@@ -1,0 +1,18 @@
+---
+repos:
+- hooks:
+  - entry: scripts/config/check-nickel-configs
+    id: nickel-configs
+    language: script
+    name: Nickel generated configs
+    pass_filenames: false
+    stages:
+    - pre-commit
+  - entry: scripts/hooks/octet-lints
+    id: octet-lints
+    language: script
+    name: Octet lints
+    pass_filenames: false
+    stages:
+    - pre-commit
+  repo: local

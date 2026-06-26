@@ -1,0 +1,5 @@
+[alias]
+verify = "test --workspace"
+
+[net]
+git-fetch-with-cli = true
