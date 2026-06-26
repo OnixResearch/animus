@@ -1,0 +1,13 @@
+[package]
+name = "animus-core"
+description = "no_std functional core for animus."
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]

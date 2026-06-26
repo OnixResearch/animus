@@ -1,0 +1,14 @@
+[package]
+name = "animus-adapters"
+description = "no_std adapter contracts for swappable animus components."
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+animus-core = { path = "../animus-core", version = "0.1.0" }

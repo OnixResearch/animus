@@ -1,0 +1,16 @@
+[package]
+name = "animus-preserves"
+description = "Preserves serialization bridge for animus adapter boundary messages."
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+animus-adapters = { path = "../animus-adapters", version = "0.1.0" }
+preserves = "4.996.0"
+serde = { version = "1.0", features = ["derive"] }

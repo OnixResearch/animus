@@ -1,0 +1,19 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+cd "${repo_root}"
+
+if command -v nix >/dev/null 2>&1 && [ -f flake.nix ]; then
+  exec nix run .#cargo-tigerstyle -- check
+fi
+
+if command -v cargo >/dev/null 2>&1; then
+  exec cargo tigerstyle check
+fi
+
+printf '%s\n' 'error: nix or cargo is required to run Octet lints.' >&2
+exit "${FAILURE}"
