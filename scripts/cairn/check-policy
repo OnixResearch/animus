@@ -1,0 +1,62 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+readonly POLICY_RELATIVE_PATH=cairn-policy/generated/cairn-policy.json
+readonly DEFAULT_SOURCE_RELATIVE_PATH=../cairn/cairn-policy/generated/cairn-policy.json
+readonly DEFAULT_SOURCE_REPO=../cairn
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+
+if [ "${1:-}" = "--root" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  repo_root=$(CDPATH= cd -- "$2" && pwd)
+fi
+
+repo_policy=${repo_root}/${POLICY_RELATIVE_PATH}
+source_policy=${CAIRN_POLICY_SOURCE:-}
+source_label=${CAIRN_POLICY_SOURCE_LABEL:-}
+
+if [ ! -f "${repo_policy}" ]; then
+  printf 'error: missing repo policy artifact: %s\n' "${POLICY_RELATIVE_PATH}" >&2
+  exit "${FAILURE}"
+fi
+
+if [ -z "${source_policy}" ] && [ -f "${repo_root}/${DEFAULT_SOURCE_RELATIVE_PATH}" ]; then
+  source_policy=${repo_root}/${DEFAULT_SOURCE_RELATIVE_PATH}
+  if command -v git >/dev/null 2>&1 && git -C "${repo_root}/${DEFAULT_SOURCE_REPO}" rev-parse --short HEAD >/dev/null 2>&1; then
+    source_label="local-cairn:$(git -C "${repo_root}/${DEFAULT_SOURCE_REPO}" rev-parse --short HEAD)"
+  else
+    source_label=local-cairn
+  fi
+fi
+
+if [ -z "${source_policy}" ]; then
+  printf '%s\n' 'policy artifact: cairn-policy/generated/cairn-policy.json'
+  printf '%s\n' 'policy drift: skipped'
+  printf '%s\n' 'source identity: unavailable'
+  printf '%s\n' 'next check: set CAIRN_POLICY_SOURCE to a canonical Cairn generated policy artifact'
+  exit 0
+fi
+
+if [ -z "${source_label}" ]; then
+  source_label=explicit-source
+fi
+
+if [ ! -f "${source_policy}" ]; then
+  printf 'error: configured Cairn policy source is unavailable; source identity: %s\n' "${source_label}" >&2
+  exit "${FAILURE}"
+fi
+
+if ! cmp -s "${repo_policy}" "${source_policy}"; then
+  printf 'error: generated Cairn policy differs from canonical source; source identity: %s\n' "${source_label}" >&2
+  exit "${FAILURE}"
+fi
+
+printf '%s\n' 'policy artifact: cairn-policy/generated/cairn-policy.json'
+printf 'policy drift: ok\n'
+printf 'source identity: %s\n' "${source_label}"

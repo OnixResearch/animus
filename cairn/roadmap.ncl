@@ -76,7 +76,7 @@ in
 
 let change_entries = [
   change "adapt-branchfs-speculative-workspaces" host_role "concrete-adapters" ["adapt-pi-tool-contracts", "adapt-sandlock-sandbox-enforcement", "adapt-clankers-provenance-ledger"] [],
-  change "adapt-clankers-focused-verification-rails" foundation_role "baseline-lifecycle" ["wire-cairn-policy-validation", "dogfood-cairn-lifecycle-evidence"] [],
+  change "adapt-clankers-focused-verification-rails" foundation_role "baseline-lifecycle" ["agent_harness_runtime.cairn_policy.closeout", "dogfood-cairn-lifecycle-evidence"] [],
   change "adapt-clankers-injected-effect-services" core_role "injected-services" ["introduce-steel-runtime-loop"] [],
   change "adapt-clankers-neutral-session-ledger" core_role "session-ledger" ["introduce-steel-runtime-loop", "adapt-clankers-injected-effect-services"] [],
   change "adapt-clankers-provenance-ledger" core_role "receipt-provenance" ["adapt-clankers-safe-receipts-artifacts", "adapt-clankers-neutral-session-ledger"] ["adapt-git-ai-vcs-neutral-provenance"],
@@ -84,7 +84,7 @@ let change_entries = [
   change "adapt-clankers-runtime-facade-inventory" core_role "runtime-loop" ["dogfood-cairn-lifecycle-evidence", "agent_harness_runtime.roadmap_sequence.dependency_order"] [],
   change "adapt-clankers-runtime-patterns" core_role "runtime-loop" ["introduce-steel-runtime-loop", "adapt-clankers-injected-effect-services", "adapt-clankers-safe-receipts-artifacts", "adapt-clankers-neutral-session-ledger", "adapt-clankers-steel-runtime-policy"] [],
   change "adapt-clankers-safe-receipts-artifacts" core_role "receipt-provenance" ["adapt-clankers-injected-effect-services"] [],
-  change "adapt-clankers-steel-runtime-policy" core_role "policy-guidance" ["introduce-steel-runtime-loop", "wire-cairn-policy-validation"] [],
+  change "adapt-clankers-steel-runtime-policy" core_role "policy-guidance" ["introduce-steel-runtime-loop", "agent_harness_runtime.cairn_policy.closeout"] [],
   change "adapt-claude-code-agent-teams" product_role "ui-headless" ["adapt-openai-codex-subagent-threads", "adapt-claude-code-permission-modes", "adapt-clankers-focused-verification-rails"] [],
   change "adapt-claude-code-headless-surfaces" product_role "ui-headless" ["adapt-pi-headless-rpc-protocol", "adapt-openai-codex-jsonl-exec-sdk", "adapt-clankers-focused-verification-rails"] [],
   change "adapt-claude-code-layered-memory" core_role "policy-guidance" ["adapt-hermes-policy-profiles", "adapt-clankers-neutral-session-ledger"] [],
@@ -123,16 +123,15 @@ let change_entries = [
   change "add-animus-hf-dataset-export" product_role "export-surfaces" ["adapt-pi-session-tree-ledger", "adapt-openai-codex-opt-in-memories", "adapt-clankers-safe-receipts-artifacts", "adapt-hermes-review-report-contracts", "adapt-clankers-focused-verification-rails"] [],
   change "add-concrete-std-runtime-adapters" host_role "concrete-adapters" ["adapt-clankers-injected-effect-services", "adapt-pi-tool-contracts", "adapt-pi-provider-registry-shell", "adapt-openai-codex-execpolicy-rules", "adapt-clankers-safe-receipts-artifacts"] [],
   change "add-ratatui-tool-host-surface" product_role "ui-headless" ["add-concrete-std-runtime-adapters", "adapt-pi-runtime-event-lifecycle", "adapt-clankers-safe-receipts-artifacts", "adapt-clankers-focused-verification-rails"] [],
-  change "align-clash-patterns-with-ucan" core_role "policy-guidance" ["wire-cairn-policy-validation", "adapt-clankers-injected-effect-services"] [],
-  change "dogfood-cairn-lifecycle-evidence" foundation_role "baseline-lifecycle" ["wire-cairn-policy-validation"] [],
+  change "align-clash-patterns-with-ucan" core_role "policy-guidance" ["agent_harness_runtime.cairn_policy.closeout", "adapt-clankers-injected-effect-services"] [],
+  change "dogfood-cairn-lifecycle-evidence" foundation_role "baseline-lifecycle" ["agent_harness_runtime.cairn_policy.closeout"] [],
   change "evaluate-clankers-plugin-manifest-boundary" evaluation_role "evaluation" ["adapt-hermes-plugin-tool-manifests", "adapt-pi-tool-contracts"] [],
   change "evaluate-clankers-provider-contract-parity" evaluation_role "evaluation" ["adapt-pi-provider-registry-shell"] [],
   change "evaluate-clankers-release-evidence-index" evaluation_role "evaluation" ["dogfood-cairn-lifecycle-evidence", "adapt-clankers-focused-verification-rails"] [],
   change "evaluate-clankers-tool-catalog-packs" evaluation_role "evaluation" ["adapt-hermes-plugin-tool-manifests", "adapt-pi-tool-contracts"] [],
   change "harden-preserves-boundary-schemas" core_role "receipt-provenance" ["introduce-steel-runtime-loop", "adapt-clankers-neutral-session-ledger", "adapt-pi-runtime-event-lifecycle"] [],
-  change "introduce-steel-runtime-loop" core_role "runtime-loop" ["wire-cairn-policy-validation", "dogfood-cairn-lifecycle-evidence", "agent_harness_runtime.roadmap_sequence.closeout"] [],
+  change "introduce-steel-runtime-loop" core_role "runtime-loop" ["agent_harness_runtime.cairn_policy.closeout", "dogfood-cairn-lifecycle-evidence", "agent_harness_runtime.roadmap_sequence.closeout"] [],
   change "reject-clankers-product-surfaces" optional_role "optional-references" ["agent_harness_runtime.roadmap_sequence.overlap_resolution"] [],
-  change "wire-cairn-policy-validation" foundation_role "policy-wiring" [] [],
 ]
 in
 
