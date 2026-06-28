@@ -13,3 +13,4 @@ workspace = true
 [dependencies]
 animus-adapters = { path = "../animus-adapters", version = "0.1.0" }
 animus-core = { path = "../animus-core", version = "0.1.0" }
+redb = "2.6.3"

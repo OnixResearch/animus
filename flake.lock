@@ -227,12 +227,30 @@
         "url": "ssh://git@github.com/OnixResearch/octet.git"
       }
     },
+    "rats": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1782446120,
+        "narHash": "sha256-Ct58ZfWnIe7KJ6q/a+gUMVCa4ylTuSv7ZnjI1IYHzgY=",
+        "ref": "refs/heads/main",
+        "rev": "e9cb7865fe400de6220aea8bfc08ddf4f75da3d3",
+        "revCount": 92,
+        "type": "git",
+        "url": "ssh://git@github.com/brittonr/rats.git"
+      },
+      "original": {
+        "rev": "e9cb7865fe400de6220aea8bfc08ddf4f75da3d3",
+        "type": "git",
+        "url": "ssh://git@github.com/brittonr/rats.git"
+      }
+    },
     "root": {
       "inputs": {
         "basalt": "basalt",
         "cairn": "cairn",
         "nixpkgs": "nixpkgs",
         "octet": "octet",
+        "rats": "rats",
         "systems": "systems_3",
         "trellis": "trellis",
         "ucan": "ucan"

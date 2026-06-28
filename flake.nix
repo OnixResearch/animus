@@ -5,6 +5,10 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     systems.url = "github:nix-systems/default-linux";
     octet.url = "git+ssh://git@github.com/OnixResearch/octet.git";
+    rats = {
+      url = "git+ssh://git@github.com/brittonr/rats.git?rev=e9cb7865fe400de6220aea8bfc08ddf4f75da3d3";
+      flake = false;
+    };
     basalt = {
       url = "git+ssh://git@github.com/OnixResearch/basalt.git?rev=005e1496a4a1be477ba84008ecbcdf8793a236c6";
       flake = false;
@@ -29,6 +33,7 @@
       nixpkgs,
       systems,
       octet,
+      rats,
       basalt,
       cairn,
       trellis,
@@ -94,6 +99,34 @@
               diff -u ${./.pre-commit-config.yaml} "$tmp_dir/.pre-commit-config.yaml"
             '';
           };
+
+          cairn = pkgs.writeShellApplication {
+            name = "cairn";
+            runtimeInputs = [ pkgs.nix ];
+            text = ''
+              policy_path=${pkgs.lib.escapeShellArg "${cairn}/cairn-policy/generated/cairn-policy.json"}
+              source_flake=${pkgs.lib.escapeShellArg "path:${cairn}"}
+
+              has_policy_arg=false
+              for argument in "$@"; do
+                if [ "$argument" = "--policy" ]; then
+                  has_policy_arg=true
+                  break
+                fi
+              done
+
+              command="''${1:-}"
+              case "$command" in
+                doctor|validate|release-readiness|policy|probe|steel-orchestration|migrate|gate|sync|archive)
+                  if [ "$has_policy_arg" = false ]; then
+                    exec nix run "$source_flake#cairn" -- "$@" --policy "$policy_path"
+                  fi
+                  ;;
+              esac
+
+              exec nix run "$source_flake#cairn" -- "$@"
+            '';
+          };
         }
       );
 
@@ -112,6 +145,12 @@
             self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs
           }/bin/check-nickel-configs";
           meta.description = "Verify generated config files match the Nickel source of truth.";
+        };
+
+        cairn = {
+          type = "app";
+          program = "${self.packages.${pkgs.stdenv.hostPlatform.system}.cairn}/bin/cairn";
+          meta.description = "Run the pinned Cairn lifecycle CLI with Animus' locked Cairn policy.";
         };
 
         octet = self.apps.${pkgs.stdenv.hostPlatform.system}.cargo-tigerstyle;
@@ -145,11 +184,47 @@
               );
           };
 
+          cargoOctet = octet.packages.${pkgs.stdenv.hostPlatform.system}.cargo-octet;
+          octetDriver = octet.packages.${pkgs.stdenv.hostPlatform.system}.dylint-driver;
+          octetPkg = octet.packages.${pkgs.stdenv.hostPlatform.system}.default;
+          octetToolchainChannel =
+            (builtins.fromTOML (builtins.readFile "${octet}/rust-toolchain.toml")).toolchain.channel;
+          octetHostTriple = pkgs.stdenv.hostPlatform.rust.rustcTarget;
+          octetRustupToolchain =
+            if pkgs.lib.hasSuffix octetHostTriple octetToolchainChannel then
+              octetToolchainChannel
+            else
+              "${octetToolchainChannel}-${octetHostTriple}";
+          octetSharedLibSuffix = if pkgs.stdenv.hostPlatform.isDarwin then ".dylib" else ".so";
+          octetDllPrefix = if pkgs.stdenv.hostPlatform.isDarwin then "lib" else "lib";
+          octetDylintLibDir = pkgs.runCommand "animus-octet-dylint-lib" { } ''
+            mkdir -p "$out/lib"
+            ln -s ${octetPkg}/lib/${octetDllPrefix}octet${octetSharedLibSuffix} \
+              "$out/lib/${octetDllPrefix}octet@${octetRustupToolchain}${octetSharedLibSuffix}"
+          '';
+          octetDylintLibPath = "${octetDylintLibDir}/lib/${octetDllPrefix}octet@${octetRustupToolchain}${octetSharedLibSuffix}";
+
+          cargoLockSpec = {
+            lockFile = ./Cargo.lock;
+            outputHashes = {
+              "basalt-0.1.0" = "sha256-kPESje/5w1vk2KKJgFz0Z+RqyxkjJAiGT7mgortULX4=";
+              "cairn-core-0.1.0" = "sha256-Xv9uAhYI+byXcKbqR+A4rESDYmmX44ZWhDLARgqbv5k=";
+              "rat-chrome-0.1.0" = "sha256-Ct58ZfWnIe7KJ6q/a+gUMVCa4ylTuSv7ZnjI1IYHzgY=";
+              "rat-widgets-0.1.0" = "sha256-Ct58ZfWnIe7KJ6q/a+gUMVCa4ylTuSv7ZnjI1IYHzgY=";
+              "ucan-0.1.0" = "sha256-Hn0sK7y/lnGNKWxGuqiPOlqni4OTfh+aqhMxXNZ0oTI=";
+              "ucan-core-0.1.0" = "sha256-Hn0sK7y/lnGNKWxGuqiPOlqni4OTfh+aqhMxXNZ0oTI=";
+              "verified-logic-0.1.0" = "sha256-Hn0sK7y/lnGNKWxGuqiPOlqni4OTfh+aqhMxXNZ0oTI=";
+              "verified-logic-0.2.0" = "sha256-xhKyUabrb8Xx6c4vKrWfHmaQDwZITCMNefnxB8mxmwg=";
+            };
+          };
+
           cargoDeps =
             (pkgs.rustPlatform.importCargoLock.override {
               fetchgit =
                 args:
-                if args.url == "ssh://git@github.com/OnixResearch/basalt.git" then
+                if args.url == "ssh://git@github.com/brittonr/rats.git" then
+                  rats
+                else if args.url == "ssh://git@github.com/OnixResearch/basalt.git" then
                   basalt
                 else if args.url == "ssh://git@github.com/OnixResearch/cairn.git" then
                   cairn
@@ -165,17 +240,7 @@
                     }
                   );
             })
-              {
-                lockFile = ./Cargo.lock;
-                outputHashes = {
-                  "basalt-0.1.0" = "sha256-kPESje/5w1vk2KKJgFz0Z+RqyxkjJAiGT7mgortULX4=";
-                  "cairn-core-0.1.0" = "sha256-Xv9uAhYI+byXcKbqR+A4rESDYmmX44ZWhDLARgqbv5k=";
-                  "ucan-0.1.0" = "sha256-Hn0sK7y/lnGNKWxGuqiPOlqni4OTfh+aqhMxXNZ0oTI=";
-                  "ucan-core-0.1.0" = "sha256-Hn0sK7y/lnGNKWxGuqiPOlqni4OTfh+aqhMxXNZ0oTI=";
-                  "verified-logic-0.1.0" = "sha256-Hn0sK7y/lnGNKWxGuqiPOlqni4OTfh+aqhMxXNZ0oTI=";
-                  "verified-logic-0.2.0" = "sha256-xhKyUabrb8Xx6c4vKrWfHmaQDwZITCMNefnxB8mxmwg=";
-                };
-              };
+              cargoLockSpec;
 
           cargoNativeBuildInputs = with pkgs; [
             cargo
@@ -239,6 +304,14 @@
             cargo check -p animus --features steel --locked
           '';
 
+          cargo-tui = cargoCheck "animus-cargo-tui" [ ] ''
+            cargo check -p animus-tui --locked
+          '';
+
+          cargo-tui-feature = cargoCheck "animus-cargo-tui-feature" [ ] ''
+            cargo check -p animus --features tui --locked
+          '';
+
           cargo-trellis-reference = cargoCheck "animus-cargo-trellis-reference" [ ] ''
             cargo check -p animus --features trellis-reference --locked
           '';
@@ -252,20 +325,38 @@
             touch "$out"
           '';
 
-          octet = octet.lib.mkConsumerCheck {
-            inherit (pkgs.stdenv.hostPlatform) system;
-            cargoLock = ./Cargo.lock;
-            nativeBuildInputs = cargoNativeBuildInputs ++ [ pkgs.clippy ];
-            packages = [
-              "animus"
-              "animus-adapters"
-              "animus-core"
-              "animus-preserves"
-              "animus-std"
-              "animus-steel"
-            ];
-            src = source;
-          };
+          # Octet currently reports a vendored serde_core module-name finding
+          # while linting animus-preserves through a store-backed Cargo vendor
+          # directory. Cargo/clippy checks still cover animus-preserves.
+          octet =
+            pkgs.runCommand "animus-octet"
+              {
+                nativeBuildInputs = cargoNativeBuildInputs ++ [
+                  pkgs.clippy
+                  cargoOctet
+                ];
+              }
+              ''
+                export HOME="$PWD/home"
+                export CARGO_HOME="$PWD/.cargo-home"
+                mkdir -p "$HOME" "$CARGO_HOME"
+                sed 's|directory = "cargo-vendor-dir"|directory = "${cargoDeps}"|' \
+                  "${cargoDeps}/.cargo/config.toml" > "$CARGO_HOME/config.toml"
+                cp -r ${source} source
+                chmod -R u+w source
+                cd source
+                export TIGERSTYLE_DRIVER_PATH="${octetDriver}/bin/dylint-driver"
+                export TIGERSTYLE_LINT_LIB="${octetDylintLibPath}"
+                export TIGERSTYLE_TOOLCHAIN="${octetRustupToolchain}"
+                cargo-octet check \
+                  -p animus \
+                  -p animus-adapters \
+                  -p animus-core \
+                  -p animus-std \
+                  -p animus-steel \
+                  -p animus-tui
+                mkdir -p "$out"
+              '';
         }
       );
 
@@ -273,6 +364,7 @@
         default = pkgs.mkShell {
           packages = with pkgs; [
             self.packages.${stdenv.hostPlatform.system}.cargo-tigerstyle
+            self.packages.${stdenv.hostPlatform.system}.cairn
             cargo
             rustc
             rustfmt
@@ -288,6 +380,7 @@
           RUSTC_WRAPPER = "";
           BASALT_SOURCE = "${basalt}";
           CAIRN_SOURCE = "${cairn}";
+          RATS_SOURCE = "${rats}";
           TRELLIS_SOURCE = "${trellis}";
           UCAN_SOURCE = "${ucan}";
 

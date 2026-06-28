@@ -41,3 +41,7 @@ pub use animus_preserves;
 /// Re-export of the optional Steel Scheme loop fabric.
 #[cfg(feature = "steel")]
 pub use animus_steel;
+
+/// Re-export of the optional terminal UI host shell.
+#[cfg(feature = "tui")]
+pub use animus_tui;

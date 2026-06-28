@@ -9,9 +9,10 @@
 - `crates/animus-preserves` is the optional Preserves serialization bridge. It keeps cross-language text/binary boundary encoding out of the core contracts while making adapter messages portable.
 - `crates/animus-steel` is the canonical Steel Scheme loop fabric. It lets embedders script the agent turn loop while Rust revalidates every selected model/tool/response action at adapter boundaries.
 - `crates/animus-std` is the standard-library runtime shell. It owns environment/config parsing, process-facing orchestration, and default std-backed adapters.
+- `crates/animus-tui` is the optional terminal UI host shell. It keeps Rats/Ratatui-facing dependencies outside reusable core, adapter, Steel, and std runtime contracts.
 - The root `animus` package is a thin compatibility layer that re-exports the workspace crates.
 
-Embedders should depend on the smallest crate set they need: `animus-core` for pure state, `animus-adapters` for port contracts, `animus-preserves` for Preserves text/binary boundary payloads, `animus-steel` for the main scriptable agent-loop fabric, `animus-std` for the default runtime shell, or root `animus` for the combined compatibility surface. Runtime configuration is parsed once at the shell boundary and stored in typed structs before being passed into the core. Component calls cross typed adapter contracts so model, tool, memory, and host integrations can be swapped without changing core logic.
+Embedders should depend on the smallest crate set they need: `animus-core` for pure state, `animus-adapters` for port contracts, `animus-preserves` for Preserves text/binary boundary payloads, `animus-steel` for the main scriptable agent-loop fabric, `animus-std` for the default runtime shell, `animus-tui` for an optional Rats-backed terminal host shell, or root `animus` for the combined compatibility surface. Runtime configuration is parsed once at the shell boundary and stored in typed structs before being passed into the core. Component calls cross typed adapter contracts so model, tool, memory, and host integrations can be swapped without changing core logic.
 
 ## Development safety rails
 
@@ -61,6 +62,7 @@ cargo check --workspace --all-targets
 cargo clippy --workspace --all-targets -- -D warnings
 cargo check -p animus --features preserves
 cargo check -p animus --features steel
+cargo check -p animus --features tui
 cargo tigerstyle check
 check-nickel-configs
 nix run .#cargo-tigerstyle -- check
@@ -92,8 +94,10 @@ The `nickel-configs` hook runs `scripts/config/check-nickel-configs` before each
 - [Preserves](https://preserves.dev/) — expressive data model and text/binary serialization formats for portable adapter boundary payloads. Added through the optional `animus-preserves` crate and root `preserves` feature.
 - [Syndicate](https://syndicate-lang.org/) / [Syndicate/rs](https://git.syndicate-lang.org/syndicate-lang/syndicate-rs) — syndicated actors, dataspaces, assertion-based state replication, facets, and conversational concurrency; useful as an architectural reference for future runtime/dataspace adapters, not a core dependency yet.
 - [Steel Scheme](https://github.com/mattwparas/steel) — embeddable Scheme implementation used by `animus-steel` as the main scriptable agent-loop fabric.
+- [Rats](https://github.com/brittonr/rats) — Rust terminal UI widget workspace used by the optional `animus-tui` host shell through an SSH-pinned Cargo dependency.
 - [`../hermes`](../hermes) — Hermes Agent workspace used as a bounded reference for skill manifests, plugin/tool manifests, review report contracts, Kanban orchestration, policy profiles, retrieval budgets, background work queues, and ResearchSpec lifecycle patterns.
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) — coding-agent product reference for layered project memory, permission modes, workflow commands, lifecycle hooks, agent teams, headless automation, and MCP bridge ergonomics; adapted only as bounded patterns behind Animus-owned contracts.
+- [Claude Converter](https://github.com/FredyRivera-dev/claude_converter) — compact session-to-Hugging-Face `messages` conversion and inspection surface used as a bounded reference for Animus-owned dataset export; Animus sessions remain the source format.
 - [OpenAI Codex](https://github.com/openai/codex) — coding-agent reference for exec policy rules, hook trust lifecycles, non-interactive JSONL execution and SDK control, worktree automations, subagent threads, guidance/skill budgeting, opt-in memories, and read-only review mode; adapted only as bounded patterns behind Animus-owned contracts.
 - [Sandlock](https://github.com/multikernel/sandlock) — lightweight Linux process sandbox using Landlock, seccomp-bpf, seccomp user notification, COW filesystem handling, and network/HTTP ACLs; useful as a bounded reference for std-shell sandbox enforcement and descriptor translation, not a core dependency.
 - [BranchFS](https://github.com/multikernel/branchfs) — FUSE-based speculative branching filesystem with copy-on-write workspaces, nested branches, atomic commit/abort, and `@branch` paths; useful as a bounded reference for optional workspace-isolation adapters, not a required dependency.

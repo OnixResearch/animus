@@ -5,6 +5,7 @@ members = [
   "crates/animus-preserves",
   "crates/animus-std",
   "crates/animus-steel",
+  "crates/animus-tui",
 ]
 default-members = [
   ".",
@@ -13,6 +14,7 @@ default-members = [
   "crates/animus-preserves",
   "crates/animus-std",
   "crates/animus-steel",
+  "crates/animus-tui",
 ]
 resolver = "2"
 
@@ -63,6 +65,7 @@ cairn-reference = ["dep:cairn_core"]
 trellis-reference = ["dep:trellis"]
 preserves = ["dep:animus-preserves"]
 steel = ["dep:animus-steel"]
+tui = ["dep:animus-tui"]
 
 [dependencies]
 animus-adapters = { path = "crates/animus-adapters", version = "0.1.0" }
@@ -70,6 +73,7 @@ animus-core = { path = "crates/animus-core", version = "0.1.0" }
 animus-preserves = { path = "crates/animus-preserves", version = "0.1.0", optional = true }
 animus-std = { path = "crates/animus-std", version = "0.1.0" }
 animus-steel = { path = "crates/animus-steel", version = "0.1.0", optional = true }
+animus-tui = { path = "crates/animus-tui", version = "0.1.0", optional = true }
 basalt = { git = "ssh://git@github.com/OnixResearch/basalt.git", rev = "005e1496a4a1be477ba84008ecbcdf8793a236c6", optional = true }
 cairn_core = { package = "cairn-core", git = "ssh://git@github.com/OnixResearch/cairn.git", rev = "24381f77987b7e519ebbf05a62b959290d89c582", optional = true }
 trellis = { package = "verified-logic", git = "ssh://git@github.com/OnixResearch/trellis.git", rev = "68ac5824f0ef664e4bedeb8ea92ee938b9e00da0", optional = true }
