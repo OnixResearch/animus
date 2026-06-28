@@ -178,6 +178,7 @@
                 || baseName == ".pre-commit-config.yaml"
                 || baseName == "config.toml"
                 || baseName == "README.md"
+                || baseName == "check-clankers-product-surfaces"
                 || pkgs.lib.hasSuffix ".ncl" baseName
                 || pkgs.lib.hasSuffix ".rs" baseName
                 || pkgs.lib.hasSuffix ".md" baseName
@@ -324,6 +325,22 @@
             ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
             touch "$out"
           '';
+
+          clankers-product-surfaces =
+            pkgs.runCommand "animus-clankers-product-surfaces"
+              {
+                nativeBuildInputs = [
+                  pkgs.rustc
+                  pkgs.gcc
+                ];
+              }
+              ''
+                cp -r ${source} source
+                chmod -R u+w source
+                cd source
+                sh scripts/cairn/check-clankers-product-surfaces --root .
+                touch "$out"
+              '';
 
           # Octet currently reports a vendored serde_core module-name finding
           # while linting animus-preserves through a store-backed Cargo vendor

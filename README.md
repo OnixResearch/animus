@@ -65,6 +65,7 @@ cargo check -p animus --features steel
 cargo check -p animus --features tui
 cargo tigerstyle check
 check-nickel-configs
+scripts/cairn/check-clankers-product-surfaces --root .
 nix run .#cargo-tigerstyle -- check
 nix run .#check-nickel-configs
 nix flake check
