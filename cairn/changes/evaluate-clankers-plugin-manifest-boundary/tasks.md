@@ -1,0 +1,8 @@
+# Tasks
+
+- [ ] [serial] Add an architecture note evaluating Clankers plugin manifest patterns and explicitly separating descriptors from runtime execution. r[agent_harness_runtime.clankers_plugin_manifest.scope]
+- [ ] [depends:clankers_plugin_manifest.scope] Define optional Animus-owned descriptor fields for identity, runtime kind, declared tools, capabilities, launch policy metadata, sandbox requirements, environment allowlist names, writable roots, network policy, and redaction. r[agent_harness_runtime.clankers_plugin_manifest.schema]
+- [ ] [depends:clankers_plugin_manifest.schema] Add validation that rejects unknown runtime kinds, missing required fields, duplicate or built-in tool collisions, path escapes, absolute writable roots, env value leakage, and unsafe network/sandbox combinations. r[agent_harness_runtime.clankers_plugin_manifest.validation]
+- [ ] [depends:clankers_plugin_manifest.validation] Add runtime-neutrality checks proving parsing does not launch stdio, load Wasm, inherit environment values, read secrets, connect to network, or execute tools. r[agent_harness_runtime.clankers_plugin_manifest.runtime_neutral]
+- [ ] [depends:clankers_plugin_manifest.validation] Add positive and negative manifest fixtures for safe descriptors and invalid launch/sandbox/tool cases. r[agent_harness_runtime.clankers_plugin_manifest.fixtures]
+- [ ] [depends:clankers_plugin_manifest.runtime_neutral,clankers_plugin_manifest.fixtures] Run focused manifest rails, dependency checks, workspace tests if touched, and Cairn validation/gates before archive. r[agent_harness_runtime.clankers_plugin_manifest.closeout]

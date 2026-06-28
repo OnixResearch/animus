@@ -1,0 +1,7 @@
+# Tasks
+
+- [ ] [serial] Add an architecture note listing Clankers product surfaces rejected as Animus defaults and explaining bounded pattern adoption versus product adoption. r[agent_harness_runtime.clankers_product_rejection.docs]
+- [ ] [depends:clankers_product_rejection.docs] Add dependency-isolation checks proving reusable Animus crates do not require Clankers product crates, daemon/TUI concepts, global `.clankers` state, Matrix/P2P, plugin runtimes, Automerge storage, OAuth/provider router, self-evolution workflows, product tools, or dogfood harnesses. r[agent_harness_runtime.clankers_product_rejection.dependency_isolation]
+- [ ] [depends:clankers_product_rejection.docs] Add documentation rules for future exceptions: host ownership, injected service boundary, safety policy, redacted receipts, feature gating, and focused validation rails. r[agent_harness_runtime.clankers_product_rejection.future_exception]
+- [ ] [depends:clankers_product_rejection.dependency_isolation] Add focused marker fixtures that allow bounded-reference docs but reject product-surface dependencies or runtime assumptions in reusable crates. r[agent_harness_runtime.clankers_product_rejection.marker_rail]
+- [ ] [depends:clankers_product_rejection.marker_rail] Run dependency/marker rails, workspace tests if touched, and Cairn validation/gates before archive. r[agent_harness_runtime.clankers_product_rejection.closeout]
