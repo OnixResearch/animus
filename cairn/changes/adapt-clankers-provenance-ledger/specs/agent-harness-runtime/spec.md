@@ -136,26 +136,42 @@ r[agent_harness_runtime.provenance_ledger.tool_effects.truncation]
 
 ### Requirement: Optional Toolpath interchange adapter
 
-r[agent_harness_runtime.provenance_ledger.toolpath_adapter] Animus MAY provide an optional std-only Toolpath adapter that exports redacted Animus provenance as Toolpath Graph/Path/Step documents and imports redacted Toolpath documents into review fixtures, while keeping Toolpath crates and Pathbase/CLI behavior out of Animus core contracts.
+r[agent_harness_runtime.provenance_ledger.toolpath_adapter] Animus MAY provide an optional std-only Toolpath adapter that exports redacted Animus provenance as Toolpath Graph/Path/Step documents and imports redacted Toolpath documents into review fixtures, MUST treat Toolpath as an interchange and review vocabulary rather than the internal ledger, and MUST keep Toolpath crates, `toolpath-convo`, Pathbase, provider importers, Git/GitHub derivation, and CLI cache/share/resume behavior out of default reusable contracts.
 
 #### Scenario: Redacted Toolpath export maps Animus DAGs
 
 r[agent_harness_runtime.provenance_ledger.toolpath_adapter.export]
-- GIVEN an Animus provenance ledger contains actors, parent relationships, artifact hashes, safe structural changes, and redacted receipts
+- GIVEN an Animus provenance ledger contains actors, parent relationships, active heads, artifact hashes, safe structural changes, typed refs, correlation links, and redacted receipts
 - WHEN Toolpath export is explicitly requested
-- THEN the adapter emits a Toolpath graph with equivalent path head, step parents, actor labels, and safe structural perspectives
-- AND raw prompts, provider payloads, tool input/output, full paths, credentials, and unbounded before/after content are omitted or represented by hashes/redaction markers.
+- THEN the adapter emits a Toolpath graph with equivalent path head, step parents, actor labels, typed refs, artifact hash markers, and safe structural perspectives
+- AND raw prompts, provider payloads, tool input/output, full paths, credentials, raw unified diffs, and unbounded before/after content are omitted or represented by hashes/redaction markers.
+
+#### Scenario: Default Toolpath export remains redacted
+
+r[agent_harness_runtime.provenance_ledger.toolpath_adapter.redacted_default]
+- GIVEN a Toolpath export candidate includes raw prompt text, provider JSON, credential-looking values, absolute path dumps, raw tool input, raw tool output, raw model output, unbounded before/after content, or raw unified diffs
+- WHEN default redacted export validation runs
+- THEN the adapter rejects the unsafe fields or replaces them with explicit redaction markers and BLAKE3 artifact hashes
+- AND full-fidelity raw export is unavailable unless a future explicit policy enables it.
+
+#### Scenario: Toolpath adoption matrix is documented
+
+r[agent_harness_runtime.provenance_ledger.toolpath_adapter.docs]
+- GIVEN maintainers evaluate Toolpath features for Animus
+- WHEN the adoption matrix is reviewed
+- THEN Graph/Path/Step, actor taxonomy, parent/head semantics, dead-end queries, typed refs/correlation, JSONL streaming shape, and Markdown/DOT review surfaces are documented as optional projection or review concerns
+- AND Toolpath is not documented as Animus' internal ledger, runtime conversation IR, hashing authority, provider importer, or default storage format.
 
 #### Scenario: Toolpath dependency isolation is verified
 
 r[agent_harness_runtime.provenance_ledger.toolpath_adapter.isolated]
 - GIVEN default Animus features are built without Toolpath compatibility
 - WHEN workspace dependency checks run
-- THEN reusable core, adapter, Steel, and standard-shell contracts do not require Toolpath crates, Pathbase clients, GitHub/Git derivation crates, or Toolpath cache/resume CLI behavior.
+- THEN reusable core, adapter, Steel, and standard-shell contracts do not require Toolpath crates, `toolpath-convo`, Pathbase clients, provider session importers, GitHub/Git derivation crates, or Toolpath cache/share/resume CLI behavior.
 
 ### Requirement: Focused provenance-ledger verification
 
-r[agent_harness_runtime.provenance_ledger.verification] The provenance-ledger adaptation MUST include focused positive and negative verification for bounded reference scope, neutral ledger replay, unsupported-entry failure, typed fact queries, opaque record handling, BLAKE3 artifact identity, redaction classes, branch/dead-end queries, malformed graph rejection, tool/effect outcomes, safe receipts, optional Toolpath export, and dependency isolation.
+r[agent_harness_runtime.provenance_ledger.verification] The provenance-ledger adaptation MUST include focused positive and negative verification for bounded reference scope, neutral ledger replay, unsupported-entry failure, typed fact queries, opaque record handling, BLAKE3 artifact identity, redaction classes, branch/dead-end queries, malformed graph rejection, tool/effect outcomes, safe receipts, optional Toolpath export, redacted-by-default Toolpath behavior, Toolpath adoption documentation, and dependency isolation.
 
 #### Scenario: Closeout evidence is reviewable
 

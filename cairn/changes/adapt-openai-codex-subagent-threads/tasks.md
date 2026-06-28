@@ -1,0 +1,15 @@
+# Tasks
+
+- [ ] [serial] Define explicit subagent delegation DTOs with role, task, allowed tools, workspace scope, model profile, and expected summary shape. r[agent_harness_runtime.openai_codex_subagent_threads.delegation_request]
+- [ ] [depends:delegation_request] Add negative tests proving runtime rejects implicit or untrusted subagent spawning. r[agent_harness_runtime.openai_codex_subagent_threads.delegation_request.explicit]
+- [ ] [serial] Add isolated subagent thread ledger records and parent-thread summary references. r[agent_harness_runtime.openai_codex_subagent_threads.thread_isolation]
+- [ ] [depends:thread_isolation] Add tests proving raw subagent logs are not imported into the parent thread unless explicitly requested and bounded. r[agent_harness_runtime.openai_codex_subagent_threads.thread_isolation.no_raw_logs]
+- [ ] [serial] Define typed subagent summary outputs for findings, evidence references, confidence, unresolved questions, and recommended next actions. r[agent_harness_runtime.openai_codex_subagent_threads.summary_contract]
+- [ ] [depends:summary_contract] Add positive aggregation tests and negative malformed-summary tests. r[agent_harness_runtime.openai_codex_subagent_threads.summary_contract.validation]
+- [ ] [serial] Define subagent role profiles for model preference, reasoning effort, tool permissions, workspace scope, and output schema. r[agent_harness_runtime.openai_codex_subagent_threads.role_profiles]
+- [ ] [depends:role_profiles] Add negative tests proving unauthorized tools and out-of-scope workspace access are denied for subagents. r[agent_harness_runtime.openai_codex_subagent_threads.role_profiles.permissions]
+- [ ] [serial] Add write-conflict policy requiring isolated workspace, mutation serialization, or parent-approved handoff for write-capable subagents. r[agent_harness_runtime.openai_codex_subagent_threads.write_conflict_policy]
+- [ ] [depends:write_conflict_policy] Add conflict tests proving parallel writes to the same resource cannot merge silently. r[agent_harness_runtime.openai_codex_subagent_threads.write_conflict_policy.conflict]
+- [ ] [serial] Record subagent start, stop, continuation, failure, and aggregation events in runtime reports. r[agent_harness_runtime.openai_codex_subagent_threads.event_reporting]
+- [ ] [depends:event_reporting] Add failure-reporting tests for cancelled, failed, and timed-out subagents. r[agent_harness_runtime.openai_codex_subagent_threads.event_reporting.failure]
+- [ ] [depends:delegation_request.explicit,thread_isolation.no_raw_logs,summary_contract.validation,role_profiles.permissions,write_conflict_policy.conflict,event_reporting.failure] Update docs and run focused subagent tests, workspace checks, Cairn validation, and Cairn gates with reviewable evidence. r[agent_harness_runtime.openai_codex_subagent_threads.delegation_request]

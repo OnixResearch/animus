@@ -4,7 +4,7 @@
 
 Animus has small no-std core and adapter crates, a Preserves bridge, a Steel loop fabric, and a standard-library shell. Active Cairn work already calls for safe receipts, neutral session ledger behavior, injected dispatch, and VCS-neutral provenance. The remaining design question is whether Animus should import Toolpath or Clankers structures directly, or define its own internal model.
 
-Clankers is a closer internal reference because its reusable pieces already emphasize safe metadata, BLAKE3 artifact identity, neutral replay DTOs, injected tool/provider boundaries, and redaction. Toolpath is valuable because it names a public provenance document format with Step/Path/Graph DAGs and Graph/Path/Step export tooling. The right split is: Animus owns the internal ledger; Toolpath is an adapter target.
+Clankers is a closer internal reference because its reusable pieces already emphasize safe metadata, BLAKE3 artifact identity, neutral replay DTOs, injected tool/provider boundaries, and redaction. Toolpath is valuable because it names a public provenance document format with Graph/Path/Step DAGs, actor taxonomy, raw/structural change perspectives, typed refs, JSONL streaming, and review renderers. The right split is: Animus owns the internal ledger; Toolpath is an adapter target and review vocabulary.
 
 ## Decisions
 
@@ -28,9 +28,11 @@ Clankers is a closer internal reference because its reusable pieces already emph
 
 **Choice:** Add Toolpath compatibility only as a std-only adapter that projects Animus provenance into Toolpath Graph/Path/Step documents and can later import redacted Toolpath documents into Animus review fixtures.
 
-**Rationale:** Toolpath's Step/Path/Graph, actor taxonomy, raw/structural perspectives, and dead-end queries are useful for sharing provenance. They should not dictate Animus core storage or receipt leakage policy.
+**Adapt:** Use Toolpath's Graph/Path/Step shape as the public interchange vocabulary; map Animus branch parents and active heads onto Toolpath `step.parents` and `path.head`; render Animus actor types into Toolpath-compatible `human:`, `agent:`, `tool:`, and `ci:` labels; project safe structural changes, artifact hashes, intents, refs, and correlation links into Toolpath `change` and `meta` fields; and keep JSONL streaming plus Markdown/DOT rendering as optional shell/review surfaces.
 
-**Boundary:** Default exports are redacted and safe: raw prompts, provider payloads, tool inputs/outputs, full paths, credentials, and unbounded before/after contents are omitted or represented by BLAKE3 hashes/redaction markers. Full-fidelity export requires an explicit future policy decision.
+**Rationale:** Toolpath's Graph/Path/Step, actor taxonomy, raw/structural perspectives, typed refs, and dead-end queries are useful for sharing provenance. They should not dictate Animus core storage, replay semantics, identity hashing, or receipt leakage policy.
+
+**Boundary:** Default exports are redacted and safe: raw prompts, provider payloads, tool inputs/outputs, full paths, credentials, unbounded before/after contents, and raw unified diffs are omitted or represented by BLAKE3 hashes/redaction markers unless a future explicit policy enables full-fidelity export. Toolpath Pathbase, cache/share/resume CLI behavior, Git/GitHub derivation, provider session importers, and `toolpath-convo` are not core Animus runtime dependencies.
 
 ### 4. Ledger replay is a pure functional core
 
@@ -66,6 +68,6 @@ Clankers is a closer internal reference because its reusable pieces already emph
 
 - Owning DTOs means more code than importing Toolpath directly. The benefit is boundary control and no accidental std/storage leakage.
 - Adapting from Clankers can pull product assumptions into Animus. Every adapted field must pass a bounded-reference review.
-- Toolpath interoperability can tempt full transcript export. Keep the first adapter redacted and policy-gated.
+- Toolpath interoperability can tempt full transcript export or raw diff leakage. Keep the first adapter redacted and policy-gated.
 - Canonical envelopes need stable fixtures. Start with a small versioned shape and positive/negative tests before treating hashes as public contracts.
 - Branch queries and VCS provenance can overlap. Keep session/provenance DAG queries VCS-neutral and let VCS-specific storage remain behind injected backends.
