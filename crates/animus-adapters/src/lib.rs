@@ -22,7 +22,7 @@ mod validation;
 
 pub use manifest::{
     LaunchPolicy, LaunchPolicyDraft, NetworkPolicy, PROHIBITED_PLUGIN_MANIFEST_EFFECTS,
-    PluginManifest, PluginManifestDraft, PluginManifestError, RedactionPolicy,
+    PluginDescriptor, PluginDescriptorDraft, PluginDescriptorError, RedactionPolicy,
     RedactionPolicyDraft, RuntimeKind, SandboxMode, SandboxRequirements, SandboxRequirementsDraft,
     ToolDescriptor, ToolDescriptorDraft, WorkingDirectoryMode,
 };

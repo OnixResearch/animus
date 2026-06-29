@@ -4,7 +4,13 @@ use std::path::{Path, PathBuf};
 
 const ARG_ROOT: &str = "--root";
 const ARCHITECTURE_NOTE: &str = "docs/plugin-manifest-boundary.md";
-const MANIFEST_CORE: &str = "crates/animus-adapters/src/manifest.rs";
+const MANIFEST_CORE_PATHS: &[&str] = &[
+    "crates/animus-adapters/src/manifest.rs",
+    "crates/animus-adapters/src/manifest/accessors.rs",
+    "crates/animus-adapters/src/manifest/error.rs",
+    "crates/animus-adapters/src/manifest/validation.rs",
+    "crates/animus-adapters/src/manifest/validation/path.rs",
+];
 const EXIT_FAILURE: i32 = 1;
 const EXIT_SUCCESS: i32 = 0;
 
@@ -137,19 +143,25 @@ fn validate_architecture_note(root: &Path) -> Vec<Issue> {
 }
 
 fn validate_manifest_core(root: &Path) -> Vec<Issue> {
-    let core_path = root.join(MANIFEST_CORE);
-    let Ok(text) = fs::read_to_string(&core_path) else {
-        return vec![issue(MANIFEST_CORE, "missing plugin manifest core")];
-    };
-
     let mut issues = Vec::new();
-    for pattern in FORBIDDEN_CORE_PATTERNS {
-        for token in pattern.tokens {
-            if text.contains(token) {
-                issues.push(issue(
-                    MANIFEST_CORE,
-                    &format!("descriptor core contains forbidden {} token: {token}", pattern.label),
-                ));
+    for manifest_core in MANIFEST_CORE_PATHS {
+        let core_path = root.join(manifest_core);
+        let Ok(text) = fs::read_to_string(&core_path) else {
+            issues.push(issue(manifest_core, "missing plugin manifest core"));
+            continue;
+        };
+
+        for pattern in FORBIDDEN_CORE_PATTERNS {
+            for token in pattern.tokens {
+                if text.contains(token) {
+                    issues.push(issue(
+                        manifest_core,
+                        &format!(
+                            "descriptor core contains forbidden {} token: {token}",
+                            pattern.label
+                        ),
+                    ));
+                }
             }
         }
     }
