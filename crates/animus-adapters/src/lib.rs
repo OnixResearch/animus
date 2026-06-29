@@ -17,6 +17,7 @@ extern crate alloc;
 
 mod manifest;
 mod model;
+mod status;
 mod tool;
 mod validation;
 
@@ -25,6 +26,12 @@ pub use manifest::{
     PluginDescriptor, PluginDescriptorDraft, PluginDescriptorError, RedactionPolicy,
     RedactionPolicyDraft, RuntimeKind, SandboxMode, SandboxRequirements, SandboxRequirementsDraft,
     ToolDescriptor, ToolDescriptorDraft, WorkingDirectoryMode,
+};
+pub use status::{
+    AgentSessionReference, AgentSessionReferenceDraft, AgentSessionReferenceKind,
+    AgentStatusObservation, AgentStatusObservationDraft, AgentStatusObservationKind,
+    AgentStatusPresentation, AgentStatusPresentationDraft, HostStatusObservationBatch,
+    HostStatusRequest, SAFE_EVIDENCE_HASH_HEX_CHARS, SemanticAgentState, StatusSequence, StatusTtl,
 };
 pub use validation::{AdapterContractError, MAX_ADAPTER_FIELD_CHARS, MIN_ADAPTER_FIELD_CHARS};
 
@@ -49,6 +56,17 @@ impl<T> ModelAdapter for T where T: ComponentAdapter<ModelRequest, ModelResponse
 pub trait ToolAdapter: ComponentAdapter<ToolRequest, ToolResponse> {}
 
 impl<T> ToolAdapter for T where T: ComponentAdapter<ToolRequest, ToolResponse> {}
+
+/// Host status-observation adapter contract.
+pub trait HostStatusAdapter:
+    ComponentAdapter<HostStatusRequest, HostStatusObservationBatch>
+{
+}
+
+impl<T> HostStatusAdapter for T where
+    T: ComponentAdapter<HostStatusRequest, HostStatusObservationBatch>
+{
+}
 
 /// Generic port between harness orchestration and a swappable component.
 pub trait ComponentAdapter<Request, Response> {

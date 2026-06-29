@@ -16,6 +16,7 @@
 mod contract;
 mod fabric;
 mod shell;
+mod status;
 mod telemetry;
 mod transition;
 
@@ -25,6 +26,11 @@ pub use contract::{
 };
 pub use fabric::LoopFabric;
 pub use shell::{RuntimeAdapters, run_agent_loop, run_with_steel_program};
+pub use status::{
+    AgentStatusSelection, RejectedStatusCandidate, RejectedStatusReason, StatusAuthoritySummary,
+    StatusDecisionExplanation, StatusEvidenceError, StatusEvidenceSummary, StatusFallbackReason,
+    StatusFreshness, select_agent_status, validate_status_evidence_summary,
+};
 pub use telemetry::{AdapterComponent, RuntimeEvent};
 pub use transition::{
     AdapterOutcome, AdapterRequest, AdapterStep, DecisionStep, TurnPlan, TurnState,

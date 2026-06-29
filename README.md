@@ -21,7 +21,7 @@ The workspace denies missing docs, `clippy::all`, `clippy::pedantic`, and undocu
 
 Every test suite should include positive and negative tests. Run baseline tests before core changes and repeat them after the change. Avoid process-global state in tests unless explicit isolation is in place.
 
-See [docs/safety-contract.md](docs/safety-contract.md) for the durable repo-owned safety contract, [docs/request-lifecycle.md](docs/request-lifecycle.md) for the maintained request-lifecycle ownership map, [docs/runtime-facade-inventory.md](docs/runtime-facade-inventory.md) for public export classes, and [docs/release-evidence-index.md](docs/release-evidence-index.md) for the bounded future release-evidence index evaluation.
+See [docs/safety-contract.md](docs/safety-contract.md) for the durable repo-owned safety contract, [docs/request-lifecycle.md](docs/request-lifecycle.md) for the maintained request-lifecycle ownership map, [docs/status-authority.md](docs/status-authority.md) for semantic agent status precedence, [docs/runtime-facade-inventory.md](docs/runtime-facade-inventory.md) for public export classes, and [docs/release-evidence-index.md](docs/release-evidence-index.md) for the bounded future release-evidence index evaluation.
 
 ## Development shell
 

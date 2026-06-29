@@ -1,0 +1,13 @@
+# Tasks
+
+- [x] [serial] Define semantic agent status DTOs for `idle`, `working`, `blocked`, `done`, and `unknown` with source identity, agent label, optional session reference, message, presentation metadata, sequence, and TTL fields. r[agent_harness_runtime.agent_status_authority.semantic_state]
+- [x] [depends:semantic_state] Add positive lifecycle-report validation tests and negative malformed state, malformed source, missing target, and unsupported session-reference tests. r[agent_harness_runtime.agent_status_authority.semantic_state.validation]
+- [x] [serial] Implement pure authority selection over trusted lifecycle reports, heuristic fallback observations, stale reports, and unknown state. r[agent_harness_runtime.agent_status_authority.authority_precedence]
+- [x] [depends:authority_precedence] Add tests proving current trusted lifecycle reports suppress heuristic fallback and stale lifecycle reports degrade deterministically. r[agent_harness_runtime.agent_status_authority.authority_precedence.lifecycle_wins]
+- [x] [serial] Separate visual metadata from semantic lifecycle state in status reduction and event/report DTOs. r[agent_harness_runtime.agent_status_authority.presentation_only]
+- [x] [depends:presentation_only] Add negative tests proving custom titles, display-agent names, and activity labels do not satisfy waits, notifications, rollups, or policy decisions. r[agent_harness_runtime.agent_status_authority.presentation_only.no_semantic_escalation]
+- [x] [serial] Define bounded explain/status-decision receipts with selected authority, rejected candidates, freshness class, fallback reason, and safe evidence hashes. r[agent_harness_runtime.agent_status_authority.explain]
+- [x] [depends:explain] Add leak fixtures for raw prompts, terminal snapshots, provider payloads, credentials, and unbounded detector evidence. r[agent_harness_runtime.agent_status_authority.explain.redacted]
+- [x] [serial] Add host-observation adapter contracts proving process, terminal, and screen detection stay outside reusable runtime crates. r[agent_harness_runtime.agent_status_authority.host_owned_detection]
+- [x] [depends:host_owned_detection] Add pure-core tests proving status selection consumes typed observations without reading terminals, processes, files, clocks, or environment variables. r[agent_harness_runtime.agent_status_authority.host_owned_detection.no_ambient_io]
+- [x] [depends:semantic_state.validation,authority_precedence.lifecycle_wins,presentation_only.no_semantic_escalation,explain.redacted,host_owned_detection.no_ambient_io] Update docs and run focused status-authority tests, workspace checks, Cairn validation, and Cairn gates with reviewable evidence. r[agent_harness_runtime.agent_status_authority.verification]

@@ -10,10 +10,12 @@ This document is the maintained ownership map for request processing. It is a re
 4. **Steel loop decision input** is owned by `animus-steel::LoopTurn` and `animus-steel::SteelLoopFabric` (`crates/animus-steel/src/turn.rs` and `fabric.rs`). `animus-runtime::TurnState` projects validated runtime state into this scriptable loop boundary for each turn.
 5. **Steel loop decisions** are owned by `animus-steel::LoopDecision` (`crates/animus-steel/src/action.rs`). Rust revalidates every `CallModel`, `CallTool`, `Respond`, and `Stop` decision before a host adapter receives it.
 6. **Adapter dispatch DTOs** are owned by `animus-adapters::ModelRequest`, `animus-adapters::ModelResponse`, `animus-adapters::ToolRequest`, `animus-adapters::ToolResponse`, `ModelAdapter`, and `ToolAdapter` (`crates/animus-adapters/src/`). These are implementation-free contracts.
-7. **Reusable runtime dispatch and projection** are owned by `animus-runtime::run_agent_loop`, `LoopFabric`, `RuntimeEvent`, `RunReport`, and `RuntimeStatus` (`crates/animus-runtime/src/`). The runtime shell calls injected fabrics/adapters, records ordered events, handles stop/final/max-turn/failure statuses, and does not discover providers or credentials.
-8. **Std-shell adapter dispatch** is owned by `animus-std::run_with_model`, `run`, and `SummaryModelAdapter` (`crates/animus-std/src/execution.rs`). The shell wires typed config, core state, and caller-provided adapters without discovering providers or credentials. The legacy **Runtime event/report projection** remains represented by `animus-std::RunReport` and `animus-std::RunError` for this shell path.
-9. **Safe receipt construction** is future host-owned behavior. Until a receipt DTO lands, evidence summaries must follow `docs/cairn-lifecycle.md` and `docs/safety-contract.md`: bounded status, issue codes, counts, safe relative labels, BLAKE3 hashes where content identity is needed, and explicit redaction markers.
-10. **Host ledger persistence seam** is future host-owned behavior. The source-of-truth placeholder is a future host-owned `LedgerService` trait or DTO set; reusable core, adapter, Steel, and runtime crates must not persist sessions directly.
+7. **Host status-observation DTOs** are owned by `animus-adapters::AgentStatusObservation`, `HostStatusRequest`, `HostStatusObservationBatch`, and `HostStatusAdapter`. Hosts may detect agent status however they choose, but reusable crates receive only typed observations.
+8. **Reusable status authority selection** is owned by `animus-runtime::select_agent_status`, `AgentStatusSelection`, and `StatusDecisionExplanation`. The selector is pure over a validated target request, logical sequence, and in-memory observations; presentation metadata remains visual-only.
+9. **Reusable runtime dispatch and projection** are owned by `animus-runtime::run_agent_loop`, `LoopFabric`, `RuntimeEvent`, `RunReport`, and `RuntimeStatus` (`crates/animus-runtime/src/`). The runtime shell calls injected fabrics/adapters, records ordered events, handles stop/final/max-turn/failure statuses, and does not discover providers or credentials.
+10. **Std-shell adapter dispatch** is owned by `animus-std::run_with_model`, `run`, and `SummaryModelAdapter` (`crates/animus-std/src/execution.rs`). The shell wires typed config, core state, and caller-provided adapters without discovering providers or credentials. The legacy **Runtime event/report projection** remains represented by `animus-std::RunReport` and `animus-std::RunError` for this shell path.
+11. **Safe receipt construction** is future host-owned behavior. Until a receipt DTO lands, evidence summaries must follow `docs/cairn-lifecycle.md`, `docs/status-authority.md`, and `docs/safety-contract.md`: bounded status, issue codes, counts, safe relative labels, BLAKE3 hashes where content identity is needed, and explicit redaction markers.
+12. **Host ledger persistence seam** is future host-owned behavior. The source-of-truth placeholder is a future host-owned `LedgerService` trait or DTO set; reusable core, adapter, Steel, and runtime crates must not persist sessions directly.
 
 ## Boundary owners
 
@@ -25,7 +27,9 @@ This document is the maintained ownership map for request processing. It is a re
 | Steel turn input | `animus-steel` / `animus-runtime` | `LoopTurn`, `TurnState`, `LoopFabric` | Fabric is injected; no concrete providers or tools are constructed. |
 | Steel decision | `animus-steel` | `LoopDecision`, `SteelLoopFabric`, `LoopError` | No adapter dispatch until Rust revalidation passes. |
 | Model/tool DTOs | `animus-adapters` | `ModelRequest`, `ModelResponse`, `ToolRequest`, `ToolResponse` | No implementation authority. |
-| Adapter ports | `animus-adapters` | `ComponentAdapter`, `ModelAdapter`, `ToolAdapter` | Concrete host implementation is injected by callers. |
+| Status observation DTOs | `animus-adapters` | `AgentStatusObservation`, `HostStatusRequest`, `HostStatusObservationBatch` | Typed observations only. |
+| Adapter ports | `animus-adapters` | `ComponentAdapter`, `ModelAdapter`, `ToolAdapter`, `HostStatusAdapter` | Concrete host implementation is injected by callers. |
+| Status authority selection | `animus-runtime` | `select_agent_status`, `AgentStatusSelection`, `StatusDecisionExplanation` | Pure selection over typed inputs only. |
 | Runtime dispatch | `animus-runtime` | `run_agent_loop`, `run_with_steel_program`, `RuntimeEvent`, `RunReport`, `RuntimeStatus` | Calls injected fabric/model/tool boundaries only. |
 | Std dispatch | `animus-std` | `run_with_model`, `run`, `SummaryModelAdapter` | Shell orchestration only; no provider discovery. |
 | Receipts | host-owned future surface | Future receipt DTO | Must be redacted and bounded before persistence. |
@@ -39,7 +43,11 @@ This document is the maintained ownership map for request processing. It is a re
 
 ### Adapter contract boundary
 
-`animus-adapters` must not implement providers, discover tools, read credentials, open network connections, execute processes, read files, or persist sessions. It owns DTO validation and implementation-free traits only. Validate with `cargo test -p animus-adapters` and dependency rails.
+`animus-adapters` must not implement providers, discover tools, read credentials, open network connections, execute processes, read files, or persist sessions. It owns DTO validation and implementation-free traits only, including host status-observation DTOs and the `HostStatusAdapter` port. Validate with `cargo test -p animus-adapters` and dependency rails.
+
+### Status authority boundary
+
+`animus-runtime::select_agent_status` must remain pure over typed in-memory observations, a logical sequence, and a validated target request. Trusted current lifecycle observations suppress heuristic fallback; stale, untrusted, or conflicting reports degrade deterministically without reading host state. Presentation metadata must remain visual-only and must not drive waits, notifications, rollups, or policy decisions.
 
 ### Steel boundary
 
@@ -55,7 +63,7 @@ This document is the maintained ownership map for request processing. It is a re
 
 ### Receipt boundary
 
-Receipt and evidence code must not embed raw prompts, credentials, provider payloads, raw tool output, unbounded stdout/stderr, full private paths, or raw private file bodies. Validate current lifecycle evidence with `scripts/cairn/check-evidence-safety --root .`.
+Receipt and evidence code must not embed raw prompts, credentials, provider payloads, raw tool output, raw terminal snapshots, unbounded stdout/stderr, unbounded detector transcripts, full private paths, or raw private file bodies. Status-decision explanations must use safe hashes and bounded redacted summaries. Validate current lifecycle evidence with `scripts/cairn/check-evidence-safety --root .`.
 
 ### Future ledger boundary
 

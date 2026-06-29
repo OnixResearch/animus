@@ -1,3 +1,5 @@
+use alloc::string::String;
+
 const NUL_CHARACTER: char = '\0';
 
 /// Smallest accepted non-empty adapter field length after trimming.
@@ -47,6 +49,34 @@ pub enum AdapterContractError {
         /// Byte index where the NUL character starts.
         byte_index: usize,
     },
+    /// A semantic agent status state was not supported.
+    UnsupportedStatusState {
+        /// Boundary field name.
+        field: &'static str,
+        /// Unsupported value after normalization.
+        value: String,
+    },
+    /// A status-observation authority kind was not supported.
+    UnsupportedStatusObservationKind {
+        /// Boundary field name.
+        field: &'static str,
+        /// Unsupported value after normalization.
+        value: String,
+    },
+    /// A session-reference kind was not supported.
+    UnsupportedSessionReferenceKind {
+        /// Boundary field name.
+        field: &'static str,
+        /// Unsupported value after normalization.
+        value: String,
+    },
+    /// A safe evidence hash failed deterministic validation.
+    InvalidEvidenceHash {
+        /// Boundary field name.
+        field: &'static str,
+        /// Human-readable validation reason.
+        reason: &'static str,
+    },
 }
 
 impl core::fmt::Display for AdapterContractError {
@@ -65,6 +95,23 @@ impl core::fmt::Display for AdapterContractError {
                 formatter,
                 "{field} contains a NUL character at byte index {byte_index}"
             ),
+            Self::UnsupportedStatusState { field, value } => {
+                write!(
+                    formatter,
+                    "{field} contains unsupported status state {value}"
+                )
+            }
+            Self::UnsupportedStatusObservationKind { field, value } => write!(
+                formatter,
+                "{field} contains unsupported status observation kind {value}"
+            ),
+            Self::UnsupportedSessionReferenceKind { field, value } => write!(
+                formatter,
+                "{field} contains unsupported session reference kind {value}"
+            ),
+            Self::InvalidEvidenceHash { field, reason } => {
+                write!(formatter, "{field} is invalid: {reason}")
+            }
         }
     }
 }

@@ -16,8 +16,13 @@
 #![forbid(unsafe_code)]
 
 pub use animus_adapters::{
-    AdapterContractError, ComponentAdapter, MAX_ADAPTER_FIELD_CHARS, MIN_ADAPTER_FIELD_CHARS,
-    ModelAdapter, ModelRequest, ModelResponse, ToolAdapter, ToolRequest, ToolResponse,
+    AdapterContractError, AgentSessionReference, AgentSessionReferenceDraft,
+    AgentSessionReferenceKind, AgentStatusObservation, AgentStatusObservationDraft,
+    AgentStatusObservationKind, AgentStatusPresentation, AgentStatusPresentationDraft,
+    ComponentAdapter, HostStatusAdapter, HostStatusObservationBatch, HostStatusRequest,
+    MAX_ADAPTER_FIELD_CHARS, MIN_ADAPTER_FIELD_CHARS, ModelAdapter, ModelRequest, ModelResponse,
+    SAFE_EVIDENCE_HASH_HEX_CHARS, SemanticAgentState, StatusSequence, StatusTtl, ToolAdapter,
+    ToolRequest, ToolResponse,
 };
 pub use animus_core::{AnimusState, CoreError, Intent, MAX_INTENT_CHARS, MIN_INTENT_CHARS};
 
