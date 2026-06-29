@@ -90,7 +90,6 @@ let change_entries = [
   change "adapt-clankers-provenance-ledger" core_role "receipt-provenance" ["adapt-clankers-safe-receipts-artifacts", "adapt-clankers-neutral-session-ledger"] ["adapt-git-ai-vcs-neutral-provenance"],
   change "adapt-clankers-prompt-assembly-kit" core_role "policy-guidance" ["adapt-hermes-policy-profiles", "adapt-openai-codex-guidance-skill-budget", "adapt-clankers-context-references", "adapt-clankers-agent-definition-trust"] ["adapt-claude-code-layered-memory", "adapt-openai-codex-opt-in-memories"],
   change "adapt-clankers-remote-admission-receipts" core_role "policy-guidance" ["align-clash-patterns-with-ucan", "adapt-clankers-confirmation-broker-kit", "adapt-clankers-safe-receipts-artifacts"] ["adapt-pi-headless-rpc-protocol", "adapt-claude-code-mcp-bridge"],
-  change "adapt-clankers-request-lifecycle-ownership" core_role "runtime-loop" ["agent_harness_runtime.cairn_dogfood.closeout", "agent_harness_runtime.roadmap_sequence.dependency_order"] [],
   change "adapt-clankers-runtime-facade-inventory" core_role "runtime-loop" ["agent_harness_runtime.cairn_dogfood.closeout", "agent_harness_runtime.roadmap_sequence.dependency_order"] [],
   change "adapt-clankers-runtime-patterns" core_role "runtime-loop" ["introduce-steel-runtime-loop", "adapt-clankers-injected-effect-services", "adapt-clankers-safe-receipts-artifacts", "adapt-clankers-neutral-session-ledger", "adapt-clankers-steel-runtime-policy"] [],
   change "adapt-clankers-safe-receipts-artifacts" core_role "receipt-provenance" ["adapt-clankers-injected-effect-services"] [],

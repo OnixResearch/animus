@@ -179,6 +179,7 @@
                 || baseName == "config.toml"
                 || baseName == "README.md"
                 || baseName == "check-clankers-product-surfaces"
+                || baseName == "check-request-lifecycle"
                 || baseName == "check-wasm-surface"
                 || pkgs.lib.hasSuffix ".ncl" baseName
                 || pkgs.lib.hasSuffix ".rs" baseName
@@ -345,6 +346,22 @@
                 chmod -R u+w source
                 cd source
                 sh scripts/cairn/check-clankers-product-surfaces --root .
+                touch "$out"
+              '';
+
+          request-lifecycle =
+            pkgs.runCommand "animus-request-lifecycle"
+              {
+                nativeBuildInputs = [
+                  pkgs.rustc
+                  pkgs.gcc
+                ];
+              }
+              ''
+                cp -r ${source} source
+                chmod -R u+w source
+                cd source
+                sh scripts/cairn/check-request-lifecycle --root .
                 touch "$out"
               '';
 
