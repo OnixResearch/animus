@@ -95,6 +95,16 @@ nix run .#check-nickel-configs
 nix flake check
 ```
 
+## Cairn drain helper
+
+Generate a Steel Scheme drain plan for selected active changes:
+
+```sh
+steel scripts/ralph-drain-cairns.scm --change introduce-steel-runtime-loop
+```
+
+The helper defaults to the repo-pinned Cairn command (`nix run .#cairn --`) and emits Animus-specific guardrails for roadmap blockers, accepted-spec sync verification, evidence safety, and non-claims. Use `--self-test` to run its positive and negative checks.
+
 ## Pre-commit hooks
 
 Install the repo hooks once per checkout:
@@ -126,3 +136,4 @@ The `nickel-configs` hook runs `scripts/config/check-nickel-configs` before each
 - [OpenAI Codex](https://github.com/openai/codex) — coding-agent reference for exec policy rules, hook trust lifecycles, non-interactive JSONL execution and SDK control, worktree automations, subagent threads, guidance/skill budgeting, opt-in memories, and read-only review mode; adapted only as bounded patterns behind Animus-owned contracts.
 - [Sandlock](https://github.com/multikernel/sandlock) — lightweight Linux process sandbox using Landlock, seccomp-bpf, seccomp user notification, COW filesystem handling, and network/HTTP ACLs; useful as a bounded reference for std-shell sandbox enforcement and descriptor translation, not a core dependency.
 - [BranchFS](https://github.com/multikernel/branchfs) — FUSE-based speculative branching filesystem with copy-on-write workspaces, nested branches, atomic commit/abort, and `@branch` paths; useful as a bounded reference for optional workspace-isolation adapters, not a required dependency.
+- [`../mc`](../mc) — sibling Cairn-heavy workspace whose `scripts/ralph-drain-cairns.scm` Steel loop was adapted as an Animus-specific drain planner; no Minecraft runtime behavior is adopted.
