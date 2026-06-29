@@ -9,6 +9,9 @@ readonly POLICY_DRIFT_SKIPPED=skipped-explicit-source-unset
 readonly POLICY_DRIFT_CHECKED=checked
 readonly POLICY_NEXT_CHECK_SKIPPED='set CAIRN_POLICY_SOURCE to a canonical generated Cairn policy artifact'
 readonly POLICY_NEXT_CHECK_CHECKED=none
+readonly STEEL_POLICY_SOURCE=policy/steel-runtime/policy.ncl
+readonly STEEL_POLICY_GENERATED=policy/steel-runtime/generated/steel-runtime-policy.json
+readonly STEEL_POLICY_FIELD=steel_runtime_policy
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
@@ -26,7 +29,18 @@ if ! command -v cargo >/dev/null 2>&1; then
   exit "${FAILURE}"
 fi
 
+if ! command -v nickel >/dev/null 2>&1; then
+  printf '%s\n' 'error: nickel is required. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+
 cd "${repo_root}"
+
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/animus-steel-policy.XXXXXX")
+trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
+
+nickel export --format json --field "${STEEL_POLICY_FIELD}" "${STEEL_POLICY_SOURCE}" > "${tmp_dir}/steel-runtime-policy.json"
+diff -u "${STEEL_POLICY_GENERATED}" "${tmp_dir}/steel-runtime-policy.json"
 
 policy_drift_status=${POLICY_DRIFT_SKIPPED}
 policy_next_check=${POLICY_NEXT_CHECK_SKIPPED}
@@ -38,6 +52,7 @@ fi
 
 cargo test -p animus-steel --locked
 cargo test -p animus-runtime --locked steel_runtime
+cargo test -p animus-runtime --locked steel_policy
 cargo test -p animus-runtime --locked invalid_steel
 
 mkdir -p "${RECEIPT_DIR}"
@@ -46,20 +61,26 @@ cat > "${receipt_path}" <<EOF
 schema: ${RECEIPT_SCHEMA}
 rail: ${RAIL_NAME}
 status: pass
-boundary: animus-steel activation and Rust adapter-boundary revalidation
+boundary: Nickel-authored Steel policy export, animus-steel activation, and Rust adapter-boundary revalidation
+steel_policy_source: ${STEEL_POLICY_SOURCE}
+steel_policy_export: checked
 policy_drift: ${policy_drift_status}
 policy_next_check: ${policy_next_check}
 positive_fixtures:
+- Nickel steel_runtime_policy export matches checked generated JSON
+- animus-steel generated policy export activates the checked default script
 - animus-steel valid model/tool/respond/stop decision programs
 - animus-runtime steel_runtime positive dispatch programs
 negative_fixtures:
+- animus-runtime steel_policy denial blocks adapter dispatch
+- animus-steel invalid policy fixtures reject missing scripts, bad names, non-positive budgets, unknown actions, hash mismatches, path escapes, and unsupported fallback/redaction modes
 - animus-steel invalid load, return-shape, and adapter-payload programs
 - animus-runtime invalid_steel no-adapter-dispatch failures
 safe_evidence:
-- fixture names only
+- fixture names and hashes only
 - no raw prompts, provider payloads, credentials, full paths, script source, or tool bodies
 non_claims:
-- this rail does not claim the future Nickel-governed Steel runtime policy is complete
+- this rail does not grant Steel ambient filesystem, shell, network, provider, credential, daemon, or session mutation authority
 EOF
 
 printf 'focused rail %s: pass\n' "${RAIL_NAME}"

@@ -24,6 +24,35 @@ impl<'a, Model, Tool> RuntimeAdapters<'a, Model, Tool> {
     }
 }
 
+/// Checked Steel profile and script selected for one runtime execution.
+pub struct SteelPolicyRuntime<'profile, 'script> {
+    profile: &'profile animus_steel::SteelPolicyProfile,
+    script: animus_steel::SteelPolicyScript<'script>,
+}
+
+impl<'profile, 'script> SteelPolicyRuntime<'profile, 'script> {
+    /// Builds a checked Steel policy runtime selection.
+    #[must_use]
+    pub const fn new(
+        profile: &'profile animus_steel::SteelPolicyProfile,
+        script: animus_steel::SteelPolicyScript<'script>,
+    ) -> Self {
+        Self { profile, script }
+    }
+
+    /// Returns the selected policy profile.
+    #[must_use]
+    pub const fn profile(&self) -> &'profile animus_steel::SteelPolicyProfile {
+        self.profile
+    }
+
+    /// Returns the selected Steel script.
+    #[must_use]
+    pub const fn script(&self) -> animus_steel::SteelPolicyScript<'script> {
+        self.script
+    }
+}
+
 #[derive(Debug, Eq, PartialEq)]
 enum RunStep {
     Continue { state: crate::TurnState },
@@ -78,6 +107,38 @@ where
     Tool::Error: core::fmt::Display,
 {
     match animus_steel::SteelLoopFabric::new(program) {
+        Ok(mut fabric) => run_agent_loop(input, config, &mut fabric, adapters),
+        Err(error) => {
+            crate::complete_with_fabric_error(crate::TurnState::new(input), error.to_string())
+        }
+    }
+}
+
+/// Runs the agent loop with a Steel program after checked policy activation.
+#[must_use]
+pub fn run_with_steel_policy<Model, Tool>(
+    policy: &SteelPolicyRuntime<'_, '_>,
+    input: &crate::RuntimeInput,
+    config: crate::RuntimeConfig,
+    adapters: RuntimeAdapters<'_, Model, Tool>,
+) -> crate::RunReport
+where
+    Model: animus_adapters::ModelAdapter,
+    Model::Error: core::fmt::Display,
+    Tool: animus_adapters::ToolAdapter,
+    Tool::Error: core::fmt::Display,
+{
+    let activation = animus_steel::SteelPolicyActivation::new(
+        policy.script(),
+        config.max_turns().policy_count(),
+        animus_steel::DEFAULT_RUNTIME_HOST_ACTIONS,
+    );
+    let receipt = policy.profile().activate(&activation);
+    if !receipt.is_allowed() {
+        return crate::complete_with_steel_policy_denial(crate::TurnState::new(input), &receipt);
+    }
+
+    match animus_steel::SteelLoopFabric::new(policy.script().source()) {
         Ok(mut fabric) => run_agent_loop(input, config, &mut fabric, adapters),
         Err(error) => {
             crate::complete_with_fabric_error(crate::TurnState::new(input), error.to_string())

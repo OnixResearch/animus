@@ -25,7 +25,10 @@ pub use contract::{
     RuntimeFailure, RuntimeInput, RuntimeStatus,
 };
 pub use fabric::LoopFabric;
-pub use shell::{RuntimeAdapters, run_agent_loop, run_with_steel_program};
+pub use shell::{
+    RuntimeAdapters, SteelPolicyRuntime, run_agent_loop, run_with_steel_policy,
+    run_with_steel_program,
+};
 /// Pure status-selection result.
 pub type AgentStatusSelection = status::choose::Selection;
 /// Safe summary of a rejected status candidate.
@@ -67,5 +70,6 @@ pub fn validate_status_evidence_summary(text: &str) -> Result<(), StatusEvidence
 pub use telemetry::{AdapterComponent, RuntimeEvent};
 pub use transition::{
     AdapterOutcome, AdapterRequest, AdapterStep, DecisionStep, TurnPlan, TurnState,
-    apply_adapter_outcome, apply_decision, complete_with_fabric_error, plan_next_turn,
+    apply_adapter_outcome, apply_decision, complete_with_fabric_error,
+    complete_with_steel_policy_denial, plan_next_turn,
 };

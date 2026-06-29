@@ -59,4 +59,15 @@ pub enum RuntimeEvent {
         /// Human-readable fabric error message.
         message: String,
     },
+    /// Steel policy denied activation before Steel evaluation.
+    SteelPolicyDenied {
+        /// Safe selected profile label.
+        profile: String,
+        /// BLAKE3 hash of observed script source.
+        script_hash: String,
+        /// BLAKE3 hash of safe receipt fields.
+        receipt_hash: String,
+        /// Typed denial reason label.
+        reason: String,
+    },
 }

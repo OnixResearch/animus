@@ -1,0 +1,27 @@
+{
+  "profiles": [
+    {
+      "allowed_host_actions": [
+        "model",
+        "tool",
+        "respond",
+        "stop"
+      ],
+      "budget": {
+        "max_turns": 2
+      },
+      "default": true,
+      "enabled": true,
+      "fallback_mode": "block",
+      "name": "default-loop",
+      "receipt_redaction": {
+        "mode": "hash-only"
+      },
+      "script": {
+        "hash": "79d887ab1ffd350d191ad7aea6a10fe3de28f108d34271cc99e4a59e537e9d0e",
+        "label": "scripts/default-loop.scm"
+      }
+    }
+  ],
+  "schema": "animus.steel-runtime-policy.v1"
+}

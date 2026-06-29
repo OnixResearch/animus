@@ -39,6 +39,36 @@ fn invalid_steel_load_fails_before_adapter_dispatch() {
 }
 
 #[test]
+fn steel_policy_denial_fails_before_adapter_dispatch() {
+    let mut model = super::support::ModelStub::ok();
+    let mut tool = super::support::ToolStub::ok();
+    let result = super::support::run_policy_program_with_bad_profile(
+        super::support::MODEL_THEN_RESPOND_PROGRAM,
+        &mut model,
+        &mut tool,
+    );
+
+    assert!(matches!(
+        result.status(),
+        crate::RuntimeStatus::Failed {
+            failure: crate::RuntimeFailure::SteelPolicy { message }
+        } if message == "steel policy denied: profile_mismatch"
+    ));
+    assert_eq!(model.calls, super::support::NO_ADAPTER_CALLS);
+    assert_eq!(tool.calls, super::support::NO_ADAPTER_CALLS);
+    assert!(result.events().iter().any(|event| matches!(
+        event,
+        crate::RuntimeEvent::SteelPolicyDenied { reason, .. } if reason == "profile_mismatch"
+    )));
+    assert!(
+        result
+            .events()
+            .iter()
+            .all(|event| !matches!(event, crate::RuntimeEvent::ModelRequested { .. }))
+    );
+}
+
+#[test]
 fn model_adapter_failure_stops_safely() {
     let mut model = super::support::ModelStub::failing();
     let mut tool = super::support::ToolStub::ok();

@@ -1,3 +1,7 @@
+mod halt;
+
+pub use halt::complete_with_steel_policy_denial;
+
 /// Runtime plan before evaluating the next loop-fabric turn.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum TurnPlan {

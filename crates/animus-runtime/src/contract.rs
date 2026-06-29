@@ -1,22 +1,34 @@
 const DEFAULT_MAX_TURNS_COUNT: usize = 16;
+const DEFAULT_MAX_TURNS_POLICY_COUNT: u32 = 16;
 const MIN_MAX_TURNS_COUNT: usize = 1;
+const MIN_MAX_TURNS_POLICY_COUNT: u32 = 1;
 const SUMMARY_FIELD: &str = "summary";
 #[cfg(test)]
 const MAX_TURNS_FIELD: &str = "max_turns";
+#[cfg(test)]
+const MAX_TURNS_TOO_LARGE_REASON: &str = "max turns must fit Steel policy budget";
 
 /// Explicit maximum fabric-turn budget.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct MaxTurns {
     count: usize,
+    policy_count: u32,
 }
 
 impl MaxTurns {
-    const fn from_valid_count(count: usize) -> Self {
-        Self { count }
+    const fn from_valid_count(count: usize, policy_count: u32) -> Self {
+        Self {
+            count,
+            policy_count,
+        }
     }
 
     pub(crate) const fn count(self) -> usize {
         self.count
+    }
+
+    pub(crate) const fn policy_count(self) -> u32 {
+        self.policy_count
     }
 
     #[cfg(test)]
@@ -27,18 +39,30 @@ impl MaxTurns {
                 reason: "max turns must be at least one",
             });
         }
+        let Ok(policy_count) = u32::try_from(count) else {
+            return Err(RuntimeError::InvalidConfig {
+                field: MAX_TURNS_FIELD,
+                reason: MAX_TURNS_TOO_LARGE_REASON,
+            });
+        };
 
-        Ok(Self { count })
+        Ok(Self {
+            count,
+            policy_count,
+        })
     }
 }
 
 /// Default maximum number of fabric turns before the runtime fails closed.
-pub const DEFAULT_MAX_TURNS: MaxTurns = MaxTurns::from_valid_count(DEFAULT_MAX_TURNS_COUNT);
+pub const DEFAULT_MAX_TURNS: MaxTurns =
+    MaxTurns::from_valid_count(DEFAULT_MAX_TURNS_COUNT, DEFAULT_MAX_TURNS_POLICY_COUNT);
 
 /// Smallest accepted maximum-turn budget.
-pub const MIN_MAX_TURNS: MaxTurns = MaxTurns::from_valid_count(MIN_MAX_TURNS_COUNT);
+pub const MIN_MAX_TURNS: MaxTurns =
+    MaxTurns::from_valid_count(MIN_MAX_TURNS_COUNT, MIN_MAX_TURNS_POLICY_COUNT);
 
 const _: () = assert!(DEFAULT_MAX_TURNS_COUNT >= MIN_MAX_TURNS_COUNT);
+const _: () = assert!(DEFAULT_MAX_TURNS_POLICY_COUNT >= MIN_MAX_TURNS_POLICY_COUNT);
 
 /// Runtime configuration for one agent-loop execution.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -141,6 +165,11 @@ pub enum RuntimeFailure {
         /// Human-readable failure message.
         message: String,
     },
+    /// Steel policy denied activation before fabric evaluation.
+    SteelPolicy {
+        /// Human-readable failure message.
+        message: String,
+    },
 }
 
 impl RuntimeFailure {
@@ -150,7 +179,8 @@ impl RuntimeFailure {
         match self {
             Self::Fabric { message }
             | Self::ModelAdapter { message }
-            | Self::ToolAdapter { message } => message.as_str(),
+            | Self::ToolAdapter { message }
+            | Self::SteelPolicy { message } => message.as_str(),
         }
     }
 }
