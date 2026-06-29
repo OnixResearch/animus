@@ -3,8 +3,10 @@
 //! New business logic belongs in `animus-core`; swappable component contracts
 //! belong in `animus-adapters`; runtime orchestration belongs in `animus-std`.
 //! This crate re-exports the workspace crates for downstream users that want one
-//! dependency while keeping crate barriers explicit in-tree.
+//! dependency while keeping crate barriers explicit in-tree. Disable default
+//! features to use the no-std facade over `animus-core` and `animus-adapters`.
 
+#![cfg_attr(not(feature = "std"), no_std)]
 #![deny(missing_docs)]
 #![deny(clippy::all)]
 #![deny(clippy::pedantic)]
@@ -17,6 +19,9 @@ pub use animus_adapters::{
     ModelAdapter, ModelRequest, ModelResponse, ToolAdapter, ToolRequest, ToolResponse,
 };
 pub use animus_core::{AnimusState, CoreError, Intent, MAX_INTENT_CHARS, MIN_INTENT_CHARS};
+
+/// Re-export of the default standard-library runtime shell.
+#[cfg(feature = "std")]
 pub use animus_std::{
     ConfigError, INTENT_ENV_KEY, RunError, RunReport, RuntimeConfig, SummaryModelAdapter,
     load_runtime, run, run_with_model,

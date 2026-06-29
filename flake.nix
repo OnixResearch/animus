@@ -179,9 +179,11 @@
                 || baseName == "config.toml"
                 || baseName == "README.md"
                 || baseName == "check-clankers-product-surfaces"
+                || baseName == "check-wasm-surface"
                 || pkgs.lib.hasSuffix ".ncl" baseName
                 || pkgs.lib.hasSuffix ".rs" baseName
                 || pkgs.lib.hasSuffix ".md" baseName
+                || pkgs.lib.hasSuffix ".txt" baseName
               );
           };
 
@@ -315,6 +317,10 @@
 
           cargo-trellis-reference = cargoCheck "animus-cargo-trellis-reference" [ ] ''
             cargo check -p animus --features trellis-reference --locked
+          '';
+
+          wasm-surface = cargoCheck "animus-wasm-surface" [ ] ''
+            sh scripts/cairn/check-wasm-surface --root .
           '';
 
           cargo-clippy = cargoCheck "animus-cargo-clippy" [ pkgs.clippy ] ''

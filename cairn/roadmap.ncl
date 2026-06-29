@@ -143,7 +143,6 @@ let change_entries = [
   change "evaluate-clankers-tool-catalog-packs" evaluation_role "evaluation" ["adapt-hermes-plugin-tool-manifests", "adapt-pi-tool-contracts"] [],
   change "harden-preserves-boundary-schemas" core_role "receipt-provenance" ["introduce-steel-runtime-loop", "adapt-clankers-neutral-session-ledger", "adapt-pi-runtime-event-lifecycle"] [],
   change "introduce-steel-runtime-loop" core_role "runtime-loop" ["agent_harness_runtime.cairn_policy.closeout", "agent_harness_runtime.cairn_dogfood.closeout", "agent_harness_runtime.roadmap_sequence.closeout"] [],
-  change "reject-clankers-product-surfaces" optional_role "optional-references" ["agent_harness_runtime.roadmap_sequence.overlap_resolution"] [],
 ]
 in
 

@@ -59,19 +59,20 @@ version.workspace = true
 workspace = true
 
 [features]
-default = []
+default = ["std"]
+std = ["dep:animus-std"]
 basalt-reference = ["dep:basalt"]
 cairn-reference = ["dep:cairn_core"]
 trellis-reference = ["dep:trellis"]
 preserves = ["dep:animus-preserves"]
 steel = ["dep:animus-steel"]
-tui = ["dep:animus-tui"]
+tui = ["std", "dep:animus-tui"]
 
 [dependencies]
 animus-adapters = { path = "crates/animus-adapters", version = "0.1.0" }
 animus-core = { path = "crates/animus-core", version = "0.1.0" }
 animus-preserves = { path = "crates/animus-preserves", version = "0.1.0", optional = true }
-animus-std = { path = "crates/animus-std", version = "0.1.0" }
+animus-std = { path = "crates/animus-std", version = "0.1.0", optional = true }
 animus-steel = { path = "crates/animus-steel", version = "0.1.0", optional = true }
 animus-tui = { path = "crates/animus-tui", version = "0.1.0", optional = true }
 basalt = { git = "ssh://git@github.com/OnixResearch/basalt.git", rev = "005e1496a4a1be477ba84008ecbcdf8793a236c6", optional = true }

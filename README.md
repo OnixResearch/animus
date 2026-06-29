@@ -12,7 +12,7 @@
 - `crates/animus-tui` is the optional terminal UI host shell. It keeps Rats/Ratatui-facing dependencies outside reusable core, adapter, Steel, and std runtime contracts.
 - The root `animus` package is a thin compatibility layer that re-exports the workspace crates.
 
-Embedders should depend on the smallest crate set they need: `animus-core` for pure state, `animus-adapters` for port contracts, `animus-preserves` for Preserves text/binary boundary payloads, `animus-steel` for the main scriptable agent-loop fabric, `animus-std` for the default runtime shell, `animus-tui` for an optional Rats-backed terminal host shell, or root `animus` for the combined compatibility surface. Runtime configuration is parsed once at the shell boundary and stored in typed structs before being passed into the core. Component calls cross typed adapter contracts so model, tool, memory, and host integrations can be swapped without changing core logic.
+Embedders should depend on the smallest crate set they need: `animus-core` for pure state, `animus-adapters` for port contracts, `animus-preserves` for Preserves text/binary boundary payloads, `animus-steel` for the main scriptable agent-loop fabric, `animus-std` for the default runtime shell, `animus-tui` for an optional Rats-backed terminal host shell, or root `animus` for the combined compatibility surface. The root `animus` crate enables the `std` feature by default for compatibility; disable default features to select the no-std facade over `animus-core` and `animus-adapters`. Runtime configuration is parsed once at the shell boundary and stored in typed structs before being passed into the core. Component calls cross typed adapter contracts so model, tool, memory, and host integrations can be swapped without changing core logic.
 
 ## Development safety rails
 
@@ -50,6 +50,25 @@ check-nickel-configs
 nix run .#check-nickel-configs
 ```
 
+## Wasm compile surface
+
+The supported Wasm compile boundary targets `wasm32-unknown-unknown` for deterministic reusable contracts. The initial supported surface is:
+
+```sh
+cargo check -p animus-core --target wasm32-unknown-unknown --locked
+cargo check -p animus-adapters --target wasm32-unknown-unknown --locked
+cargo check -p animus --no-default-features --target wasm32-unknown-unknown --locked
+```
+
+The root `animus --no-default-features` profile intentionally excludes `animus-std`, `animus-steel`, `animus-tui`, `animus-preserves`, terminal UI, provider clients, native persistence, process execution, filesystem authority, credentials, browser APIs, WASI host behavior, plugin loading, and host shell orchestration. Optional bridges such as Preserves are not part of the initial Wasm rail; add them only with separate compatibility evidence and adapter DTO revalidation tests.
+
+Run the focused rail:
+
+```sh
+scripts/cairn/check-wasm-surface --root .
+nix build .#checks.x86_64-linux.wasm-surface --no-link -L
+```
+
 ## Verification
 
 ```sh
@@ -66,6 +85,7 @@ cargo check -p animus --features tui
 cargo tigerstyle check
 check-nickel-configs
 scripts/cairn/check-clankers-product-surfaces --root .
+scripts/cairn/check-wasm-surface --root .
 nix run .#cargo-tigerstyle -- check
 nix run .#check-nickel-configs
 nix flake check

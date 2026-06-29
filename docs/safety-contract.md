@@ -14,7 +14,11 @@ Animus is structured around a functional-core / imperative-shell (FCIS) split. T
 
 ## no_std core boundary
 
-`animus-core` and `animus-adapters` are `#![no_std]` and may use `alloc` for owned data. Do not use `std`, process environment, filesystem, networking, clocks, randomness, interpreters such as Steel, serialization backends such as Preserves, or global mutable state in either crate.
+`animus-core` and `animus-adapters` are `#![no_std]` and may use `alloc` for owned data. The root `animus` crate must also build as a no-std facade when default features are disabled, re-exporting only the deterministic reusable surface. Do not use `std`, process environment, filesystem, networking, clocks, randomness, interpreters such as Steel, serialization backends such as Preserves, or global mutable state in the no-std-supported surface.
+
+## Wasm compile boundary
+
+The initial Wasm compile boundary targets `wasm32-unknown-unknown` and covers `animus-core`, `animus-adapters`, and root `animus --no-default-features`. The rail is a compile-surface check, not a runtime support claim. It excludes `animus-std`, `animus-steel`, `animus-tui`, `animus-preserves`, terminal UI, provider clients, native persistence, process execution, filesystem authority, credentials, browser APIs, WASI host behavior, plugin loading, and host shell orchestration unless a later Cairn change adds a target-specific contract and validation evidence.
 
 ## Config ownership
 
@@ -59,9 +63,10 @@ cargo check -p animus --features steel
 cargo tigerstyle check
 check-nickel-configs
 scripts/cairn/check-clankers-product-surfaces --root .
+scripts/cairn/check-wasm-surface --root .
 nix run .#cargo-tigerstyle -- check
 nix run .#check-nickel-configs
 nix flake check
 ```
 
-`cargo tigerstyle check` is the local executable Tiger Style policy rail backed by workspace metadata. `nix run .#cargo-tigerstyle -- check` exposes the pinned flake app for the same check. `check-nickel-configs` and `nix run .#check-nickel-configs` verify that generated TOML/YAML configs match `config/repo.ncl`. `scripts/cairn/check-clankers-product-surfaces --root .` verifies that bounded Clankers documentation remains allowed while reusable crates stay free of rejected Clankers product-surface dependencies and runtime assumptions. The `nickel-configs` and `octet-lints` pre-commit hooks in `.pre-commit-config.yaml` call `scripts/config/check-nickel-configs` and `scripts/hooks/octet-lints`. Keep this document, `config/repo.ncl`, generated config files, `workspace.metadata.tigerstyle`, `workspace.metadata.octet`, the flake apps, and the pre-commit hooks in sync with the Octet command.
+`cargo tigerstyle check` is the local executable Tiger Style policy rail backed by workspace metadata. `nix run .#cargo-tigerstyle -- check` exposes the pinned flake app for the same check. `check-nickel-configs` and `nix run .#check-nickel-configs` verify that generated TOML/YAML configs match `config/repo.ncl`. `scripts/cairn/check-clankers-product-surfaces --root .` verifies that bounded Clankers documentation remains allowed while reusable crates stay free of rejected Clankers product-surface dependencies and runtime assumptions. `scripts/cairn/check-wasm-surface --root .` verifies the credential-free `wasm32-unknown-unknown` compile surface and rejects excluded shell/runtime packages in the no-default root facade tree. The `nickel-configs` and `octet-lints` pre-commit hooks in `.pre-commit-config.yaml` call `scripts/config/check-nickel-configs` and `scripts/hooks/octet-lints`. Keep this document, `config/repo.ncl`, generated config files, `workspace.metadata.tigerstyle`, `workspace.metadata.octet`, the flake apps, and the pre-commit hooks in sync with the Octet command.

@@ -1,0 +1,5 @@
+expected_issue=WASM_SURFACE_EXCLUDED_PACKAGE
+
+animus v0.1.0
+animus-std v0.1.0
+animus-core v0.1.0
