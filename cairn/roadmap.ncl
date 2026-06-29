@@ -102,8 +102,7 @@ let change_entries = [
   change "adapt-claude-code-permission-modes" core_role "policy-guidance" ["align-clash-patterns-with-ucan", "adapt-clankers-injected-effect-services"] [],
   change "adapt-claude-code-workflow-commands" product_role "ui-headless" ["adapt-claude-code-permission-modes", "adapt-pi-skills-resource-discovery", "adapt-pi-headless-rpc-protocol", "adapt-clankers-focused-verification-rails"] [],
   change "adapt-git-ai-vcs-neutral-provenance" core_role "receipt-provenance" ["adapt-clankers-provenance-ledger", "adapt-pi-tool-contracts"] [],
-  change "adapt-agent-status-authority" core_role "event-hooks" ["adapt-pi-runtime-event-lifecycle", "adapt-clankers-safe-receipts-artifacts"] ["adapt-host-control-protocol", "add-ratatui-tool-host-surface"],
-  change "adapt-host-control-protocol" product_role "ui-headless" ["adapt-pi-headless-rpc-protocol", "add-ratatui-tool-host-surface", "adapt-agent-status-authority", "adapt-clankers-focused-verification-rails"] ["adapt-openai-codex-jsonl-exec-sdk", "adapt-claude-code-headless-surfaces"],
+  change "adapt-host-control-protocol" product_role "ui-headless" ["adapt-pi-headless-rpc-protocol", "add-ratatui-tool-host-surface", "adapt-clankers-focused-verification-rails"] ["adapt-openai-codex-jsonl-exec-sdk", "adapt-claude-code-headless-surfaces"],
   change "adapt-plugin-action-manifests" core_role "policy-guidance" ["adapt-hermes-plugin-tool-manifests", "adapt-pi-tool-contracts", "adapt-clankers-safe-receipts-artifacts"] ["adapt-host-control-protocol"],
   change "adapt-session-restore-contract" core_role "session-ledger" ["adapt-pi-session-tree-ledger", "adapt-clankers-safe-receipts-artifacts"] ["adapt-host-control-protocol", "adapt-pi-headless-rpc-protocol"],
   change "adapt-hermes-background-work-queues" host_role "concrete-adapters" ["adapt-clankers-injected-effect-services", "adapt-pi-tool-contracts", "adapt-clankers-safe-receipts-artifacts"] [],
@@ -159,8 +158,7 @@ let overlap_entries = [
   overlap "audit-observability" "adapt-clankers-observability-audit-receipts" ["adapt-pi-runtime-event-lifecycle", "adapt-clankers-safe-receipts-artifacts"],
   overlap "model-streaming" "ensure-model-token-thought-streaming" ["adapt-pi-runtime-event-lifecycle", "adapt-pi-headless-rpc-protocol", "adapt-openai-codex-jsonl-exec-sdk", "add-ratatui-tool-host-surface", "adapt-pi-provider-registry-shell", "adapt-clankers-cost-model-routing", "add-multimodal-image-payloads", "evaluate-clankers-provider-contract-parity"],
   overlap "provider-dispatch" "adapt-clankers-injected-effect-services" ["adapt-pi-provider-registry-shell", "adapt-zerostack-provider-registry-hardening", "add-concrete-std-runtime-adapters", "adapt-clankers-cost-model-routing", "add-multimodal-image-payloads", "evaluate-clankers-provider-contract-parity"],
-  overlap "hooks" "adapt-pi-runtime-event-lifecycle" ["adapt-openai-codex-hook-trust-lifecycle", "adapt-claude-code-lifecycle-hooks", "adapt-openai-codex-jsonl-exec-sdk", "adapt-agent-status-authority"],
-  overlap "agent-status" "adapt-agent-status-authority" ["adapt-pi-runtime-event-lifecycle", "adapt-host-control-protocol", "add-ratatui-tool-host-surface", "adapt-claude-code-lifecycle-hooks", "adapt-openai-codex-hook-trust-lifecycle"],
+  overlap "hooks" "adapt-pi-runtime-event-lifecycle" ["adapt-openai-codex-hook-trust-lifecycle", "adapt-claude-code-lifecycle-hooks", "adapt-openai-codex-jsonl-exec-sdk"],
   overlap "manifest-catalog" "adapt-hermes-plugin-tool-manifests" ["adapt-clankers-tool-gateway-delivery", "adapt-plugin-action-manifests", "evaluate-clankers-tool-catalog-packs", "adapt-claude-code-mcp-bridge"],
   overlap "tool-contracts" "adapt-pi-tool-contracts" ["adapt-clankers-injected-effect-services", "adapt-zerostack-hashed-edit-protocol", "adapt-hermes-background-work-queues", "adapt-clankers-tool-gateway-delivery", "add-ratatui-tool-host-surface", "add-concrete-std-runtime-adapters"],
   overlap "policy-guidance" "adapt-hermes-policy-profiles" ["adapt-clankers-prompt-assembly-kit", "adapt-zerostack-permission-kernel", "adapt-zerostack-prompt-mode-profiles", "adapt-clankers-cost-model-routing", "adapt-clankers-agent-definition-trust", "adapt-clankers-process-job-profiles", "adapt-hermes-retrieval-budgets", "adapt-openai-codex-guidance-skill-budget", "adapt-pi-skills-resource-discovery", "adapt-claude-code-layered-memory"],
@@ -176,7 +174,7 @@ let overlap_entries = [
   overlap "continuation-policy" "adapt-clankers-controller-continuation-policy" ["adapt-pi-runtime-event-lifecycle", "adapt-pi-session-tree-ledger", "adapt-openai-codex-jsonl-exec-sdk", "adapt-claude-code-workflow-commands"],
   overlap "session-restore" "adapt-session-restore-contract" ["adapt-pi-session-tree-ledger", "adapt-pi-headless-rpc-protocol", "adapt-host-control-protocol"],
   overlap "remote-admission" "adapt-clankers-remote-admission-receipts" ["align-clash-patterns-with-ucan", "adapt-pi-headless-rpc-protocol", "adapt-claude-code-mcp-bridge"],
-  overlap "host-control" "adapt-host-control-protocol" ["adapt-pi-headless-rpc-protocol", "add-ratatui-tool-host-surface", "adapt-openai-codex-jsonl-exec-sdk", "adapt-claude-code-headless-surfaces", "adapt-agent-status-authority", "adapt-session-restore-contract"],
+  overlap "host-control" "adapt-host-control-protocol" ["adapt-pi-headless-rpc-protocol", "add-ratatui-tool-host-surface", "adapt-openai-codex-jsonl-exec-sdk", "adapt-claude-code-headless-surfaces", "adapt-session-restore-contract"],
   overlap "ui-headless" "adapt-pi-runtime-event-lifecycle" ["adapt-pi-headless-rpc-protocol", "adapt-openai-codex-jsonl-exec-sdk", "adapt-claude-code-headless-surfaces", "add-ratatui-tool-host-surface", "adapt-host-control-protocol"],
 ]
 in
