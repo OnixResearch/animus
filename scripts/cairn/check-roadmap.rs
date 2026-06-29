@@ -55,18 +55,24 @@ const ALLOWED_ROLES: &[&str] = &[
     ROLE_EVALUATION_ONLY,
 ];
 
-const FOUNDATIONAL_SAFETY_CHANGES: &[&str] = &[
+const FOUNDATIONAL_SAFETY_MARKERS: &[&str] = &[
     "wire-cairn-policy-validation",
     "dogfood-cairn-lifecycle-evidence",
     "adapt-clankers-focused-verification-rails",
+    "agent_harness_runtime.cairn_policy.closeout",
+    "agent_harness_runtime.cairn_dogfood.closeout",
+    "agent_harness_runtime.clankers_focused_rails.closeout",
 ];
 
-const RUNTIME_SAFETY_CHANGES: &[&str] = &[
+const RUNTIME_SAFETY_MARKERS: &[&str] = &[
     "introduce-steel-runtime-loop",
     "adapt-clankers-injected-effect-services",
     "adapt-clankers-safe-receipts-artifacts",
     "adapt-pi-runtime-event-lifecycle",
     "adapt-pi-tool-contracts",
+    "agent_harness_runtime.validation",
+    "agent_harness_runtime.clankers_injected_services.closeout",
+    "agent_harness_runtime.clankers_safe_receipts.closeout",
 ];
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -200,17 +206,21 @@ fn parse_roadmap(text: &str) -> Roadmap {
                 id: fields[1].to_string(),
                 requires: parse_csv(fields[2]),
             }),
-            RECORD_KIND_CHANGE if fields.len() == CHANGE_FIELD_COUNT => roadmap.changes.push(Change {
-                id: fields[1].to_string(),
-                role: fields[2].to_string(),
-                tier: fields[3].to_string(),
-                prerequisites: parse_csv(fields[4]),
-            }),
-            RECORD_KIND_OVERLAP if fields.len() == OVERLAP_FIELD_COUNT => roadmap.overlaps.push(Overlap {
-                concept: fields[1].to_string(),
-                owner: fields[2].to_string(),
-                related: parse_csv(fields[3]),
-            }),
+            RECORD_KIND_CHANGE if fields.len() == CHANGE_FIELD_COUNT => {
+                roadmap.changes.push(Change {
+                    id: fields[1].to_string(),
+                    role: fields[2].to_string(),
+                    tier: fields[3].to_string(),
+                    prerequisites: parse_csv(fields[4]),
+                })
+            }
+            RECORD_KIND_OVERLAP if fields.len() == OVERLAP_FIELD_COUNT => {
+                roadmap.overlaps.push(Overlap {
+                    concept: fields[1].to_string(),
+                    owner: fields[2].to_string(),
+                    related: parse_csv(fields[3]),
+                })
+            }
             RECORD_KIND_ACTIVE if fields.len() == ACTIVE_FIELD_COUNT => {
                 roadmap.active_override.push(fields[1].to_string());
             }
@@ -250,7 +260,10 @@ fn parse_csv(text: &str) -> Vec<String> {
         .collect()
 }
 
-fn active_changes_for_validation(root: &Path, roadmap: &Roadmap) -> Result<BTreeSet<String>, String> {
+fn active_changes_for_validation(
+    root: &Path,
+    roadmap: &Roadmap,
+) -> Result<BTreeSet<String>, String> {
     if !roadmap.active_override.is_empty() {
         return Ok(roadmap.active_override.iter().cloned().collect());
     }
@@ -357,7 +370,7 @@ fn validate_roadmap(
     validate_overlaps(roadmap, &change_ids, active_changes, &mut report);
     validate_change_cycles(roadmap, &change_ids, &mut report);
     validate_tier_cycles(roadmap, &tier_ids, &mut report);
-    validate_product_surface_safety(roadmap, &change_ids, &mut report);
+    validate_product_surface_safety(roadmap, &change_ids, &accepted_requirements, &mut report);
     report
 }
 
@@ -434,11 +447,7 @@ fn validate_change_membership(
     }
 }
 
-fn validate_tiers(
-    roadmap: &Roadmap,
-    tier_ids: &BTreeSet<String>,
-    report: &mut ValidationReport,
-) {
+fn validate_tiers(roadmap: &Roadmap, tier_ids: &BTreeSet<String>, report: &mut ValidationReport) {
     for tier in &roadmap.tiers {
         for required_tier in &tier.requires {
             if !tier_ids.contains(required_tier) {
@@ -630,6 +639,7 @@ fn cycle_nodes(
 fn validate_product_surface_safety(
     roadmap: &Roadmap,
     change_ids: &BTreeSet<String>,
+    accepted_requirements: &BTreeSet<String>,
     report: &mut ValidationReport,
 ) {
     let prerequisite_map = prerequisite_map(roadmap);
@@ -637,11 +647,16 @@ fn validate_product_surface_safety(
         if change.role != ROLE_PRODUCT_SURFACE {
             continue;
         }
-        let transitive = transitive_prerequisites(&change.id, &prerequisite_map, change_ids);
-        let has_foundation = FOUNDATIONAL_SAFETY_CHANGES
+        let transitive = transitive_prerequisites(
+            &change.id,
+            &prerequisite_map,
+            change_ids,
+            accepted_requirements,
+        );
+        let has_foundation = FOUNDATIONAL_SAFETY_MARKERS
             .iter()
             .any(|id| transitive.contains(*id));
-        let has_runtime_safety = RUNTIME_SAFETY_CHANGES
+        let has_runtime_safety = RUNTIME_SAFETY_MARKERS
             .iter()
             .any(|id| transitive.contains(*id));
         if !has_foundation || !has_runtime_safety {
@@ -666,6 +681,7 @@ fn transitive_prerequisites(
     start: &str,
     prerequisite_map: &BTreeMap<String, Vec<String>>,
     change_ids: &BTreeSet<String>,
+    accepted_requirements: &BTreeSet<String>,
 ) -> BTreeSet<String> {
     let mut visited = BTreeSet::new();
     let mut pending = VecDeque::new();
@@ -675,15 +691,19 @@ fn transitive_prerequisites(
         }
     }
     while let Some(candidate) = pending.pop_front() {
-        if !change_ids.contains(&candidate) {
+        let known_change = change_ids.contains(&candidate);
+        let known_requirement = accepted_requirements.contains(&candidate);
+        if !known_change && !known_requirement {
             continue;
         }
         if !visited.insert(candidate.clone()) {
             continue;
         }
-        if let Some(prerequisites) = prerequisite_map.get(&candidate) {
-            for prerequisite in prerequisites {
-                pending.push_back(prerequisite.clone());
+        if known_change {
+            if let Some(prerequisites) = prerequisite_map.get(&candidate) {
+                for prerequisite in prerequisites {
+                    pending.push_back(prerequisite.clone());
+                }
             }
         }
     }

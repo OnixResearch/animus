@@ -26,17 +26,18 @@ r[agent_harness_runtime.clankers_focused_rails.lifecycle.drift]
 - THEN it fails with an actionable diagnostic
 - AND it does not require provider credentials or live services.
 
-### Requirement: Steel policy rail
+### Requirement: Steel runtime policy rail
 
-r[agent_harness_runtime.clankers_focused_rails.steel_policy] Animus MUST provide focused Steel policy rails for Nickel/export drift, valid activation, invalid policy fixtures, and enforcement-before-evaluation behavior.
+r[agent_harness_runtime.clankers_focused_rails.steel_policy] Animus MUST provide a focused Steel runtime policy rail that covers current Steel activation, Rust adapter-boundary revalidation, invalid Steel program rejection before adapter dispatch, and an explicit policy-drift hook when a canonical policy source is supplied. Full Nickel-governed Steel runtime policy fixtures remain owned by a separate policy change.
 
 #### Scenario: Steel rail covers positive and negative activation
 
 r[agent_harness_runtime.clankers_focused_rails.steel_policy.fixtures]
-- GIVEN valid and invalid Steel policy fixtures exist
-- WHEN the Steel policy rail runs
-- THEN valid policy activates safely
-- AND invalid policies fail before Steel evaluation or adapter dispatch.
+- GIVEN current positive and negative Steel runtime fixtures exist
+- WHEN the Steel runtime policy rail runs
+- THEN valid Steel programs activate safely through Rust DTO validation
+- AND invalid Steel programs fail before model or tool adapter dispatch
+- AND policy-drift checking is either executed against an explicit canonical source or reported as skipped with a next-best validation path.
 
 ### Requirement: Receipt, artifact, ledger, and service rails
 

@@ -1,0 +1,66 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+readonly RAIL_NAME=steel-runtime-policy
+readonly RECEIPT_SCHEMA=animus.focused-rail.v1
+readonly RECEIPT_DIR=target/cairn/focused-rails
+readonly POLICY_DRIFT_SKIPPED=skipped-explicit-source-unset
+readonly POLICY_DRIFT_CHECKED=checked
+readonly POLICY_NEXT_CHECK_SKIPPED='set CAIRN_POLICY_SOURCE to a canonical generated Cairn policy artifact'
+readonly POLICY_NEXT_CHECK_CHECKED=none
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+
+if [ "${1:-}" = "--root" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  repo_root=$(CDPATH= cd -- "$2" && pwd)
+fi
+
+if ! command -v cargo >/dev/null 2>&1; then
+  printf '%s\n' 'error: cargo is required. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+
+cd "${repo_root}"
+
+policy_drift_status=${POLICY_DRIFT_SKIPPED}
+policy_next_check=${POLICY_NEXT_CHECK_SKIPPED}
+if [ -n "${CAIRN_POLICY_SOURCE:-}" ]; then
+  scripts/cairn/check-policy --root "${repo_root}"
+  policy_drift_status=${POLICY_DRIFT_CHECKED}
+  policy_next_check=${POLICY_NEXT_CHECK_CHECKED}
+fi
+
+cargo test -p animus-steel --locked
+cargo test -p animus-runtime --locked steel_runtime
+cargo test -p animus-runtime --locked invalid_steel
+
+mkdir -p "${RECEIPT_DIR}"
+receipt_path=${RECEIPT_DIR}/${RAIL_NAME}.md
+cat > "${receipt_path}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+boundary: animus-steel activation and Rust adapter-boundary revalidation
+policy_drift: ${policy_drift_status}
+policy_next_check: ${policy_next_check}
+positive_fixtures:
+- animus-steel valid model/tool/respond/stop decision programs
+- animus-runtime steel_runtime positive dispatch programs
+negative_fixtures:
+- animus-steel invalid load, return-shape, and adapter-payload programs
+- animus-runtime invalid_steel no-adapter-dispatch failures
+safe_evidence:
+- fixture names only
+- no raw prompts, provider payloads, credentials, full paths, script source, or tool bodies
+non_claims:
+- this rail does not claim the future Nickel-governed Steel runtime policy is complete
+EOF
+
+printf 'focused rail %s: pass\n' "${RAIL_NAME}"
+printf 'receipt: %s\n' "${receipt_path}"

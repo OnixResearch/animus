@@ -1,0 +1,56 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+readonly RAIL_NAME=injected-services
+readonly RECEIPT_SCHEMA=animus.focused-rail.v1
+readonly RECEIPT_DIR=target/cairn/focused-rails
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+
+if [ "${1:-}" = "--root" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  repo_root=$(CDPATH= cd -- "$2" && pwd)
+fi
+
+if ! command -v cargo >/dev/null 2>&1; then
+  printf '%s\n' 'error: cargo is required. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+
+cd "${repo_root}"
+
+cargo test -p animus-runtime --locked missing_model_service
+cargo test -p animus-runtime --locked missing_tool_service
+cargo test -p animus-runtime --locked model_adapter_failure
+cargo test -p animus-runtime --locked tool_adapter_failure
+cargo test -p animus-runtime --locked blocked_adapter_outcome
+cargo test -p animus-adapters --locked effect::
+
+mkdir -p "${RECEIPT_DIR}"
+receipt_path=${RECEIPT_DIR}/${RAIL_NAME}.md
+cat > "${receipt_path}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+boundary: injected model/tool/effect services and fail-closed runtime outcomes
+positive_fixtures:
+- completed service outcome carries completed receipt
+- valid BLAKE3 safe evidence hash is accepted
+negative_fixtures:
+- missing model service fails closed before tool dispatch
+- missing tool service fails closed before model dispatch
+- model/tool adapter failures stop safely
+- denied adapter outcome emits no success response
+- absent, unavailable, denied, cancelled, timed-out, and malformed-output outcomes are blocking
+safe_evidence:
+- fixture names, outcome classes, and redaction classes only
+- no raw prompts, provider payloads, credentials, full paths, environment values, or unbounded tool output
+EOF
+
+printf 'focused rail %s: pass\n' "${RAIL_NAME}"
+printf 'receipt: %s\n' "${receipt_path}"

@@ -181,7 +181,9 @@
                 || baseName == "check-clankers-product-surfaces"
                 || baseName == "check-plugin-manifest-runtime-neutral"
                 || baseName == "check-request-lifecycle"
+                || baseName == "check-steel-runtime-policy"
                 || baseName == "check-neutral-ledger"
+                || baseName == "check-injected-services"
                 || baseName == "check-release-evidence-index"
                 || baseName == "check-runtime-facade-inventory"
                 || baseName == "check-safe-receipts-artifacts"
@@ -343,6 +345,14 @@
 
           neutral-ledger = cargoCheck "animus-neutral-ledger" [ ] ''
             sh scripts/cairn/check-neutral-ledger --root .
+          '';
+
+          steel-runtime-policy = cargoCheck "animus-steel-runtime-policy" [ ] ''
+            sh scripts/cairn/check-steel-runtime-policy --root .
+          '';
+
+          injected-services = cargoCheck "animus-injected-services" [ ] ''
+            sh scripts/cairn/check-injected-services --root .
           '';
 
           cargo-clippy = cargoCheck "animus-cargo-clippy" [ pkgs.clippy ] ''
