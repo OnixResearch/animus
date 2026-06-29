@@ -1,0 +1,13 @@
+# Tasks
+
+- [ ] [serial] Extend plugin descriptor DTOs with data-only action, event-hook, host-pane entrypoint, and link-handler declarations. r[agent_harness_runtime.plugin_action_manifests.manifest_roles]
+- [ ] [depends:manifest_roles] Add positive manifest-role fixtures and negative duplicate ID, missing title, missing command/artifact label, unsafe label, and unsupported role tests. r[agent_harness_runtime.plugin_action_manifests.manifest_roles.validation]
+- [ ] [serial] Define minimum host capability/version and platform compatibility rules at manifest and entrypoint levels. r[agent_harness_runtime.plugin_action_manifests.compatibility]
+- [ ] [depends:compatibility] Add negative newer-host-required, platform-unsupported, invalid version, and missing required compatibility tests. r[agent_harness_runtime.plugin_action_manifests.compatibility.unsupported]
+- [ ] [serial] Define safe invocation context DTOs for workspace, tab, pane, agent status, worktree/session provenance, request identity, plugin root/config/state labels, and source metadata. r[agent_harness_runtime.plugin_action_manifests.invocation_context]
+- [ ] [depends:invocation_context] Add leak fixtures proving context injection excludes raw prompts, transcripts, credentials, full private paths, unbounded logs, and provider payloads by default. r[agent_harness_runtime.plugin_action_manifests.invocation_context.redacted]
+- [ ] [serial] Define host-owned registry operation contracts for link, unlink, enable, disable, list, action-list, invocation planning, event planning, and pane-entrypoint planning. r[agent_harness_runtime.plugin_action_manifests.host_registry]
+- [ ] [depends:host_registry] Add tests proving manifest validation and invocation planning do not persist registries, install plugins, execute commands, open panes, or read plugin storage. r[agent_harness_runtime.plugin_action_manifests.host_registry.no_execution]
+- [ ] [serial] Define diagnostic classes for link-time warnings, invocation-blocking failures, unknown events, disabled plugins, unknown entrypoints, policy denials, and malformed manifests. r[agent_harness_runtime.plugin_action_manifests.diagnostics]
+- [ ] [depends:diagnostics] Add positive warning-retention tests and negative disabled-plugin, unknown-entrypoint, policy-denied, malformed-context, and unsupported-event invocation tests. r[agent_harness_runtime.plugin_action_manifests.diagnostics.fail_closed]
+- [ ] [depends:manifest_roles.validation,compatibility.unsupported,invocation_context.redacted,host_registry.no_execution,diagnostics.fail_closed] Update docs and run focused manifest tests, workspace checks, Cairn validation, and Cairn gates with reviewable evidence. r[agent_harness_runtime.plugin_action_manifests.verification]

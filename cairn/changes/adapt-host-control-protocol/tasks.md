@@ -1,0 +1,15 @@
+# Tasks
+
+- [ ] [serial] Define UI-neutral host-control DTOs for workspaces, tabs, panes, agents, labels, cwd/provenance summaries, focus, rename, close, revision, and status fields. r[agent_harness_runtime.host_control.topology_dtos]
+- [ ] [depends:topology_dtos] Add positive topology command validation tests and negative missing selector, stale selector, cross-host selector, duplicate label, and unsupported operation tests. r[agent_harness_runtime.host_control.topology_dtos.validation]
+- [ ] [serial] Define selector lifetime rules that distinguish live-session selectors from host-declared durable identities. r[agent_harness_runtime.host_control.selector_lifetime]
+- [ ] [depends:selector_lifetime] Add tests proving callers must re-resolve compact live selectors after topology changes and cannot treat them as durable IDs. r[agent_harness_runtime.host_control.selector_lifetime.not_durable]
+- [ ] [serial] Define bounded output read DTOs for visible, recent, recent-unwrapped, and detector-safe output views with truncation, redaction, line/byte counts, and optional BLAKE3 hashes. r[agent_harness_runtime.host_control.bounded_reads]
+- [ ] [depends:bounded_reads] Add positive bounded-read fixtures and negative unbounded transcript, raw secret, malformed source, and missing truncation metadata tests. r[agent_harness_runtime.host_control.bounded_reads.truncated]
+- [ ] [serial] Define declarative layout export/apply DTOs for pane and split trees, labels, cwd summaries, optional command descriptors, focus, and zoom state. r[agent_harness_runtime.host_control.layout_contract]
+- [ ] [depends:layout_contract] Add malformed layout, unsupported command descriptor, cross-host pane, and false-live-process-preservation negative tests. r[agent_harness_runtime.host_control.layout_contract.apply]
+- [ ] [serial] Define event subscription and one-shot wait DTOs for agent status, output match, pane lifecycle, cancellation, timeout, and host errors. r[agent_harness_runtime.host_control.events_waits]
+- [ ] [depends:events_waits] Add event-order, filter, wait-success, wait-timeout, cancellation, and unknown-event negative tests. r[agent_harness_runtime.host_control.events_waits.timeout]
+- [ ] [serial] Define transport/version envelopes with correlation IDs, typed errors, feature negotiation, and unknown-field handling. r[agent_harness_runtime.host_control.transport_neutral]
+- [ ] [depends:transport_neutral] Add tests proving command validation is transport-neutral and does not require sockets, named pipes, PTYs, terminal rendering, or CLI wrappers. r[agent_harness_runtime.host_control.transport_neutral.no_ipc_dependency]
+- [ ] [depends:topology_dtos.validation,selector_lifetime.not_durable,bounded_reads.truncated,layout_contract.apply,events_waits.timeout,transport_neutral.no_ipc_dependency] Update docs and run focused host-control tests, workspace checks, Cairn validation, and Cairn gates with reviewable evidence. r[agent_harness_runtime.host_control.verification]
