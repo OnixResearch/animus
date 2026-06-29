@@ -26,6 +26,18 @@ r[agent_harness_runtime.openai_codex_opt_in_memories.record_contract.validation]
 - THEN validation rejects the record
 - AND the memory is not eligible for future prompt injection.
 
+### Requirement: Swappable memory storage and extraction boundary
+
+r[agent_harness_runtime.openai_codex_opt_in_memories.adapter_boundary] Memory storage, retrieval, search, update/delete, and provider-assisted extraction MUST be represented as swappable injected adapter contracts that exchange typed memory records, generation requests, extraction outcomes, and availability statuses; reusable core/runtime logic MUST NOT depend on a concrete memory database, vector index, provider extractor, or host path layout.
+
+#### Scenario: Alternate backend preserves memory semantics
+
+r[agent_harness_runtime.openai_codex_opt_in_memories.adapter_boundary.swappable]
+- GIVEN two hosts back memories with different storage or extraction implementations
+- WHEN the same validated memory records, extraction outcomes, and policy decisions reach reusable logic
+- THEN generation eligibility, prompt injection, and ledgers use only typed adapter DTOs and produce equivalent reusable outcomes
+- AND missing adapters produce explicit unavailable outcomes rather than ambient fallback storage, search, or extraction.
+
 ### Requirement: Conservative memory generation eligibility
 
 r[agent_harness_runtime.openai_codex_opt_in_memories.generation_eligibility] Memory generation MUST be denied for threads without consent, disallowed external context, secret-bearing content, failed redaction, or exhausted memory-generation budget.

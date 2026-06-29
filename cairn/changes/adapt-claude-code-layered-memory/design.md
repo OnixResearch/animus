@@ -26,7 +26,13 @@ Existing Animus work on policy profiles and resource discovery covers broad prom
 
 **Rationale:** Auto-memory is useful but dangerous when it silently stores secrets, transient debugging guesses, or user-private text.
 
-### 4. Receipts prove influence without leaking bodies
+### 4. Memory backends are swappable host adapters
+
+**Choice:** Memory source discovery, storage, deletion, import from compatibility files, provider-assisted extraction, and admission are host-owned behaviors behind implementation-free adapters. Reusable crates receive typed descriptors, candidate requests, and admission outcomes; they do not bind to concrete databases, path layouts, provider clients, or file formats.
+
+**Rationale:** Embedders should be able to use in-memory fixtures, JSONL, SQLite, object stores, product-native memory services, or no memory service without changing prompt assembly or descriptor validation.
+
+### 5. Receipts prove influence without leaking bodies
 
 **Choice:** Prompt-influence receipts record descriptor IDs, source labels, trust status, freshness state, inclusion decisions, redaction classes, and BLAKE3 body hashes where body identity is needed.
 
@@ -35,5 +41,6 @@ Existing Animus work on policy profiles and resource discovery covers broad prom
 ## Risks / Trade-offs
 
 - Too much memory can bloat prompts. Require budgets and stale-entry behavior in policy.
+- Adapter boundaries can become accidental storage policy. Keep backend behavior explicit, typed, and replaceable.
 - File-format importers can become authority. Keep `CLAUDE.md` compatibility, if any, in std/adapters and convert into typed descriptors before use.
 - Conflicting guidance can be subtle. Expose deterministic conflict diagnostics rather than silently merging incompatible rules.

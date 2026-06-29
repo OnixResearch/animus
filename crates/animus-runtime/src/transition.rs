@@ -60,6 +60,13 @@ pub enum AdapterOutcome {
         /// Validated tool response.
         response: animus_adapters::ToolResponse,
     },
+    /// Adapter service failed closed with a typed non-completed outcome.
+    Blocked {
+        /// Adapter component that was blocked.
+        component: crate::AdapterComponent,
+        /// Non-completed service outcome.
+        outcome: animus_adapters::OutcomeKind,
+    },
     /// Adapter returned an error.
     Err {
         /// Adapter component that failed.
@@ -224,6 +231,9 @@ pub fn apply_adapter_outcome(state: TurnState, outcome: AdapterOutcome) -> Adapt
     match outcome {
         AdapterOutcome::ModelOk { response } => model_success(state, response),
         AdapterOutcome::ToolOk { response } => tool_success(state, response),
+        AdapterOutcome::Blocked { component, outcome } => {
+            adapter_blocked(state, component, outcome)
+        }
         AdapterOutcome::Err { component, message } => adapter_failure(state, component, message),
     }
 }
@@ -255,6 +265,14 @@ fn tool_success(mut state: TurnState, response: animus_adapters::ToolResponse) -
         .events
         .push(crate::RuntimeEvent::ToolResponded { response });
     AdapterStep::Continue { state }
+}
+
+fn adapter_blocked(
+    state: TurnState,
+    component: crate::AdapterComponent,
+    outcome: animus_adapters::OutcomeKind,
+) -> AdapterStep {
+    adapter_failure(state, component, String::from(outcome.as_str()))
 }
 
 fn adapter_failure(

@@ -4,6 +4,8 @@ pub(super) const TOOL_NAME: &str = "search";
 pub(super) const TOOL_INPUT: &str = "query";
 pub(super) const TOOL_OUTPUT: &str = "tool result";
 pub(super) const ADAPTER_FAILURE: &str = "adapter failed";
+pub(super) const ABSENT_SERVICE: &str = "absent";
+pub(super) const DENIED_SERVICE: &str = "denied";
 pub(super) const INVALID_CONFIG_TURNS: usize = 0;
 pub(super) const NO_ADAPTER_CALLS: usize = 0;
 pub(super) const EXPECTED_ADAPTER_CALLS: usize = 1;
@@ -157,7 +159,31 @@ pub(super) fn run_program_with_followup_turn_budget(
     )
 }
 
-fn runtime_input() -> crate::RuntimeInput {
+pub(super) fn run_program_with_missing_model_service(
+    program: &str,
+    tool: &mut ToolStub,
+) -> crate::RunReport {
+    super::super::run_with_steel_program(
+        program,
+        &runtime_input(),
+        runtime_config_with_followup_turn_budget(),
+        super::super::RuntimeAdapters::<ModelStub, ToolStub>::new_optional(None, Some(tool)),
+    )
+}
+
+pub(super) fn run_program_with_missing_tool_service(
+    program: &str,
+    model: &mut ModelStub,
+) -> crate::RunReport {
+    super::super::run_with_steel_program(
+        program,
+        &runtime_input(),
+        runtime_config_with_followup_turn_budget(),
+        super::super::RuntimeAdapters::<ModelStub, ToolStub>::new_optional(Some(model), None),
+    )
+}
+
+pub(super) fn runtime_input() -> crate::RuntimeInput {
     crate::RuntimeInput::new(SUMMARY).expect("summary should be valid")
 }
 
@@ -166,7 +192,7 @@ fn runtime_config_with_initial_turn_budget() -> crate::RuntimeConfig {
         .expect("one max turn should be valid")
 }
 
-fn runtime_config_with_followup_turn_budget() -> crate::RuntimeConfig {
+pub(super) fn runtime_config_with_followup_turn_budget() -> crate::RuntimeConfig {
     crate::RuntimeConfig::from_max_turn_count(FOLLOWUP_TURN_BUDGET)
         .expect("two max turns should be valid")
 }

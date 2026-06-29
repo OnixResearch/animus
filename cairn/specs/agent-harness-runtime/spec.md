@@ -42,6 +42,206 @@ r[agent_harness_runtime.baseline.adapters.missing_service]
 - THEN runtime returns a typed failure before claiming completed effects
 - AND it does not discover ambient config, read credentials, spawn commands, or contact providers as a fallback.
 
+### Requirement: Runtime dispatch uses injected services
+
+r[agent_harness_runtime.clankers_injected_services.contracts] Animus runtime dispatch MUST consume injected model/provider, tool, host-effect, capability, cancellation, confirmation, and runtime-policy services through typed contracts rather than constructing concrete clients or reading ambient host state.
+
+#### Scenario: Service contracts are explicit
+
+r[agent_harness_runtime.clankers_injected_services.contracts.explicit]
+- GIVEN runtime code needs model, provider, tool, host-effect, confirmation, cancellation, or policy behavior
+- WHEN the boundary is reviewed
+- THEN the behavior is represented by an injected trait, adapter, or typed service handle
+- AND reusable runtime code does not depend on concrete provider clients, credential stores, shell tools, plugin runtimes, or host persistence.
+
+### Requirement: Missing or denied services fail closed
+
+r[agent_harness_runtime.clankers_injected_services.fail_closed] Missing, unavailable, denied, cancelled, timed-out, malformed-output, and completed service outcomes MUST be typed and MUST prevent false success receipts or later side effects when the outcome is not completed.
+
+#### Scenario: Non-completed services block effects
+
+r[agent_harness_runtime.clankers_injected_services.fail_closed.blocks]
+- GIVEN a runtime action requires an injected service
+- WHEN the service is absent, unavailable, denied, cancelled, timed out, or returns malformed output
+- THEN runtime returns the corresponding typed outcome
+- AND no receipt or provenance fact claims the effect completed.
+
+### Requirement: Confirmation denies by default
+
+r[agent_harness_runtime.clankers_injected_services.confirmation] Protected actions that require confirmation MUST deny by default when no broker is injected or when the broker reports unavailable, timed-out, or cancelled.
+
+#### Scenario: Missing confirmation broker prevents protected action
+
+r[agent_harness_runtime.clankers_injected_services.confirmation.default_deny]
+- GIVEN a protected action requires human or host confirmation
+- WHEN no confirmation broker is available
+- THEN runtime records a denied decision
+- AND the protected side effect is not executed.
+
+### Requirement: Provider boundary forbids ambient clients
+
+r[agent_harness_runtime.clankers_injected_services.provider_boundary] Provider dispatch tests or rails MUST prove reusable runtime code does not construct provider clients, read credentials, discover provider config, or open network connections directly.
+
+#### Scenario: Provider dispatch goes through the injected service
+
+r[agent_harness_runtime.clankers_injected_services.provider_boundary.injected]
+- GIVEN a model/provider request is dispatched
+- WHEN focused boundary tests run
+- THEN the runtime calls only the injected service with a validated adapter-neutral request
+- AND ambient credential lookup, provider discovery, network opening, and concrete client construction are absent from reusable runtime code.
+
+### Requirement: Tool and effect boundaries fail before unsafe execution
+
+r[agent_harness_runtime.clankers_injected_services.tool_boundary] Tool/effect dispatch tests MUST cover missing executor, unavailable service, capability denial, cancellation, timeout, and malformed output.
+
+#### Scenario: Tool denial stops the turn safely
+
+r[agent_harness_runtime.clankers_injected_services.tool_boundary.denied]
+- GIVEN a loop decision requests a tool or effect denied by capability policy
+- WHEN dispatch evaluates the decision
+- THEN a typed capability-denied outcome is returned
+- AND later model, provider, or tool calls for that denied effect are not executed.
+
+### Requirement: Effect receipts are redacted
+
+r[agent_harness_runtime.clankers_injected_services.receipts] Service and effect receipts MUST record safe outcome classes and MUST omit raw provider bodies, credentials, environment values, full paths, raw tool arguments, and raw tool output.
+
+#### Scenario: Injected-service closeout is evidenced
+
+r[agent_harness_runtime.clankers_injected_services.closeout]
+- GIVEN the injected service change is ready to archive
+- WHEN closeout validation runs
+- THEN evidence includes provider-boundary tests, tool/effect negative tests, receipt redaction tests, Cairn validation, and Cairn gates
+- AND skipped checks record a blocker and next-best validation.
+
+### Requirement: Safe receipt DTOs
+
+r[agent_harness_runtime.clankers_safe_receipts.dto] Animus runtime and provenance receipts MUST expose safe metadata only, including schema, status, issue code, labels, bounded counts, BLAKE3 hashes, effect or mutation kind, backend/interchange labels, and explicit redaction markers.
+
+#### Scenario: Positive receipts expose only safe evidence
+
+r[agent_harness_runtime.clankers_safe_receipts.positive]
+- GIVEN model, tool, authorization, runtime block, final response, adapter error, or provenance observations contain raw sensitive inputs and outputs
+- WHEN safe receipts are constructed
+- THEN receipts expose only safe labels, bounded counts, status, issue class, redaction markers, and BLAKE3 hashes
+- AND the raw sensitive material is omitted.
+
+### Requirement: Receipt leak rejection
+
+r[agent_harness_runtime.clankers_safe_receipts.rejects_leaks] Receipt validation MUST reject or redact raw prompt text, provider JSON, credential-looking values, absolute path dumps, raw tool input, raw tool output, raw model output, and unbounded output before evidence is accepted.
+
+#### Scenario: Leak fixtures fail closed
+
+r[agent_harness_runtime.clankers_safe_receipts.rejects_leaks.fixture]
+- GIVEN a receipt fixture includes raw prompt text, provider JSON, token-like values, absolute paths, raw tool/model output, or an oversized body
+- WHEN receipt validation runs
+- THEN validation returns a typed redaction error or redacted output
+- AND the unsafe fixture is not accepted as review or release evidence.
+
+### Requirement: BLAKE3 canonical artifact envelopes
+
+r[agent_harness_runtime.clankers_artifact_identity.envelope] Animus-owned artifact identity MUST use BLAKE3 over versioned canonical envelopes containing artifact kind, envelope version, redaction class, normalized payload, and sorted/deduplicated dependency hashes.
+
+#### Scenario: Artifact identity is deterministic
+
+r[agent_harness_runtime.clankers_artifact_identity.deterministic]
+- GIVEN equivalent artifact envelopes with dependencies provided in different orders and with duplicates
+- WHEN artifact identity is computed
+- THEN dependencies are sorted and deduplicated before hashing
+- AND the resulting BLAKE3 hash is stable and round-trips through display/parse validation.
+
+### Requirement: Redaction classes govern review output
+
+r[agent_harness_runtime.clankers_artifact_identity.redaction] Artifact redaction classes MUST determine whether payload bodies may appear in receipts, CLI, or review output.
+
+#### Scenario: Non-public artifacts hide payloads
+
+r[agent_harness_runtime.clankers_artifact_identity.redaction.display]
+- GIVEN an artifact is metadata-only, redacted-payload, or secret
+- WHEN a receipt or review output is rendered
+- THEN payload bodies are omitted or replaced with explicit redaction markers
+- AND only public artifacts may expose payload bodies by default.
+
+### Requirement: Focused receipt and artifact rails
+
+r[agent_harness_runtime.clankers_safe_receipts.rails] Animus MUST provide focused verification rails for safe receipt validation, leak rejection, artifact hash determinism, and redaction-class display behavior before claiming the Clankers receipt/artifact pattern adopted.
+
+#### Scenario: Receipt and artifact closeout is evidenced
+
+r[agent_harness_runtime.clankers_safe_receipts.closeout]
+- GIVEN the safe receipt and artifact identity change is ready to archive
+- WHEN closeout validation runs
+- THEN evidence includes focused receipt/artifact rails, positive and negative tests, dependency checks, Cairn validation, and Cairn gates
+- AND skipped checks record a blocker and next-best validation.
+
+### Requirement: Animus-owned neutral ledger DTOs
+
+r[agent_harness_runtime.clankers_neutral_ledger.dto] Animus MUST define its own neutral session-ledger DTOs for model-visible messages, summaries, usage observations, safe receipts, unsupported entries, replay metadata, and typed replay errors without depending on Clankers session, daemon, TUI, provider, Automerge, or concrete storage types.
+
+#### Scenario: DTOs stay storage-neutral
+
+r[agent_harness_runtime.clankers_neutral_ledger.dto.storage_neutral]
+- GIVEN reusable Animus ledger DTOs are reviewed
+- WHEN dependency and field boundaries are inspected
+- THEN the DTOs do not require concrete storage, filesystem paths, wall-clock construction, daemon events, TUI types, provider-native payloads, or Clankers transcript IDs
+- AND host persistence can wrap them without changing pure replay semantics.
+
+### Requirement: Pure deterministic replay
+
+r[agent_harness_runtime.clankers_neutral_ledger.replay] Ledger replay MUST be a pure deterministic function over in-memory entries that returns model-visible context plus safe metadata counts or a typed error.
+
+#### Scenario: Supported entries replay in order
+
+r[agent_harness_runtime.clankers_neutral_ledger.replay_positive]
+- GIVEN an in-memory ledger containing user, assistant, tool, summary, usage, and safe receipt entries
+- WHEN replay runs
+- THEN model-visible user, assistant, tool, and summary context is returned in deterministic order
+- AND usage and receipt entries contribute safe metadata counts without leaking raw storage details.
+
+### Requirement: Unsupported entries fail closed
+
+r[agent_harness_runtime.clankers_neutral_ledger.unsupported] Replay MUST fail closed on unsupported or adapter-owned ledger entries rather than silently dropping or exposing them.
+
+#### Scenario: Unsupported payloads do not leak
+
+r[agent_harness_runtime.clankers_neutral_ledger.unsupported.redacted]
+- GIVEN replay encounters an unsupported or adapter-owned entry
+- WHEN replay is required before a model request
+- THEN replay returns a typed unsupported-entry error
+- AND the error includes only a safe reason class, not the raw unsupported payload.
+
+### Requirement: Resume requires an injected ledger service
+
+r[agent_harness_runtime.clankers_neutral_ledger.missing_service] Runtime paths that require session resume MUST consume an injected ledger service and MUST fail before adapter dispatch when the service or requested session is unavailable.
+
+#### Scenario: Missing ledger service blocks dispatch
+
+r[agent_harness_runtime.clankers_neutral_ledger.missing_service.blocks]
+- GIVEN a runtime request requires resume semantics
+- WHEN no ledger service is injected or the requested session is missing
+- THEN runtime returns a typed unavailable-service or missing-session failure
+- AND no model or tool adapter call is made.
+
+### Requirement: Pure branch query helpers when parent links exist
+
+r[agent_harness_runtime.clankers_neutral_ledger.branch_queries] If Animus ledger entries include parent/head relationships, branch query helpers MUST be pure and MUST detect duplicate IDs, missing parents, cycles, active branch ancestry, and abandoned/dead-end attempts.
+
+#### Scenario: Malformed graphs fail without panic
+
+r[agent_harness_runtime.clankers_neutral_ledger.branch_queries.invalid]
+- GIVEN a ledger graph has duplicate IDs, a missing parent, a cycle, or reversed-order assumptions
+- WHEN query preparation runs
+- THEN it returns a typed graph validation error
+- AND no panic, infinite traversal, or silent ancestry corruption occurs.
+
+#### Scenario: Ledger closeout is evidenced
+
+r[agent_harness_runtime.clankers_neutral_ledger.closeout]
+- GIVEN the neutral ledger change is ready to archive
+- WHEN closeout validation runs
+- THEN evidence includes focused replay tests, unsupported-entry negative tests, missing-service tests, dependency-isolation checks, Cairn validation, and Cairn gates
+- AND skipped checks record a blocker and next-best validation.
+
 ### Requirement: Steel decision fabric baseline
 
 r[agent_harness_runtime.baseline.steel_fabric] Animus SHOULD use Steel Scheme as the default scriptable turn-decision fabric while Rust boundary code MUST revalidate every selected model, tool, memory, response, or host action before dispatch.

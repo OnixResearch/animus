@@ -79,6 +79,80 @@ fn tool_adapter_failure_stops_safely() {
 }
 
 #[test]
+fn missing_model_service_fails_closed_before_tool_dispatch() {
+    let mut tool = super::support::ToolStub::ok();
+    let result = super::support::run_program_with_missing_model_service(
+        super::support::MODEL_THEN_RESPOND_PROGRAM,
+        &mut tool,
+    );
+
+    assert!(matches!(
+        result.status(),
+        crate::RuntimeStatus::Failed {
+            failure: crate::RuntimeFailure::ModelAdapter { message }
+        } if message == super::support::ABSENT_SERVICE
+    ));
+    assert_eq!(tool.calls, super::support::NO_ADAPTER_CALLS);
+    assert!(
+        result
+            .events()
+            .iter()
+            .all(|event| !matches!(event, crate::RuntimeEvent::ModelResponded { .. }))
+    );
+}
+
+#[test]
+fn missing_tool_service_fails_closed_before_model_dispatch() {
+    let mut model = super::support::ModelStub::ok();
+    let result = super::support::run_program_with_missing_tool_service(
+        super::support::TOOL_THEN_RESPOND_PROGRAM,
+        &mut model,
+    );
+
+    assert!(matches!(
+        result.status(),
+        crate::RuntimeStatus::Failed {
+            failure: crate::RuntimeFailure::ToolAdapter { message }
+        } if message == super::support::ABSENT_SERVICE
+    ));
+    assert_eq!(model.calls, super::support::NO_ADAPTER_CALLS);
+    assert!(
+        result
+            .events()
+            .iter()
+            .all(|event| !matches!(event, crate::RuntimeEvent::ToolResponded { .. }))
+    );
+}
+
+#[test]
+fn blocked_adapter_outcome_stops_without_success_receipt() {
+    let state = crate::TurnState::new(&super::support::runtime_input());
+    let step = crate::apply_adapter_outcome(
+        state,
+        crate::AdapterOutcome::Blocked {
+            component: crate::AdapterComponent::Tool,
+            outcome: animus_adapters::OutcomeKind::Denied,
+        },
+    );
+
+    let crate::AdapterStep::Complete { report } = step else {
+        panic!("blocked adapter outcome should complete the run");
+    };
+    assert!(matches!(
+        report.status(),
+        crate::RuntimeStatus::Failed {
+            failure: crate::RuntimeFailure::ToolAdapter { message }
+        } if message == super::support::DENIED_SERVICE
+    ));
+    assert!(
+        report
+            .events()
+            .iter()
+            .all(|event| !matches!(event, crate::RuntimeEvent::ToolResponded { .. }))
+    );
+}
+
+#[test]
 fn max_turn_exhaustion_fails_closed_without_extra_adapter_call() {
     let mut model = super::support::ModelStub::ok();
     let mut tool = super::support::ToolStub::ok();

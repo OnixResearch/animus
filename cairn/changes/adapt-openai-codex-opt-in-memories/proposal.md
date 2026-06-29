@@ -10,12 +10,13 @@ Animus should adapt the safety semantics: memories are useful context, not autho
 
 - Define opt-in memory use and memory generation policies at user, project, and thread scopes.
 - Add memory record DTOs for summaries, durable facts, preferences, pitfalls, supporting evidence, source scope, and freshness metadata.
+- Define swappable memory storage, retrieval, update/delete, and model-extraction adapter boundaries.
 - Add redaction, external-context exclusion, and budget-gating requirements before thread content can generate memories.
 - Add memory injection records that show which memories were used, skipped, expired, or redacted during prompt assembly.
 - Keep memory storage and model extraction as shell/provider concerns rather than core runtime dependencies.
 
 ## Impact
 
-- **Files**: memory policy DTOs, memory record contracts, prompt assembly integration, redaction/freshness metadata, docs, and positive/negative tests.
-- **Testing**: positive tests for opted-in memory use and generation; negative tests for disabled memories, external-context exclusions, stale memories, secret-bearing content, missing consent, and over-budget injection.
-- **Non-claims**: this change does not make memories authoritative policy, add a concrete memory database, or train models on user data.
+- **Files**: memory policy DTOs, memory record contracts, swappable adapter-boundary contracts, prompt assembly integration, redaction/freshness metadata, docs, and positive/negative tests.
+- **Testing**: positive tests for opted-in memory use and generation; negative tests for disabled memories, external-context exclusions, stale memories, secret-bearing content, missing consent, missing adapters, backend swaps, and over-budget injection.
+- **Non-claims**: this change does not make memories authoritative policy, add a concrete memory database, require a vector store, or train models on user data.

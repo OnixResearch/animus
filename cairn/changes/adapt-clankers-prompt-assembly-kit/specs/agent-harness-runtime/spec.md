@@ -40,16 +40,16 @@ r[agent_harness_runtime.clankers_prompt_assembly.ledger.truncated]
 
 ### Requirement: Ambient discovery remains host-owned
 
-r[agent_harness_runtime.clankers_prompt_assembly.discovery] Reusable prompt assembly MUST NOT perform ambient filesystem, project-file, memory-store, skill-store, URL, or tool-discovery side effects; hosts MUST inject admitted sources or discovery adapters.
+r[agent_harness_runtime.clankers_prompt_assembly.discovery] Reusable prompt assembly MUST NOT perform ambient filesystem, project-file, memory-store, skill-store, URL, or tool-discovery side effects; hosts MUST inject admitted sources or swappable discovery adapters, including memory-source adapters for any memory-backed prompt source.
 
 #### Scenario: Missing discovery adapter is explicit
 
 r[agent_harness_runtime.clankers_prompt_assembly.discovery.missing]
-- GIVEN assembly policy references a source kind that requires host discovery
-- AND no discovery adapter or admitted source exists for that kind
+- GIVEN assembly policy references a source kind that requires host discovery, such as a memory-backed source
+- AND no swappable discovery adapter or admitted source exists for that kind
 - WHEN assembly runs
 - THEN the ledger records an unsupported or unavailable source outcome
-- AND no fallback ambient discovery occurs.
+- AND no fallback ambient discovery, memory-store lookup, or provider extraction occurs.
 
 ### Requirement: Safe prompt assembly receipts
 

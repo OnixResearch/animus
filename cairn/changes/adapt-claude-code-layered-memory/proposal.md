@@ -9,6 +9,7 @@ A native Cairn change is needed so Animus can adapt the UX benefit without adopt
 ## What Changes
 
 - Define typed instruction and memory descriptors with source identity, trust scope, precedence, freshness, and prompt-inclusion policy.
+- Define swappable memory source, store, importer, and admission adapter boundaries so concrete backends stay host-owned.
 - Add deterministic prompt assembly for layered instructions and admitted memory entries with compact attribution.
 - Require host-mediated admission before learned memory can persist or influence a future prompt.
 - Add redacted memory receipts using BLAKE3 hashes for bodies that are not safe to embed.
@@ -16,6 +17,6 @@ A native Cairn change is needed so Animus can adapt the UX benefit without adopt
 
 ## Impact
 
-- **Files**: future memory DTOs, prompt assembly core, std-owned loaders/importers, Nickel policy contracts, receipts, tests, and docs.
-- **Testing**: valid layer composition plus negative tests for untrusted project memory, conflicting precedence, raw secret-looking body leakage, stale entries, and malformed descriptors.
-- **Non-claims**: this change does not copy Claude Code's prompt text, does not make `CLAUDE.md` the Animus source of truth, does not write hidden memory without host admission, and does not add provider-specific memory behavior to reusable core crates.
+- **Files**: future memory DTOs, adapter-boundary contracts, prompt assembly core, std-owned loaders/importers, Nickel policy contracts, receipts, tests, and docs.
+- **Testing**: valid layer composition plus negative tests for untrusted project memory, conflicting precedence, raw secret-looking body leakage, stale entries, malformed descriptors, missing adapters, and backend swap behavior.
+- **Non-claims**: this change does not copy Claude Code's prompt text, does not make `CLAUDE.md` the Animus source of truth, does not write hidden memory without host admission, does not require a built-in memory database, and does not add provider-specific memory behavior to reusable core crates.

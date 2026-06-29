@@ -15,25 +15,172 @@
 
 extern crate alloc;
 
+mod artifact;
+mod effect;
+mod ledger;
 mod manifest;
 mod model;
+mod safe;
 mod status;
 mod tool;
 mod validation;
+mod workspace;
 
+pub use artifact::BLAKE3_HASH_HEX_CHARS;
+
+/// Active envelope version used for Animus-owned BLAKE3 identities.
+pub const ARTIFACT_ENVELOPE_VERSION: u32 = artifact::VERSION;
+/// Largest normalized payload accepted by the no-std DTO layer.
+pub const MAX_ARTIFACT_PAYLOAD_CHARS: usize = artifact::MAX_PAYLOAD_CHARS;
+/// Canonical Animus envelope with deterministic BLAKE3 identity.
+pub type ArtifactEnvelope = artifact::Envelope;
+/// Borrowed inputs used to build a canonical envelope.
+pub type ArtifactEnvelopeDraft<'a> = artifact::Draft<'a>;
+/// Validated lowercase BLAKE3 identity.
+pub type ArtifactHash = artifact::Hash;
+/// Artifact payload class used in canonical envelopes.
+pub type ArtifactKind = artifact::Kind;
+/// Redaction class controlling payload display.
+pub type ArtifactRedactionClass = artifact::RedactionClass;
+/// Errors raised while parsing or building safe artifact envelopes.
+pub type ArtifactValidationError = artifact::Error;
+pub use effect::{
+    CancellationCheck, CancellationDecision, CancellationService, CapabilityClass,
+    CapabilityDecision, CapabilityDecisionRequest, CapabilityDecisionService, ConfirmationBroker,
+    ConfirmationDecision, ConfirmationRequest, HostRequest, HostService, ModelProviderService,
+    OutcomeKind, Reason, Receipt, ReceiptDraft, RedactionMarker, RuntimePolicyDecision,
+    RuntimePolicyRequest, RuntimePolicyService, SAFE_HASH_HEX_CHARS, SafeHash, ServiceKind,
+    ServiceOutcome, ToolExecutionService, default_deny_confirmation,
+};
+pub use ledger::SessionLedgerService;
+
+/// Neutral ledger entry owned by Animus adapter boundaries.
+pub type LedgerEntry = ledger::Entry;
+/// Validated neutral ledger entry identifier.
+pub type LedgerEntryId = ledger::EntryId;
+/// Kind of neutral ledger entry.
+pub type LedgerEntryKind = ledger::EntryKind;
+/// Safe replay metadata counts.
+pub type LedgerReplayCounts = ledger::ReplayCounts;
+/// Replay errors that fail closed without exposing raw adapter-owned payloads.
+pub type LedgerReplayError = ledger::Error;
+/// Successful replay result for neutral entries.
+pub type LedgerReplayReport = ledger::Report;
+/// Replay request sent to an injected session-ledger service.
+pub type LedgerReplayRequest = ledger::Request;
+/// Model-visible context item produced by replay.
+pub type ModelContextItem = ledger::ContextItem;
+/// Model-visible replay role.
+pub type ModelContextRole = ledger::ContextRole;
+
+/// Builds the fail-closed outcome for an absent session-ledger service.
+#[must_use]
+pub fn missing_session_ledger_service(
+    request: &LedgerReplayRequest,
+) -> ServiceOutcome<LedgerReplayReport> {
+    ledger::missing_service(request)
+}
+
+/// Replays neutral entries into model-visible context plus safe counts.
+///
+/// # Errors
+///
+/// Returns [`LedgerReplayError`] when the ledger is empty or contains an
+/// unsupported or adapter-owned entry marker.
+pub fn replay_ledger(entries: &[LedgerEntry]) -> Result<LedgerReplayReport, LedgerReplayError> {
+    ledger::replay(entries)
+}
 pub use manifest::{
     LaunchPolicy, LaunchPolicyDraft, NetworkPolicy, PROHIBITED_PLUGIN_MANIFEST_EFFECTS,
     PluginDescriptor, PluginDescriptorDraft, PluginDescriptorError, RedactionPolicy,
     RedactionPolicyDraft, RuntimeKind, SandboxMode, SandboxRequirements, SandboxRequirementsDraft,
     ToolDescriptor, ToolDescriptorDraft, WorkingDirectoryMode,
 };
-pub use status::{
-    AgentSessionReference, AgentSessionReferenceDraft, AgentSessionReferenceKind,
-    AgentStatusObservation, AgentStatusObservationDraft, AgentStatusObservationKind,
-    AgentStatusPresentation, AgentStatusPresentationDraft, HostStatusObservationBatch,
-    HostStatusRequest, SAFE_EVIDENCE_HASH_HEX_CHARS, SemanticAgentState, StatusSequence, StatusTtl,
-};
+pub use safe::receipt::{BoundedCount, BoundedCountDraft};
+
+/// Largest accepted bounded count value in a safe receipt.
+pub const MAX_SAFE_RECEIPT_COUNT: u32 = safe::receipt::MAX_COUNT;
+/// Largest accepted safe metadata label length.
+pub const MAX_SAFE_RECEIPT_LABEL_CHARS: usize = safe::receipt::MAX_LABEL_CHARS;
+/// Schema identifier attached to safe receipt DTOs.
+pub const SAFE_RECEIPT_SCHEMA: &str = safe::receipt::SCHEMA;
+/// Issue code recorded by a safe receipt.
+pub type ReceiptIssueCode = safe::receipt::IssueCode;
+/// Unsafe material class rejected by safe receipt validation.
+pub type ReceiptLeakClass = safe::receipt::LeakClass;
+/// Effect or mutation class observed by a safe receipt.
+pub type ReceiptOperation = safe::receipt::Operation;
+/// Redaction marker recorded by a safe receipt.
+pub type ReceiptRedaction = safe::receipt::Redaction;
+/// Status class recorded by a safe receipt.
+pub type ReceiptStatus = safe::receipt::Status;
+/// Safe runtime/provenance receipt containing metadata, counts, hashes, and redactions only.
+pub type SafeReceipt = safe::receipt::Record;
+/// Borrowed inputs used to construct a safe receipt.
+pub type SafeReceiptDraft<'a> = safe::receipt::Draft<'a>;
+/// Errors raised by safe receipt validation.
+pub type SafeReceiptError = safe::receipt::Error;
+pub use status::evidence::SAFE_EVIDENCE_HASH_HEX_CHARS;
+
+/// Optional native host session reference.
+pub type AgentSessionReference = status::identity::Reference;
+/// Borrowed session-reference input.
+pub type AgentSessionReferenceDraft<'a> = status::identity::ReferenceDraft<'a>;
+/// Supported session reference kind.
+pub type AgentSessionReferenceKind = status::identity::Kind;
+/// Validated semantic status observation supplied by a host adapter.
+pub type AgentStatusObservation = status::report::Observation;
+/// Borrowed status observation input.
+pub type AgentStatusObservationDraft<'a> = status::report::ObservationDraft<'a>;
+/// Observation authority class supplied by a host integration.
+pub type AgentStatusObservationKind = status::lifecycle::ObservationKind;
+/// Presentation-only status metadata.
+pub type AgentStatusPresentation = status::view::Presentation;
+/// Borrowed presentation metadata input.
+pub type AgentStatusPresentationDraft<'a> = status::view::PresentationDraft<'a>;
+/// Batch returned by a host status-observation adapter.
+pub type HostStatusObservationBatch = status::report::HostObservationBatch;
+/// Request sent to a host status-observation adapter.
+pub type HostStatusRequest = status::report::HostRequest;
+/// Semantic lifecycle state shared by runtime hosts.
+pub type SemanticAgentState = status::lifecycle::SemanticAgent;
+/// Logical monotonic sequence used for deterministic freshness checks.
+pub type StatusSequence = status::lifecycle::Sequence;
+/// Logical TTL for an observation.
+pub type StatusTtl = status::lifecycle::Ttl;
 pub use validation::{AdapterContractError, MAX_ADAPTER_FIELD_CHARS, MIN_ADAPTER_FIELD_CHARS};
+/// Validated speculative workspace descriptor.
+pub type SpeculativeWorkspaceDescriptor = workspace::intent::Descriptor;
+/// Borrowed speculative workspace descriptor input.
+pub type SpeculativeWorkspaceDescriptorDraft<'a> = workspace::intent::DescriptorDraft<'a>;
+/// Abort behavior requested for a workspace.
+pub type WorkspaceAbortPolicy = workspace::rules::AbortPolicy;
+/// Validated workspace adapter capability advertisement.
+pub type WorkspaceAdapterCapabilities = workspace::adapter::Capabilities;
+/// Borrowed workspace adapter capability input.
+pub type WorkspaceAdapterCapabilitiesDraft<'a> = workspace::adapter::CapabilitiesDraft<'a>;
+/// Backend kind advertised by a workspace adapter.
+pub type WorkspaceAdapterKind = workspace::adapter::Kind;
+/// Typed workspace adapter outcome.
+pub type WorkspaceAdapterOutcome = workspace::result::Outcome;
+/// Borrowed workspace adapter outcome input.
+pub type WorkspaceAdapterOutcomeDraft<'a> = workspace::result::OutcomeDraft<'a>;
+/// Workspace adapter outcome kind.
+pub type WorkspaceAdapterOutcomeKind = workspace::result::Kind;
+/// Availability state advertised by a workspace adapter.
+pub type WorkspaceAdapterState = workspace::adapter::State;
+/// Capability class for speculative workspace adapters.
+pub type WorkspaceCapability = workspace::adapter::Capability;
+/// Cleanup behavior required after workspace operations.
+pub type WorkspaceCleanupPolicy = workspace::rules::CleanupPolicy;
+/// Target for a successful workspace commit.
+pub type WorkspaceCommitTarget = workspace::rules::CommitTarget;
+/// Conflict behavior for workspace commit planning.
+pub type WorkspaceConflictPolicy = workspace::rules::ConflictPolicy;
+/// Policy for ignored or local files in speculative workspaces.
+pub type WorkspaceFileInclusionPolicy = workspace::rules::FileInclusionPolicy;
+/// Requested workspace operation.
+pub type WorkspaceOperation = workspace::rules::Operation;
 
 /// Request sent from the harness to a model component.
 pub type ModelRequest = model::Request;

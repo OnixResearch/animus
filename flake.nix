@@ -181,8 +181,10 @@
                 || baseName == "check-clankers-product-surfaces"
                 || baseName == "check-plugin-manifest-runtime-neutral"
                 || baseName == "check-request-lifecycle"
+                || baseName == "check-neutral-ledger"
                 || baseName == "check-release-evidence-index"
                 || baseName == "check-runtime-facade-inventory"
+                || baseName == "check-safe-receipts-artifacts"
                 || baseName == "check-wasm-surface"
                 || pkgs.lib.hasSuffix ".ncl" baseName
                 || pkgs.lib.hasSuffix ".rs" baseName
@@ -333,6 +335,14 @@
 
           wasm-surface = cargoCheck "animus-wasm-surface" [ ] ''
             sh scripts/cairn/check-wasm-surface --root .
+          '';
+
+          safe-receipts-artifacts = cargoCheck "animus-safe-receipts-artifacts" [ ] ''
+            sh scripts/cairn/check-safe-receipts-artifacts --root .
+          '';
+
+          neutral-ledger = cargoCheck "animus-neutral-ledger" [ ] ''
+            sh scripts/cairn/check-neutral-ledger --root .
           '';
 
           cargo-clippy = cargoCheck "animus-cargo-clippy" [ pkgs.clippy ] ''

@@ -1,0 +1,25 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+
+if [ "${1:-}" = "--root" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  repo_root=$(CDPATH= cd -- "$2" && pwd)
+fi
+
+if ! command -v cargo >/dev/null 2>&1; then
+  printf '%s\n' 'error: cargo is required. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+
+cd "${repo_root}"
+
+cargo test -p animus-adapters --locked artifact::
+cargo test -p animus-adapters --locked safe_receipt::

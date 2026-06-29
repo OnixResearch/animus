@@ -1,16 +1,25 @@
 const NO_PLANNING_STEPS_REMAINING: usize = 0;
 const PLANNING_GUARD_EXHAUSTED: &str = "runtime planning step guard exhausted";
 
-/// Borrowed model/tool adapter bundle used by runtime runners.
+/// Borrowed injected model/tool service bundle used by runtime runners.
 pub struct RuntimeAdapters<'a, Model, Tool> {
-    model: &'a mut Model,
-    tool: &'a mut Tool,
+    model: Option<&'a mut Model>,
+    tool: Option<&'a mut Tool>,
 }
 
 impl<'a, Model, Tool> RuntimeAdapters<'a, Model, Tool> {
-    /// Builds a borrowed adapter bundle.
+    /// Builds a borrowed adapter bundle with required model and tool services.
     #[must_use]
     pub fn new(model: &'a mut Model, tool: &'a mut Tool) -> Self {
+        Self {
+            model: Some(model),
+            tool: Some(tool),
+        }
+    }
+
+    /// Builds a borrowed adapter bundle that can represent absent services.
+    #[must_use]
+    pub fn new_optional(model: Option<&'a mut Model>, tool: Option<&'a mut Tool>) -> Self {
         Self { model, tool }
     }
 }
@@ -158,20 +167,33 @@ where
     Tool::Error: core::fmt::Display,
 {
     match request {
-        crate::AdapterRequest::Model { request } => adapters.model.call(&request).map_or_else(
-            |error| crate::AdapterOutcome::Err {
-                component: crate::AdapterComponent::Model,
-                message: error.to_string(),
-            },
-            |response| crate::AdapterOutcome::ModelOk { response },
-        ),
-        crate::AdapterRequest::Tool { request } => adapters.tool.call(&request).map_or_else(
-            |error| crate::AdapterOutcome::Err {
-                component: crate::AdapterComponent::Tool,
-                message: error.to_string(),
-            },
-            |response| crate::AdapterOutcome::ToolOk { response },
-        ),
+        crate::AdapterRequest::Model { request } => match adapters.model.as_deref_mut() {
+            Some(model) => model.call(&request).map_or_else(
+                |error| crate::AdapterOutcome::Err {
+                    component: crate::AdapterComponent::Model,
+                    message: error.to_string(),
+                },
+                |response| crate::AdapterOutcome::ModelOk { response },
+            ),
+            None => missing_service(crate::AdapterComponent::Model),
+        },
+        crate::AdapterRequest::Tool { request } => match adapters.tool.as_deref_mut() {
+            Some(tool) => tool.call(&request).map_or_else(
+                |error| crate::AdapterOutcome::Err {
+                    component: crate::AdapterComponent::Tool,
+                    message: error.to_string(),
+                },
+                |response| crate::AdapterOutcome::ToolOk { response },
+            ),
+            None => missing_service(crate::AdapterComponent::Tool),
+        },
+    }
+}
+
+fn missing_service(component: crate::AdapterComponent) -> crate::AdapterOutcome {
+    crate::AdapterOutcome::Blocked {
+        component,
+        outcome: animus_adapters::OutcomeKind::Absent,
     }
 }
 

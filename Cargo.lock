@@ -59,6 +59,7 @@ name = "animus-adapters"
 version = "0.1.0"
 dependencies = [
  "animus-core",
+ "blake3",
 ]
 
 [[package]]

@@ -1,5 +1,3 @@
-use alloc::string::String;
-
 const NUL_CHARACTER: char = '\0';
 
 /// Smallest accepted non-empty adapter field length after trimming.
@@ -54,21 +52,21 @@ pub enum AdapterContractError {
         /// Boundary field name.
         field: &'static str,
         /// Unsupported value after normalization.
-        value: String,
+        value: alloc::string::String,
     },
     /// A status-observation authority kind was not supported.
     UnsupportedStatusObservationKind {
         /// Boundary field name.
         field: &'static str,
         /// Unsupported value after normalization.
-        value: String,
+        value: alloc::string::String,
     },
     /// A session-reference kind was not supported.
     UnsupportedSessionReferenceKind {
         /// Boundary field name.
         field: &'static str,
         /// Unsupported value after normalization.
-        value: String,
+        value: alloc::string::String,
     },
     /// A safe evidence hash failed deterministic validation.
     InvalidEvidenceHash {
@@ -77,12 +75,26 @@ pub enum AdapterContractError {
         /// Human-readable validation reason.
         reason: &'static str,
     },
+    /// A workspace field value was not supported.
+    UnsupportedWorkspaceValue {
+        /// Boundary field name.
+        field: &'static str,
+        /// Unsupported value after normalization.
+        value: alloc::string::String,
+    },
+    /// A required collection contained no values.
+    EmptyCollection {
+        /// Boundary collection field name.
+        field: &'static str,
+    },
 }
 
 impl core::fmt::Display for AdapterContractError {
     fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Self::EmptyField { field } => write!(formatter, "{field} must not be empty"),
+            Self::EmptyField { field } | Self::EmptyCollection { field } => {
+                write!(formatter, "{field} must not be empty")
+            }
             Self::FieldTooLong {
                 field,
                 max_chars,
@@ -112,6 +124,12 @@ impl core::fmt::Display for AdapterContractError {
             Self::InvalidEvidenceHash { field, reason } => {
                 write!(formatter, "{field} is invalid: {reason}")
             }
+            Self::UnsupportedWorkspaceValue { field, value } => {
+                write!(
+                    formatter,
+                    "{field} contains unsupported workspace value {value}"
+                )
+            }
         }
     }
 }
@@ -138,6 +156,24 @@ pub(crate) fn validate_required_adapter_field(
     }
 
     validate_optional_adapter_field(field_name, field_text)
+}
+
+pub(crate) fn normalized_adapter_field(
+    field_name: FieldName,
+    field_text: &str,
+) -> Result<alloc::string::String, AdapterContractError> {
+    validate_required_adapter_field(field_name, field_text)?;
+    let normalized = field_text.trim();
+    let normalized_chars = normalized.chars().count();
+    assert!(
+        normalized_chars >= MIN_ADAPTER_FIELD_CHARS,
+        "normalized required field must not be empty"
+    );
+    assert!(
+        normalized_chars <= MAX_ADAPTER_FIELD_CHARS,
+        "normalized required field must fit adapter limit"
+    );
+    Ok(alloc::string::String::from(normalized))
 }
 
 pub(crate) fn validate_optional_adapter_field(

@@ -18,19 +18,25 @@ Codex memories are disabled unless enabled by settings or configuration in some 
 
 **Rationale:** Future prompt assembly can explain why a memory was included and whether it may be stale.
 
-### 3. Required behavior does not live only in memory
+### 3. Memory stores and extractors are swappable adapters
+
+**Choice:** Memory storage, search/retrieval, update/delete, and provider-assisted extraction are host/provider behaviors behind implementation-free adapters. Reusable logic receives typed memory records, generation requests, extraction outcomes, and availability statuses; it does not bind to a concrete database, vector index, provider client, or host path layout.
+
+**Rationale:** Embedders should be able to use in-memory fixtures, JSONL, SQLite, vector search, object stores, product-native memory services, provider extractors, or no memory service while keeping the same validation, eligibility, and injection ledgers.
+
+### 4. Required behavior does not live only in memory
 
 **Choice:** Runtime treats memories as optional context. Required rules must come from guidance, policy, or checked-in contracts.
 
 **Rationale:** Memories may be disabled, skipped, stale, or local to one user.
 
-### 4. Generation eligibility is conservative
+### 5. Generation eligibility is conservative
 
 **Choice:** Memory generation is denied for threads without consent, threads containing disallowed external context, secret-bearing content, or content that fails redaction policy.
 
 **Rationale:** Generated memory should not silently persist sensitive or third-party context.
 
-### 5. Injection is budgeted and auditable
+### 6. Injection is budgeted and auditable
 
 **Choice:** Prompt assembly records included, skipped, expired, redacted, and over-budget memories in the context ledger.
 
@@ -39,5 +45,6 @@ Codex memories are disabled unless enabled by settings or configuration in some 
 ## Risks / Trade-offs
 
 - Conservative generation may miss useful context. Users can promote stable rules into guidance files when they must always apply.
+- Adapter boundaries can become implicit product policy. Keep availability, refusal, and backend identity as typed outcomes.
 - Memory extraction can be provider-specific. Keep extractors behind adapters and store typed results.
 - Evidence handles can expose sensitive locations. Store bounded display references and hashes rather than raw bodies when needed.

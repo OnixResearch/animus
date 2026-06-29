@@ -21,8 +21,13 @@ pub use animus_adapters::{
     AgentStatusObservationKind, AgentStatusPresentation, AgentStatusPresentationDraft,
     ComponentAdapter, HostStatusAdapter, HostStatusObservationBatch, HostStatusRequest,
     MAX_ADAPTER_FIELD_CHARS, MIN_ADAPTER_FIELD_CHARS, ModelAdapter, ModelRequest, ModelResponse,
-    SAFE_EVIDENCE_HASH_HEX_CHARS, SemanticAgentState, StatusSequence, StatusTtl, ToolAdapter,
-    ToolRequest, ToolResponse,
+    SAFE_EVIDENCE_HASH_HEX_CHARS, SemanticAgentState, SpeculativeWorkspaceDescriptor,
+    SpeculativeWorkspaceDescriptorDraft, StatusSequence, StatusTtl, ToolAdapter, ToolRequest,
+    ToolResponse, WorkspaceAbortPolicy, WorkspaceAdapterCapabilities,
+    WorkspaceAdapterCapabilitiesDraft, WorkspaceAdapterKind, WorkspaceAdapterOutcome,
+    WorkspaceAdapterOutcomeDraft, WorkspaceAdapterOutcomeKind, WorkspaceAdapterState,
+    WorkspaceCapability, WorkspaceCleanupPolicy, WorkspaceCommitTarget, WorkspaceConflictPolicy,
+    WorkspaceFileInclusionPolicy, WorkspaceOperation,
 };
 pub use animus_core::{AnimusState, CoreError, Intent, MAX_INTENT_CHARS, MIN_INTENT_CHARS};
 

@@ -26,11 +26,44 @@ pub use contract::{
 };
 pub use fabric::LoopFabric;
 pub use shell::{RuntimeAdapters, run_agent_loop, run_with_steel_program};
-pub use status::{
-    AgentStatusSelection, RejectedStatusCandidate, RejectedStatusReason, StatusAuthoritySummary,
-    StatusDecisionExplanation, StatusEvidenceError, StatusEvidenceSummary, StatusFallbackReason,
-    StatusFreshness, select_agent_status, validate_status_evidence_summary,
-};
+/// Pure status-selection result.
+pub type AgentStatusSelection = status::choose::Selection;
+/// Safe summary of a rejected status candidate.
+pub type RejectedStatusCandidate = status::types::RejectedCandidate;
+/// Reason an observation was not selected.
+pub type RejectedStatusReason = status::types::RejectedReason;
+/// Safe summary of a selected status authority.
+pub type StatusAuthoritySummary = status::types::AuthoritySummary;
+/// Bounded explanation for a status selection decision.
+pub type StatusDecisionExplanation = status::explain::DecisionExplanation;
+/// Evidence-summary validation error.
+pub type StatusEvidenceError = status::safe::EvidenceError;
+/// Bounded redacted evidence summary for durable explanations.
+pub type StatusEvidenceSummary = status::safe::EvidenceSummary;
+/// Reason a decision selected fallback or unknown state.
+pub type StatusFallbackReason = status::types::FallbackReason;
+/// Freshness class assigned to a status decision.
+pub type StatusFreshness = status::types::Freshness;
+
+/// Selects one semantic status authority for a target without ambient I/O.
+#[must_use]
+pub fn select_agent_status(
+    request: &animus_adapters::HostStatusRequest,
+    current_sequence: animus_adapters::StatusSequence,
+    observations: &[animus_adapters::AgentStatusObservation],
+) -> AgentStatusSelection {
+    status::choose::select(request, current_sequence, observations)
+}
+
+/// Validates a durable status evidence summary.
+///
+/// # Errors
+///
+/// Returns [`StatusEvidenceError`] when the summary is empty, overlong, or
+/// contains raw or unsafe evidence markers.
+pub fn validate_status_evidence_summary(text: &str) -> Result<(), StatusEvidenceError> {
+    status::safe::validate_summary(text)
+}
 pub use telemetry::{AdapterComponent, RuntimeEvent};
 pub use transition::{
     AdapterOutcome, AdapterRequest, AdapterStep, DecisionStep, TurnPlan, TurnState,

@@ -8,7 +8,7 @@ Animus is accumulating guidance, skills, memories, context references, policy pr
 
 - Define typed prompt-source DTOs for host context, policy profiles, skills, memories, agent definitions, context references, tool metadata, and run objectives.
 - Add pure deterministic prompt assembly over in-memory sources, trust/admission decisions, precedence policy, section budgets, and redaction policy.
-- Keep filesystem discovery, project-file loading, network retrieval, and host-specific source discovery behind injected adapters.
+- Keep filesystem discovery, project-file loading, memory-store lookup, network retrieval, and host-specific source discovery behind swappable injected adapters.
 - Emit prompt assembly ledgers that record included, skipped, truncated, redacted, denied, and unsupported sources with safe source identity and BLAKE3 body hashes.
 - Add positive and negative fixtures for precedence, disabled ambient discovery, over-budget sources, conflicting sources, untrusted project sources, unsupported source kinds, and receipt leaks.
 

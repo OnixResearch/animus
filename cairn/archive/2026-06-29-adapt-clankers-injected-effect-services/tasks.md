@@ -1,0 +1,9 @@
+# Tasks
+
+- [x] [serial] Define injected service contracts for model/provider dispatch, tool execution, host effects, capability decisions, cancellation, confirmation, and runtime policy checks. r[agent_harness_runtime.clankers_injected_services.contracts]
+- [x] [depends:clankers_injected_services.contracts] Add typed outcomes for absent, unavailable, denied, cancelled, timed-out, malformed-output, and completed services. r[agent_harness_runtime.clankers_injected_services.fail_closed]
+- [x] [depends:clankers_injected_services.contracts] Add default-deny confirmation broker behavior for absent, unavailable, timed-out, or cancelled confirmations. r[agent_harness_runtime.clankers_injected_services.confirmation]
+- [x] [depends:clankers_injected_services.fail_closed] Add model/provider dispatch tests proving runtime uses injected services and does not construct provider clients, read credentials, discover provider config, or open network connections directly. r[agent_harness_runtime.clankers_injected_services.provider_boundary]
+- [x] [depends:clankers_injected_services.fail_closed] Add tool/effect tests for missing executor, unavailable service, capability denial, cancellation, timeout, and malformed output. r[agent_harness_runtime.clankers_injected_services.tool_boundary]
+- [x] [depends:clankers_injected_services.fail_closed] Add safe effect receipts that record outcome classes without raw provider, credential, environment, full-path, tool-arg, or tool-output leakage. r[agent_harness_runtime.clankers_injected_services.receipts]
+- [x] [depends:clankers_injected_services.provider_boundary,clankers_injected_services.tool_boundary,clankers_injected_services.receipts] Add focused boundary rails and run workspace tests if touched, Cairn validation, and Cairn gates before archive. r[agent_harness_runtime.clankers_injected_services.closeout]

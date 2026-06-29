@@ -90,11 +90,15 @@ check-nickel-configs
 scripts/cairn/check-clankers-product-surfaces --root .
 scripts/cairn/check-plugin-manifest-runtime-neutral --root .
 scripts/cairn/check-request-lifecycle --root .
+scripts/cairn/check-neutral-ledger --root .
 scripts/cairn/check-release-evidence-index --root .
 scripts/cairn/check-runtime-facade-inventory --root .
+scripts/cairn/check-safe-receipts-artifacts --root .
 scripts/cairn/check-wasm-surface --root .
 nix run .#cargo-tigerstyle -- check
 nix run .#check-nickel-configs
+nix build .#checks.x86_64-linux.neutral-ledger --no-link -L
+nix build .#checks.x86_64-linux.safe-receipts-artifacts --no-link -L
 nix flake check
 ```
 

@@ -50,6 +50,18 @@ r[agent_harness_runtime.claude_code_memory.admission.denied]
 - THEN the candidate is not stored for future prompt influence
 - AND the receipt records the denied admission status without embedding the raw candidate body.
 
+### Requirement: Swappable memory adapter boundary
+
+r[agent_harness_runtime.claude_code_memory.adapter_boundary] Memory discovery, storage, deletion, compatibility import, provider-assisted extraction, and admission MUST be represented as swappable injected adapter contracts that exchange typed descriptor, candidate, and admission DTOs; reusable core/runtime logic MUST NOT depend on a concrete memory database, file format, provider client, or host path layout.
+
+#### Scenario: Memory backend swap preserves reusable behavior
+
+r[agent_harness_runtime.claude_code_memory.adapter_boundary.swappable]
+- GIVEN two hosts provide different memory source, store, importer, or extraction adapters
+- WHEN they supply the same validated descriptors and admission outcomes to prompt assembly
+- THEN reusable Animus logic produces equivalent prompt sections, diagnostics, and receipts
+- AND missing adapters produce explicit unavailable outcomes rather than fallback ambient storage or discovery.
+
 ### Requirement: Safe memory influence receipts
 
 r[agent_harness_runtime.claude_code_memory.receipts] Memory receipts MUST record safe metadata for prompt influence, including descriptor IDs, source labels, trust status, freshness state, inclusion status, redaction classes, and BLAKE3 hashes for redacted bodies, and MUST NOT include raw credentials, raw provider payloads, absolute path dumps, or unbounded prompt text.

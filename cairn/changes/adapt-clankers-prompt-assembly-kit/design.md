@@ -20,9 +20,9 @@ Prompt assembly is the seam where many independent features meet. Clankers' embe
 
 ### 3. Ambient discovery is off by default
 
-**Choice:** Embeddable/default assembly uses host-context-only mode unless a host explicitly injects discovery adapters and admitted sources.
+**Choice:** Embeddable/default assembly uses host-context-only mode unless a host explicitly injects swappable discovery adapters and admitted sources. Memory sources are just one source kind; assembly never chooses a concrete memory store, vector index, importer, or provider extractor.
 
-**Rationale:** Animus should not silently read project files, URLs, memories, or prompt snippets in embedded applications.
+**Rationale:** Animus should not silently read project files, URLs, memories, or prompt snippets in embedded applications, and embedders should be able to replace memory backends without changing prompt assembly.
 
 ### 4. Assembly produces a ledger
 
