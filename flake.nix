@@ -180,6 +180,7 @@
                 || baseName == "README.md"
                 || baseName == "check-clankers-product-surfaces"
                 || baseName == "check-request-lifecycle"
+                || baseName == "check-runtime-facade-inventory"
                 || baseName == "check-wasm-surface"
                 || pkgs.lib.hasSuffix ".ncl" baseName
                 || pkgs.lib.hasSuffix ".rs" baseName
@@ -362,6 +363,24 @@
                 chmod -R u+w source
                 cd source
                 sh scripts/cairn/check-request-lifecycle --root .
+                touch "$out"
+              '';
+
+          runtime-facade-inventory =
+            pkgs.runCommand "animus-runtime-facade-inventory"
+              {
+                nativeBuildInputs = [
+                  pkgs.rustc
+                  pkgs.gcc
+                  pkgs.nickel
+                  pkgs.b3sum
+                ];
+              }
+              ''
+                cp -r ${source} source
+                chmod -R u+w source
+                cd source
+                sh scripts/cairn/check-runtime-facade-inventory --root .
                 touch "$out"
               '';
 
