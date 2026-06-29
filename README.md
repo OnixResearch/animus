@@ -20,7 +20,7 @@ The workspace denies missing docs, `clippy::all`, `clippy::pedantic`, and undocu
 
 Every test suite should include positive and negative tests. Run baseline tests before core changes and repeat them after the change. Avoid process-global state in tests unless explicit isolation is in place.
 
-See [docs/safety-contract.md](docs/safety-contract.md) for the durable repo-owned safety contract, [docs/request-lifecycle.md](docs/request-lifecycle.md) for the maintained request-lifecycle ownership map, and [docs/runtime-facade-inventory.md](docs/runtime-facade-inventory.md) for public export classes.
+See [docs/safety-contract.md](docs/safety-contract.md) for the durable repo-owned safety contract, [docs/request-lifecycle.md](docs/request-lifecycle.md) for the maintained request-lifecycle ownership map, [docs/runtime-facade-inventory.md](docs/runtime-facade-inventory.md) for public export classes, and [docs/release-evidence-index.md](docs/release-evidence-index.md) for the bounded future release-evidence index evaluation.
 
 ## Development shell
 
@@ -87,6 +87,7 @@ check-nickel-configs
 scripts/cairn/check-clankers-product-surfaces --root .
 scripts/cairn/check-plugin-manifest-runtime-neutral --root .
 scripts/cairn/check-request-lifecycle --root .
+scripts/cairn/check-release-evidence-index --root .
 scripts/cairn/check-runtime-facade-inventory --root .
 scripts/cairn/check-wasm-surface --root .
 nix run .#cargo-tigerstyle -- check

@@ -1,0 +1,84 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+readonly SCHEMA_RELATIVE_PATH=cairn/release-evidence-index-schema.ncl
+readonly FIXTURE_DIR=cairn/release-evidence-index-fixtures
+readonly SAMPLE_FIELD=sample_index_lines
+readonly INDEX_FIELD=index_lines
+readonly EXPECTED_FIELD=expected_issue
+readonly EXPECTED_OK=OK
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+
+if [ "${1:-}" = "--root" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  repo_root=$(CDPATH= cd -- "$2" && pwd)
+fi
+
+if ! command -v rustc >/dev/null 2>&1; then
+  printf '%s\n' 'error: rustc is required. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+
+if ! command -v nickel >/dev/null 2>&1; then
+  printf '%s\n' 'error: nickel is required. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+
+rust_source=${script_dir}/check-release-evidence-index.rs
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/animus-release-evidence-index.XXXXXX")
+trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
+
+checker=${tmp_dir}/check-release-evidence-index
+rustc --edition=2021 "${rust_source}" -o "${checker}"
+
+schema_source=${repo_root}/${SCHEMA_RELATIVE_PATH}
+sample_lines=${tmp_dir}/sample.lines
+nickel export --format raw --field "${SAMPLE_FIELD}" "${schema_source}" > "${sample_lines}"
+
+if command -v b3sum >/dev/null 2>&1; then
+  printf 'release_evidence_schema_b3=%s\n' "$(b3sum "${sample_lines}" | awk '{print $1}')"
+else
+  printf '%s\n' 'release_evidence_schema_b3=unavailable:b3sum-not-on-path'
+fi
+
+"${checker}" --index "${sample_lines}"
+printf '%s\n' 'schema sample ok'
+
+if [ -d "${repo_root}/${FIXTURE_DIR}" ]; then
+  for fixture in "${repo_root}/${FIXTURE_DIR}"/*.ncl; do
+    if [ ! -e "${fixture}" ]; then
+      continue
+    fi
+    fixture_name=$(basename "${fixture}" .ncl)
+    fixture_index=${tmp_dir}/${fixture_name}.lines
+    fixture_output=${tmp_dir}/${fixture_name}.out
+    expected_issue=$(nickel export --format raw --field "${EXPECTED_FIELD}" "${fixture}")
+    nickel export --format raw --field "${INDEX_FIELD}" "${fixture}" > "${fixture_index}"
+
+    if [ "${expected_issue}" = "${EXPECTED_OK}" ]; then
+      "${checker}" --index "${fixture_index}" > "${fixture_output}" 2>&1
+      printf 'positive fixture ok: %s\n' "${fixture_name}"
+      continue
+    fi
+
+    if "${checker}" --index "${fixture_index}" > "${fixture_output}" 2>&1; then
+      printf 'error: fixture %s unexpectedly passed\n' "${fixture_name}" >&2
+      cat "${fixture_output}" >&2
+      exit "${FAILURE}"
+    fi
+    if ! grep -F "ERROR ${expected_issue}" "${fixture_output}" >/dev/null 2>&1; then
+      printf 'error: fixture %s did not report expected issue %s\n' "${fixture_name}" "${expected_issue}" >&2
+      cat "${fixture_output}" >&2
+      exit "${FAILURE}"
+    fi
+    printf 'negative fixture ok: %s -> %s\n' "${fixture_name}" "${expected_issue}"
+  done
+fi
+
+printf '%s\n' 'release evidence index: ok'

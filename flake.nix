@@ -181,6 +181,7 @@
                 || baseName == "check-clankers-product-surfaces"
                 || baseName == "check-plugin-manifest-runtime-neutral"
                 || baseName == "check-request-lifecycle"
+                || baseName == "check-release-evidence-index"
                 || baseName == "check-runtime-facade-inventory"
                 || baseName == "check-wasm-surface"
                 || pkgs.lib.hasSuffix ".ncl" baseName
@@ -398,6 +399,24 @@
                 chmod -R u+w source
                 cd source
                 sh scripts/cairn/check-runtime-facade-inventory --root .
+                touch "$out"
+              '';
+
+          release-evidence-index =
+            pkgs.runCommand "animus-release-evidence-index"
+              {
+                nativeBuildInputs = [
+                  pkgs.rustc
+                  pkgs.gcc
+                  pkgs.nickel
+                  pkgs.b3sum
+                ];
+              }
+              ''
+                cp -r ${source} source
+                chmod -R u+w source
+                cd source
+                sh scripts/cairn/check-release-evidence-index --root .
                 touch "$out"
               '';
 
