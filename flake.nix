@@ -179,6 +179,7 @@
                 || baseName == "config.toml"
                 || baseName == "README.md"
                 || baseName == "check-clankers-product-surfaces"
+                || baseName == "check-plugin-manifest-runtime-neutral"
                 || baseName == "check-request-lifecycle"
                 || baseName == "check-runtime-facade-inventory"
                 || baseName == "check-wasm-surface"
@@ -347,6 +348,22 @@
                 chmod -R u+w source
                 cd source
                 sh scripts/cairn/check-clankers-product-surfaces --root .
+                touch "$out"
+              '';
+
+          plugin-manifest-runtime-neutral =
+            pkgs.runCommand "animus-plugin-manifest-runtime-neutral"
+              {
+                nativeBuildInputs = [
+                  pkgs.rustc
+                  pkgs.gcc
+                ];
+              }
+              ''
+                cp -r ${source} source
+                chmod -R u+w source
+                cd source
+                sh scripts/cairn/check-plugin-manifest-runtime-neutral --root .
                 touch "$out"
               '';
 

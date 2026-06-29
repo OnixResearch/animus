@@ -15,10 +15,17 @@
 
 extern crate alloc;
 
+mod manifest;
 mod model;
 mod tool;
 mod validation;
 
+pub use manifest::{
+    LaunchPolicy, LaunchPolicyDraft, NetworkPolicy, PROHIBITED_PLUGIN_MANIFEST_EFFECTS,
+    PluginManifest, PluginManifestDraft, PluginManifestError, RedactionPolicy,
+    RedactionPolicyDraft, RuntimeKind, SandboxMode, SandboxRequirements, SandboxRequirementsDraft,
+    ToolDescriptor, ToolDescriptorDraft, WorkingDirectoryMode,
+};
 pub use validation::{AdapterContractError, MAX_ADAPTER_FIELD_CHARS, MIN_ADAPTER_FIELD_CHARS};
 
 /// Request sent from the harness to a model component.

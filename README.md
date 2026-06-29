@@ -85,6 +85,7 @@ cargo check -p animus --features tui
 cargo tigerstyle check
 check-nickel-configs
 scripts/cairn/check-clankers-product-surfaces --root .
+scripts/cairn/check-plugin-manifest-runtime-neutral --root .
 scripts/cairn/check-request-lifecycle --root .
 scripts/cairn/check-runtime-facade-inventory --root .
 scripts/cairn/check-wasm-surface --root .
