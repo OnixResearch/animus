@@ -1,7 +1,8 @@
 //! Thin compatibility crate for the `animus` workspace.
 //!
 //! New business logic belongs in `animus-core`; swappable component contracts
-//! belong in `animus-adapters`; runtime orchestration belongs in `animus-std`.
+//! belong in `animus-adapters`; reusable agent-loop orchestration belongs in
+//! `animus-runtime`; standard-library host shell concerns belong in `animus-std`.
 //! This crate re-exports the workspace crates for downstream users that want one
 //! dependency while keeping crate barriers explicit in-tree. Disable default
 //! features to use the no-std facade over `animus-core` and `animus-adapters`.
@@ -42,6 +43,10 @@ pub use trellis;
 /// Re-export of the optional Preserves boundary serialization bridge.
 #[cfg(feature = "preserves")]
 pub use animus_preserves;
+
+/// Re-export of the optional reusable agent-loop runtime.
+#[cfg(feature = "runtime")]
+pub use animus_runtime;
 
 /// Re-export of the optional Steel Scheme loop fabric.
 #[cfg(feature = "steel")]

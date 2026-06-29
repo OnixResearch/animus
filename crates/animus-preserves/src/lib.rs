@@ -16,6 +16,7 @@ mod error;
 mod message;
 
 pub use codec::{from_bytes, from_text, to_bytes, to_text};
+pub use message::{RuntimeFailureEnvelope, RuntimeReportStatus};
 
 /// Error returned by Preserves bridge operations.
 pub type CodecError = error::Failure;

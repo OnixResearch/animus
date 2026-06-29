@@ -45,6 +45,7 @@ dependencies = [
  "animus-adapters",
  "animus-core",
  "animus-preserves",
+ "animus-runtime",
  "animus-std",
  "animus-steel",
  "animus-tui",
@@ -69,8 +70,18 @@ name = "animus-preserves"
 version = "0.1.0"
 dependencies = [
  "animus-adapters",
+ "animus-runtime",
  "preserves",
  "serde",
+]
+
+[[package]]
+name = "animus-runtime"
+version = "0.1.0"
+dependencies = [
+ "animus-adapters",
+ "animus-core",
+ "animus-steel",
 ]
 
 [[package]]

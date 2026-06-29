@@ -18,6 +18,7 @@ The source of truth is `cairn/runtime-facade-inventory.ncl`. The focused rail is
 - `animus-adapters` request/response DTOs and validation errors are reusable contracts; `ComponentAdapter`, `ModelAdapter`, and `ToolAdapter` are host-injection surfaces.
 - `animus-preserves` exports are optional reusable bridge contracts.
 - `animus-steel` exports are optional reusable loop-fabric boundary contracts; Steel decisions still revalidate through adapter DTOs before dispatch.
+- `animus-runtime` exports reusable event/report/config DTOs, pure transition helpers, and host-injection dispatch surfaces over caller-supplied fabrics and adapters.
 - `animus-std` exports are shell adapters because they own process-facing runtime loading and shell orchestration.
 - `animus-tui` exports are shell adapters because terminal UI authority belongs outside reusable contracts.
 - The root `animus` crate mirrors these classes through feature-gated reexports.

@@ -303,6 +303,14 @@
             cargo check -p animus --features preserves --locked
           '';
 
+          cargo-runtime = cargoCheck "animus-cargo-runtime" [ ] ''
+            cargo check -p animus-runtime --locked
+          '';
+
+          cargo-runtime-feature = cargoCheck "animus-cargo-runtime-feature" [ ] ''
+            cargo check -p animus --features runtime --locked
+          '';
+
           cargo-steel = cargoCheck "animus-cargo-steel" [ ] ''
             cargo check -p animus-steel --locked
           '';
@@ -447,6 +455,7 @@
                   -p animus \
                   -p animus-adapters \
                   -p animus-core \
+                  -p animus-runtime \
                   -p animus-std \
                   -p animus-steel \
                   -p animus-tui

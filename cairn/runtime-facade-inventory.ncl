@@ -33,6 +33,7 @@ let root = "src/lib.rs" in
 let core = "crates/animus-core/src/lib.rs" in
 let adapters = "crates/animus-adapters/src/lib.rs" in
 let preserves = "crates/animus-preserves/src/lib.rs" in
+let runtime = "crates/animus-runtime/src/lib.rs" in
 let std_shell = "crates/animus-std/src/lib.rs" in
 let steel = "crates/animus-steel/src/lib.rs" in
 let tui = "crates/animus-tui/src/lib.rs" in
@@ -66,6 +67,7 @@ let entry_values = [
   entry "animus::cairn_core" "animus" root reusable none optional_stability "optional Cairn reference reexport",
   entry "animus::trellis" "animus" root reusable none optional_stability "optional Trellis reference reexport",
   entry "animus::animus_preserves" "animus" root reusable none optional_stability "optional Preserves bridge reexport",
+  entry "animus::animus_runtime" "animus" root reusable none optional_stability "optional runtime crate reexport",
   entry "animus::animus_steel" "animus" root reusable none optional_stability "optional Steel fabric reexport",
   entry "animus::animus_tui" "animus" root shell shell_owned optional_stability "optional terminal shell reexport",
 
@@ -85,6 +87,22 @@ let entry_values = [
   entry "animus-adapters::ModelAdapter" "animus-adapters" adapters injection injected stable "model port trait",
   entry "animus-adapters::ToolAdapter" "animus-adapters" adapters injection injected stable "tool port trait",
   entry "animus-adapters::ComponentAdapter" "animus-adapters" adapters injection injected stable "generic component port trait",
+  entry "animus-adapters::LaunchPolicy" "animus-adapters" adapters reusable none stable "manifest launch policy DTO",
+  entry "animus-adapters::LaunchPolicyDraft" "animus-adapters" adapters reusable none stable "manifest launch policy draft DTO",
+  entry "animus-adapters::NetworkPolicy" "animus-adapters" adapters reusable none stable "manifest connectivity policy DTO",
+  entry "animus-adapters::PROHIBITED_PLUGIN_MANIFEST_EFFECTS" "animus-adapters" adapters reusable none stable "manifest prohibited effects constant",
+  entry "animus-adapters::PluginDescriptor" "animus-adapters" adapters reusable none stable "manifest descriptor DTO",
+  entry "animus-adapters::PluginDescriptorDraft" "animus-adapters" adapters reusable none stable "manifest descriptor draft DTO",
+  entry "animus-adapters::PluginDescriptorError" "animus-adapters" adapters reusable none stable "manifest descriptor validation error",
+  entry "animus-adapters::RedactionPolicy" "animus-adapters" adapters reusable none stable "manifest redaction policy DTO",
+  entry "animus-adapters::RedactionPolicyDraft" "animus-adapters" adapters reusable none stable "manifest redaction policy draft DTO",
+  entry "animus-adapters::RuntimeKind" "animus-adapters" adapters reusable none stable "manifest runtime kind DTO",
+  entry "animus-adapters::SandboxMode" "animus-adapters" adapters reusable none stable "manifest isolation mode DTO",
+  entry "animus-adapters::SandboxRequirements" "animus-adapters" adapters reusable none stable "manifest isolation requirements DTO",
+  entry "animus-adapters::SandboxRequirementsDraft" "animus-adapters" adapters reusable none stable "manifest isolation requirements draft DTO",
+  entry "animus-adapters::ToolDescriptor" "animus-adapters" adapters reusable none stable "manifest tool descriptor DTO",
+  entry "animus-adapters::ToolDescriptorDraft" "animus-adapters" adapters reusable none stable "manifest tool descriptor draft DTO",
+  entry "animus-adapters::WorkingDirectoryMode" "animus-adapters" adapters reusable none stable "manifest working-directory DTO",
 
   entry "animus-preserves::from_bytes" "animus-preserves" preserves reusable none optional_stability "Preserves byte decoder",
   entry "animus-preserves::from_text" "animus-preserves" preserves reusable none optional_stability "Preserves text decoder",
@@ -93,6 +111,34 @@ let entry_values = [
   entry "animus-preserves::CodecError" "animus-preserves" preserves reusable none optional_stability "Preserves codec error",
   entry "animus-preserves::BoundaryMessage" "animus-preserves" preserves reusable none optional_stability "Preserves boundary envelope",
   entry "animus-preserves::BoundaryKind" "animus-preserves" preserves reusable none optional_stability "Preserves boundary kind",
+  entry "animus-preserves::RuntimeFailureEnvelope" "animus-preserves" preserves reusable none optional_stability "runtime failure boundary envelope",
+  entry "animus-preserves::RuntimeReportStatus" "animus-preserves" preserves reusable none optional_stability "runtime report status envelope",
+
+  entry "animus-runtime::DEFAULT_MAX_TURNS" "animus-runtime" runtime reusable none stable "runtime max-turn default",
+  entry "animus-runtime::MIN_MAX_TURNS" "animus-runtime" runtime reusable none stable "runtime max-turn lower bound",
+  entry "animus-runtime::MaxTurns" "animus-runtime" runtime reusable none stable "runtime max-turn budget DTO",
+  entry "animus-runtime::RuntimeConfig" "animus-runtime" runtime reusable none stable "runtime execution config DTO",
+  entry "animus-runtime::RuntimeError" "animus-runtime" runtime reusable none stable "runtime validation error",
+  entry "animus-runtime::RuntimeFailure" "animus-runtime" runtime reusable none stable "runtime failure status DTO",
+  entry "animus-runtime::AdapterComponent" "animus-runtime" runtime reusable none stable "runtime adapter component enum",
+  entry "animus-runtime::RuntimeEvent" "animus-runtime" runtime reusable none stable "runtime event DTO",
+  entry "animus-runtime::LoopFabric" "animus-runtime" runtime injection injected stable "caller-supplied loop fabric port",
+  entry "animus-runtime::RuntimeInput" "animus-runtime" runtime reusable none stable "runtime input DTO",
+  entry "animus-runtime::RunReport" "animus-runtime" runtime reusable none stable "runtime report DTO",
+  entry "animus-runtime::RuntimeStatus" "animus-runtime" runtime reusable none stable "runtime status DTO",
+  entry "animus-runtime::RuntimeAdapters" "animus-runtime" runtime injection injected stable "borrowed model tool adapter bundle",
+  entry "animus-runtime::run_agent_loop" "animus-runtime" runtime injection injected stable "runtime loop over caller-supplied ports",
+  entry "animus-runtime::run_with_steel_program" "animus-runtime" runtime injection injected stable "Steel runtime loop over caller-supplied ports",
+  entry "animus-runtime::AdapterOutcome" "animus-runtime" runtime reusable none stable "adapter outcome DTO",
+  entry "animus-runtime::AdapterRequest" "animus-runtime" runtime reusable none stable "adapter request DTO",
+  entry "animus-runtime::AdapterStep" "animus-runtime" runtime reusable none stable "adapter transition DTO",
+  entry "animus-runtime::DecisionStep" "animus-runtime" runtime reusable none stable "decision transition DTO",
+  entry "animus-runtime::TurnPlan" "animus-runtime" runtime reusable none stable "turn planning DTO",
+  entry "animus-runtime::TurnState" "animus-runtime" runtime reusable none stable "turn state DTO",
+  entry "animus-runtime::apply_adapter_outcome" "animus-runtime" runtime reusable none stable "pure adapter transition helper",
+  entry "animus-runtime::apply_decision" "animus-runtime" runtime reusable none stable "pure decision transition helper",
+  entry "animus-runtime::complete_with_fabric_error" "animus-runtime" runtime reusable none stable "pure failure report helper",
+  entry "animus-runtime::plan_next_turn" "animus-runtime" runtime reusable none stable "pure turn planning helper",
 
   entry "animus-std::INTENT_ENV_KEY" "animus-std" std_shell shell shell_owned stable "std shell setting key",
   entry "animus-std::load_runtime" "animus-std" std_shell shell shell_owned stable "std shell runtime loader",

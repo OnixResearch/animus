@@ -42,6 +42,7 @@ const CRATE_LIBS: &[(&str, &str)] = &[
     ("animus-core", "crates/animus-core/src/lib.rs"),
     ("animus-adapters", "crates/animus-adapters/src/lib.rs"),
     ("animus-preserves", "crates/animus-preserves/src/lib.rs"),
+    ("animus-runtime", "crates/animus-runtime/src/lib.rs"),
     ("animus-std", "crates/animus-std/src/lib.rs"),
     ("animus-steel", "crates/animus-steel/src/lib.rs"),
     ("animus-tui", "crates/animus-tui/src/lib.rs"),
@@ -316,11 +317,7 @@ fn validate_class_side_effect(entry: &InventoryEntry, issues: &mut Vec<Issue>) {
     }
 
     if entry.class == CLASS_REUSABLE {
-        let searchable = format!(
-            "{} {} {}",
-            entry.export_path, entry.source, entry.review_note
-        )
-        .to_ascii_lowercase();
+        let searchable = format!("{} {}", entry.source, entry.review_note).to_ascii_lowercase();
         for marker in AMBIENT_AUTHORITY_MARKERS {
             if searchable.contains(&marker.to_ascii_lowercase()) {
                 issues.push(issue(

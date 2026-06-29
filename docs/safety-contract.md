@@ -8,7 +8,8 @@ Animus is structured around a functional-core / imperative-shell (FCIS) split. T
 - `crates/animus-adapters` is the component-boundary crate. It owns implementation-free port traits and typed DTOs that separate the harness from swappable model, tool, memory, and host integrations.
 - `crates/animus-preserves` is the optional Preserves serialization bridge. It owns cross-language text/binary encoding for adapter boundary messages and must not become a required dependency of the core or adapter-contract crates.
 - `crates/animus-steel` is the canonical Steel Scheme loop fabric. It owns script evaluation for agent turn selection and must revalidate every selected action through Rust adapter DTOs before calling model, tool, or response boundaries.
-- `crates/animus-std` is the imperative shell. It owns environment parsing, runtime setup, logging, async work, I/O, default std adapters, and other process-facing concerns.
+- `crates/animus-runtime` is the reusable agent-loop runtime. It owns pure turn-state transitions, ordered runtime events/reports, max-turn handling, and the thin generic shell that calls injected loop fabrics plus model/tool adapters without constructing concrete providers or host services.
+- `crates/animus-std` is the imperative host shell. It owns environment parsing, runtime setup, logging, async work, I/O, default std adapters, and other process-facing concerns.
 - The root `animus` package is a thin compatibility layer. It must not accumulate non-trivial business logic.
 - `docs/request-lifecycle.md` is the maintained ownership map for runtime input, core state, Steel decisions, adapter dispatch, reports, receipts, and future ledger seams.
 - `docs/runtime-facade-inventory.md` and `cairn/runtime-facade-inventory.ncl` classify runtime-facing public exports as reusable contracts, host-injection surfaces, or shell adapters.
@@ -20,11 +21,11 @@ Animus is structured around a functional-core / imperative-shell (FCIS) split. T
 
 ## Wasm compile boundary
 
-The initial Wasm compile boundary targets `wasm32-unknown-unknown` and covers `animus-core`, `animus-adapters`, and root `animus --no-default-features`. The rail is a compile-surface check, not a runtime support claim. It excludes `animus-std`, `animus-steel`, `animus-tui`, `animus-preserves`, terminal UI, provider clients, native persistence, process execution, filesystem authority, credentials, browser APIs, WASI host behavior, plugin loading, and host shell orchestration unless a later Cairn change adds a target-specific contract and validation evidence.
+The initial Wasm compile boundary targets `wasm32-unknown-unknown` and covers `animus-core`, `animus-adapters`, and root `animus --no-default-features`. The rail is a compile-surface check, not a runtime support claim. It excludes `animus-runtime`, `animus-std`, `animus-steel`, `animus-tui`, `animus-preserves`, terminal UI, provider clients, native persistence, process execution, filesystem authority, credentials, browser APIs, WASI host behavior, plugin loading, and host shell orchestration unless a later Cairn change adds a target-specific contract and validation evidence.
 
 ## Config ownership
 
-Parse configuration once at the shell boundary, validate it, and keep the typed result in owned structs such as `RuntimeConfig`. Do not validate-and-drop raw settings and then re-read or re-parse them later.
+Parse configuration once at the shell boundary, validate it, and keep the typed result in owned structs such as `animus-std::RuntimeConfig` for host input loading or `animus-runtime::RuntimeConfig` for loop execution limits. Do not validate-and-drop raw settings and then re-read or re-parse them later.
 
 Repo-owned tool configuration must be authored in Nickel under `config/repo.ncl` with typed contracts. Keep tool-native TOML/YAML files generated from Nickel for consumers that require those formats, and run the generated-config drift check after every config change.
 
@@ -57,11 +58,13 @@ cargo test -p animus-core
 cargo test -p animus-adapters
 cargo test -p animus-preserves
 cargo test -p animus-steel
+cargo test -p animus-runtime
 cargo test -p animus-std
 cargo check --workspace --all-targets
 cargo clippy --workspace --all-targets -- -D warnings
 cargo check -p animus --features preserves
 cargo check -p animus --features steel
+cargo check -p animus --features runtime
 cargo tigerstyle check
 check-nickel-configs
 scripts/cairn/check-clankers-product-surfaces --root .

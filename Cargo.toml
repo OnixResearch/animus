@@ -3,6 +3,7 @@ members = [
   "crates/animus-adapters",
   "crates/animus-core",
   "crates/animus-preserves",
+  "crates/animus-runtime",
   "crates/animus-std",
   "crates/animus-steel",
   "crates/animus-tui",
@@ -12,6 +13,7 @@ default-members = [
   "crates/animus-adapters",
   "crates/animus-core",
   "crates/animus-preserves",
+  "crates/animus-runtime",
   "crates/animus-std",
   "crates/animus-steel",
   "crates/animus-tui",
@@ -65,6 +67,7 @@ basalt-reference = ["dep:basalt"]
 cairn-reference = ["dep:cairn_core"]
 trellis-reference = ["dep:trellis"]
 preserves = ["dep:animus-preserves"]
+runtime = ["std", "dep:animus-runtime"]
 steel = ["dep:animus-steel"]
 tui = ["std", "dep:animus-tui"]
 
@@ -72,6 +75,7 @@ tui = ["std", "dep:animus-tui"]
 animus-adapters = { path = "crates/animus-adapters", version = "0.1.0" }
 animus-core = { path = "crates/animus-core", version = "0.1.0" }
 animus-preserves = { path = "crates/animus-preserves", version = "0.1.0", optional = true }
+animus-runtime = { path = "crates/animus-runtime", version = "0.1.0", optional = true }
 animus-std = { path = "crates/animus-std", version = "0.1.0", optional = true }
 animus-steel = { path = "crates/animus-steel", version = "0.1.0", optional = true }
 animus-tui = { path = "crates/animus-tui", version = "0.1.0", optional = true }

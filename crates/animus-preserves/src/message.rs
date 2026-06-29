@@ -2,6 +2,14 @@ const MODEL_REQUEST_KIND: &str = "model_request";
 const MODEL_RESPONSE_KIND: &str = "model_response";
 const TOOL_REQUEST_KIND: &str = "tool_request";
 const TOOL_RESPONSE_KIND: &str = "tool_response";
+const RUNTIME_EVENT_KIND: &str = "runtime_event";
+const RUNTIME_REPORT_KIND: &str = "runtime_report";
+const RUNTIME_COMPONENT_FIELD: &str = "component";
+const RUNTIME_MAX_TURNS_FIELD: &str = "max_turns";
+const RUNTIME_MAX_TURNS_ZERO_REASON: &str = "max turns must be at least one";
+const MODEL_COMPONENT: &str = "model";
+const TOOL_COMPONENT: &str = "tool";
+const UNKNOWN_COMPONENT_REASON: &str = "unknown runtime adapter component";
 
 /// Boundary message kind.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -14,6 +22,10 @@ pub enum Kind {
     ToolRequest,
     /// Tool response boundary payload.
     ToolResponse,
+    /// Runtime event boundary payload.
+    RuntimeEvent,
+    /// Runtime report boundary payload.
+    RuntimeReport,
 }
 
 impl Kind {
@@ -25,6 +37,115 @@ impl Kind {
             Self::ModelResponse => MODEL_RESPONSE_KIND,
             Self::ToolRequest => TOOL_REQUEST_KIND,
             Self::ToolResponse => TOOL_RESPONSE_KIND,
+            Self::RuntimeEvent => RUNTIME_EVENT_KIND,
+            Self::RuntimeReport => RUNTIME_REPORT_KIND,
+        }
+    }
+}
+
+/// Runtime failure payload encoded inside a runtime report status.
+#[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+pub enum RuntimeFailureEnvelope {
+    /// Loop fabric failed.
+    Fabric {
+        /// Human-readable failure message.
+        message: String,
+    },
+    /// Model adapter failed.
+    ModelAdapter {
+        /// Human-readable failure message.
+        message: String,
+    },
+    /// Tool adapter failed.
+    ToolAdapter {
+        /// Human-readable failure message.
+        message: String,
+    },
+}
+
+impl RuntimeFailureEnvelope {
+    fn from_runtime_failure(failure: &animus_runtime::RuntimeFailure) -> Self {
+        match failure {
+            animus_runtime::RuntimeFailure::Fabric { message } => Self::Fabric {
+                message: message.clone(),
+            },
+            animus_runtime::RuntimeFailure::ModelAdapter { message } => Self::ModelAdapter {
+                message: message.clone(),
+            },
+            animus_runtime::RuntimeFailure::ToolAdapter { message } => Self::ToolAdapter {
+                message: message.clone(),
+            },
+        }
+    }
+
+    fn into_runtime_failure(self) -> animus_runtime::RuntimeFailure {
+        match self {
+            Self::Fabric { message } => animus_runtime::RuntimeFailure::Fabric { message },
+            Self::ModelAdapter { message } => {
+                animus_runtime::RuntimeFailure::ModelAdapter { message }
+            }
+            Self::ToolAdapter { message } => {
+                animus_runtime::RuntimeFailure::ToolAdapter { message }
+            }
+        }
+    }
+}
+
+/// Runtime report status payload.
+#[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+pub enum RuntimeReportStatus {
+    /// Runtime produced a final response.
+    FinalResponse {
+        /// Final response message.
+        message: String,
+    },
+    /// Runtime stopped without a final response.
+    Stopped,
+    /// Runtime exhausted its max-turn limit.
+    MaxTurnsExceeded {
+        /// Configured maximum number of fabric turns.
+        max_turns: usize,
+    },
+    /// Runtime failed through a typed boundary.
+    Failed {
+        /// Failure payload.
+        failure: RuntimeFailureEnvelope,
+    },
+}
+
+impl RuntimeReportStatus {
+    fn from_runtime_status(status: &animus_runtime::RuntimeStatus) -> Self {
+        match status {
+            animus_runtime::RuntimeStatus::FinalResponse { response } => Self::FinalResponse {
+                message: String::from(response.message()),
+            },
+            animus_runtime::RuntimeStatus::Stopped => Self::Stopped,
+            animus_runtime::RuntimeStatus::MaxTurnsExceeded { max_turns } => {
+                Self::MaxTurnsExceeded {
+                    max_turns: *max_turns,
+                }
+            }
+            animus_runtime::RuntimeStatus::Failed { failure } => Self::Failed {
+                failure: RuntimeFailureEnvelope::from_runtime_failure(failure),
+            },
+        }
+    }
+
+    fn into_runtime_status(self) -> Result<animus_runtime::RuntimeStatus, crate::CodecError> {
+        match self {
+            Self::FinalResponse { message } => Ok(animus_runtime::RuntimeStatus::FinalResponse {
+                response: animus_adapters::ModelResponse::new(&message)?,
+            }),
+            Self::Stopped => Ok(animus_runtime::RuntimeStatus::Stopped),
+            Self::MaxTurnsExceeded { max_turns } => {
+                let max_turns = max_turns_from_count(max_turns)?;
+                Ok(animus_runtime::RuntimeStatus::MaxTurnsExceeded {
+                    max_turns: max_turns.get(),
+                })
+            }
+            Self::Failed { failure } => Ok(animus_runtime::RuntimeStatus::Failed {
+                failure: failure.into_runtime_failure(),
+            }),
         }
     }
 }
@@ -54,6 +175,64 @@ pub enum Envelope {
         /// Tool output payload.
         output: String,
     },
+    /// Runtime loop-started event payload.
+    RuntimeLoopStarted {
+        /// Runtime input summary.
+        summary: String,
+    },
+    /// Runtime model-requested event payload.
+    RuntimeModelRequested {
+        /// Model prompt.
+        prompt: String,
+    },
+    /// Runtime model-responded event payload.
+    RuntimeModelResponded {
+        /// Model response message.
+        message: String,
+    },
+    /// Runtime tool-requested event payload.
+    RuntimeToolRequested {
+        /// Tool name.
+        name: String,
+        /// Tool input.
+        input: String,
+    },
+    /// Runtime tool-responded event payload.
+    RuntimeToolResponded {
+        /// Tool output.
+        output: String,
+    },
+    /// Runtime final-response event payload.
+    RuntimeFinalResponse {
+        /// Final response message.
+        message: String,
+    },
+    /// Runtime stopped event payload.
+    RuntimeStopped,
+    /// Runtime max-turn exhaustion event payload.
+    RuntimeMaxTurnsExceeded {
+        /// Configured maximum number of fabric turns.
+        max_turns: usize,
+    },
+    /// Runtime adapter-error event payload.
+    RuntimeAdapterError {
+        /// Adapter component name.
+        component: String,
+        /// Human-readable adapter error message.
+        message: String,
+    },
+    /// Runtime fabric-error event payload.
+    RuntimeFabricError {
+        /// Human-readable fabric error message.
+        message: String,
+    },
+    /// Runtime report payload.
+    RuntimeReport {
+        /// Final runtime status.
+        status: RuntimeReportStatus,
+        /// Ordered runtime event envelopes.
+        events: Vec<Envelope>,
+    },
 }
 
 impl Envelope {
@@ -65,6 +244,17 @@ impl Envelope {
             Self::ModelResponse { .. } => Kind::ModelResponse,
             Self::ToolRequest { .. } => Kind::ToolRequest,
             Self::ToolResponse { .. } => Kind::ToolResponse,
+            Self::RuntimeLoopStarted { .. }
+            | Self::RuntimeModelRequested { .. }
+            | Self::RuntimeModelResponded { .. }
+            | Self::RuntimeToolRequested { .. }
+            | Self::RuntimeToolResponded { .. }
+            | Self::RuntimeFinalResponse { .. }
+            | Self::RuntimeStopped
+            | Self::RuntimeMaxTurnsExceeded { .. }
+            | Self::RuntimeAdapterError { .. }
+            | Self::RuntimeFabricError { .. } => Kind::RuntimeEvent,
+            Self::RuntimeReport { .. } => Kind::RuntimeReport,
         }
     }
 
@@ -98,6 +288,68 @@ impl Envelope {
     pub fn from_tool_response(response: &animus_adapters::ToolResponse) -> Self {
         Self::ToolResponse {
             output: String::from(response.output()),
+        }
+    }
+
+    /// Builds a boundary message from a runtime event.
+    #[must_use]
+    pub fn from_runtime_event(event: &animus_runtime::RuntimeEvent) -> Self {
+        match event {
+            animus_runtime::RuntimeEvent::LoopStarted { summary } => Self::RuntimeLoopStarted {
+                summary: summary.clone(),
+            },
+            animus_runtime::RuntimeEvent::ModelRequested { request } => {
+                Self::RuntimeModelRequested {
+                    prompt: String::from(request.prompt()),
+                }
+            }
+            animus_runtime::RuntimeEvent::ModelResponded { response } => {
+                Self::RuntimeModelResponded {
+                    message: String::from(response.message()),
+                }
+            }
+            animus_runtime::RuntimeEvent::ToolRequested { request } => Self::RuntimeToolRequested {
+                name: String::from(request.name()),
+                input: String::from(request.input()),
+            },
+            animus_runtime::RuntimeEvent::ToolResponded { response } => {
+                Self::RuntimeToolResponded {
+                    output: String::from(response.output()),
+                }
+            }
+            animus_runtime::RuntimeEvent::FinalResponse { response } => {
+                Self::RuntimeFinalResponse {
+                    message: String::from(response.message()),
+                }
+            }
+            animus_runtime::RuntimeEvent::Stopped => Self::RuntimeStopped,
+            animus_runtime::RuntimeEvent::MaxTurnsExceeded { max_turns } => {
+                Self::RuntimeMaxTurnsExceeded {
+                    max_turns: *max_turns,
+                }
+            }
+            animus_runtime::RuntimeEvent::AdapterError { component, message } => {
+                Self::RuntimeAdapterError {
+                    component: component_to_string(*component),
+                    message: message.clone(),
+                }
+            }
+            animus_runtime::RuntimeEvent::FabricError { message } => Self::RuntimeFabricError {
+                message: message.clone(),
+            },
+        }
+    }
+
+    /// Builds a boundary message from a runtime report.
+    #[must_use]
+    pub fn from_runtime_report(report: &animus_runtime::RunReport) -> Self {
+        Self::RuntimeReport {
+            status: RuntimeReportStatus::from_runtime_status(report.status()),
+            events: report
+                .events()
+                .iter()
+                .map(Self::from_runtime_event)
+                .collect(),
         }
     }
 
@@ -172,6 +424,122 @@ impl Envelope {
             )),
         }
     }
+
+    /// Converts this decoded message into a runtime event.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::CodecError`] when the message kind differs or decoded
+    /// payload fields violate adapter/runtime contracts.
+    pub fn try_into_runtime_event(self) -> Result<animus_runtime::RuntimeEvent, crate::CodecError> {
+        match self {
+            Self::RuntimeLoopStarted { summary } => {
+                let input = animus_runtime::RuntimeInput::new(&summary)?;
+                Ok(animus_runtime::RuntimeEvent::LoopStarted {
+                    summary: String::from(input.summary()),
+                })
+            }
+            Self::RuntimeModelRequested { prompt } => {
+                Ok(animus_runtime::RuntimeEvent::ModelRequested {
+                    request: animus_adapters::ModelRequest::new(&prompt)?,
+                })
+            }
+            Self::RuntimeModelResponded { message } => {
+                Ok(animus_runtime::RuntimeEvent::ModelResponded {
+                    response: animus_adapters::ModelResponse::new(&message)?,
+                })
+            }
+            Self::RuntimeToolRequested { name, input } => {
+                Ok(animus_runtime::RuntimeEvent::ToolRequested {
+                    request: animus_adapters::ToolRequest::new(&name, &input)?,
+                })
+            }
+            Self::RuntimeToolResponded { output } => {
+                Ok(animus_runtime::RuntimeEvent::ToolResponded {
+                    response: animus_adapters::ToolResponse::new(&output)?,
+                })
+            }
+            Self::RuntimeFinalResponse { message } => {
+                Ok(animus_runtime::RuntimeEvent::FinalResponse {
+                    response: animus_adapters::ModelResponse::new(&message)?,
+                })
+            }
+            Self::RuntimeStopped => Ok(animus_runtime::RuntimeEvent::Stopped),
+            Self::RuntimeMaxTurnsExceeded { max_turns } => {
+                let max_turns = max_turns_from_count(max_turns)?;
+                Ok(animus_runtime::RuntimeEvent::MaxTurnsExceeded {
+                    max_turns: max_turns.get(),
+                })
+            }
+            Self::RuntimeAdapterError { component, message } => {
+                Ok(animus_runtime::RuntimeEvent::AdapterError {
+                    component: component_from_str(&component)?,
+                    message,
+                })
+            }
+            Self::RuntimeFabricError { message } => {
+                Ok(animus_runtime::RuntimeEvent::FabricError { message })
+            }
+            other => Err(crate::CodecError::wrong_kind(
+                Kind::RuntimeEvent,
+                other.kind(),
+            )),
+        }
+    }
+
+    /// Converts this decoded message into a runtime report.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::CodecError`] when the message kind differs or any
+    /// decoded status/event payload violates adapter/runtime contracts.
+    pub fn try_into_runtime_report(self) -> Result<animus_runtime::RunReport, crate::CodecError> {
+        match self {
+            Self::RuntimeReport { status, events } => {
+                let mut decoded_events = Vec::with_capacity(events.len());
+                for event in events {
+                    decoded_events.push(event.try_into_runtime_event()?);
+                }
+                Ok(animus_runtime::RunReport::new(
+                    decoded_events,
+                    status.into_runtime_status()?,
+                ))
+            }
+            other => Err(crate::CodecError::wrong_kind(
+                Kind::RuntimeReport,
+                other.kind(),
+            )),
+        }
+    }
+}
+
+fn max_turns_from_count(max_turns: usize) -> Result<core::num::NonZeroUsize, crate::CodecError> {
+    core::num::NonZeroUsize::new(max_turns).ok_or(crate::CodecError::RuntimeContract {
+        source: animus_runtime::RuntimeError::InvalidConfig {
+            field: RUNTIME_MAX_TURNS_FIELD,
+            reason: RUNTIME_MAX_TURNS_ZERO_REASON,
+        },
+    })
+}
+
+fn component_to_string(component: animus_runtime::AdapterComponent) -> String {
+    match component {
+        animus_runtime::AdapterComponent::Model => String::from(MODEL_COMPONENT),
+        animus_runtime::AdapterComponent::Tool => String::from(TOOL_COMPONENT),
+    }
+}
+
+fn component_from_str(
+    component: &str,
+) -> Result<animus_runtime::AdapterComponent, crate::CodecError> {
+    match component {
+        MODEL_COMPONENT => Ok(animus_runtime::AdapterComponent::Model),
+        TOOL_COMPONENT => Ok(animus_runtime::AdapterComponent::Tool),
+        _other => Err(crate::CodecError::InvalidRuntimePayload {
+            field: RUNTIME_COMPONENT_FIELD,
+            reason: UNKNOWN_COMPONENT_REASON,
+        }),
+    }
 }
 
 #[cfg(test)]
@@ -184,6 +552,8 @@ mod tests {
     const TOOL_INPUT: &str = "query";
     const TOOL_OUTPUT: &str = "result";
     const BLANK_TEXT: &str = "   ";
+    const UNKNOWN_COMPONENT: &str = "memory";
+    const MAX_TURNS: usize = 2;
 
     #[test]
     fn model_request_round_trips_through_contract() {
@@ -235,6 +605,59 @@ mod tests {
     }
 
     #[test]
+    fn runtime_event_round_trips_through_contract() {
+        let event = animus_runtime::RuntimeEvent::ToolRequested {
+            request: animus_adapters::ToolRequest::new(TOOL_NAME, TOOL_INPUT)
+                .expect("valid request should parse"),
+        };
+        let message = Envelope::from_runtime_event(&event);
+        let decoded = message
+            .try_into_runtime_event()
+            .expect("runtime event should convert");
+
+        assert_eq!(decoded, event);
+    }
+
+    #[test]
+    fn runtime_report_round_trips_through_contract() {
+        let response = animus_adapters::ModelResponse::new(MODEL_MESSAGE)
+            .expect("valid response should parse");
+        let event = animus_runtime::RuntimeEvent::FinalResponse {
+            response: response.clone(),
+        };
+        let report = animus_runtime::RunReport::new(
+            vec![event],
+            animus_runtime::RuntimeStatus::FinalResponse { response },
+        );
+        let message = Envelope::from_runtime_report(&report);
+        let decoded = message
+            .try_into_runtime_report()
+            .expect("runtime report should convert");
+
+        assert_eq!(decoded, report);
+    }
+
+    #[test]
+    fn runtime_report_text_round_trips() {
+        let report = animus_runtime::RunReport::new(
+            vec![animus_runtime::RuntimeEvent::MaxTurnsExceeded {
+                max_turns: MAX_TURNS,
+            }],
+            animus_runtime::RuntimeStatus::MaxTurnsExceeded {
+                max_turns: MAX_TURNS,
+            },
+        );
+        let message = Envelope::from_runtime_report(&report);
+        let text = crate::to_text(&message).expect("runtime report should encode");
+        let decoded = crate::from_text(&text)
+            .expect("runtime report should decode")
+            .try_into_runtime_report()
+            .expect("runtime report should validate");
+
+        assert_eq!(decoded, report);
+    }
+
+    #[test]
     fn wrong_kind_is_rejected() {
         let message = Envelope::ModelResponse {
             message: String::from(MODEL_MESSAGE),
@@ -253,6 +676,24 @@ mod tests {
     }
 
     #[test]
+    fn runtime_wrong_kind_is_rejected() {
+        let message = Envelope::ModelRequest {
+            prompt: String::from(MODEL_PROMPT),
+        };
+        let error = message
+            .try_into_runtime_event()
+            .expect_err("wrong kind should fail");
+
+        assert!(matches!(
+            error,
+            crate::CodecError::WrongKind {
+                expected: RUNTIME_EVENT_KIND,
+                actual: MODEL_REQUEST_KIND,
+            }
+        ));
+    }
+
+    #[test]
     fn invalid_decoded_payload_is_revalidated() {
         let message = Envelope::ModelRequest {
             prompt: String::from(BLANK_TEXT),
@@ -265,6 +706,42 @@ mod tests {
             error,
             crate::CodecError::AdapterContract {
                 source: animus_adapters::AdapterContractError::EmptyField { .. },
+            }
+        ));
+    }
+
+    #[test]
+    fn invalid_runtime_event_payload_is_revalidated() {
+        let message = Envelope::RuntimeModelRequested {
+            prompt: String::from(BLANK_TEXT),
+        };
+        let error = message
+            .try_into_runtime_event()
+            .expect_err("blank runtime request should fail");
+
+        assert!(matches!(
+            error,
+            crate::CodecError::AdapterContract {
+                source: animus_adapters::AdapterContractError::EmptyField { .. },
+            }
+        ));
+    }
+
+    #[test]
+    fn invalid_runtime_component_is_rejected() {
+        let message = Envelope::RuntimeAdapterError {
+            component: String::from(UNKNOWN_COMPONENT),
+            message: String::from(MODEL_MESSAGE),
+        };
+        let error = message
+            .try_into_runtime_event()
+            .expect_err("unknown component should fail");
+
+        assert!(matches!(
+            error,
+            crate::CodecError::InvalidRuntimePayload {
+                field: RUNTIME_COMPONENT_FIELD,
+                reason: UNKNOWN_COMPONENT_REASON,
             }
         ));
     }

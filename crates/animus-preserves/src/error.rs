@@ -6,6 +6,18 @@ pub enum Failure {
         /// Adapter contract validation error.
         source: animus_adapters::AdapterContractError,
     },
+    /// Runtime DTO validation failed while converting a decoded boundary message.
+    RuntimeContract {
+        /// Runtime contract validation error.
+        source: animus_runtime::RuntimeError,
+    },
+    /// A decoded runtime payload used an unsupported tag or field value.
+    InvalidRuntimePayload {
+        /// Payload field name.
+        field: &'static str,
+        /// Human-readable validation reason.
+        reason: &'static str,
+    },
     /// Preserves serialization or deserialization failed.
     Preserves {
         /// Preserves codec error.
@@ -40,6 +52,12 @@ impl From<animus_adapters::AdapterContractError> for Failure {
     }
 }
 
+impl From<animus_runtime::RuntimeError> for Failure {
+    fn from(source: animus_runtime::RuntimeError) -> Self {
+        Self::RuntimeContract { source }
+    }
+}
+
 impl From<preserves::error::Error> for Failure {
     fn from(source: preserves::error::Error) -> Self {
         Self::Preserves { source }
@@ -57,6 +75,12 @@ impl std::fmt::Display for Failure {
         match self {
             Self::AdapterContract { source } => {
                 write!(formatter, "adapter contract failed: {source}")
+            }
+            Self::RuntimeContract { source } => {
+                write!(formatter, "runtime contract failed: {source}")
+            }
+            Self::InvalidRuntimePayload { field, reason } => {
+                write!(formatter, "invalid runtime payload field {field}: {reason}")
             }
             Self::Preserves { source } => write!(formatter, "preserves codec failed: {source}"),
             Self::Utf8 { source } => write!(formatter, "preserves text was not UTF-8: {source}"),
