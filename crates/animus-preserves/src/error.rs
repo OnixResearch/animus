@@ -18,6 +18,34 @@ pub enum Failure {
         /// Human-readable validation reason.
         reason: &'static str,
     },
+    /// Schema version is unsupported for this boundary family.
+    UnsupportedSchemaVersion {
+        /// Stable schema family label.
+        family: &'static str,
+        /// Decoded schema version.
+        version: u16,
+        /// Supported schema version.
+        supported: u16,
+    },
+    /// Schema family does not match the typed boundary payload.
+    WrongSchemaFamily {
+        /// Expected schema family label.
+        expected: &'static str,
+        /// Actual schema family label.
+        actual: &'static str,
+    },
+    /// Compatibility metadata is unsafe to preserve.
+    UnsafeCompatibilityField {
+        /// Safe field class label.
+        field: &'static str,
+        /// Human-readable validation reason.
+        reason: &'static str,
+    },
+    /// Too many compatibility metadata fields were supplied.
+    TooManyCompatibilityFields {
+        /// Maximum number of safe metadata fields.
+        limit: usize,
+    },
     /// Preserves serialization or deserialization failed.
     Preserves {
         /// Preserves codec error.
@@ -82,6 +110,28 @@ impl std::fmt::Display for Failure {
             Self::InvalidRuntimePayload { field, reason } => {
                 write!(formatter, "invalid runtime payload field {field}: {reason}")
             }
+            Self::UnsupportedSchemaVersion {
+                family,
+                version,
+                supported,
+            } => write!(
+                formatter,
+                "unsupported Preserves schema family {family} version {version}; supported version is {supported}"
+            ),
+            Self::WrongSchemaFamily { expected, actual } => write!(
+                formatter,
+                "expected Preserves schema family {expected}; got {actual}"
+            ),
+            Self::UnsafeCompatibilityField { field, reason } => {
+                write!(
+                    formatter,
+                    "unsafe Preserves compatibility field {field}: {reason}"
+                )
+            }
+            Self::TooManyCompatibilityFields { limit } => write!(
+                formatter,
+                "too many Preserves compatibility metadata fields; maximum is {limit}"
+            ),
             Self::Preserves { source } => write!(formatter, "preserves codec failed: {source}"),
             Self::Utf8 { source } => write!(formatter, "preserves text was not UTF-8: {source}"),
             Self::WrongKind { expected, actual } => {

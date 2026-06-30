@@ -142,7 +142,6 @@ let change_entries = [
   change "ensure-model-token-thought-streaming" core_role "concrete-adapters" ["agent_harness_runtime.pi_event_lifecycle.typed_events", "adapt-pi-provider-registry-shell", "evaluate-clankers-provider-contract-parity"] ["adapt-pi-headless-rpc-protocol", "adapt-openai-codex-jsonl-exec-sdk", "add-ratatui-tool-host-surface"],
   change "evaluate-clankers-provider-contract-parity" evaluation_role "evaluation" ["adapt-pi-provider-registry-shell"] [],
   change "evaluate-clankers-tool-catalog-packs" evaluation_role "evaluation" ["adapt-hermes-plugin-tool-manifests", "adapt-pi-tool-contracts"] [],
-  change "harden-preserves-boundary-schemas" core_role "receipt-provenance" ["agent_harness_runtime.validation", "agent_harness_runtime.clankers_neutral_ledger.closeout", "agent_harness_runtime.pi_event_lifecycle.typed_events"] [],
 ]
 in
 
