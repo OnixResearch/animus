@@ -179,6 +179,7 @@
                 || baseName == "config.toml"
                 || baseName == "README.md"
                 || baseName == "check-clankers-product-surfaces"
+                || baseName == "check-clash-ucan-authority"
                 || baseName == "check-plugin-manifest-runtime-neutral"
                 || baseName == "check-request-lifecycle"
                 || baseName == "check-steel-runtime-policy"
@@ -188,8 +189,10 @@
                 || baseName == "check-runtime-facade-inventory"
                 || baseName == "check-safe-receipts-artifacts"
                 || baseName == "check-wasm-surface"
+                || pkgs.lib.hasSuffix ".json" baseName
                 || pkgs.lib.hasSuffix ".ncl" baseName
                 || pkgs.lib.hasSuffix ".rs" baseName
+                || pkgs.lib.hasSuffix ".scm" baseName
                 || pkgs.lib.hasSuffix ".md" baseName
                 || pkgs.lib.hasSuffix ".txt" baseName
               );
@@ -355,6 +358,10 @@
             sh scripts/cairn/check-injected-services --root .
           '';
 
+          clash-ucan-authority = cargoCheck "animus-clash-ucan-authority" [ pkgs.nickel ] ''
+            sh scripts/cairn/check-clash-ucan-authority --root .
+          '';
+
           cargo-clippy = cargoCheck "animus-cargo-clippy" [ pkgs.clippy ] ''
             cargo clippy --workspace --all-targets --locked -- -D warnings
           '';
@@ -449,8 +456,8 @@
               '';
 
           # Octet currently reports a vendored serde_core module-name finding
-          # while linting animus-preserves through a store-backed Cargo vendor
-          # directory. Cargo/clippy checks still cover animus-preserves.
+          # while linting crates that pull Steel/Preserves through a store-backed
+          # Cargo vendor directory. Cargo/clippy checks still cover those crates.
           octet =
             pkgs.runCommand "animus-octet"
               {
@@ -477,7 +484,6 @@
                   -p animus-core \
                   -p animus-runtime \
                   -p animus-std \
-                  -p animus-steel \
                   -p animus-tui
                 mkdir -p "$out"
               '';

@@ -1,0 +1,66 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+readonly RAIL_NAME=clash-ucan-authority
+readonly RECEIPT_SCHEMA=animus.focused-rail.v1
+readonly RECEIPT_DIR=target/cairn/focused-rails
+readonly POLICY_SOURCE=policy/capability/policy.ncl
+readonly POLICY_GENERATED=policy/capability/generated/capability-policy.json
+readonly POLICY_FIELD=capability_policy
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+
+if [ "${1:-}" = "--root" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  repo_root=$(CDPATH= cd -- "$2" && pwd)
+fi
+
+if ! command -v cargo >/dev/null 2>&1; then
+  printf '%s\n' 'error: cargo is required. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+
+if ! command -v nickel >/dev/null 2>&1; then
+  printf '%s\n' 'error: nickel is required. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+
+cd "${repo_root}"
+
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/animus-clash-ucan.XXXXXX")
+trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
+
+nickel export --format json --field "${POLICY_FIELD}" "${POLICY_SOURCE}" > "${tmp_dir}/capability-policy.json"
+diff -u "${POLICY_GENERATED}" "${tmp_dir}/capability-policy.json"
+
+cargo test -p animus-adapters --locked authority::
+
+mkdir -p "${RECEIPT_DIR}"
+receipt_path=${RECEIPT_DIR}/${RAIL_NAME}.md
+cat > "${receipt_path}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+boundary: UCAN-aligned capability request, local caveat, sandbox constraint, and authorization receipt core
+policy_source: ${POLICY_SOURCE}
+policy_export: checked
+positive_fixtures:
+- Nickel capability_policy export matches checked generated JSON
+- authorized model/tool/exec requests require matching contract, resource, ability, local caveat, and UCAN grant evidence
+- sandbox-constrained dispatch records descriptor hashes only
+negative_fixtures:
+- missing UCAN grants, contract mismatches, local denials, malformed/unavailable sandboxes, malformed requests, and receipt leak attempts fail closed
+safe_evidence:
+- fixture names and hashes only
+- no raw prompts, provider payloads, credentials, full paths, script source, tool bodies, or model outputs
+non_claims:
+- this rail does not adopt Clash Starlark policy, brush shell, plugin machinery, editor/LSP surfaces, installer flows, audit schema, or precedence-as-authority behavior
+EOF
+
+printf 'focused rail %s: pass\n' "${RAIL_NAME}"
+printf 'receipt: %s\n' "${receipt_path}"

@@ -45,12 +45,16 @@ pub type ArtifactRedactionClass = artifact::RedactionClass;
 /// Errors raised while parsing or building safe artifact envelopes.
 pub type ArtifactValidationError = artifact::Error;
 pub use effect::{
-    CancellationCheck, CancellationDecision, CancellationService, CapabilityClass,
-    CapabilityDecision, CapabilityDecisionRequest, CapabilityDecisionService, ConfirmationBroker,
-    ConfirmationDecision, ConfirmationRequest, HostRequest, HostService, ModelProviderService,
-    OutcomeKind, Reason, Receipt, ReceiptDraft, RedactionMarker, RuntimePolicyDecision,
-    RuntimePolicyRequest, RuntimePolicyService, SAFE_HASH_HEX_CHARS, SafeHash, ServiceKind,
-    ServiceOutcome, ToolExecutionService, default_deny_confirmation,
+    AuthorizationContext, AuthorizationIssue, AuthorizationLeak, AuthorizationReceipt,
+    AuthorizationStatus, CancellationCheck, CancellationDecision, CancellationService,
+    CapabilityClass, CapabilityDecision, CapabilityDecisionRequest, CapabilityDecisionService,
+    CapabilityPolicyContract, CapabilityRequest, CaveatSummary, ConfirmationBroker,
+    ConfirmationDecision, ConfirmationRequest, GuardedAction, HostRequest, HostService,
+    LocalCaveat, LocalCaveatDecision, LocalPolicyLayer, ModelProviderService, OutcomeKind, Reason,
+    Receipt, ReceiptDraft, RedactionMarker, RuntimePolicyDecision, RuntimePolicyRequest,
+    RuntimePolicyService, SAFE_HASH_HEX_CHARS, SafeHash, SandboxConstraint, SandboxState,
+    ServiceKind, ServiceOutcome, ToolExecutionService, UcanGrant, authorize_capability,
+    default_deny_confirmation, validate_authorization_receipt_text,
 };
 pub use ledger::SessionLedgerService;
 
