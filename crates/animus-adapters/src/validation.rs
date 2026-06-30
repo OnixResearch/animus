@@ -89,6 +89,13 @@ pub enum AdapterContractError {
         /// Unsupported value after normalization.
         value: alloc::string::String,
     },
+    /// A model-router field value was not supported.
+    UnsupportedRouterValue {
+        /// Boundary field name.
+        field: &'static str,
+        /// Unsupported value after normalization.
+        value: alloc::string::String,
+    },
     /// A required collection contained no values.
     EmptyCollection {
         /// Boundary collection field name.
@@ -141,6 +148,12 @@ impl core::fmt::Display for AdapterContractError {
                 write!(
                     formatter,
                     "{field} contains unsupported dataspace value {value}"
+                )
+            }
+            Self::UnsupportedRouterValue { field, value } => {
+                write!(
+                    formatter,
+                    "{field} contains unsupported model-router value {value}"
                 )
             }
         }

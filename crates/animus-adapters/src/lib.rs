@@ -21,6 +21,7 @@ mod effect;
 mod ledger;
 mod manifest;
 mod model;
+mod router;
 mod safe;
 mod status;
 mod tool;
@@ -197,6 +198,55 @@ pub type ModelRequest = model::Request;
 
 /// Response returned by a model component.
 pub type ModelResponse = model::Response;
+pub use router::{
+    DurationBucket, FallbackEligibility, FallbackPolicy, OutputContract, PrivacyBand, QuorumClass,
+    RouteFamily, RouteResult, RouteResultStatus, SelectionDenial, SignalBand, TaskShape,
+    select_recipe,
+};
+/// Hard model-router execution bounds.
+pub type ExecutionBounds = router::Bounds;
+/// Borrowed fields used to validate model-router execution bounds.
+pub type ExecutionBoundsDraft<'a> = router::BoundsDraft<'a>;
+/// Safe model catalog projection for router selection.
+pub type ModelCatalogEntry = router::CatalogEntry;
+/// Borrowed safe model catalog projection fields.
+pub type ModelCatalogEntryDraft<'a> = router::CatalogEntryDraft<'a>;
+/// Model role used inside a router recipe.
+pub type ModelRole = router::Role;
+/// Borrowed request-signal projection fields.
+pub type RequestSignalDraft<'a> = router::SignalDraft<'a>;
+/// Bounded request signals for router selection.
+pub type RequestSignals = router::Signals;
+/// Router budget state.
+pub type RouterBudget = router::Budget;
+/// Safe router-recipe receipt.
+pub type RouterReceipt = router::Receipt;
+/// Borrowed fields used to build a safe router receipt.
+pub type RouterReceiptDraft<'a> = router::ReceiptDraft<'a>;
+/// Router receipt leak class.
+pub type RouterReceiptLeak = router::ReceiptLeak;
+/// Router recipe contract checked before provider dispatch.
+pub type RouterRecipe = router::Recipe;
+/// Borrowed fields used to validate a router recipe.
+pub type RouterRecipeDraft<'a> = router::RecipeDraft<'a>;
+/// Router receipt redaction marker.
+pub type RouterRedaction = router::Redaction;
+/// Router validation error.
+pub type RouterValidationError = router::ValidationError;
+/// Selected router plan.
+pub type SelectedRoutePlan = router::SelectedPlan;
+/// Timeout/deadline class for bounded host execution.
+pub type TimeoutClass = router::DeadlineClass;
+/// Validates safe router receipt text for known leak sentinels.
+///
+/// # Errors
+///
+/// Returns [`RouterReceiptLeak`] when unsafe receipt text is detected.
+pub fn validate_router_receipt_text(text: &str) -> Result<(), RouterReceiptLeak> {
+    router::validate_receipt_text(text)
+}
+/// Borrowed final-output validation facts.
+pub type RouteResultDraft<'a> = router::outcome::ResultDraft<'a>;
 
 /// Request sent from the harness to a tool component.
 pub type ToolRequest = tool::Request;
