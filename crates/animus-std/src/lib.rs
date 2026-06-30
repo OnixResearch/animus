@@ -12,9 +12,16 @@
 #![allow(clippy::module_name_repetitions)]
 #![forbid(unsafe_code)]
 
+mod adapters;
 mod config;
 mod execution;
 
+pub use adapters::{
+    AdapterDescriptor, AdapterFamily, AdapterIssue, AdapterPlan, AdapterVerdict, CredentialState,
+    EffectExposure, EffectPrerequisites, FixtureAdapters, FixtureKind, FixtureModelAdapter,
+    FixtureOutput, FixtureToolAdapter, GateState, OutputState, TerminationState,
+    plan_adapter_effect,
+};
 pub use config::{INTENT_ENV_KEY, load_runtime};
 pub use execution::{RunError, RunReport, SummaryModelAdapter, run, run_with_model};
 

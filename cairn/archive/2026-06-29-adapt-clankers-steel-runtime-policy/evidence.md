@@ -2,10 +2,10 @@
 
 ## Baseline
 
-- `nix run path:/home/brittonr/git/animus#cairn -- gate proposal adapt-clankers-steel-runtime-policy --root /home/brittonr/git/animus`: PASS.
-- `nix run path:/home/brittonr/git/animus#cairn -- gate design adapt-clankers-steel-runtime-policy --root /home/brittonr/git/animus`: PASS.
-- `nix run path:/home/brittonr/git/animus#cairn -- gate tasks adapt-clankers-steel-runtime-policy --root /home/brittonr/git/animus`: PASS.
-- `nix develop -c scripts/cairn/check-steel-runtime-policy --root /home/brittonr/git/animus`: PASS before closeout edits; receipt recorded the pre-existing future-policy non-claim.
+- `nix run path:$ROOT#cairn -- gate proposal adapt-clankers-steel-runtime-policy --root $ROOT`: PASS.
+- `nix run path:$ROOT#cairn -- gate design adapt-clankers-steel-runtime-policy --root $ROOT`: PASS.
+- `nix run path:$ROOT#cairn -- gate tasks adapt-clankers-steel-runtime-policy --root $ROOT`: PASS.
+- `nix develop -c scripts/cairn/check-steel-runtime-policy --root $ROOT`: PASS before closeout edits; receipt recorded the pre-existing future-policy non-claim.
 - `nix develop -c scripts/config/check-nickel-configs`: PASS.
 
 ## Implementation evidence
@@ -22,7 +22,7 @@
 - `nix develop -c cargo fmt --check`: PASS.
 - `nix develop -c cargo clippy -p animus-steel --all-targets --locked -- -D warnings`: PASS.
 - `nix develop -c scripts/config/check-nickel-configs`: PASS.
-- `nix develop -c scripts/cairn/check-steel-runtime-policy --root /home/brittonr/git/animus`: PASS after closeout edits; covers Nickel export drift, generated-policy activation, invalid policy fixtures, runtime policy-denial no-dispatch, positive Steel runtime dispatch, and invalid Steel no-dispatch fixtures.
+- `nix develop -c scripts/cairn/check-steel-runtime-policy --root $ROOT`: PASS after closeout edits; covers Nickel export drift, generated-policy activation, invalid policy fixtures, runtime policy-denial no-dispatch, positive Steel runtime dispatch, and invalid Steel no-dispatch fixtures.
 
 ## Non-claims
 

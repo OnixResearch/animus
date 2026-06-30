@@ -15,12 +15,12 @@
 - `nix develop -c cargo test -p animus-adapters --locked authority::`: PASS, 12 passed.
 - `nix develop -c cargo fmt --check`: PASS.
 - `nix develop -c cargo clippy -p animus-adapters --all-targets --locked -- -D warnings`: PASS.
-- `nix develop -c sh scripts/cairn/check-trellis-verified-core --root /home/brittonr/git/animus`: PASS; receipt `target/cairn/focused-rails/trellis-verified-core.md`.
-- `nix build path:/home/brittonr/git/animus#checks.x86_64-linux.trellis-verified-core --no-link -L`: PASS.
-- `nix run path:/home/brittonr/git/animus#cairn -- gate proposal adapt-trellis-verified-core-boundaries --root /home/brittonr/git/animus`: PASS.
-- `nix run path:/home/brittonr/git/animus#cairn -- gate design adapt-trellis-verified-core-boundaries --root /home/brittonr/git/animus`: PASS.
-- `nix run path:/home/brittonr/git/animus#cairn -- gate tasks adapt-trellis-verified-core-boundaries --root /home/brittonr/git/animus`: PASS after task closeout.
-- `nix run path:/home/brittonr/git/animus#cairn -- validate --root /home/brittonr/git/animus`: PASS.
+- `nix develop -c sh scripts/cairn/check-trellis-verified-core --root $ROOT`: PASS; receipt `target/cairn/focused-rails/trellis-verified-core.md`.
+- `nix build path:$ROOT#checks.x86_64-linux.trellis-verified-core --no-link -L`: PASS.
+- `nix run path:$ROOT#cairn -- gate proposal adapt-trellis-verified-core-boundaries --root $ROOT`: PASS.
+- `nix run path:$ROOT#cairn -- gate design adapt-trellis-verified-core-boundaries --root $ROOT`: PASS.
+- `nix run path:$ROOT#cairn -- gate tasks adapt-trellis-verified-core-boundaries --root $ROOT`: PASS after task closeout.
+- `nix run path:$ROOT#cairn -- validate --root $ROOT`: PASS.
 
 ## Non-claims
 

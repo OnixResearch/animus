@@ -61,6 +61,11 @@ pub enum RuntimeFailureEnvelope {
         /// Human-readable failure message.
         message: String,
     },
+    /// Steel policy denied activation before fabric evaluation.
+    SteelPolicy {
+        /// Human-readable failure message.
+        message: String,
+    },
 }
 
 impl RuntimeFailureEnvelope {
@@ -75,6 +80,9 @@ impl RuntimeFailureEnvelope {
             animus_runtime::RuntimeFailure::ToolAdapter { message } => Self::ToolAdapter {
                 message: message.clone(),
             },
+            animus_runtime::RuntimeFailure::SteelPolicy { message } => Self::SteelPolicy {
+                message: message.clone(),
+            },
         }
     }
 
@@ -86,6 +94,9 @@ impl RuntimeFailureEnvelope {
             }
             Self::ToolAdapter { message } => {
                 animus_runtime::RuntimeFailure::ToolAdapter { message }
+            }
+            Self::SteelPolicy { message } => {
+                animus_runtime::RuntimeFailure::SteelPolicy { message }
             }
         }
     }
@@ -226,6 +237,17 @@ pub enum Envelope {
         /// Human-readable fabric error message.
         message: String,
     },
+    /// Runtime Steel policy-denied event payload.
+    RuntimeSteelPolicyDenied {
+        /// Safe selected Steel profile label.
+        profile: String,
+        /// BLAKE3 hash of observed script source.
+        script_hash: String,
+        /// BLAKE3 hash of safe receipt fields.
+        receipt_hash: String,
+        /// Stable denial reason label.
+        reason: String,
+    },
     /// Runtime report payload.
     RuntimeReport {
         /// Final runtime status.
@@ -253,7 +275,8 @@ impl Envelope {
             | Self::RuntimeStopped
             | Self::RuntimeMaxTurnsExceeded { .. }
             | Self::RuntimeAdapterError { .. }
-            | Self::RuntimeFabricError { .. } => Kind::RuntimeEvent,
+            | Self::RuntimeFabricError { .. }
+            | Self::RuntimeSteelPolicyDenied { .. } => Kind::RuntimeEvent,
             Self::RuntimeReport { .. } => Kind::RuntimeReport,
         }
     }
@@ -336,6 +359,17 @@ impl Envelope {
             }
             animus_runtime::RuntimeEvent::FabricError { message } => Self::RuntimeFabricError {
                 message: message.clone(),
+            },
+            animus_runtime::RuntimeEvent::SteelPolicyDenied {
+                profile,
+                script_hash,
+                receipt_hash,
+                reason,
+            } => Self::RuntimeSteelPolicyDenied {
+                profile: profile.clone(),
+                script_hash: script_hash.clone(),
+                receipt_hash: receipt_hash.clone(),
+                reason: reason.clone(),
             },
         }
     }
@@ -480,6 +514,17 @@ impl Envelope {
             Self::RuntimeFabricError { message } => {
                 Ok(animus_runtime::RuntimeEvent::FabricError { message })
             }
+            Self::RuntimeSteelPolicyDenied {
+                profile,
+                script_hash,
+                receipt_hash,
+                reason,
+            } => Ok(animus_runtime::RuntimeEvent::SteelPolicyDenied {
+                profile,
+                script_hash,
+                receipt_hash,
+                reason,
+            }),
             other => Err(crate::CodecError::wrong_kind(
                 Kind::RuntimeEvent,
                 other.kind(),
@@ -553,7 +598,23 @@ mod tests {
     const TOOL_OUTPUT: &str = "result";
     const BLANK_TEXT: &str = "   ";
     const UNKNOWN_COMPONENT: &str = "memory";
+    const STEEL_PROFILE: &str = "default";
+    const STEEL_SCRIPT_HASH: &str =
+        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+    const STEEL_RECEIPT_HASH: &str =
+        "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210";
+    const STEEL_REASON: &str = "profile_mismatch";
+    const STEEL_FAILURE_MESSAGE: &str = "steel policy denied: profile_mismatch";
     const MAX_TURNS: usize = 2;
+
+    fn steel_policy_denied_event() -> animus_runtime::RuntimeEvent {
+        animus_runtime::RuntimeEvent::SteelPolicyDenied {
+            profile: String::from(STEEL_PROFILE),
+            script_hash: String::from(STEEL_SCRIPT_HASH),
+            receipt_hash: String::from(STEEL_RECEIPT_HASH),
+            reason: String::from(STEEL_REASON),
+        }
+    }
 
     #[test]
     fn model_request_round_trips_through_contract() {
@@ -619,6 +680,17 @@ mod tests {
     }
 
     #[test]
+    fn steel_policy_denied_event_round_trips_through_contract() {
+        let event = steel_policy_denied_event();
+        let message = Envelope::from_runtime_event(&event);
+        let decoded = message
+            .try_into_runtime_event()
+            .expect("Steel policy event should convert");
+
+        assert_eq!(decoded, event);
+    }
+
+    #[test]
     fn runtime_report_round_trips_through_contract() {
         let response = animus_adapters::ModelResponse::new(MODEL_MESSAGE)
             .expect("valid response should parse");
@@ -653,6 +725,24 @@ mod tests {
             .expect("runtime report should decode")
             .try_into_runtime_report()
             .expect("runtime report should validate");
+
+        assert_eq!(decoded, report);
+    }
+
+    #[test]
+    fn steel_policy_failure_status_round_trips_through_contract() {
+        let report = animus_runtime::RunReport::new(
+            vec![steel_policy_denied_event()],
+            animus_runtime::RuntimeStatus::Failed {
+                failure: animus_runtime::RuntimeFailure::SteelPolicy {
+                    message: String::from(STEEL_FAILURE_MESSAGE),
+                },
+            },
+        );
+        let message = Envelope::from_runtime_report(&report);
+        let decoded = message
+            .try_into_runtime_report()
+            .expect("Steel policy failure report should convert");
 
         assert_eq!(decoded, report);
     }
