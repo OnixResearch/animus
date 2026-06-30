@@ -170,6 +170,13 @@ pub enum RuntimeFailure {
         /// Human-readable failure message.
         message: String,
     },
+    /// Host middleware blocked or failed a guarded boundary.
+    Middleware {
+        /// Guarded boundary that failed safe.
+        boundary: crate::HookBoundary,
+        /// Human-readable failure message.
+        message: String,
+    },
 }
 
 impl RuntimeFailure {
@@ -180,7 +187,8 @@ impl RuntimeFailure {
             Self::Fabric { message }
             | Self::ModelAdapter { message }
             | Self::ToolAdapter { message }
-            | Self::SteelPolicy { message } => message.as_str(),
+            | Self::SteelPolicy { message }
+            | Self::Middleware { message, .. } => message.as_str(),
         }
     }
 }

@@ -15,6 +15,7 @@
 
 mod contract;
 mod fabric;
+mod hooks;
 mod shell;
 mod status;
 mod telemetry;
@@ -25,6 +26,10 @@ pub use contract::{
     RuntimeFailure, RuntimeInput, RuntimeStatus,
 };
 pub use fabric::LoopFabric;
+pub use hooks::{
+    HookAction, HookBoundary, HookDecision, MiddlewareError, RuntimeMiddleware,
+    RuntimeMiddlewareStack,
+};
 pub use shell::{
     RuntimeAdapters, SteelPolicyRuntime, run_agent_loop, run_with_steel_policy,
     run_with_steel_program,
@@ -67,9 +72,11 @@ pub fn select_agent_status(
 pub fn validate_status_evidence_summary(text: &str) -> Result<(), StatusEvidenceError> {
     status::safe::validate_summary(text)
 }
-pub use telemetry::{AdapterComponent, RuntimeEvent};
+pub use telemetry::{
+    AdapterComponent, LoopDecisionKind, RuntimeEvent, RuntimeEventKind, RuntimeTerminalKind,
+};
 pub use transition::{
     AdapterOutcome, AdapterRequest, AdapterStep, DecisionStep, TurnPlan, TurnState,
-    apply_adapter_outcome, apply_decision, complete_with_fabric_error,
-    complete_with_steel_policy_denial, plan_next_turn,
+    apply_adapter_outcome, apply_decision, complete_with_fabric_error, complete_with_guard_block,
+    complete_with_guard_failure, complete_with_steel_policy_denial, plan_next_turn,
 };

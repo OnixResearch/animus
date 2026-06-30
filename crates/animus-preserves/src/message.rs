@@ -5,11 +5,31 @@ const TOOL_RESPONSE_KIND: &str = "tool_response";
 const RUNTIME_EVENT_KIND: &str = "runtime_event";
 const RUNTIME_REPORT_KIND: &str = "runtime_report";
 const RUNTIME_COMPONENT_FIELD: &str = "component";
+const RUNTIME_BOUNDARY_FIELD: &str = "boundary";
+const RUNTIME_DECISION_FIELD: &str = "decision";
+const RUNTIME_TERMINAL_FIELD: &str = "terminal";
 const RUNTIME_MAX_TURNS_FIELD: &str = "max_turns";
 const RUNTIME_MAX_TURNS_ZERO_REASON: &str = "max turns must be at least one";
 const MODEL_COMPONENT: &str = "model";
 const TOOL_COMPONENT: &str = "tool";
+const BOUNDARY_OBSERVE: &str = "observe";
+const BOUNDARY_MODEL_DISPATCH: &str = "model_dispatch";
+const BOUNDARY_TOOL_DISPATCH: &str = "tool_dispatch";
+const BOUNDARY_COMPACTION: &str = "compaction";
+const BOUNDARY_REPLAY: &str = "replay";
+const BOUNDARY_SESSION_REPLACEMENT: &str = "session_replacement";
+const DECISION_MODEL: &str = "model";
+const DECISION_TOOL: &str = "tool";
+const DECISION_RESPOND: &str = "respond";
+const DECISION_STOP: &str = "stop";
+const TERMINAL_FINAL_RESPONSE: &str = "final_response";
+const TERMINAL_STOPPED: &str = "stopped";
+const TERMINAL_MAX_TURNS_EXCEEDED: &str = "max_turns_exceeded";
+const TERMINAL_FAILED: &str = "failed";
 const UNKNOWN_COMPONENT_REASON: &str = "unknown runtime adapter component";
+const UNKNOWN_BOUNDARY_REASON: &str = "unknown runtime hook boundary";
+const UNKNOWN_DECISION_REASON: &str = "unknown runtime loop decision";
+const UNKNOWN_TERMINAL_REASON: &str = "unknown runtime terminal status";
 
 /// Boundary message kind.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -66,6 +86,13 @@ pub enum RuntimeFailureEnvelope {
         /// Human-readable failure message.
         message: String,
     },
+    /// Host middleware blocked or failed a guarded boundary.
+    Middleware {
+        /// Guarded boundary label.
+        boundary: String,
+        /// Human-readable failure message.
+        message: String,
+    },
 }
 
 impl RuntimeFailureEnvelope {
@@ -83,20 +110,30 @@ impl RuntimeFailureEnvelope {
             animus_runtime::RuntimeFailure::SteelPolicy { message } => Self::SteelPolicy {
                 message: message.clone(),
             },
+            animus_runtime::RuntimeFailure::Middleware { boundary, message } => Self::Middleware {
+                boundary: boundary_to_string(*boundary),
+                message: message.clone(),
+            },
         }
     }
 
-    fn into_runtime_failure(self) -> animus_runtime::RuntimeFailure {
+    fn into_runtime_failure(self) -> Result<animus_runtime::RuntimeFailure, crate::CodecError> {
         match self {
-            Self::Fabric { message } => animus_runtime::RuntimeFailure::Fabric { message },
+            Self::Fabric { message } => Ok(animus_runtime::RuntimeFailure::Fabric { message }),
             Self::ModelAdapter { message } => {
-                animus_runtime::RuntimeFailure::ModelAdapter { message }
+                Ok(animus_runtime::RuntimeFailure::ModelAdapter { message })
             }
             Self::ToolAdapter { message } => {
-                animus_runtime::RuntimeFailure::ToolAdapter { message }
+                Ok(animus_runtime::RuntimeFailure::ToolAdapter { message })
             }
             Self::SteelPolicy { message } => {
-                animus_runtime::RuntimeFailure::SteelPolicy { message }
+                Ok(animus_runtime::RuntimeFailure::SteelPolicy { message })
+            }
+            Self::Middleware { boundary, message } => {
+                Ok(animus_runtime::RuntimeFailure::Middleware {
+                    boundary: boundary_from_str(&boundary)?,
+                    message,
+                })
             }
         }
     }
@@ -155,7 +192,7 @@ impl RuntimeReportStatus {
                 })
             }
             Self::Failed { failure } => Ok(animus_runtime::RuntimeStatus::Failed {
-                failure: failure.into_runtime_failure(),
+                failure: failure.into_runtime_failure()?,
             }),
         }
     }
@@ -186,10 +223,32 @@ pub enum Envelope {
         /// Tool output payload.
         output: String,
     },
+    /// Runtime-started event payload.
+    RuntimeStarted {
+        /// Runtime input summary.
+        summary: String,
+    },
+    /// Runtime context-replayed event payload.
+    RuntimeContextReplayed {
+        /// Runtime context summary.
+        summary: String,
+    },
     /// Runtime loop-started event payload.
     RuntimeLoopStarted {
         /// Runtime input summary.
         summary: String,
+    },
+    /// Runtime turn-started event payload.
+    RuntimeTurnStarted {
+        /// Zero-based turn index.
+        turn_index: usize,
+    },
+    /// Runtime loop-decision event payload.
+    RuntimeLoopDecision {
+        /// Zero-based turn index.
+        turn_index: usize,
+        /// Stable decision label.
+        decision: String,
     },
     /// Runtime model-requested event payload.
     RuntimeModelRequested {
@@ -200,6 +259,13 @@ pub enum Envelope {
     RuntimeModelResponded {
         /// Model response message.
         message: String,
+    },
+    /// Runtime model-denied event payload.
+    RuntimeModelDenied {
+        /// Denied model prompt.
+        prompt: String,
+        /// Safe denial reason.
+        reason: String,
     },
     /// Runtime tool-requested event payload.
     RuntimeToolRequested {
@@ -212,6 +278,15 @@ pub enum Envelope {
     RuntimeToolResponded {
         /// Tool output.
         output: String,
+    },
+    /// Runtime tool-denied event payload.
+    RuntimeToolDenied {
+        /// Denied tool name.
+        name: String,
+        /// Denied tool input.
+        input: String,
+        /// Safe denial reason.
+        reason: String,
     },
     /// Runtime final-response event payload.
     RuntimeFinalResponse {
@@ -237,6 +312,24 @@ pub enum Envelope {
         /// Human-readable fabric error message.
         message: String,
     },
+    /// Runtime hook-blocked event payload.
+    RuntimeHookBlocked {
+        /// Guarded boundary label.
+        boundary: String,
+        /// Hook label.
+        hook: String,
+        /// Safe block reason.
+        reason: String,
+    },
+    /// Runtime hook-failed event payload.
+    RuntimeHookFailed {
+        /// Guarded boundary label.
+        boundary: String,
+        /// Hook label.
+        hook: String,
+        /// Safe failure message.
+        message: String,
+    },
     /// Runtime Steel policy-denied event payload.
     RuntimeSteelPolicyDenied {
         /// Safe selected Steel profile label.
@@ -247,6 +340,21 @@ pub enum Envelope {
         receipt_hash: String,
         /// Stable denial reason label.
         reason: String,
+    },
+    /// Runtime cancellation event payload.
+    RuntimeCancelled {
+        /// Safe cancellation reason.
+        reason: String,
+    },
+    /// Runtime compaction-requested event payload.
+    RuntimeCompactionRequested {
+        /// Safe compaction summary.
+        summary: String,
+    },
+    /// Runtime shutdown event payload.
+    RuntimeShutdown {
+        /// Stable terminal status label.
+        status: String,
     },
     /// Runtime report payload.
     RuntimeReport {
@@ -266,17 +374,28 @@ impl Envelope {
             Self::ModelResponse { .. } => Kind::ModelResponse,
             Self::ToolRequest { .. } => Kind::ToolRequest,
             Self::ToolResponse { .. } => Kind::ToolResponse,
-            Self::RuntimeLoopStarted { .. }
+            Self::RuntimeStarted { .. }
+            | Self::RuntimeContextReplayed { .. }
+            | Self::RuntimeLoopStarted { .. }
+            | Self::RuntimeTurnStarted { .. }
+            | Self::RuntimeLoopDecision { .. }
             | Self::RuntimeModelRequested { .. }
             | Self::RuntimeModelResponded { .. }
+            | Self::RuntimeModelDenied { .. }
             | Self::RuntimeToolRequested { .. }
             | Self::RuntimeToolResponded { .. }
+            | Self::RuntimeToolDenied { .. }
             | Self::RuntimeFinalResponse { .. }
             | Self::RuntimeStopped
             | Self::RuntimeMaxTurnsExceeded { .. }
             | Self::RuntimeAdapterError { .. }
             | Self::RuntimeFabricError { .. }
-            | Self::RuntimeSteelPolicyDenied { .. } => Kind::RuntimeEvent,
+            | Self::RuntimeHookBlocked { .. }
+            | Self::RuntimeHookFailed { .. }
+            | Self::RuntimeSteelPolicyDenied { .. }
+            | Self::RuntimeCancelled { .. }
+            | Self::RuntimeCompactionRequested { .. }
+            | Self::RuntimeShutdown { .. } => Kind::RuntimeEvent,
             Self::RuntimeReport { .. } => Kind::RuntimeReport,
         }
     }
@@ -317,60 +436,11 @@ impl Envelope {
     /// Builds a boundary message from a runtime event.
     #[must_use]
     pub fn from_runtime_event(event: &animus_runtime::RuntimeEvent) -> Self {
-        match event {
-            animus_runtime::RuntimeEvent::LoopStarted { summary } => Self::RuntimeLoopStarted {
-                summary: summary.clone(),
-            },
-            animus_runtime::RuntimeEvent::ModelRequested { request } => {
-                Self::RuntimeModelRequested {
-                    prompt: String::from(request.prompt()),
-                }
-            }
-            animus_runtime::RuntimeEvent::ModelResponded { response } => {
-                Self::RuntimeModelResponded {
-                    message: String::from(response.message()),
-                }
-            }
-            animus_runtime::RuntimeEvent::ToolRequested { request } => Self::RuntimeToolRequested {
-                name: String::from(request.name()),
-                input: String::from(request.input()),
-            },
-            animus_runtime::RuntimeEvent::ToolResponded { response } => {
-                Self::RuntimeToolResponded {
-                    output: String::from(response.output()),
-                }
-            }
-            animus_runtime::RuntimeEvent::FinalResponse { response } => {
-                Self::RuntimeFinalResponse {
-                    message: String::from(response.message()),
-                }
-            }
-            animus_runtime::RuntimeEvent::Stopped => Self::RuntimeStopped,
-            animus_runtime::RuntimeEvent::MaxTurnsExceeded { max_turns } => {
-                Self::RuntimeMaxTurnsExceeded {
-                    max_turns: *max_turns,
-                }
-            }
-            animus_runtime::RuntimeEvent::AdapterError { component, message } => {
-                Self::RuntimeAdapterError {
-                    component: component_to_string(*component),
-                    message: message.clone(),
-                }
-            }
-            animus_runtime::RuntimeEvent::FabricError { message } => Self::RuntimeFabricError {
-                message: message.clone(),
-            },
-            animus_runtime::RuntimeEvent::SteelPolicyDenied {
-                profile,
-                script_hash,
-                receipt_hash,
-                reason,
-            } => Self::RuntimeSteelPolicyDenied {
-                profile: profile.clone(),
-                script_hash: script_hash.clone(),
-                receipt_hash: receipt_hash.clone(),
-                reason: reason.clone(),
-            },
+        match runtime_event_group(event) {
+            RuntimeEventGroup::Lifecycle => encode_lifecycle_event(event),
+            RuntimeEventGroup::Adapter => encode_adapter_event(event),
+            RuntimeEventGroup::Completion => encode_completion_event(event),
+            RuntimeEventGroup::Failure => encode_failure_event(event),
         }
     }
 
@@ -466,69 +536,16 @@ impl Envelope {
     /// Returns [`crate::CodecError`] when the message kind differs or decoded
     /// payload fields violate adapter/runtime contracts.
     pub fn try_into_runtime_event(self) -> Result<animus_runtime::RuntimeEvent, crate::CodecError> {
-        match self {
-            Self::RuntimeLoopStarted { summary } => {
-                let input = animus_runtime::RuntimeInput::new(&summary)?;
-                Ok(animus_runtime::RuntimeEvent::LoopStarted {
-                    summary: String::from(input.summary()),
-                })
-            }
-            Self::RuntimeModelRequested { prompt } => {
-                Ok(animus_runtime::RuntimeEvent::ModelRequested {
-                    request: animus_adapters::ModelRequest::new(&prompt)?,
-                })
-            }
-            Self::RuntimeModelResponded { message } => {
-                Ok(animus_runtime::RuntimeEvent::ModelResponded {
-                    response: animus_adapters::ModelResponse::new(&message)?,
-                })
-            }
-            Self::RuntimeToolRequested { name, input } => {
-                Ok(animus_runtime::RuntimeEvent::ToolRequested {
-                    request: animus_adapters::ToolRequest::new(&name, &input)?,
-                })
-            }
-            Self::RuntimeToolResponded { output } => {
-                Ok(animus_runtime::RuntimeEvent::ToolResponded {
-                    response: animus_adapters::ToolResponse::new(&output)?,
-                })
-            }
-            Self::RuntimeFinalResponse { message } => {
-                Ok(animus_runtime::RuntimeEvent::FinalResponse {
-                    response: animus_adapters::ModelResponse::new(&message)?,
-                })
-            }
-            Self::RuntimeStopped => Ok(animus_runtime::RuntimeEvent::Stopped),
-            Self::RuntimeMaxTurnsExceeded { max_turns } => {
-                let max_turns = max_turns_from_count(max_turns)?;
-                Ok(animus_runtime::RuntimeEvent::MaxTurnsExceeded {
-                    max_turns: max_turns.get(),
-                })
-            }
-            Self::RuntimeAdapterError { component, message } => {
-                Ok(animus_runtime::RuntimeEvent::AdapterError {
-                    component: component_from_str(&component)?,
-                    message,
-                })
-            }
-            Self::RuntimeFabricError { message } => {
-                Ok(animus_runtime::RuntimeEvent::FabricError { message })
-            }
-            Self::RuntimeSteelPolicyDenied {
-                profile,
-                script_hash,
-                receipt_hash,
-                reason,
-            } => Ok(animus_runtime::RuntimeEvent::SteelPolicyDenied {
-                profile,
-                script_hash,
-                receipt_hash,
-                reason,
-            }),
-            other => Err(crate::CodecError::wrong_kind(
-                Kind::RuntimeEvent,
-                other.kind(),
-            )),
+        let actual = self.kind();
+        let Some(group) = runtime_envelope_group(&self) else {
+            return Err(crate::CodecError::wrong_kind(Kind::RuntimeEvent, actual));
+        };
+
+        match group {
+            RuntimeEventGroup::Lifecycle => decode_lifecycle_event(self),
+            RuntimeEventGroup::Adapter => decode_adapter_event(self),
+            RuntimeEventGroup::Completion => decode_completion_event(self),
+            RuntimeEventGroup::Failure => decode_failure_event(self),
         }
     }
 
@@ -558,6 +575,366 @@ impl Envelope {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum RuntimeEventGroup {
+    Lifecycle,
+    Adapter,
+    Completion,
+    Failure,
+}
+
+fn runtime_event_group(event: &animus_runtime::RuntimeEvent) -> RuntimeEventGroup {
+    match event {
+        animus_runtime::RuntimeEvent::RuntimeStarted { .. }
+        | animus_runtime::RuntimeEvent::ContextReplayed { .. }
+        | animus_runtime::RuntimeEvent::LoopStarted { .. }
+        | animus_runtime::RuntimeEvent::TurnStarted { .. }
+        | animus_runtime::RuntimeEvent::LoopDecision { .. } => RuntimeEventGroup::Lifecycle,
+        animus_runtime::RuntimeEvent::ModelRequested { .. }
+        | animus_runtime::RuntimeEvent::ModelResponded { .. }
+        | animus_runtime::RuntimeEvent::ModelDenied { .. }
+        | animus_runtime::RuntimeEvent::ToolRequested { .. }
+        | animus_runtime::RuntimeEvent::ToolResponded { .. }
+        | animus_runtime::RuntimeEvent::ToolDenied { .. } => RuntimeEventGroup::Adapter,
+        animus_runtime::RuntimeEvent::FinalResponse { .. }
+        | animus_runtime::RuntimeEvent::Stopped
+        | animus_runtime::RuntimeEvent::MaxTurnsExceeded { .. }
+        | animus_runtime::RuntimeEvent::Shutdown { .. } => RuntimeEventGroup::Completion,
+        animus_runtime::RuntimeEvent::AdapterError { .. }
+        | animus_runtime::RuntimeEvent::FabricError { .. }
+        | animus_runtime::RuntimeEvent::HookBlocked { .. }
+        | animus_runtime::RuntimeEvent::HookFailed { .. }
+        | animus_runtime::RuntimeEvent::SteelPolicyDenied { .. }
+        | animus_runtime::RuntimeEvent::Cancelled { .. }
+        | animus_runtime::RuntimeEvent::CompactionRequested { .. } => RuntimeEventGroup::Failure,
+    }
+}
+
+fn runtime_envelope_group(envelope: &Envelope) -> Option<RuntimeEventGroup> {
+    match envelope {
+        Envelope::RuntimeStarted { .. }
+        | Envelope::RuntimeContextReplayed { .. }
+        | Envelope::RuntimeLoopStarted { .. }
+        | Envelope::RuntimeTurnStarted { .. }
+        | Envelope::RuntimeLoopDecision { .. } => Some(RuntimeEventGroup::Lifecycle),
+        Envelope::RuntimeModelRequested { .. }
+        | Envelope::RuntimeModelResponded { .. }
+        | Envelope::RuntimeModelDenied { .. }
+        | Envelope::RuntimeToolRequested { .. }
+        | Envelope::RuntimeToolResponded { .. }
+        | Envelope::RuntimeToolDenied { .. } => Some(RuntimeEventGroup::Adapter),
+        Envelope::RuntimeFinalResponse { .. }
+        | Envelope::RuntimeStopped
+        | Envelope::RuntimeMaxTurnsExceeded { .. }
+        | Envelope::RuntimeShutdown { .. } => Some(RuntimeEventGroup::Completion),
+        Envelope::RuntimeAdapterError { .. }
+        | Envelope::RuntimeFabricError { .. }
+        | Envelope::RuntimeHookBlocked { .. }
+        | Envelope::RuntimeHookFailed { .. }
+        | Envelope::RuntimeSteelPolicyDenied { .. }
+        | Envelope::RuntimeCancelled { .. }
+        | Envelope::RuntimeCompactionRequested { .. } => Some(RuntimeEventGroup::Failure),
+        Envelope::ModelRequest { .. }
+        | Envelope::ModelResponse { .. }
+        | Envelope::ToolRequest { .. }
+        | Envelope::ToolResponse { .. }
+        | Envelope::RuntimeReport { .. } => None,
+    }
+}
+
+fn encode_lifecycle_event(event: &animus_runtime::RuntimeEvent) -> Envelope {
+    match event {
+        animus_runtime::RuntimeEvent::RuntimeStarted { summary } => Envelope::RuntimeStarted {
+            summary: summary.clone(),
+        },
+        animus_runtime::RuntimeEvent::ContextReplayed { summary } => {
+            Envelope::RuntimeContextReplayed {
+                summary: summary.clone(),
+            }
+        }
+        animus_runtime::RuntimeEvent::LoopStarted { summary } => Envelope::RuntimeLoopStarted {
+            summary: summary.clone(),
+        },
+        animus_runtime::RuntimeEvent::TurnStarted { turn_index } => Envelope::RuntimeTurnStarted {
+            turn_index: *turn_index,
+        },
+        animus_runtime::RuntimeEvent::LoopDecision {
+            turn_index,
+            decision,
+        } => Envelope::RuntimeLoopDecision {
+            turn_index: *turn_index,
+            decision: decision_to_string(*decision),
+        },
+        _other => unreachable!("runtime event group mismatch"),
+    }
+}
+
+fn encode_adapter_event(event: &animus_runtime::RuntimeEvent) -> Envelope {
+    match event {
+        animus_runtime::RuntimeEvent::ModelRequested { request } => {
+            Envelope::RuntimeModelRequested {
+                prompt: String::from(request.prompt()),
+            }
+        }
+        animus_runtime::RuntimeEvent::ModelResponded { response } => {
+            Envelope::RuntimeModelResponded {
+                message: String::from(response.message()),
+            }
+        }
+        animus_runtime::RuntimeEvent::ModelDenied { request, reason } => {
+            Envelope::RuntimeModelDenied {
+                prompt: String::from(request.prompt()),
+                reason: reason.clone(),
+            }
+        }
+        animus_runtime::RuntimeEvent::ToolRequested { request } => Envelope::RuntimeToolRequested {
+            name: String::from(request.name()),
+            input: String::from(request.input()),
+        },
+        animus_runtime::RuntimeEvent::ToolResponded { response } => {
+            Envelope::RuntimeToolResponded {
+                output: String::from(response.output()),
+            }
+        }
+        animus_runtime::RuntimeEvent::ToolDenied { request, reason } => {
+            Envelope::RuntimeToolDenied {
+                name: String::from(request.name()),
+                input: String::from(request.input()),
+                reason: reason.clone(),
+            }
+        }
+        _other => unreachable!("runtime event group mismatch"),
+    }
+}
+
+fn encode_completion_event(event: &animus_runtime::RuntimeEvent) -> Envelope {
+    match event {
+        animus_runtime::RuntimeEvent::FinalResponse { response } => {
+            Envelope::RuntimeFinalResponse {
+                message: String::from(response.message()),
+            }
+        }
+        animus_runtime::RuntimeEvent::Stopped => Envelope::RuntimeStopped,
+        animus_runtime::RuntimeEvent::MaxTurnsExceeded { max_turns } => {
+            Envelope::RuntimeMaxTurnsExceeded {
+                max_turns: *max_turns,
+            }
+        }
+        animus_runtime::RuntimeEvent::Shutdown { status } => Envelope::RuntimeShutdown {
+            status: terminal_to_string(*status),
+        },
+        _other => unreachable!("runtime event group mismatch"),
+    }
+}
+
+fn encode_failure_event(event: &animus_runtime::RuntimeEvent) -> Envelope {
+    match event {
+        animus_runtime::RuntimeEvent::AdapterError { component, message } => {
+            Envelope::RuntimeAdapterError {
+                component: component_to_string(*component),
+                message: message.clone(),
+            }
+        }
+        animus_runtime::RuntimeEvent::FabricError { message } => Envelope::RuntimeFabricError {
+            message: message.clone(),
+        },
+        animus_runtime::RuntimeEvent::HookBlocked {
+            boundary,
+            hook,
+            reason,
+        } => Envelope::RuntimeHookBlocked {
+            boundary: boundary_to_string(*boundary),
+            hook: hook.clone(),
+            reason: reason.clone(),
+        },
+        animus_runtime::RuntimeEvent::HookFailed {
+            boundary,
+            hook,
+            message,
+        } => Envelope::RuntimeHookFailed {
+            boundary: boundary_to_string(*boundary),
+            hook: hook.clone(),
+            message: message.clone(),
+        },
+        animus_runtime::RuntimeEvent::SteelPolicyDenied {
+            profile,
+            script_hash,
+            receipt_hash,
+            reason,
+        } => Envelope::RuntimeSteelPolicyDenied {
+            profile: profile.clone(),
+            script_hash: script_hash.clone(),
+            receipt_hash: receipt_hash.clone(),
+            reason: reason.clone(),
+        },
+        animus_runtime::RuntimeEvent::Cancelled { reason } => Envelope::RuntimeCancelled {
+            reason: reason.clone(),
+        },
+        animus_runtime::RuntimeEvent::CompactionRequested { summary } => {
+            Envelope::RuntimeCompactionRequested {
+                summary: summary.clone(),
+            }
+        }
+        _other => unreachable!("runtime event group mismatch"),
+    }
+}
+
+fn decode_lifecycle_event(
+    envelope: Envelope,
+) -> Result<animus_runtime::RuntimeEvent, crate::CodecError> {
+    match envelope {
+        Envelope::RuntimeStarted { summary } => {
+            let input = animus_runtime::RuntimeInput::new(&summary)?;
+            Ok(animus_runtime::RuntimeEvent::RuntimeStarted {
+                summary: String::from(input.summary()),
+            })
+        }
+        Envelope::RuntimeContextReplayed { summary } => {
+            let input = animus_runtime::RuntimeInput::new(&summary)?;
+            Ok(animus_runtime::RuntimeEvent::ContextReplayed {
+                summary: String::from(input.summary()),
+            })
+        }
+        Envelope::RuntimeLoopStarted { summary } => {
+            let input = animus_runtime::RuntimeInput::new(&summary)?;
+            Ok(animus_runtime::RuntimeEvent::LoopStarted {
+                summary: String::from(input.summary()),
+            })
+        }
+        Envelope::RuntimeTurnStarted { turn_index } => {
+            Ok(animus_runtime::RuntimeEvent::TurnStarted { turn_index })
+        }
+        Envelope::RuntimeLoopDecision {
+            turn_index,
+            decision,
+        } => Ok(animus_runtime::RuntimeEvent::LoopDecision {
+            turn_index,
+            decision: decision_from_str(&decision)?,
+        }),
+        _other => unreachable!("runtime envelope group mismatch"),
+    }
+}
+
+fn decode_adapter_event(
+    envelope: Envelope,
+) -> Result<animus_runtime::RuntimeEvent, crate::CodecError> {
+    match envelope {
+        Envelope::RuntimeModelRequested { prompt } => {
+            Ok(animus_runtime::RuntimeEvent::ModelRequested {
+                request: animus_adapters::ModelRequest::new(&prompt)?,
+            })
+        }
+        Envelope::RuntimeModelResponded { message } => {
+            Ok(animus_runtime::RuntimeEvent::ModelResponded {
+                response: animus_adapters::ModelResponse::new(&message)?,
+            })
+        }
+        Envelope::RuntimeModelDenied { prompt, reason } => {
+            Ok(animus_runtime::RuntimeEvent::ModelDenied {
+                request: animus_adapters::ModelRequest::new(&prompt)?,
+                reason,
+            })
+        }
+        Envelope::RuntimeToolRequested { name, input } => {
+            Ok(animus_runtime::RuntimeEvent::ToolRequested {
+                request: animus_adapters::ToolRequest::new(&name, &input)?,
+            })
+        }
+        Envelope::RuntimeToolResponded { output } => {
+            Ok(animus_runtime::RuntimeEvent::ToolResponded {
+                response: animus_adapters::ToolResponse::new(&output)?,
+            })
+        }
+        Envelope::RuntimeToolDenied {
+            name,
+            input,
+            reason,
+        } => Ok(animus_runtime::RuntimeEvent::ToolDenied {
+            request: animus_adapters::ToolRequest::new(&name, &input)?,
+            reason,
+        }),
+        _other => unreachable!("runtime envelope group mismatch"),
+    }
+}
+
+fn decode_completion_event(
+    envelope: Envelope,
+) -> Result<animus_runtime::RuntimeEvent, crate::CodecError> {
+    match envelope {
+        Envelope::RuntimeFinalResponse { message } => {
+            Ok(animus_runtime::RuntimeEvent::FinalResponse {
+                response: animus_adapters::ModelResponse::new(&message)?,
+            })
+        }
+        Envelope::RuntimeStopped => Ok(animus_runtime::RuntimeEvent::Stopped),
+        Envelope::RuntimeMaxTurnsExceeded { max_turns } => {
+            let max_turns = max_turns_from_count(max_turns)?;
+            Ok(animus_runtime::RuntimeEvent::MaxTurnsExceeded {
+                max_turns: max_turns.get(),
+            })
+        }
+        Envelope::RuntimeShutdown { status } => Ok(animus_runtime::RuntimeEvent::Shutdown {
+            status: terminal_from_str(&status)?,
+        }),
+        _other => unreachable!("runtime envelope group mismatch"),
+    }
+}
+
+fn decode_failure_event(
+    envelope: Envelope,
+) -> Result<animus_runtime::RuntimeEvent, crate::CodecError> {
+    match envelope {
+        Envelope::RuntimeAdapterError { component, message } => {
+            Ok(animus_runtime::RuntimeEvent::AdapterError {
+                component: component_from_str(&component)?,
+                message,
+            })
+        }
+        Envelope::RuntimeFabricError { message } => {
+            Ok(animus_runtime::RuntimeEvent::FabricError { message })
+        }
+        Envelope::RuntimeHookBlocked {
+            boundary,
+            hook,
+            reason,
+        } => Ok(animus_runtime::RuntimeEvent::HookBlocked {
+            boundary: boundary_from_str(&boundary)?,
+            hook,
+            reason,
+        }),
+        Envelope::RuntimeHookFailed {
+            boundary,
+            hook,
+            message,
+        } => Ok(animus_runtime::RuntimeEvent::HookFailed {
+            boundary: boundary_from_str(&boundary)?,
+            hook,
+            message,
+        }),
+        Envelope::RuntimeSteelPolicyDenied {
+            profile,
+            script_hash,
+            receipt_hash,
+            reason,
+        } => Ok(animus_runtime::RuntimeEvent::SteelPolicyDenied {
+            profile,
+            script_hash,
+            receipt_hash,
+            reason,
+        }),
+        Envelope::RuntimeCancelled { reason } => {
+            Ok(animus_runtime::RuntimeEvent::Cancelled { reason })
+        }
+        Envelope::RuntimeCompactionRequested { summary } => {
+            let input = animus_runtime::RuntimeInput::new(&summary)?;
+            Ok(animus_runtime::RuntimeEvent::CompactionRequested {
+                summary: String::from(input.summary()),
+            })
+        }
+        _other => unreachable!("runtime envelope group mismatch"),
+    }
+}
+
 fn max_turns_from_count(max_turns: usize) -> Result<core::num::NonZeroUsize, crate::CodecError> {
     core::num::NonZeroUsize::new(max_turns).ok_or(crate::CodecError::RuntimeContract {
         source: animus_runtime::RuntimeError::InvalidConfig {
@@ -583,6 +960,63 @@ fn component_from_str(
         _other => Err(crate::CodecError::InvalidRuntimePayload {
             field: RUNTIME_COMPONENT_FIELD,
             reason: UNKNOWN_COMPONENT_REASON,
+        }),
+    }
+}
+
+fn boundary_to_string(boundary: animus_runtime::HookBoundary) -> String {
+    String::from(boundary.as_str())
+}
+
+fn boundary_from_str(boundary: &str) -> Result<animus_runtime::HookBoundary, crate::CodecError> {
+    match boundary {
+        BOUNDARY_OBSERVE => Ok(animus_runtime::HookBoundary::Observe),
+        BOUNDARY_MODEL_DISPATCH => Ok(animus_runtime::HookBoundary::ModelDispatch),
+        BOUNDARY_TOOL_DISPATCH => Ok(animus_runtime::HookBoundary::ToolDispatch),
+        BOUNDARY_COMPACTION => Ok(animus_runtime::HookBoundary::Compaction),
+        BOUNDARY_REPLAY => Ok(animus_runtime::HookBoundary::Replay),
+        BOUNDARY_SESSION_REPLACEMENT => Ok(animus_runtime::HookBoundary::SessionReplacement),
+        _other => Err(crate::CodecError::InvalidRuntimePayload {
+            field: RUNTIME_BOUNDARY_FIELD,
+            reason: UNKNOWN_BOUNDARY_REASON,
+        }),
+    }
+}
+
+fn decision_to_string(decision: animus_runtime::LoopDecisionKind) -> String {
+    String::from(decision.as_str())
+}
+
+fn decision_from_str(
+    decision: &str,
+) -> Result<animus_runtime::LoopDecisionKind, crate::CodecError> {
+    match decision {
+        DECISION_MODEL => Ok(animus_runtime::LoopDecisionKind::Model),
+        DECISION_TOOL => Ok(animus_runtime::LoopDecisionKind::Tool),
+        DECISION_RESPOND => Ok(animus_runtime::LoopDecisionKind::Respond),
+        DECISION_STOP => Ok(animus_runtime::LoopDecisionKind::Stop),
+        _other => Err(crate::CodecError::InvalidRuntimePayload {
+            field: RUNTIME_DECISION_FIELD,
+            reason: UNKNOWN_DECISION_REASON,
+        }),
+    }
+}
+
+fn terminal_to_string(status: animus_runtime::RuntimeTerminalKind) -> String {
+    String::from(status.as_str())
+}
+
+fn terminal_from_str(
+    status: &str,
+) -> Result<animus_runtime::RuntimeTerminalKind, crate::CodecError> {
+    match status {
+        TERMINAL_FINAL_RESPONSE => Ok(animus_runtime::RuntimeTerminalKind::FinalResponse),
+        TERMINAL_STOPPED => Ok(animus_runtime::RuntimeTerminalKind::Stopped),
+        TERMINAL_MAX_TURNS_EXCEEDED => Ok(animus_runtime::RuntimeTerminalKind::MaxTurnsExceeded),
+        TERMINAL_FAILED => Ok(animus_runtime::RuntimeTerminalKind::Failed),
+        _other => Err(crate::CodecError::InvalidRuntimePayload {
+            field: RUNTIME_TERMINAL_FIELD,
+            reason: UNKNOWN_TERMINAL_REASON,
         }),
     }
 }

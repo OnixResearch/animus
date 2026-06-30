@@ -1,5 +1,9 @@
+mod boundary;
+mod denial;
 mod halt;
 
+pub use boundary::{AdapterOutcome, AdapterStep, apply_adapter_outcome};
+pub use denial::{complete_with_guard_block, complete_with_guard_failure};
 pub use halt::complete_with_steel_policy_denial;
 
 /// Runtime plan before evaluating the next loop-fabric turn.
@@ -34,6 +38,17 @@ pub enum AdapterRequest {
     },
 }
 
+impl AdapterRequest {
+    /// Returns the guarded middleware boundary for this adapter request.
+    #[must_use]
+    pub const fn boundary(&self) -> crate::HookBoundary {
+        match self {
+            Self::Model { .. } => crate::HookBoundary::ModelDispatch,
+            Self::Tool { .. } => crate::HookBoundary::ToolDispatch,
+        }
+    }
+}
+
 /// Step returned after applying a loop decision to pure state.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum DecisionStep {
@@ -43,50 +58,6 @@ pub enum DecisionStep {
         state: TurnState,
         /// Adapter request to dispatch.
         request: AdapterRequest,
-    },
-    /// Runtime execution has completed.
-    Complete {
-        /// Final runtime report.
-        report: crate::RunReport,
-    },
-}
-
-/// Adapter result normalized for pure transition handling.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum AdapterOutcome {
-    /// Model adapter returned a validated response.
-    ModelOk {
-        /// Validated model response.
-        response: animus_adapters::ModelResponse,
-    },
-    /// Tool adapter returned a validated response.
-    ToolOk {
-        /// Validated tool response.
-        response: animus_adapters::ToolResponse,
-    },
-    /// Adapter service failed closed with a typed non-completed outcome.
-    Blocked {
-        /// Adapter component that was blocked.
-        component: crate::AdapterComponent,
-        /// Non-completed service outcome.
-        outcome: animus_adapters::OutcomeKind,
-    },
-    /// Adapter returned an error.
-    Err {
-        /// Adapter component that failed.
-        component: crate::AdapterComponent,
-        /// Human-readable adapter error message.
-        message: String,
-    },
-}
-
-/// Step returned after applying an adapter outcome to pure state.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum AdapterStep {
-    /// Continue to the next fabric turn.
-    Continue {
-        /// Updated turn state.
-        state: TurnState,
     },
     /// Runtime execution has completed.
     Complete {
@@ -114,9 +85,17 @@ impl TurnState {
             turns_completed: 0,
             last_model_message: None,
             last_tool_output: None,
-            events: vec![crate::RuntimeEvent::LoopStarted {
-                summary: String::from(input.summary()),
-            }],
+            events: vec![
+                crate::RuntimeEvent::RuntimeStarted {
+                    summary: String::from(input.summary()),
+                },
+                crate::RuntimeEvent::ContextReplayed {
+                    summary: String::from(input.summary()),
+                },
+                crate::RuntimeEvent::LoopStarted {
+                    summary: String::from(input.summary()),
+                },
+            ],
         }
     }
 
@@ -161,7 +140,10 @@ impl TurnState {
         })
     }
 
-    fn complete(self, status: crate::RuntimeStatus) -> crate::RunReport {
+    fn complete(mut self, status: crate::RuntimeStatus) -> crate::RunReport {
+        let terminal = crate::RuntimeTerminalKind::from_status(&status);
+        self.events
+            .push(crate::RuntimeEvent::Shutdown { status: terminal });
         crate::RunReport::new(self.events, status)
     }
 
@@ -182,8 +164,12 @@ pub fn plan_next_turn(config: crate::RuntimeConfig, state: TurnState) -> TurnPla
         };
     }
 
+    let turn_index = state.turns_completed();
     match state.next_turn() {
-        Ok(turn) => TurnPlan::Evaluate { state, turn },
+        Ok(turn) => TurnPlan::Evaluate {
+            state: state.with_event(crate::RuntimeEvent::TurnStarted { turn_index }),
+            turn,
+        },
         Err(error) => TurnPlan::Complete {
             report: complete_with_fabric_error(state, error.to_string()),
         },
@@ -195,50 +181,61 @@ pub fn plan_next_turn(config: crate::RuntimeConfig, state: TurnState) -> TurnPla
 pub fn apply_decision(state: TurnState, decision: animus_steel::LoopDecision) -> DecisionStep {
     match decision {
         animus_steel::LoopDecision::CallModel { request } => {
-            let state = state.with_event(crate::RuntimeEvent::ModelRequested {
-                request: request.clone(),
-            });
+            let turn_index = state.turns_completed();
+            let state = state
+                .with_event(crate::RuntimeEvent::LoopDecision {
+                    turn_index,
+                    decision: crate::LoopDecisionKind::Model,
+                })
+                .with_event(crate::RuntimeEvent::ModelRequested {
+                    request: request.clone(),
+                });
             DecisionStep::Dispatch {
                 state,
                 request: AdapterRequest::Model { request },
             }
         }
         animus_steel::LoopDecision::CallTool { request } => {
-            let state = state.with_event(crate::RuntimeEvent::ToolRequested {
-                request: request.clone(),
-            });
+            let turn_index = state.turns_completed();
+            let state = state
+                .with_event(crate::RuntimeEvent::LoopDecision {
+                    turn_index,
+                    decision: crate::LoopDecisionKind::Tool,
+                })
+                .with_event(crate::RuntimeEvent::ToolRequested {
+                    request: request.clone(),
+                });
             DecisionStep::Dispatch {
                 state,
                 request: AdapterRequest::Tool { request },
             }
         }
         animus_steel::LoopDecision::Respond { response } => {
-            let state = state.with_event(crate::RuntimeEvent::FinalResponse {
-                response: response.clone(),
-            });
+            let turn_index = state.turns_completed();
+            let state = state
+                .with_event(crate::RuntimeEvent::LoopDecision {
+                    turn_index,
+                    decision: crate::LoopDecisionKind::Respond,
+                })
+                .with_event(crate::RuntimeEvent::FinalResponse {
+                    response: response.clone(),
+                });
             DecisionStep::Complete {
                 report: state.complete(crate::RuntimeStatus::FinalResponse { response }),
             }
         }
         animus_steel::LoopDecision::Stop => {
-            let state = state.with_event(crate::RuntimeEvent::Stopped);
+            let turn_index = state.turns_completed();
+            let state = state
+                .with_event(crate::RuntimeEvent::LoopDecision {
+                    turn_index,
+                    decision: crate::LoopDecisionKind::Stop,
+                })
+                .with_event(crate::RuntimeEvent::Stopped);
             DecisionStep::Complete {
                 report: state.complete(crate::RuntimeStatus::Stopped),
             }
         }
-    }
-}
-
-/// Applies an adapter outcome to pure state.
-#[must_use]
-pub fn apply_adapter_outcome(state: TurnState, outcome: AdapterOutcome) -> AdapterStep {
-    match outcome {
-        AdapterOutcome::ModelOk { response } => model_success(state, response),
-        AdapterOutcome::ToolOk { response } => tool_success(state, response),
-        AdapterOutcome::Blocked { component, outcome } => {
-            adapter_blocked(state, component, outcome)
-        }
-        AdapterOutcome::Err { component, message } => adapter_failure(state, component, message),
     }
 }
 
@@ -251,49 +248,4 @@ pub fn complete_with_fabric_error(state: TurnState, message: String) -> crate::R
     state.complete(crate::RuntimeStatus::Failed {
         failure: crate::RuntimeFailure::Fabric { message },
     })
-}
-
-fn model_success(mut state: TurnState, response: animus_adapters::ModelResponse) -> AdapterStep {
-    state.turns_completed = state.turns_completed.saturating_add(1);
-    state.last_model_message = Some(String::from(response.message()));
-    state
-        .events
-        .push(crate::RuntimeEvent::ModelResponded { response });
-    AdapterStep::Continue { state }
-}
-
-fn tool_success(mut state: TurnState, response: animus_adapters::ToolResponse) -> AdapterStep {
-    state.turns_completed = state.turns_completed.saturating_add(1);
-    state.last_tool_output = Some(String::from(response.output()));
-    state
-        .events
-        .push(crate::RuntimeEvent::ToolResponded { response });
-    AdapterStep::Continue { state }
-}
-
-fn adapter_blocked(
-    state: TurnState,
-    component: crate::AdapterComponent,
-    outcome: animus_adapters::OutcomeKind,
-) -> AdapterStep {
-    adapter_failure(state, component, String::from(outcome.as_str()))
-}
-
-fn adapter_failure(
-    state: TurnState,
-    component: crate::AdapterComponent,
-    message: String,
-) -> AdapterStep {
-    let failure = match component {
-        crate::AdapterComponent::Model => crate::RuntimeFailure::ModelAdapter {
-            message: message.clone(),
-        },
-        crate::AdapterComponent::Tool => crate::RuntimeFailure::ToolAdapter {
-            message: message.clone(),
-        },
-    };
-    let state = state.with_event(crate::RuntimeEvent::AdapterError { component, message });
-    AdapterStep::Complete {
-        report: state.complete(crate::RuntimeStatus::Failed { failure }),
-    }
 }
