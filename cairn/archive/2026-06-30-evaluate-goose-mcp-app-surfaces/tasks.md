@@ -1,0 +1,9 @@
+# Tasks
+
+- [x] [serial] Write an evaluation matrix for Goose MCP Apps covering UI resource identity, MIME/profile tags, CSP domains, permission requests, host-context sync, callbacks, sizing, and lifecycle bounds. r[agent_harness_runtime.goose_mcp_app_surfaces.evaluation_matrix]
+- [x] [depends:evaluation_matrix] Add positive safe-metadata fixtures and negative broad-domain, broad-permission, unbounded-callback, and ambient-host-control fixtures. r[agent_harness_runtime.goose_mcp_app_surfaces.evaluation_matrix.fixtures]
+- [x] [serial] Define a data-only UI metadata descriptor sketch that separates reusable validation from optional host rendering. r[agent_harness_runtime.goose_mcp_app_surfaces.metadata_descriptor]
+- [x] [depends:metadata_descriptor] Add runtime-neutrality tests proving descriptor validation does not render HTML, run JavaScript, open remote resources, request browser permissions, or send chat callbacks. r[agent_harness_runtime.goose_mcp_app_surfaces.metadata_descriptor.no_execution]
+- [x] [serial] Document deny-by-default CSP, permission policy, callback, and host-context requirements for any future MCP App host adapter. r[agent_harness_runtime.goose_mcp_app_surfaces.security_constraints]
+- [x] [depends:security_constraints] Add negative evaluation cases for wildcard domains, device permissions without admission, clipboard write without admission, and direct message injection. r[agent_harness_runtime.goose_mcp_app_surfaces.security_constraints.denied]
+- [x] [depends:evaluation_matrix.fixtures,metadata_descriptor.no_execution,security_constraints.denied] Update docs and run focused evaluation checks, runtime-neutrality checks, Cairn validation, roadmap checks, and Cairn gates with reviewable evidence. r[agent_harness_runtime.goose_mcp_app_surfaces.verification]

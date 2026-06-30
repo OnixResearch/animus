@@ -1899,3 +1899,123 @@ r[agent_harness_runtime.vllm_semantic_router_recipes.verification.closeout]
 - WHEN closeout validation runs
 - THEN evidence names focused recipe, signal, selection, bounds, output, receipt, roadmap, Cairn validation, and Cairn gate checks
 - AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Typed policy/profile descriptors
+
+r[agent_harness_runtime.hermes_policy_profiles.descriptor] Animus MUST define typed policy/profile descriptors for host-supplied operating guidance with policy kind, source scope, trust status, priority, goal text, success criteria, constraints, validation rules, stop rules, provenance, and optional prompt snippets.
+
+#### Scenario: Valid policy profile composes into prompt input
+
+r[agent_harness_runtime.hermes_policy_profiles.descriptor.valid]
+- GIVEN a trusted host supplies a policy profile with goal, success criteria, constraints, validation rules, stop rules, provenance, and priority
+- WHEN prompt assembly prepares policy context
+- THEN the profile contributes an attributed bounded prompt segment
+- AND the descriptor remains available as structured metadata for runtime/report evidence.
+
+### Requirement: Deterministic policy precedence and conflict diagnostics
+
+r[agent_harness_runtime.hermes_policy_profiles.precedence] Animus MUST compose multiple policy descriptors in deterministic precedence order and report conflicts between side-effect limits, validation requirements, or stop rules.
+
+#### Scenario: Global safety rule defeats project override
+
+r[agent_harness_runtime.hermes_policy_profiles.precedence.safety_wins]
+- GIVEN a trusted global policy forbids a destructive action without explicit approval and a project-local policy attempts to allow that action implicitly
+- WHEN policy composition runs
+- THEN the global safety constraint remains active
+- AND diagnostics identify the overridden project-local rule without embedding unsafe project prompt text.
+
+### Requirement: Policy prompts are outcome-first and bounded
+
+r[agent_harness_runtime.hermes_policy_profiles.prompt_hygiene] Policy-derived prompt text MUST prioritize goal, success criteria, constraints, required output shape, validation, and stop rules, and MUST be bounded to prevent context bloat.
+
+#### Scenario: Process-heavy policy is rejected or warned
+
+r[agent_harness_runtime.hermes_policy_profiles.prompt_hygiene.process_heavy]
+- GIVEN a policy descriptor contains a long process script with no observable success criteria or stop rule
+- WHEN policy validation runs
+- THEN validation rejects it or emits a prompt-hygiene diagnostic according to policy severity
+- AND prompt assembly does not silently include unbounded process-heavy text.
+
+### Requirement: Project-local policy is trust-gated
+
+r[agent_harness_runtime.hermes_policy_profiles.project_trust] Project-local policy descriptors MUST NOT influence prompts, tool activation, command expansion, or runtime guardrails until host trust permits them.
+
+#### Scenario: Untrusted project policy is omitted
+
+r[agent_harness_runtime.hermes_policy_profiles.project_trust.omit]
+- GIVEN a project-local policy descriptor is marked untrusted
+- WHEN policy context is assembled
+- THEN the descriptor is omitted or marked unavailable according to host policy
+- AND its constraints and prompt snippets do not override trusted global policy.
+
+### Requirement: Policy descriptors do not replace enforcement
+
+r[agent_harness_runtime.hermes_policy_profiles.enforcement_boundary] Animus MUST treat policy descriptors as guidance and configuration input, not as the sole enforcement mechanism for capability denial, read-only mode, mutation serialization, or credential redaction.
+
+#### Scenario: Read-only policy also has runtime guard
+
+r[agent_harness_runtime.hermes_policy_profiles.enforcement_boundary.readonly]
+- GIVEN policy context says the session is read-only
+- WHEN a tool call requests filesystem mutation
+- THEN runtime enforcement denies or blocks the mutation through a typed capability boundary
+- AND the denial does not rely only on model obedience to prompt text.
+
+### Requirement: Policy profile adaptation verification
+
+r[agent_harness_runtime.hermes_policy_profiles.verification] The policy profile adaptation MUST include focused tests for valid composition, conflict precedence, prompt hygiene, trust gating, enforcement-boundary integration, prompt budget bounds, stale model guidance rejection, and safe diagnostics.
+
+#### Scenario: Closeout evidence covers policy composition
+
+r[agent_harness_runtime.hermes_policy_profiles.verification.closeout]
+- GIVEN maintainers intend to archive the Hermes policy profile adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused policy composition tests, prompt-hygiene tests, trust-boundary tests, enforcement-boundary tests, workspace checks, Cairn validation, and Cairn gates
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: MCP Apps evaluation matrix is explicit
+
+r[agent_harness_runtime.goose_mcp_app_surfaces.evaluation_matrix] Animus MUST evaluate Goose MCP Apps patterns with an explicit matrix covering UI resource identity, MIME/profile tags, CSP domains, permission requests, host-context sync, callbacks, sizing, lifecycle bounds, and adoption risk.
+
+#### Scenario: Unsafe UI metadata is classified
+
+r[agent_harness_runtime.goose_mcp_app_surfaces.evaluation_matrix.fixtures]
+- GIVEN evaluation fixtures include safe UI metadata and unsafe broad-domain, broad-permission, unbounded-callback, or ambient-host-control descriptors
+- WHEN the MCP Apps evaluation matrix is applied
+- THEN each fixture is classified with an adoption decision and risk reason
+- AND no fixture claims runtime UI execution behavior.
+
+### Requirement: UI metadata descriptors remain data-only
+
+r[agent_harness_runtime.goose_mcp_app_surfaces.metadata_descriptor] Animus MAY define a data-only UI metadata descriptor sketch for future tool-result UI resources, but reusable validation MUST NOT render HTML, run JavaScript, open remote resources, request browser permissions, or send chat callbacks.
+
+#### Scenario: Descriptor validation has no UI execution
+
+r[agent_harness_runtime.goose_mcp_app_surfaces.metadata_descriptor.no_execution]
+- GIVEN a metadata descriptor includes a UI resource URI, MIME/profile tag, CSP domains, permissions, and callback names
+- WHEN reusable validation runs
+- THEN validation inspects only descriptor data
+- AND HTML rendering, JavaScript execution, remote resource loading, browser permission requests, and chat callbacks are absent.
+
+### Requirement: Future MCP App surfaces are deny-by-default
+
+r[agent_harness_runtime.goose_mcp_app_surfaces.security_constraints] Any future MCP App-style surface SHOULD default to no remote domains, no nested frames, no device permissions, no clipboard write, no direct model-visible message injection, and bounded host-context callbacks unless explicitly admitted by policy.
+
+#### Scenario: Broad UI permission request is denied in evaluation
+
+r[agent_harness_runtime.goose_mcp_app_surfaces.security_constraints.denied]
+- GIVEN a candidate UI metadata descriptor requests wildcard resource domains, camera access, clipboard write, and direct chat-message callbacks without policy admission
+- WHEN evaluation applies the security constraints
+- THEN the descriptor is classified as rejected for future default behavior
+- AND the evaluation records the required host-policy gates before reconsideration.
+
+### Requirement: MCP Apps evaluation closeout is evidenced
+
+r[agent_harness_runtime.goose_mcp_app_surfaces.verification] MCP Apps surface evaluation MUST include the adoption matrix, positive and negative metadata fixtures, runtime-neutrality checks, security-constraint documentation, Cairn validation, and Cairn gates before archive.
+
+#### Scenario: MCP Apps evaluation evidence is complete
+
+r[agent_harness_runtime.goose_mcp_app_surfaces.verification.closeout]
+- GIVEN the Goose MCP Apps surface evaluation change is ready to archive
+- WHEN closeout validation runs
+- THEN evidence includes the evaluation matrix, safe and unsafe fixtures, runtime-neutrality checks, security-constraint docs, Cairn validation, and Cairn gates
+- AND skipped checks record a blocker and next-best validation.

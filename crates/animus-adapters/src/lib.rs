@@ -20,7 +20,9 @@ mod dataspace;
 mod effect;
 mod ledger;
 mod manifest;
+mod mcp_app;
 mod model;
+mod policy_profile;
 mod router;
 mod safe;
 mod status;
@@ -107,6 +109,58 @@ pub use manifest::{
     RedactionPolicyDraft, RuntimeKind, SandboxMode, SandboxRequirements, SandboxRequirementsDraft,
     ToolDescriptor, ToolDescriptorDraft, WorkingDirectoryMode,
 };
+pub use mcp_app::{MCP_APP_EVALUATION_AXES, PROHIBITED_MCP_APP_VALIDATION_EFFECTS};
+/// Adoption decision for MCP Apps-style UI metadata.
+pub type McpAppAdoptionDecision = mcp_app::AdoptionDecision;
+/// Validated data-only MCP Apps-style UI metadata descriptor.
+pub type McpAppDescriptor = mcp_app::Descriptor;
+/// Borrowed MCP Apps-style UI metadata before validation.
+pub type McpAppDescriptorDraft<'a> = mcp_app::DescriptorDraft<'a>;
+/// Data-only MCP Apps evaluation report.
+pub type McpAppEvaluation = mcp_app::Evaluation;
+/// Matrix axis used to evaluate MCP Apps-style UI metadata.
+pub type McpAppEvaluationAxis = mcp_app::EvaluationAxis;
+/// Error raised while validating or classifying MCP Apps-style descriptors.
+pub type McpAppEvaluationError = mcp_app::EvaluationError;
+/// Lifecycle policy for callbacks and UI lifetime.
+pub type McpAppLifecyclePolicy = mcp_app::LifecyclePolicy;
+/// Admission state for a future MCP Apps host-policy gate.
+pub type McpAppPolicyAdmission = mcp_app::PolicyAdmission;
+/// Borrowed policy-admission flags for evaluating UI metadata.
+pub type McpAppPolicyAdmissionDraft = mcp_app::PolicyAdmissionDraft;
+/// Risk reason recorded with an MCP Apps adoption decision.
+pub type McpAppRiskReason = mcp_app::RiskReason;
+/// Preferred sizing policy for a future UI host.
+pub type McpAppSizePolicy = mcp_app::SizePolicy;
+/// Result of deterministic policy profile composition.
+pub type PolicyCompositionReport = policy_profile::CompositionReport;
+/// Diagnostic emitted while composing policy profiles.
+pub type PolicyCompositionDiagnostic = policy_profile::CompositionDiagnostic;
+/// Diagnostic class emitted while composing policy profiles.
+pub type PolicyCompositionDiagnosticKind = policy_profile::DiagnosticKind;
+/// Policy descriptor boundary relative to runtime enforcement.
+pub type PolicyEnforcementBoundary = policy_profile::EnforcementBoundary;
+/// Errors raised while validating policy profiles.
+pub type PolicyProfileError = policy_profile::ProfileError;
+/// Host-supplied policy/profile descriptor.
+pub type PolicyProfile = policy_profile::Profile;
+/// Borrowed host-supplied policy/profile descriptor.
+pub type PolicyProfileDraft<'a> = policy_profile::ProfileDraft<'a>;
+/// Policy descriptor kind.
+pub type PolicyProfileKind = policy_profile::PolicyKind;
+/// Prompt hygiene issue class.
+pub type PolicyPromptHygieneIssue = policy_profile::PromptHygieneIssue;
+/// Prompt segment attributed to a policy profile.
+pub type PolicyPromptSegment = policy_profile::PromptSegment;
+/// Host trust decision for project-local profiles.
+pub type ProjectPolicyTrustMode = policy_profile::ProjectTrustMode;
+/// Runtime guard decision required for capability enforcement.
+pub type RuntimeGuardRequirement = policy_profile::RuntimeGuardRequirement;
+/// Source scope for a policy descriptor.
+pub type PolicySourceScope = policy_profile::SourceScope;
+/// Trust status for a policy descriptor.
+pub type PolicyTrustStatus = policy_profile::TrustStatus;
+pub use policy_profile::{compose_policy_context, mutation_requires_runtime_guard};
 pub use safe::receipt::{BoundedCount, BoundedCountDraft};
 
 /// Largest accepted bounded count value in a safe receipt.
