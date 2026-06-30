@@ -1,0 +1,24 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+source_file=${repo_root}/config/provider-registry.ncl
+fixture_dir=${repo_root}/config/provider-registry-fixtures
+
+if ! command -v nickel >/dev/null 2>&1; then
+  printf '%s\n' 'error: nickel is required to check provider registry config. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+
+nickel export --format json --field provider_registry "${source_file}" >/dev/null
+
+for fixture in "${fixture_dir}"/*.ncl; do
+  if nickel export --format json --field provider_registry "${fixture}" >/dev/null 2>&1; then
+    printf 'error: negative provider registry fixture unexpectedly passed: %s\n' "${fixture}" >&2
+    exit "${FAILURE}"
+  fi
+  printf 'negative provider registry fixture ok: %s\n' "$(basename -- "${fixture}")"
+done

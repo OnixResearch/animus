@@ -15,6 +15,7 @@
 mod adapters;
 mod config;
 mod execution;
+mod providers;
 
 pub use adapters::{
     AdapterDescriptor, AdapterFamily, AdapterIssue, AdapterPlan, AdapterVerdict, CredentialState,
@@ -25,6 +26,13 @@ pub use adapters::{
 pub type FixtureAdapters = Fixtures;
 pub use config::{INTENT_ENV_KEY, load_runtime};
 pub use execution::{RunError, RunReport, SummaryModelAdapter, run, run_with_model};
+pub use providers::{
+    ApiKind, CredentialHandle, CredentialRequirement, CredentialSource, EndpointIdentity,
+    InputModality, MissingCredentialDiagnostic, ModelCapabilities, ModelCapabilitiesDraft,
+    ModelEntry, ModelId, ModelSelection, ProviderEntry, ProviderId, ProviderRegistry,
+    ReasoningSupport, RegistryError, SelectedModel, ThinkingLevel, ThinkingPolicy, TokenCost,
+    resolve_credential_from_env_pairs,
+};
 
 /// Public runtime configuration type.
 pub type RuntimeConfig = config::Runtime;
