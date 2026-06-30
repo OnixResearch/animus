@@ -7,13 +7,17 @@ script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
 cd "${repo_root}"
 
+if command -v cargo-tigerstyle >/dev/null 2>&1; then
+  exec cargo-tigerstyle check
+fi
+
+if command -v cargo >/dev/null 2>&1 && cargo tigerstyle --version >/dev/null 2>&1; then
+  exec cargo tigerstyle check
+fi
+
 if command -v nix >/dev/null 2>&1 && [ -f flake.nix ]; then
   exec nix run .#cargo-tigerstyle -- check
 fi
 
-if command -v cargo >/dev/null 2>&1; then
-  exec cargo tigerstyle check
-fi
-
-printf '%s\n' 'error: nix or cargo is required to run Octet lints.' >&2
+printf '%s\n' 'error: cargo-tigerstyle, cargo tigerstyle, or nix is required to run Octet lints.' >&2
 exit "${FAILURE}"
