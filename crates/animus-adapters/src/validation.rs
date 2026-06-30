@@ -82,6 +82,13 @@ pub enum AdapterContractError {
         /// Unsupported value after normalization.
         value: alloc::string::String,
     },
+    /// A dataspace field value was not supported.
+    UnsupportedDataspaceValue {
+        /// Boundary field name.
+        field: &'static str,
+        /// Unsupported value after normalization.
+        value: alloc::string::String,
+    },
     /// A required collection contained no values.
     EmptyCollection {
         /// Boundary collection field name.
@@ -128,6 +135,12 @@ impl core::fmt::Display for AdapterContractError {
                 write!(
                     formatter,
                     "{field} contains unsupported workspace value {value}"
+                )
+            }
+            Self::UnsupportedDataspaceValue { field, value } => {
+                write!(
+                    formatter,
+                    "{field} contains unsupported dataspace value {value}"
                 )
             }
         }

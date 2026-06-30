@@ -183,6 +183,7 @@
                 || baseName == "check-plugin-manifest-runtime-neutral"
                 || baseName == "check-request-lifecycle"
                 || baseName == "check-steel-runtime-policy"
+                || baseName == "check-syndicate-dataspace-isolation"
                 || baseName == "check-trellis-verified-core"
                 || baseName == "check-neutral-ledger"
                 || baseName == "check-injected-services"
@@ -365,6 +366,10 @@
 
           trellis-verified-core = cargoCheck "animus-trellis-verified-core" [ ] ''
             sh scripts/cairn/check-trellis-verified-core --root .
+          '';
+
+          syndicate-dataspace-isolation = cargoCheck "animus-syndicate-dataspace-isolation" [ ] ''
+            sh scripts/cairn/check-syndicate-dataspace-isolation --root .
           '';
 
           cargo-clippy = cargoCheck "animus-cargo-clippy" [ pkgs.clippy ] ''

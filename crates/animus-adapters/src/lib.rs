@@ -16,6 +16,7 @@
 extern crate alloc;
 
 mod artifact;
+mod dataspace;
 mod effect;
 mod ledger;
 mod manifest;
@@ -27,6 +28,11 @@ mod validation;
 mod workspace;
 
 pub use artifact::BLAKE3_HASH_HEX_CHARS;
+pub use dataspace::{
+    ActorKind, AdapterService, Assertion, AssertionDraft, AssertionKind, AssertionRedaction,
+    AssertionStatus, OrchestrationEvent, OrchestrationEventDraft, OrchestrationEventKind, Scope,
+    ScopeDraft, Subscription, SubscriptionDraft, SubscriptionIssue,
+};
 
 /// Active envelope version used for Animus-owned BLAKE3 identities.
 pub const ARTIFACT_ENVELOPE_VERSION: u32 = artifact::VERSION;
