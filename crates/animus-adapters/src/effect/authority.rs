@@ -1,5 +1,7 @@
 mod evidence;
 mod flow;
+#[cfg(test)]
+mod model;
 mod outcome;
 mod schema;
 mod scope;

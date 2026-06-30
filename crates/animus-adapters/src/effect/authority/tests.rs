@@ -1,3 +1,4 @@
+use super::model::{AuthorizationModelInput, model_authorization_issue};
 use super::*;
 
 const CONTRACT: &str = "animus.runtime";
@@ -45,6 +46,7 @@ macro_rules! ucan_grant {
     };
 }
 
+mod equivalence;
 mod negative;
 mod positive;
 

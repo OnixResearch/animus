@@ -131,7 +131,6 @@ let change_entries = [
   change "adapt-qualifier-quality-records" core_role "receipt-provenance" ["adapt-clankers-provenance-ledger", "adapt-hermes-review-report-contracts"] [],
   change "adapt-sandlock-sandbox-enforcement" host_role "concrete-adapters" ["agent_harness_runtime.clash_ucan.closeout", "adapt-pi-tool-contracts", "agent_harness_runtime.clankers_safe_receipts.closeout"] [],
   change "adapt-syndicate-dataspace-adapters" optional_role "optional-references" ["adapt-pi-runtime-event-lifecycle", "agent_harness_runtime.clankers_injected_services.closeout"] [],
-  change "adapt-trellis-verified-core-boundaries" optional_role "optional-references" ["agent_harness_runtime.validation", "agent_harness_runtime.clankers_runtime_facade_inventory.closeout"] [],
   change "adapt-zerostack-context-file-layering" core_role "policy-guidance" ["adapt-clankers-context-references", "adapt-clankers-prompt-assembly-kit", "agent_harness_runtime.clankers_safe_receipts.closeout"] ["adapt-pi-skills-resource-discovery", "adapt-zerostack-prompt-mode-profiles"],
   change "adapt-zerostack-fresh-context-tasks" product_role "ui-headless" ["adapt-openai-codex-subagent-threads", "adapt-pi-tool-contracts", "agent_harness_runtime.clankers_focused_rails.closeout"] ["adapt-claude-code-agent-teams"],
   change "adapt-zerostack-hashed-edit-protocol" core_role "injected-services" ["adapt-pi-tool-contracts", "agent_harness_runtime.clankers_safe_receipts.closeout"] ["add-concrete-std-runtime-adapters"],

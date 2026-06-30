@@ -1,0 +1,79 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+readonly RAIL_NAME=trellis-verified-core
+readonly RECEIPT_SCHEMA=animus.focused-rail.v1
+readonly RECEIPT_DIR=target/cairn/focused-rails
+readonly DOC_PATH=docs/trellis-verified-core-boundaries.md
+readonly ROOT_MANIFEST=Cargo.toml
+readonly TRELLIS_FEATURE='trellis-reference = ["dep:trellis"]'
+readonly TRELLIS_DEP='trellis = { package = "verified-logic"'
+readonly OPTIONAL_DEP='optional = true'
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+
+if [ "${1:-}" = "--root" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  repo_root=$(CDPATH= cd -- "$2" && pwd)
+fi
+
+if ! command -v cargo >/dev/null 2>&1; then
+  printf '%s\n' 'error: cargo is required. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+
+cd "${repo_root}"
+
+require_text() {
+  file_path=$1
+  expected=$2
+  if ! grep -F "${expected}" "${file_path}" >/dev/null 2>&1; then
+    printf 'error: %s is missing required text: %s\n' "${file_path}" "${expected}" >&2
+    exit "${FAILURE}"
+  fi
+}
+
+require_text "${DOC_PATH}" 'r[agent_harness_runtime.trellis_verified_core.candidate_inventory]'
+require_text "${DOC_PATH}" 'Capability/effect authorization'
+require_text "${DOC_PATH}" 'Equivalence tests cover allowed model/exec paths'
+require_text "${ROOT_MANIFEST}" "${TRELLIS_FEATURE}"
+require_text "${ROOT_MANIFEST}" "${TRELLIS_DEP}"
+require_text "${ROOT_MANIFEST}" "${OPTIONAL_DEP}"
+
+cargo test -p animus-adapters --locked authority::tests::equivalence
+cargo check -p animus --no-default-features --locked
+
+mkdir -p "${RECEIPT_DIR}"
+receipt_path=${RECEIPT_DIR}/${RAIL_NAME}.md
+cat > "${receipt_path}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+boundary: Trellis-style verified-core inventory, model equivalence, and dependency isolation
+scope_doc: ${DOC_PATH}
+selected_model:
+- capability/effect authorization issue ordering
+positive_fixtures:
+- allowed model action with matching contract, grant, and local allow caveat
+- allowed exec action with enforceable sandbox descriptor hash
+negative_fixtures:
+- contract mismatch, local denial, missing grant, malformed sandbox, and unavailable sandbox match the model and fail closed
+checks:
+- docs contain candidate inventory and selected model scope
+- root trellis-reference feature remains optional
+- no-default root build does not require Trellis
+- animus-adapters authority equivalence tests pass
+safe_evidence:
+- fixture names and issue classes only
+- no raw prompts, provider payloads, credentials, full paths, tool bodies, model outputs, or proof-tool logs
+non_claims:
+- this rail does not claim full formal verification, default Trellis dependency adoption, or verified coverage for unmodeled candidate boundaries
+EOF
+
+printf 'focused rail %s: pass\n' "${RAIL_NAME}"
+printf 'receipt: %s\n' "${receipt_path}"

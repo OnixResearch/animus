@@ -183,6 +183,7 @@
                 || baseName == "check-plugin-manifest-runtime-neutral"
                 || baseName == "check-request-lifecycle"
                 || baseName == "check-steel-runtime-policy"
+                || baseName == "check-trellis-verified-core"
                 || baseName == "check-neutral-ledger"
                 || baseName == "check-injected-services"
                 || baseName == "check-release-evidence-index"
@@ -360,6 +361,10 @@
 
           clash-ucan-authority = cargoCheck "animus-clash-ucan-authority" [ pkgs.nickel ] ''
             sh scripts/cairn/check-clash-ucan-authority --root .
+          '';
+
+          trellis-verified-core = cargoCheck "animus-trellis-verified-core" [ ] ''
+            sh scripts/cairn/check-trellis-verified-core --root .
           '';
 
           cargo-clippy = cargoCheck "animus-cargo-clippy" [ pkgs.clippy ] ''
