@@ -1,0 +1,15 @@
+# Tasks
+
+- [x] [serial] Extend subagent delegation DTOs with admitted recipe/profile reference, parameter bindings, tool ceilings, workspace scope, model profile, timeout/turn ceilings, return mode, and summary schema. r[agent_harness_runtime.goose_recipe_backed_subagents.delegation]
+- [x] [depends:delegation] Add positive recipe-backed review and research subagent fixtures. r[agent_harness_runtime.goose_recipe_backed_subagents.delegation.valid]
+- [x] [serial] Enforce explicit delegation from user, trusted skill, or admitted automation policy before recipe-backed subagents can start. r[agent_harness_runtime.goose_recipe_backed_subagents.explicit]
+- [x] [depends:explicit] Add negative tests proving automatic, recursive, untrusted-recipe, and unapproved automation subagent starts are rejected. r[agent_harness_runtime.goose_recipe_backed_subagents.explicit.denied]
+- [x] [serial] Resolve effective subagent capabilities as the intersection of parent policy, recipe/profile ceilings, request ceilings, workspace scope, and host admission. r[agent_harness_runtime.goose_recipe_backed_subagents.capability_intersection]
+- [x] [depends:capability_intersection] Add negative tests for unauthorized tools, out-of-scope workspace access, inherited-extension widening, and secret access attempts. r[agent_harness_runtime.goose_recipe_backed_subagents.capability_intersection.denied]
+- [x] [serial] Add return-mode contracts for summary-only, status-plus-summary, and full-detail-with-bounds parent handoffs. r[agent_harness_runtime.goose_recipe_backed_subagents.return_modes]
+- [x] [depends:return_modes] Add negative tests proving raw subagent logs cannot flood parent context outside explicit bounds. r[agent_harness_runtime.goose_recipe_backed_subagents.return_modes.bounded]
+- [x] [serial] Define external subagent descriptors backed by ACP/MCP adapters and injected host services only. r[agent_harness_runtime.goose_recipe_backed_subagents.external]
+- [x] [depends:external] Add negative tests proving external subagents cannot be discovered from ambient CLIs, inherited credentials, or undeclared tools. r[agent_harness_runtime.goose_recipe_backed_subagents.external.no_ambient]
+- [x] [serial] Add aggregation outcomes for success, failure, timeout, cancellation, malformed summary, denied tool, partial parallel success, and write conflict. r[agent_harness_runtime.goose_recipe_backed_subagents.aggregation]
+- [x] [depends:aggregation] Add failure aggregation tests proving failed subagents do not appear as successful and parallel write conflicts do not merge silently. r[agent_harness_runtime.goose_recipe_backed_subagents.aggregation.failure]
+- [x] [depends:delegation.valid,explicit.denied,capability_intersection.denied,return_modes.bounded,external.no_ambient,aggregation.failure] Update docs and run focused subagent tests, interop descriptor tests, ledger isolation tests, Cairn validation, roadmap checks, and Cairn gates with reviewable evidence. r[agent_harness_runtime.goose_recipe_backed_subagents.verification]

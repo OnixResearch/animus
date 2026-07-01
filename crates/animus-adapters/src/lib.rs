@@ -32,6 +32,7 @@ mod security;
 #[cfg(test)]
 mod security_tests;
 mod status;
+mod subagent;
 mod tool;
 mod validation;
 mod workflow;
@@ -148,6 +149,14 @@ pub type SafeReceiptDraft<'a> = safe::receipt::Draft<'a>;
 /// Errors raised by safe receipt validation.
 pub type SafeReceiptError = safe::receipt::Error;
 pub use status::evidence::SAFE_EVIDENCE_HASH_HEX_CHARS;
+pub use subagent::{
+    ExternalSubagentDescriptor, ExternalSubagentDescriptorDraft, ExternalSubagentProtocol,
+    SubagentAggregateReport, SubagentCapabilityDenial, SubagentCapabilityInput,
+    SubagentCapabilityResolution, SubagentDelegation, SubagentDelegationDraft,
+    SubagentDelegationSource, SubagentError, SubagentHandoff, SubagentHandoffDraft,
+    SubagentOutcomeDraft, SubagentOutcomeKind, SubagentReturnMode, aggregate_subagent_outcomes,
+    build_subagent_handoff, resolve_subagent_capabilities,
+};
 
 /// Optional native host session reference.
 pub type AgentSessionReference = status::identity::Reference;
