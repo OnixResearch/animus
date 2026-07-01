@@ -1,0 +1,87 @@
+{
+  "schema": "animus.recipe-workflows.v1",
+  "workflows": [
+    {
+      "activities": [
+        "plan",
+        "execute"
+      ],
+      "capability_ceilings": [
+        "model.generate",
+        "tool.read"
+      ],
+      "identity": "goose.recipe.workflow",
+      "initial_prompt": "Investigate {{topic}} in {{mode}} using {{context_file}} for {{recipe.identity}}.",
+      "instructions": "Run the bounded workflow and return structured output.",
+      "model_profile": "standard-reasoning",
+      "parameters": [
+        {
+          "default_value": "",
+          "kind": "text",
+          "name": "topic",
+          "required": true,
+          "select_options": []
+        },
+        {
+          "default_value": "review",
+          "kind": "select",
+          "name": "mode",
+          "required": false,
+          "select_options": [
+            "review",
+            "fix"
+          ]
+        },
+        {
+          "default_value": "",
+          "kind": "file",
+          "name": "context_file",
+          "required": true,
+          "select_options": []
+        }
+      ],
+      "provenance": {
+        "admitted": true,
+        "content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "source_kind": "project",
+        "source_label": "config/recipe-workflows.ncl"
+      },
+      "response_schema": {
+        "name": "workflow-result",
+        "required_fields": [
+          {
+            "kind": "string",
+            "name": "status"
+          },
+          {
+            "kind": "array",
+            "name": "warnings"
+          }
+        ]
+      },
+      "retry_policy": {
+        "checks": [
+          {
+            "capability": "tool.read",
+            "cleanup_request": "cleanup-target",
+            "effect_kind": "validation_check",
+            "label": "cargo-test",
+            "receipt_label": "retry-receipt",
+            "sandbox": "readonly",
+            "timeout_class": "standard"
+          }
+        ],
+        "max_attempts": 2
+      },
+      "subrecipes": [
+        "goose.recipe.child"
+      ],
+      "toolsets": [
+        "readonly-tools"
+      ],
+      "validation_gates": [
+        "structured-output"
+      ]
+    }
+  ]
+}

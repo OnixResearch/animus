@@ -15,27 +15,36 @@
 
 extern crate alloc;
 
+mod actor;
+mod aliases;
 mod artifact;
 mod dataspace;
 mod effect;
+mod front;
 mod ledger;
 mod manifest;
-mod mcp_app;
+mod mcpapp;
 mod model;
-mod policy_profile;
+mod profile;
 mod router;
 mod safe;
+mod security;
+#[cfg(test)]
+mod security_tests;
 mod status;
 mod tool;
 mod validation;
+mod workflow;
 mod workspace;
 
+pub use aliases::*;
 pub use artifact::BLAKE3_HASH_HEX_CHARS;
 pub use dataspace::{
     ActorKind, AdapterService, Assertion, AssertionDraft, AssertionKind, AssertionRedaction,
     AssertionStatus, OrchestrationEvent, OrchestrationEventDraft, OrchestrationEventKind, Scope,
     ScopeDraft, Subscription, SubscriptionDraft, SubscriptionIssue,
 };
+pub use front::*;
 
 /// Active envelope version used for Animus-owned BLAKE3 identities.
 pub const ARTIFACT_ENVELOPE_VERSION: u32 = artifact::VERSION;
@@ -59,11 +68,17 @@ pub use effect::{
     CapabilityClass, CapabilityDecision, CapabilityDecisionRequest, CapabilityDecisionService,
     CapabilityPolicyContract, CapabilityRequest, CaveatSummary, ConfirmationBroker,
     ConfirmationDecision, ConfirmationRequest, GuardedAction, HostRequest, HostService,
-    LocalCaveat, LocalCaveatDecision, LocalPolicyLayer, ModelProviderService, OutcomeKind, Reason,
-    Receipt, ReceiptDraft, RedactionMarker, RuntimePolicyDecision, RuntimePolicyRequest,
-    RuntimePolicyService, SAFE_HASH_HEX_CHARS, SafeHash, SandboxConstraint, SandboxState,
-    ServiceKind, ServiceOutcome, ToolExecutionService, UcanGrant, authorize_capability,
-    default_deny_confirmation, validate_authorization_receipt_text,
+    LocalCaveat, LocalCaveatDecision, LocalPolicyLayer, ModelProviderService, OutcomeKind,
+    PermissionDecisionReason, PermissionDecisionStatus, PermissionOutcome, PermissionPolicy,
+    PermissionPolicyDraft, PermissionPolicyError, PermissionPromptDecision,
+    PermissionPromptDecisionDraft, PermissionPromptRequest, PermissionPromptRequestDraft,
+    PermissionPromptStatus, PermissionReceipt, PermissionReceiptDraft, PermissionReceiptLeak,
+    PermissionResolution, PermissionResolutionRequest, PermissionTrustScope, PermissionTrustStatus,
+    PromptDecisionOutcome, PromptSummaryPolicy, Reason, Receipt, ReceiptDraft, RedactionMarker,
+    RuntimePolicyDecision, RuntimePolicyRequest, RuntimePolicyService, SAFE_HASH_HEX_CHARS,
+    SafeHash, SandboxConstraint, SandboxState, ServiceKind, ServiceOutcome, ToolExecutionService,
+    UcanGrant, authorize_capability, default_deny_confirmation, resolve_permission,
+    validate_authorization_receipt_text, validate_permission_receipt_text,
 };
 pub use ledger::SessionLedgerService;
 
@@ -109,60 +124,7 @@ pub use manifest::{
     RedactionPolicyDraft, RuntimeKind, SandboxMode, SandboxRequirements, SandboxRequirementsDraft,
     ToolDescriptor, ToolDescriptorDraft, WorkingDirectoryMode,
 };
-pub use mcp_app::{MCP_APP_EVALUATION_AXES, PROHIBITED_MCP_APP_VALIDATION_EFFECTS};
-/// Adoption decision for MCP Apps-style UI metadata.
-pub type McpAppAdoptionDecision = mcp_app::AdoptionDecision;
-/// Validated data-only MCP Apps-style UI metadata descriptor.
-pub type McpAppDescriptor = mcp_app::Descriptor;
-/// Borrowed MCP Apps-style UI metadata before validation.
-pub type McpAppDescriptorDraft<'a> = mcp_app::DescriptorDraft<'a>;
-/// Data-only MCP Apps evaluation report.
-pub type McpAppEvaluation = mcp_app::Evaluation;
-/// Matrix axis used to evaluate MCP Apps-style UI metadata.
-pub type McpAppEvaluationAxis = mcp_app::EvaluationAxis;
-/// Error raised while validating or classifying MCP Apps-style descriptors.
-pub type McpAppEvaluationError = mcp_app::EvaluationError;
-/// Lifecycle policy for callbacks and UI lifetime.
-pub type McpAppLifecyclePolicy = mcp_app::LifecyclePolicy;
-/// Admission state for a future MCP Apps host-policy gate.
-pub type McpAppPolicyAdmission = mcp_app::PolicyAdmission;
-/// Borrowed policy-admission flags for evaluating UI metadata.
-pub type McpAppPolicyAdmissionDraft = mcp_app::PolicyAdmissionDraft;
-/// Risk reason recorded with an MCP Apps adoption decision.
-pub type McpAppRiskReason = mcp_app::RiskReason;
-/// Preferred sizing policy for a future UI host.
-pub type McpAppSizePolicy = mcp_app::SizePolicy;
-/// Result of deterministic policy profile composition.
-pub type PolicyCompositionReport = policy_profile::CompositionReport;
-/// Diagnostic emitted while composing policy profiles.
-pub type PolicyCompositionDiagnostic = policy_profile::CompositionDiagnostic;
-/// Diagnostic class emitted while composing policy profiles.
-pub type PolicyCompositionDiagnosticKind = policy_profile::DiagnosticKind;
-/// Policy descriptor boundary relative to runtime enforcement.
-pub type PolicyEnforcementBoundary = policy_profile::EnforcementBoundary;
-/// Errors raised while validating policy profiles.
-pub type PolicyProfileError = policy_profile::ProfileError;
-/// Host-supplied policy/profile descriptor.
-pub type PolicyProfile = policy_profile::Profile;
-/// Borrowed host-supplied policy/profile descriptor.
-pub type PolicyProfileDraft<'a> = policy_profile::ProfileDraft<'a>;
-/// Policy descriptor kind.
-pub type PolicyProfileKind = policy_profile::PolicyKind;
-/// Prompt hygiene issue class.
-pub type PolicyPromptHygieneIssue = policy_profile::PromptHygieneIssue;
-/// Prompt segment attributed to a policy profile.
-pub type PolicyPromptSegment = policy_profile::PromptSegment;
-/// Host trust decision for project-local profiles.
-pub type ProjectPolicyTrustMode = policy_profile::ProjectTrustMode;
-/// Runtime guard decision required for capability enforcement.
-pub type RuntimeGuardRequirement = policy_profile::RuntimeGuardRequirement;
-/// Source scope for a policy descriptor.
-pub type PolicySourceScope = policy_profile::SourceScope;
-/// Trust status for a policy descriptor.
-pub type PolicyTrustStatus = policy_profile::TrustStatus;
-pub use policy_profile::{compose_policy_context, mutation_requires_runtime_guard};
 pub use safe::receipt::{BoundedCount, BoundedCountDraft};
-
 /// Largest accepted bounded count value in a safe receipt.
 pub const MAX_SAFE_RECEIPT_COUNT: u32 = safe::receipt::MAX_COUNT;
 /// Largest accepted safe metadata label length.
@@ -214,39 +176,19 @@ pub type StatusSequence = status::lifecycle::Sequence;
 /// Logical TTL for an observation.
 pub type StatusTtl = status::lifecycle::Ttl;
 pub use validation::{AdapterContractError, MAX_ADAPTER_FIELD_CHARS, MIN_ADAPTER_FIELD_CHARS};
-/// Validated speculative workspace descriptor.
-pub type SpeculativeWorkspaceDescriptor = workspace::intent::Descriptor;
-/// Borrowed speculative workspace descriptor input.
-pub type SpeculativeWorkspaceDescriptorDraft<'a> = workspace::intent::DescriptorDraft<'a>;
-/// Abort behavior requested for a workspace.
-pub type WorkspaceAbortPolicy = workspace::rules::AbortPolicy;
-/// Validated workspace adapter capability advertisement.
-pub type WorkspaceAdapterCapabilities = workspace::adapter::Capabilities;
-/// Borrowed workspace adapter capability input.
-pub type WorkspaceAdapterCapabilitiesDraft<'a> = workspace::adapter::CapabilitiesDraft<'a>;
-/// Backend kind advertised by a workspace adapter.
-pub type WorkspaceAdapterKind = workspace::adapter::Kind;
-/// Typed workspace adapter outcome.
-pub type WorkspaceAdapterOutcome = workspace::result::Outcome;
-/// Borrowed workspace adapter outcome input.
-pub type WorkspaceAdapterOutcomeDraft<'a> = workspace::result::OutcomeDraft<'a>;
-/// Workspace adapter outcome kind.
-pub type WorkspaceAdapterOutcomeKind = workspace::result::Kind;
-/// Availability state advertised by a workspace adapter.
-pub type WorkspaceAdapterState = workspace::adapter::State;
-/// Capability class for speculative workspace adapters.
-pub type WorkspaceCapability = workspace::adapter::Capability;
-/// Cleanup behavior required after workspace operations.
-pub type WorkspaceCleanupPolicy = workspace::rules::CleanupPolicy;
-/// Target for a successful workspace commit.
-pub type WorkspaceCommitTarget = workspace::rules::CommitTarget;
-/// Conflict behavior for workspace commit planning.
-pub type WorkspaceConflictPolicy = workspace::rules::ConflictPolicy;
-/// Policy for ignored or local files in speculative workspaces.
-pub type WorkspaceFileInclusionPolicy = workspace::rules::FileInclusionPolicy;
-/// Requested workspace operation.
-pub type WorkspaceOperation = workspace::rules::Operation;
-
+pub use workflow::{
+    RecipeAutomationOutcome, RecipeAutomationStatus, RecipeBinding, RecipeBindingDraft,
+    RecipeHostEffectKind, RecipeInfluence, RecipeInfluenceStatus, RecipeOutputDraft,
+    RecipeOutputFailure, RecipeOutputFieldDraft, RecipeParameter, RecipeParameterDraft,
+    RecipeParameterInput, RecipeParameterInputDraft, RecipeParameterInputKind, RecipeParameterKind,
+    RecipeProvenanceDraft, RecipeResponseField, RecipeResponseFieldDraft, RecipeResponseFieldKind,
+    RecipeResponseSchema, RecipeResponseSchemaDraft, RecipeRetryCheck, RecipeRetryCheckDraft,
+    RecipeRetryDenialReason, RecipeRetryPlan, RecipeRetryPlanDraft, RecipeRetryPolicy,
+    RecipeRetryPolicyDraft, RecipeRetryRequest, RecipeRetryRequestStatus, RecipeSourceKind,
+    RecipeTrustReceipt, RecipeTrustStatus, RecipeWorkflow, RecipeWorkflowDraft,
+    RecipeWorkflowError, SAFE_TEMPLATE_BUILTINS, bind_recipe_parameters, plan_recipe_retry,
+    validate_recipe_output,
+};
 /// Request sent from the harness to a model component.
 pub type ModelRequest = model::Request;
 

@@ -308,6 +308,67 @@ r[agent_harness_runtime.clash_ucan.closeout.evidence]
 - THEN the evidence names every successful focused rail, workspace check, and Cairn gate
 - AND any skipped rail includes a concrete blocker and next-best validation.
 
+### Requirement: Permission modes are bounded UX caveats
+
+r[agent_harness_runtime.claude_code_permissions.scope] Animus MUST treat Claude Code permission modes as a bounded UX reference for allow, ask, and deny outcomes, and MUST NOT treat local permission allows as authority beyond Nickel contract checks and verified UCAN grants.
+
+#### Scenario: Local allow lacks authority
+
+r[agent_harness_runtime.claude_code_permissions.scope.local_allow_denied]
+- GIVEN local permission policy says to allow a guarded filesystem, exec, network, model, Steel, or tool action
+- AND the requested action lacks matching contract and UCAN authority
+- WHEN permission resolution runs
+- THEN the action is denied before dispatch
+- AND the receipt separates missing authority from local permission status.
+
+### Requirement: Typed permission policy descriptors
+
+r[agent_harness_runtime.claude_code_permissions.policy] Permission policy descriptors MUST map guarded action classes and resource labels to typed allow, ask, or deny outcomes with source identity, trust scope, precedence, and prompt-summary policy.
+
+#### Scenario: Malformed permission policy fails closed
+
+r[agent_harness_runtime.claude_code_permissions.policy.invalid]
+- GIVEN a permission descriptor has an unknown action class, missing resource label, unsupported outcome, or missing source identity
+- WHEN permission policy validation runs
+- THEN validation returns typed diagnostics
+- AND the malformed descriptor cannot authorize or prompt for an action.
+
+### Requirement: Pure permission resolution
+
+r[agent_harness_runtime.claude_code_permissions.resolution] Permission resolution MUST be a pure deterministic decision over in-memory action, authority, policy, and prompt-decision inputs that returns execute, prompt, or deny with typed reasons.
+
+#### Scenario: Ask mode pauses before execution
+
+r[agent_harness_runtime.claude_code_permissions.resolution.ask]
+- GIVEN authority checks pass and local policy maps the action to ask
+- WHEN permission resolution runs without a matching prompt-decision token
+- THEN the resolver returns a prompt-required decision
+- AND no model, tool, shell, filesystem, or network dispatch occurs.
+
+### Requirement: Host-mediated prompt decisions
+
+r[agent_harness_runtime.claude_code_permissions.prompt] Ask decisions MUST be completed only through an injected host prompt service that receives redacted action summaries and returns scoped prompt-decision tokens before dispatch can continue.
+
+#### Scenario: Stale prompt token is rejected
+
+r[agent_harness_runtime.claude_code_permissions.prompt.stale]
+- GIVEN a prompt-decision token was issued for a different action identity, policy hash, session, or resource label
+- WHEN permission resolution evaluates the token
+- THEN the token is rejected as stale or mismatched
+- AND the guarded action remains unexecuted.
+
+### Requirement: Safe permission receipts
+
+r[agent_harness_runtime.claude_code_permissions.receipts] Permission receipts MUST record safe metadata for action class, redacted resource identity or BLAKE3 resource hash, authority status, local outcome, prompt status, policy hash, and decision reasons, and MUST NOT include raw prompts, credentials, provider payloads, raw tool bodies, full paths, or unbounded outputs.
+
+#### Scenario: Denied action emits redacted receipt
+
+r[agent_harness_runtime.claude_code_permissions.receipts.denied]
+- GIVEN permission resolution denies a guarded action
+- WHEN the runtime emits a permission receipt
+- THEN the receipt records denial reason, action class, policy hash, and redacted resource metadata
+- AND sensitive request material is omitted or represented only by approved hashes and redaction markers.
+
 ### Requirement: Safe receipt DTOs
 
 r[agent_harness_runtime.clankers_safe_receipts.dto] Animus runtime and provenance receipts MUST expose safe metadata only, including schema, status, issue code, labels, bounded counts, BLAKE3 hashes, effect or mutation kind, backend/interchange labels, and explicit redaction markers.
@@ -2147,3 +2208,282 @@ r[agent_harness_runtime.goose_mcp_app_surfaces.verification.closeout]
 - WHEN closeout validation runs
 - THEN evidence includes the evaluation matrix, safe and unsafe fixtures, runtime-neutrality checks, security-constraint docs, Cairn validation, and Cairn gates
 - AND skipped checks record a blocker and next-best validation.
+
+### Requirement: Security review inputs are bounded and redacted
+
+r[agent_harness_runtime.goose_security_review_stack.review_input] Animus MUST define bounded security review inputs for original task labels, recent context summaries, tool call descriptor, action class, active policy labels, and redacted evidence identities.
+
+#### Scenario: Review input omits sensitive raw material
+
+r[agent_harness_runtime.goose_security_review_stack.review_input.redacted]
+- GIVEN a tool call includes raw arguments, paths, credentials, provider text, or prompt content
+- WHEN security review input is constructed
+- THEN the input exposes only safe labels, bounded summaries, and BLAKE3 evidence hashes
+- AND raw prompts, credentials, full paths, and unbounded tool arguments are omitted.
+
+### Requirement: Deterministic pattern findings are available
+
+r[agent_harness_runtime.goose_security_review_stack.pattern_findings] Animus MUST provide deterministic scanner findings for prompt injection, destructive actions, exfiltration, privilege escalation, obfuscated remote execution, and out-of-scope mutation attempts.
+
+#### Scenario: Dangerous payloads produce findings
+
+r[agent_harness_runtime.goose_security_review_stack.pattern_findings.detects]
+- GIVEN a requested tool call attempts hidden instruction following, credential access, unknown-domain upload, recursive deletion, privilege escalation, or download-and-execute behavior
+- WHEN deterministic security scanning runs
+- THEN scanning returns one or more findings with category, confidence, finding ID, and safe explanation
+- AND the finding evidence does not include the raw secret or full sensitive payload.
+
+### Requirement: Classifier and adversary reviews are advisory
+
+r[agent_harness_runtime.goose_security_review_stack.advisory_review] Optional classifier and adversary reviewer outputs MUST be modeled as advisory allow, warn, block, unavailable, timeout, or malformed outcomes that cannot grant missing authority or weaken active policy.
+
+#### Scenario: Reviewer allow cannot bypass authority
+
+r[agent_harness_runtime.goose_security_review_stack.advisory_review.no_authority]
+- GIVEN active capability or sandbox policy denies a tool call
+- WHEN an adversary reviewer recommends allowing the call
+- THEN permission resolution preserves the denial
+- AND no provider, tool, host-effect, or confirmation bypass is executed.
+
+### Requirement: Security review failure behavior is policy controlled
+
+r[agent_harness_runtime.goose_security_review_stack.fail_behavior] Security review outages, timeouts, and malformed results MUST resolve through explicit policy-controlled fail behavior by action risk class.
+
+#### Scenario: High-risk review outage fails closed
+
+r[agent_harness_runtime.goose_security_review_stack.fail_behavior.closed]
+- GIVEN policy marks network exfiltration or destructive filesystem mutation as high risk
+- WHEN the configured adversary reviewer times out before evaluating that action
+- THEN runtime records a review-unavailable denial or required confirmation according to policy
+- AND the risky action is not silently allowed by default.
+
+### Requirement: Findings bind through permission and receipt policy
+
+r[agent_harness_runtime.goose_security_review_stack.policy_binding] Security findings MUST flow through permission resolution, confirmation prompts, sandbox descriptors, and safe receipts before any reviewed effect is dispatched.
+
+#### Scenario: Blocked finding stops dispatch
+
+r[agent_harness_runtime.goose_security_review_stack.policy_binding.blocks]
+- GIVEN a deterministic scanner or admitted advisory reviewer produces a blocking finding for a tool call
+- WHEN runtime evaluates the tool call
+- THEN dispatch stops before provider, tool, or host-effect execution
+- AND the denial receipt contains only safe finding metadata and redacted evidence identities.
+
+### Requirement: Security review closeout is evidenced
+
+r[agent_harness_runtime.goose_security_review_stack.verification] Security review stack adoption MUST include positive benign-review tests, negative prompt-injection and dangerous-action fixtures, advisory-authority bypass tests, fail-behavior tests, receipt redaction tests, documentation, Cairn validation, and Cairn gates before archive.
+
+#### Scenario: Security evidence is complete
+
+- GIVEN the Goose security review stack change is ready to archive
+- WHEN closeout validation runs
+- THEN evidence includes focused scanner tests, advisory-review tests, fail-behavior tests, policy-binding tests, docs, Cairn validation, and Cairn gates
+- AND skipped checks record a blocker and next-best validation.
+
+### Requirement: Typed recipe workflow manifests
+
+r[agent_harness_runtime.goose_recipe_workflows.manifest] Animus MUST define typed recipe/workflow manifests for identity, instructions, initial prompt, activities, parameters, model profile, capability ceilings, toolset references, validation gates, retry policy, subrecipes, response schema, and provenance.
+
+#### Scenario: Valid recipe manifest loads deterministically
+
+r[agent_harness_runtime.goose_recipe_workflows.manifest.valid]
+- GIVEN a recipe manifest declares instructions, prompt, parameters, allowed toolsets, validation gates, response schema, and provenance
+- WHEN pure manifest validation runs
+- THEN validation returns a deterministic accepted manifest DTO
+- AND no provider, filesystem, process, network, credential, or tool adapter is invoked.
+
+### Requirement: Nickel is the authoritative recipe source
+
+r[agent_harness_runtime.goose_recipe_workflows.nickel_source] Animus recipe authoring MUST use typed Nickel contracts as source of truth, and YAML or JSON recipe files MUST be derived interchange artifacts unless an external adapter explicitly imports them under validation.
+
+#### Scenario: Generated recipe drift is rejected
+
+r[agent_harness_runtime.goose_recipe_workflows.nickel_source.drift]
+- GIVEN a YAML export differs from the Nickel recipe source for the same recipe identity
+- WHEN generated-config drift validation runs
+- THEN validation reports recipe drift
+- AND runtime does not prefer the edited export over the checked Nickel source.
+
+### Requirement: Parameter binding is pure and declared
+
+r[agent_harness_runtime.goose_recipe_workflows.parameters] Recipe parameter binding MUST validate declared template variables, safe built-in variables, optional defaults, select options, and file-parameter admission before prompt assembly.
+
+#### Scenario: Unsafe parameter template fails closed
+
+r[agent_harness_runtime.goose_recipe_workflows.parameters.invalid]
+- GIVEN a recipe template references an undeclared variable, omits an optional default, includes an invalid select option, or assigns a default to a file parameter
+- WHEN parameter binding runs
+- THEN binding returns a typed validation error
+- AND no recipe prompt, activity, or subrecipe input is assembled from the invalid template.
+
+### Requirement: Structured automation output is validated
+
+r[agent_harness_runtime.goose_recipe_workflows.structured_output] Recipes that declare structured output MUST validate final responses against the declared schema before reporting automation success.
+
+#### Scenario: Malformed final output blocks success
+
+r[agent_harness_runtime.goose_recipe_workflows.structured_output.invalid]
+- GIVEN a headless recipe declares a required JSON output field
+- WHEN the final assistant output omits that field or uses the wrong type
+- THEN output validation records a structured-output failure
+- AND automation does not consume the malformed output as a successful result.
+
+### Requirement: Retry policy remains host-mediated
+
+r[agent_harness_runtime.goose_recipe_workflows.retry_policy] Recipe retry checks and cleanup actions MUST be represented as host-effect requests with capability labels, sandbox requirements, timeouts, redaction, and receipts rather than direct reusable-core shell execution.
+
+#### Scenario: Retry cannot bypass policy denial
+
+r[agent_harness_runtime.goose_recipe_workflows.retry_policy.bypass]
+- GIVEN a recipe retry check requests a shell command denied by active capability or sandbox policy
+- WHEN the retry planner evaluates the check
+- THEN the retry attempt records a denied host-effect request
+- AND reusable core does not execute the command or report validation success.
+
+### Requirement: Recipe trust and provenance are explicit
+
+r[agent_harness_runtime.goose_recipe_workflows.trust] Imported, changed, first-run, or project-provided recipes MUST have explicit trust and provenance receipts before they can influence prompt assembly, tool availability, model selection, memory use, or workflow permissions.
+
+#### Scenario: Untrusted recipe has no influence
+
+r[agent_harness_runtime.goose_recipe_workflows.trust.denied]
+- GIVEN a project recipe has not been admitted by host policy or user confirmation
+- WHEN runtime prepares a session using that recipe
+- THEN the recipe is rejected or activated in a no-influence failure state
+- AND prompt, tools, model, memory, and workflow permissions remain unchanged.
+
+### Requirement: Recipe workflow closeout is evidenced
+
+r[agent_harness_runtime.goose_recipe_workflows.verification] Recipe workflow adoption MUST include positive and negative tests for manifest validation, Nickel source authority, parameter binding, structured output, retry policy, trust receipts, documentation, Cairn validation, and Cairn gates before archive.
+
+#### Scenario: Recipe workflow evidence is complete
+
+- GIVEN the Goose recipe workflow change is ready to archive
+- WHEN closeout validation runs
+- THEN evidence includes focused recipe workflow tests, Nickel drift checks, structured-output failures, retry-bypass failures, trust-denial failures, docs, Cairn validation, and Cairn gates
+- AND skipped checks record a blocker and next-best validation.
+
+### Requirement: Bounded BranchFS adaptation scope
+
+r[agent_harness_runtime.branchfs_workspace.scope] Animus MUST treat BranchFS as a bounded reference for speculative workspace patterns, including copy-on-write branch creation, nested parentage, leaf-only commit and abort discipline, commit-to-parent promotion, zero-cost discard intent, virtual branch addressing, and mmap or cache invalidation awareness, and MUST NOT vendor BranchFS, require FUSE or macFUSE for all users, copy the BranchFS CLI or storage layout as the Animus contract, or expose BranchFS-specific ioctls, tombstones, daemon paths, or mount paths from `animus-core`.
+
+#### Scenario: Scope review rejects backend coupling
+
+r[agent_harness_runtime.branchfs_workspace.scope.review]
+- GIVEN a proposed implementation imports BranchFS into reusable core crates, shells out to `branchfs` from pure logic, stores BranchFS mount paths in core DTOs, or requires FUSE for non-workspace runtime paths
+- WHEN maintainers compare it with the bounded adaptation scope
+- THEN the change is rejected or split until BranchFS behavior remains adapter-local reference evidence
+- AND portable Animus workspace descriptors remain independent of BranchFS implementation details.
+
+### Requirement: VCS-neutral speculative workspace descriptors
+
+r[agent_harness_runtime.branchfs_workspace.descriptor] Animus speculative workspace descriptors MUST be typed portable runtime intent covering source identity, workspace identity, parent workspace identity, writable roots, ignored or local-file inclusion policy, commit target, abort policy, conflict policy, cleanup policy, and required adapter capability classes.
+
+#### Scenario: Descriptor captures workspace intent without FUSE details
+
+r[agent_harness_runtime.branchfs_workspace.descriptor.intent]
+- GIVEN a runtime action requests an isolated speculative workspace
+- WHEN Animus validates the workspace descriptor
+- THEN the descriptor names portable workspace intent rather than BranchFS CLI flags, FUSE mount paths, daemon socket paths, storage directories, ioctls, or tombstone files
+- AND missing, duplicate, malformed, or unknown required fields fail validation before any workspace backend is invoked.
+
+### Requirement: Pure workspace planning
+
+r[agent_harness_runtime.branchfs_workspace.planning] Workspace descriptor parsing, normalization, branch graph validation, conflict policy validation, unsupported-capability diagnostics, and receipt-safe projection MUST be pure deterministic logic over typed inputs and MUST NOT read the filesystem, inspect the environment, spawn processes, consult clocks, probe kernels, inspect VCS state, start daemons, mount filesystems, or mutate host state.
+
+#### Scenario: Invalid branch graph fails before platform setup
+
+r[agent_harness_runtime.branchfs_workspace.planning.invalid_graph]
+- GIVEN a workspace descriptor graph contains a parent cycle, duplicate workspace identity, missing parent identity, non-leaf commit request, or incompatible commit and abort policy
+- WHEN pure workspace planning runs
+- THEN it returns typed diagnostics naming the invalid graph or policy condition
+- AND no FUSE operation, VCS operation, process executor, filesystem operation, daemon request, or platform probe is invoked.
+
+### Requirement: Workspace adapter capability model
+
+r[agent_harness_runtime.branchfs_workspace.adapter] Animus workspace adapters SHOULD expose an explicit capability model for translating normalized workspace plans into enforceable backend behavior, including labels for BranchFS-like copy-on-write branches, Jujutsu or Git worktrees, temporary snapshot directories, nested workspaces, commit-to-parent support, abort support, conflict detection, cleanup guarantees, and unsupported platform states.
+
+#### Scenario: Backend reports unsupported nested commit
+
+r[agent_harness_runtime.branchfs_workspace.adapter.unsupported]
+- GIVEN a normalized workspace plan requires nested workspaces and commit-to-parent behavior
+- AND the selected adapter can create a temporary snapshot but cannot represent nested parentage or commit-to-parent semantics
+- WHEN adapter capability matching runs
+- THEN it reports unsupported capability diagnostics for the missing nested and commit behavior
+- AND the runtime does not silently downgrade the plan to a weaker workspace mode.
+
+### Requirement: Required workspace isolation fails closed
+
+r[agent_harness_runtime.branchfs_workspace.fail_closed] Runtime dispatch MUST fail closed before model, tool, or process execution when required workspace isolation is malformed, denied by policy, unsupported by the selected adapter, unavailable on the current platform, or only partially enforceable, and MUST NOT treat workspace isolation as authorization proof.
+
+#### Scenario: Required workspace does not fall back to host checkout
+
+r[agent_harness_runtime.branchfs_workspace.fail_closed.no_host_fallback]
+- GIVEN a capability request is authorized by its normal contract and grant checks
+- AND its local caveat requires speculative workspace isolation
+- AND the selected adapter cannot start, mount, snapshot, clean up, or enforce the requested writable-root and commit/abort semantics
+- WHEN dispatch evaluates the action
+- THEN dispatch is denied before host execution with a typed workspace-unavailable or partial-enforcement issue
+- AND the receipt records workspace isolation failure separately from authorization success.
+
+### Requirement: Explicit commit and abort outcomes
+
+r[agent_harness_runtime.branchfs_workspace.commit_abort] Workspace adapters MUST report explicit outcomes for created, committed, aborted, conflict, unavailable, failed-cleanup, and ambiguous states, and nested branch backends MUST preserve leaf-scoped commit and abort behavior so commit promotes only to the immediate parent and abort discards only the selected leaf workspace while preserving parent and sibling workspaces.
+
+#### Scenario: Leaf commit promotes without affecting siblings
+
+r[agent_harness_runtime.branchfs_workspace.commit_abort.leaf_commit]
+- GIVEN a parent workspace has two child workspaces and one child is selected for commit
+- WHEN the adapter commits the selected leaf workspace
+- THEN the committed changes are promoted only to the selected parent target
+- AND sibling workspaces remain isolated unless conflict policy explicitly blocks or invalidates them.
+
+#### Scenario: Abort discards selected leaf only
+
+r[agent_harness_runtime.branchfs_workspace.commit_abort.leaf_abort]
+- GIVEN a nested workspace tree has a leaf workspace with uncommitted changes
+- WHEN the adapter aborts that leaf workspace
+- THEN only the selected leaf workspace is discarded
+- AND the parent workspace, sibling workspaces, and base source identity remain available or are reported with explicit adapter diagnostics.
+
+### Requirement: Redacted workspace receipts
+
+r[agent_harness_runtime.branchfs_workspace.receipts] Workspace receipts MUST carry safe metadata only, including workspace status, issue code, normalized descriptor hash, source identity hash, adapter capability labels, parent and workspace identity labels, commit or abort outcome, conflict status, cleanup status, bounded manifest counts or BLAKE3 hashes, and BLAKE3 receipt hash, and MUST NOT include raw prompts, credentials, absolute path dumps, raw file contents, raw process output, raw branch manifests, raw network payloads, or unbounded event streams.
+
+#### Scenario: Successful commit receipt is reviewable
+
+r[agent_harness_runtime.branchfs_workspace.receipts.success]
+- GIVEN an isolated workspace is created, used, committed to its parent, and cleaned up successfully
+- WHEN the workspace receipt is emitted
+- THEN it records descriptor, source, manifest, commit, cleanup, and receipt hashes plus bounded adapter capability labels and outcome status
+- AND sensitive path, prompt, credential, file-content, process-output, branch-manifest, and payload material is omitted or represented only by approved hashes and redaction markers.
+
+#### Scenario: Receipt validation rejects workspace leaks
+
+r[agent_harness_runtime.branchfs_workspace.receipts.rejects_leaks]
+- GIVEN a workspace receipt fixture contains raw prompts, credential-looking values, absolute path dumps, raw file contents, raw process output, raw branch manifests, raw network payloads, or an unbounded event stream
+- WHEN receipt validation runs
+- THEN validation fails with a typed redaction error
+- AND the receipt cannot be used as review or release evidence.
+
+### Requirement: Focused verification for speculative workspaces
+
+r[agent_harness_runtime.branchfs_workspace.verification] The BranchFS-inspired adaptation MUST include focused positive and negative tests for descriptor normalization, branch graph validation, adapter capability translation, fail-closed dispatch, commit and abort outcomes, cleanup handling, and receipt redaction.
+
+#### Scenario: Positive and negative workspace fixtures gate closeout
+
+r[agent_harness_runtime.branchfs_workspace.verification.fixtures]
+- GIVEN the BranchFS-inspired speculative workspace adaptation is ready for review
+- WHEN focused verification runs
+- THEN positive fixtures show valid descriptor normalization, nested workspace planning, successful create, commit, abort, cleanup, and redacted receipts
+- AND negative fixtures show malformed descriptors, invalid branch graphs, unsupported FUSE or backend environments, partial enforcement, commit conflicts, failed cleanup, ambiguous state, and receipt leak attempts fail closed.
+
+r[agent_harness_runtime.branchfs_workspace.closeout] Closeout evidence MUST include successful focused workspace descriptor, adapter, commit/abort, cleanup, receipt, workspace checks, Cairn validation, and Cairn proposal/design/tasks gates before this adaptation is archived.
+
+#### Scenario: Closeout evidence is reviewable
+
+r[agent_harness_runtime.branchfs_workspace.closeout.evidence]
+- GIVEN maintainers intend to archive the BranchFS-inspired speculative workspace adaptation
+- WHEN they collect closeout evidence
+- THEN the evidence names every successful focused rail, workspace check, and Cairn gate
+- AND any skipped rail includes a concrete blocker and next-best validation.

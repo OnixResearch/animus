@@ -1,0 +1,15 @@
+# Tasks
+
+- [x] [serial] Define Animus recipe/workflow manifest DTOs for identity, instructions, prompt, activities, parameters, model profile, capabilities, toolset references, validation gates, retry policy, subrecipes, response schema, and provenance. r[agent_harness_runtime.goose_recipe_workflows.manifest]
+- [x] [depends:manifest] Add positive manifest fixtures for minimal interactive recipes, headless automation recipes, and recipes with declared toolsets. r[agent_harness_runtime.goose_recipe_workflows.manifest.valid]
+- [x] [serial] Add Nickel contracts and exporters so Nickel is authoritative and YAML/JSON are derived interchange artifacts. r[agent_harness_runtime.goose_recipe_workflows.nickel_source]
+- [x] [depends:nickel_source] Add drift and malformed-export negative tests proving edited YAML/JSON cannot override checked Nickel contracts. r[agent_harness_runtime.goose_recipe_workflows.nickel_source.drift]
+- [x] [serial] Implement pure parameter binding and template validation with declared variables, safe built-ins, optional defaults, select options, and file-parameter admission rules. r[agent_harness_runtime.goose_recipe_workflows.parameters]
+- [x] [depends:parameters] Add negative tests for undeclared variables, unused parameters, missing optional defaults, invalid select options, and file-parameter defaults. r[agent_harness_runtime.goose_recipe_workflows.parameters.invalid]
+- [x] [serial] Add final structured-output schema validation and typed automation outcome records. r[agent_harness_runtime.goose_recipe_workflows.structured_output]
+- [x] [depends:structured_output] Add positive valid-output tests and negative malformed-output tests that block automation success. r[agent_harness_runtime.goose_recipe_workflows.structured_output.invalid]
+- [x] [serial] Define retry plans as host-effect requests with capability labels, sandbox requirements, timeouts, cleanup requests, and safe receipts. r[agent_harness_runtime.goose_recipe_workflows.retry_policy]
+- [x] [depends:retry_policy] Add negative tests proving retry checks cannot execute shell commands, bypass denial, omit timeouts, or claim success without passing validation. r[agent_harness_runtime.goose_recipe_workflows.retry_policy.bypass]
+- [x] [serial] Add recipe trust/provenance receipts using BLAKE3 identities for first-run, changed, imported, and project-provided manifests. r[agent_harness_runtime.goose_recipe_workflows.trust]
+- [x] [depends:trust] Add negative tests proving untrusted recipes cannot change prompt, tools, model, memory, or workflow permissions. r[agent_harness_runtime.goose_recipe_workflows.trust.denied]
+- [x] [depends:manifest.valid,nickel_source.drift,parameters.invalid,structured_output.invalid,retry_policy.bypass,trust.denied] Update docs and run focused recipe workflow tests, Nickel config checks, Cairn validation, roadmap checks, and Cairn gates with reviewable evidence. r[agent_harness_runtime.goose_recipe_workflows.verification]
