@@ -1,0 +1,10 @@
+expected_issue=TOOL_CATALOG_INVALID_SCHEMA
+name=bad_schema
+description=Schema references must be stable labels.
+runtime_kind=host_descriptor
+capability=observe_read
+side_effect=read_only
+approval=allow
+input_schema=http://example.invalid/schema.json
+output_schema=schema:animus.tool.output.good.v1
+redaction=metadata_only

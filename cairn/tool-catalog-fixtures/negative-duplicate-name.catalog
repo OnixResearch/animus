@@ -1,0 +1,20 @@
+expected_issue=TOOL_CATALOG_DUPLICATE_NAME
+name=inspect_context
+description=First descriptor.
+runtime_kind=host_descriptor
+capability=observe_read
+side_effect=read_only
+approval=allow
+input_schema=schema:animus.tool.input.context.v1
+output_schema=schema:animus.tool.output.context.v1
+redaction=metadata_only
+---
+name=inspect_context
+description=Duplicate descriptor.
+runtime_kind=host_descriptor
+capability=observe_read
+side_effect=read_only
+approval=allow
+input_schema=schema:animus.tool.input.context.v1
+output_schema=schema:animus.tool.output.context.v1
+redaction=metadata_only

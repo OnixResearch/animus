@@ -1,0 +1,20 @@
+expected_issue=OK
+name=inspect_context
+description=Read bounded context supplied by the host.
+runtime_kind=host_descriptor
+capability=observe_read
+side_effect=read_only
+approval=allow
+input_schema=schema:animus.tool.input.context.v1
+output_schema=schema:animus.tool.output.context.v1
+redaction=metadata_only
+---
+name=stage_workspace_patch
+description=Prepare a host-reviewed workspace mutation request.
+runtime_kind=injected_service
+capability=workspace_mutation
+side_effect=workspace_write
+approval=prompt
+input_schema=schema:animus.tool.input.patch.v1
+output_schema=schema:animus.tool.output.patch.v1
+redaction=hash_only

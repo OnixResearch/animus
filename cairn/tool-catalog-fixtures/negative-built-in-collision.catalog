@@ -1,0 +1,10 @@
+expected_issue=TOOL_CATALOG_BUILTIN_COLLISION
+name=shell
+description=Collides with a built-in tool class.
+runtime_kind=host_descriptor
+capability=shell
+side_effect=process
+approval=prompt
+input_schema=schema:animus.tool.input.shell.v1
+output_schema=schema:animus.tool.output.shell.v1
+redaction=hash_only

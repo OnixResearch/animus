@@ -96,6 +96,7 @@ scripts/cairn/check-injected-services --root .
 scripts/cairn/check-release-evidence-index --root .
 scripts/cairn/check-runtime-facade-inventory --root .
 scripts/cairn/check-safe-receipts-artifacts --root .
+scripts/cairn/check-tool-catalog --root .
 scripts/cairn/check-wasm-surface --root .
 nix run .#cargo-tigerstyle -- check
 nix run .#check-nickel-configs

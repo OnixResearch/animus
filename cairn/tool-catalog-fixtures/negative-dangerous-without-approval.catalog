@@ -1,0 +1,10 @@
+expected_issue=TOOL_CATALOG_DANGEROUS_WITHOUT_APPROVAL
+name=network_fetch
+description=Network capability must not default allow.
+runtime_kind=external_adapter
+capability=network
+side_effect=network
+approval=allow
+input_schema=schema:animus.tool.input.fetch.v1
+output_schema=schema:animus.tool.output.fetch.v1
+redaction=hash_only

@@ -1,0 +1,66 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+readonly SCHEMA_SOURCE=policy/tool-catalog/catalog.ncl
+readonly SCHEMA_FIELD=catalog_schema
+readonly SAMPLE_FIELD=sample_catalog
+readonly RAIL_NAME=tool-catalog
+readonly RECEIPT_SCHEMA=animus.focused-rail.v1
+readonly RECEIPT_DIR=target/cairn/focused-rails
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+
+if [ "${1:-}" = "--root" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  repo_root=$(CDPATH= cd -- "$2" && pwd)
+fi
+
+if ! command -v rustc >/dev/null 2>&1; then
+  printf '%s\n' 'error: rustc is required. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+
+if ! command -v nickel >/dev/null 2>&1; then
+  printf '%s\n' 'error: nickel is required. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/animus-tool-catalog.XXXXXX")
+trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
+
+cd "${repo_root}"
+
+nickel export --format json --field "${SCHEMA_FIELD}" "${SCHEMA_SOURCE}" > "${tmp_dir}/tool-catalog-schema.json"
+nickel export --format json --field "${SAMPLE_FIELD}" "${SCHEMA_SOURCE}" > "${tmp_dir}/tool-catalog-sample.json"
+
+rust_source=${script_dir}/check-tool-catalog.rs
+checker=${tmp_dir}/check-tool-catalog
+rustc --edition=2021 "${rust_source}" -o "${checker}"
+"${checker}" --root "${repo_root}"
+
+mkdir -p "${RECEIPT_DIR}"
+receipt_path=${RECEIPT_DIR}/${RAIL_NAME}.md
+cat > "${receipt_path}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+boundary: optional data-only tool catalog descriptors and capability packs
+schema_source: ${SCHEMA_SOURCE}
+nickel_export: checked
+positive_fixtures:
+- safe host and injected-service descriptors normalize without runtime authority
+negative_fixtures:
+- duplicate names, built-in collisions, unknown runtime kinds, invalid schema references, dangerous allow-by-default capabilities, and secret-adjacent no-redaction descriptors fail closed
+runtime_neutrality:
+- descriptor parsing does not execute tools, start plugins/providers, read secrets, inherit environment values, open network connections, load Wasm modules, or spawn processes
+non_claims:
+- this rail does not add built-in product tools, plugin execution, shell/network tools, provider integration, live catalog discovery, TUI behavior, daemon behavior, or production readiness
+EOF
+
+printf 'focused rail %s: pass\n' "${RAIL_NAME}"
+printf 'receipt: %s\n' "${receipt_path}"

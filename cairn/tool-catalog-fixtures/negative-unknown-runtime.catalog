@@ -1,0 +1,10 @@
+expected_issue=TOOL_CATALOG_UNKNOWN_RUNTIME
+name=custom_runner
+description=Unknown runtime kind.
+runtime_kind=ambient_plugin
+capability=host_custom
+side_effect=read_only
+approval=allow
+input_schema=schema:animus.tool.input.custom.v1
+output_schema=schema:animus.tool.output.custom.v1
+redaction=metadata_only

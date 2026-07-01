@@ -30,6 +30,7 @@ A focused rail MAY print bounded stdout instead of writing a receipt when it is 
 | Runtime facade inventory | `scripts/cairn/check-runtime-facade-inventory --root .` | Nickel inventory fixtures for valid, unclassified, and ambient-authority exports | `checks.x86_64-linux.runtime-facade-inventory` |
 | Wasm/no-std dependency isolation | `scripts/cairn/check-wasm-surface --root .` | Allowed and rejected dependency-tree fixtures in `cairn/wasm-surface-fixtures/` | `checks.x86_64-linux.wasm-surface` |
 | Product-surface rejection | `scripts/cairn/check-clankers-product-surfaces --root .` | Bounded-doc positive fixture and reusable-contract negative fixture | `checks.x86_64-linux.clankers-product-surfaces` |
+| Tool catalog descriptors | `scripts/cairn/check-tool-catalog --root .` | Nickel schema export plus positive and negative catalog fixtures for descriptor validation and runtime-neutrality markers | not wired |
 
 ## Closeout use
 
