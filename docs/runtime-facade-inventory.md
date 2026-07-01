@@ -15,7 +15,7 @@ The source of truth is `cairn/runtime-facade-inventory.ncl`. The focused rail is
 ## Current summary
 
 - `animus-core` exports are reusable contracts: `Intent`, `AnimusState`, `CoreError`, and intent bounds.
-- `animus-adapters` request/response DTOs, status-observation DTOs, and validation errors are reusable contracts; `ComponentAdapter`, `ModelAdapter`, `ToolAdapter`, and `HostStatusAdapter` are host-injection surfaces.
+- `animus-adapters` request/response DTOs, status-observation DTOs, skill-manifest descriptors, progressive-disclosure summaries, and validation errors are reusable contracts; `ComponentAdapter`, `ModelAdapter`, `ToolAdapter`, and `HostStatusAdapter` are host-injection surfaces.
 - `animus-preserves` exports are optional reusable bridge contracts.
 - `animus-steel` exports are optional reusable loop-fabric boundary contracts; Steel decisions still revalidate through adapter DTOs before dispatch.
 - `animus-runtime` exports reusable event/report/config DTOs, pure transition helpers, pure status-authority selection/explanation helpers, and host-injection dispatch surfaces over caller-supplied fabrics and adapters.

@@ -33,6 +33,7 @@ mod schedule;
 mod security;
 #[cfg(test)]
 mod security_tests;
+mod skill;
 mod status;
 mod subagent;
 mod tool;
@@ -135,6 +136,13 @@ pub use manifest::{
     ToolDescriptor, ToolDescriptorDraft, WorkingDirectoryMode,
 };
 pub use safe::receipt::{BoundedCount, BoundedCountDraft};
+pub use skill::{
+    PROHIBITED_SKILL_MANIFEST_EFFECTS, SKILL_CONTENT_HASH_HEX_CHARS, SkillBodyDraft,
+    SkillDisclosureContext, SkillDisclosureRequest, SkillLoadedBody, SkillManifest,
+    SkillManifestDraft, SkillManifestError, SkillManifestTrustStatus, SkillResourceCatalog,
+    SkillResourceDiagnostic, SkillResourceIssue, SkillResourceSummary, advertise_skill_resources,
+    build_skill_disclosure_context,
+};
 pub use schedule::{
     NextRunInput, NextRunPlan, PROHIBITED_SCHEDULE_EFFECTS, ScheduleCadence,
     ScheduleConcurrencyPolicy, ScheduleControlAction, ScheduleControlDraft, ScheduleControlRequest,
