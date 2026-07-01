@@ -1,0 +1,15 @@
+# Tasks
+
+- [x] [serial] Define scheduled workflow DTOs for schedule identity, recipe identity/version, parameter values, cadence, timezone or calendar policy, execution mode, concurrency policy, workspace scope, retry bounds, retention policy, and provenance. r[agent_harness_runtime.goose_scheduled_recipes.schedule_descriptor]
+- [x] [depends:schedule_descriptor] Add positive read-only recurring workflow and run-now fixtures plus negative invalid-cadence and missing-recipe fixtures. r[agent_harness_runtime.goose_scheduled_recipes.schedule_descriptor.validation]
+- [x] [serial] Implement pure schedule validation and next-run planning over explicit clock/calendar inputs without timers, daemon startup, cron edits, or shell execution. r[agent_harness_runtime.goose_scheduled_recipes.data_only]
+- [x] [depends:data_only] Add runtime-neutrality negative tests for ambient cron, background daemon, process launch, filesystem mutation, and environment reads. r[agent_harness_runtime.goose_scheduled_recipes.data_only.neutral]
+- [x] [serial] Require recipe trust, capability policy, sandbox policy, queue admission, and cancellation handles before scheduled run execution. r[agent_harness_runtime.goose_scheduled_recipes.run_admission]
+- [x] [depends:run_admission] Add negative tests for untrusted recipes, denied tools, missing queue service, stale policy, and missing cancellation handles. r[agent_harness_runtime.goose_scheduled_recipes.run_admission.denied]
+- [x] [serial] Define concurrency and workspace-conflict policy for overlapping scheduled runs. r[agent_harness_runtime.goose_scheduled_recipes.concurrency]
+- [x] [depends:concurrency] Add tests proving overlapping writes require serialization, isolation, or explicit denial. r[agent_harness_runtime.goose_scheduled_recipes.concurrency.conflict]
+- [x] [serial] Add safe scheduled-run records linking schedule ID, recipe identity, parameter hashes, queue/job IDs, ledger references, retry counts, outcomes, and redacted evidence. r[agent_harness_runtime.goose_scheduled_recipes.run_records]
+- [x] [depends:run_records] Add redaction tests proving raw prompts, secret parameters, full paths, and raw tool output are omitted from run records. r[agent_harness_runtime.goose_scheduled_recipes.run_records.redacted]
+- [x] [serial] Define pause, resume, edit, run-now, and cancellation as host-mediated control requests with receipts. r[agent_harness_runtime.goose_scheduled_recipes.control]
+- [x] [depends:control] Add negative tests proving schedule mutation without confirmation or host admission is denied. r[agent_harness_runtime.goose_scheduled_recipes.control.denied]
+- [x] [depends:schedule_descriptor.validation,data_only.neutral,run_admission.denied,concurrency.conflict,run_records.redacted,control.denied] Update docs and run focused schedule tests, queue-admission tests, receipt redaction tests, Cairn validation, roadmap checks, and Cairn gates with reviewable evidence. r[agent_harness_runtime.goose_scheduled_recipes.verification]

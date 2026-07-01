@@ -29,6 +29,7 @@ mod model;
 mod profile;
 mod router;
 mod safe;
+mod schedule;
 mod security;
 #[cfg(test)]
 mod security_tests;
@@ -134,6 +135,15 @@ pub use manifest::{
     ToolDescriptor, ToolDescriptorDraft, WorkingDirectoryMode,
 };
 pub use safe::receipt::{BoundedCount, BoundedCountDraft};
+pub use schedule::{
+    NextRunInput, NextRunPlan, PROHIBITED_SCHEDULE_EFFECTS, ScheduleCadence,
+    ScheduleConcurrencyPolicy, ScheduleControlAction, ScheduleControlDraft, ScheduleControlRequest,
+    ScheduleError, ScheduleExecutionMode, ScheduledConcurrencyDecision, ScheduledConcurrencyInput,
+    ScheduledRunAdmissionDraft, ScheduledRunAdmissionStatus, ScheduledRunDenial,
+    ScheduledRunRecord, ScheduledRunRecordDraft, ScheduledWorkflow, ScheduledWorkflowDraft,
+    admit_scheduled_run, evaluate_scheduled_concurrency, plan_next_run,
+    validate_scheduled_record_text,
+};
 /// Largest accepted bounded count value in a safe receipt.
 pub const MAX_SAFE_RECEIPT_COUNT: u32 = safe::receipt::MAX_COUNT;
 /// Largest accepted safe metadata label length.
