@@ -21,6 +21,7 @@ mod artifact;
 mod dataspace;
 mod effect;
 mod front;
+mod interop;
 mod ledger;
 mod manifest;
 mod mcpapp;
@@ -46,6 +47,13 @@ pub use dataspace::{
     ScopeDraft, Subscription, SubscriptionDraft, SubscriptionIssue,
 };
 pub use front::*;
+pub use interop::{
+    AcpDescriptor, AcpDescriptorDraft, AcpPermissionMode, AcpSessionCorrelation,
+    AcpToolPassThroughPolicy, InteropError, InteropOperationKind, InteropReceipt,
+    InteropReceiptDraft, McpDescriptor, McpDescriptorDraft, McpTransportKind,
+    PROHIBITED_INTEROP_EFFECTS, ToolPassThroughInput, ToolPassThroughResolution,
+    resolve_tool_pass_through, validate_interop_receipt_text,
+};
 
 /// Active envelope version used for Animus-owned BLAKE3 identities.
 pub const ARTIFACT_ENVELOPE_VERSION: u32 = artifact::VERSION;
