@@ -6,7 +6,7 @@ This document is the maintained ownership map for request processing. It is a re
 
 1. **Typed runtime input** / typed host runtime input is owned by `animus-std::RuntimeConfig` (`crates/animus-std/src/config.rs`). The source-of-truth constructors are `Runtime::from_intent`, `Runtime::from_env_pairs`, and the thin shell `load_runtime`.
 2. **Deterministic core state** is owned by `animus-core::Intent` and `animus-core::AnimusState` (`crates/animus-core/src/lib.rs`). Core validation produces `animus-core::CoreError` and does not read ambient host state.
-3. **Reusable loop input/config** is owned by `animus-runtime::RuntimeInput` and `animus-runtime::RuntimeConfig` (`crates/animus-runtime/src/contract.rs`). Runtime config is explicit data such as max-turn budgets, not ambient process state.
+3. **Reusable loop input/config** is owned by `animus-runtime::RuntimeInput` and `animus-runtime::RuntimeConfig` (`crates/animus-runtime/src/contract.rs`). Runtime config is explicit data such as max-turn budgets, not ambient process state. Optional **workflow command planning** is owned by `animus-runtime::WorkflowCommandManifest`, `WorkflowCommandRegistry`, `WorkflowInvocationBinding`, and `WorkflowCommandOutputContract`; hosts supply already-loaded manifests and already-parsed arguments.
 4. **Steel loop decision input** is owned by `animus-steel::LoopTurn` and `animus-steel::SteelLoopFabric` (`crates/animus-steel/src/turn.rs` and `fabric.rs`). `animus-runtime::TurnState` projects validated runtime state into this scriptable loop boundary for each turn.
 5. **Steel loop decisions** are owned by `animus-steel::LoopDecision` (`crates/animus-steel/src/action.rs`). Rust revalidates every `CallModel`, `CallTool`, `Respond`, and `Stop` decision before a host adapter receives it.
 6. **Adapter dispatch DTOs** are owned by `animus-adapters::ModelRequest`, `animus-adapters::ModelResponse`, `animus-adapters::ToolRequest`, `animus-adapters::ToolResponse`, `ModelAdapter`, and `ToolAdapter` (`crates/animus-adapters/src/`). These are implementation-free contracts.
@@ -24,6 +24,7 @@ This document is the maintained ownership map for request processing. It is a re
 | Host runtime input | `animus-std` | `RuntimeConfig`, `Runtime::from_env_pairs`, `load_runtime` | Process environment is read only by `load_runtime`. |
 | Core state | `animus-core` | `Intent`, `AnimusState`, `CoreError` | No host authority. |
 | Reusable loop input/config | `animus-runtime` | `RuntimeInput`, `RuntimeConfig` | No ambient host authority. |
+| Workflow command planning | `animus-runtime` | `WorkflowCommandManifest`, `WorkflowCommandRegistry`, `WorkflowInvocationBinding`, `WorkflowCommandOutputContract` | Manifests and parsed arguments are host-supplied; reusable planning only validates, binds, and policy-checks. |
 | Steel turn input | `animus-steel` / `animus-runtime` | `LoopTurn`, `TurnState`, `LoopFabric` | Fabric is injected; no concrete providers or tools are constructed. |
 | Steel decision | `animus-steel` | `LoopDecision`, `SteelLoopFabric`, `LoopError` | No adapter dispatch until Rust revalidation passes. |
 | Model/tool DTOs | `animus-adapters` | `ModelRequest`, `ModelResponse`, `ToolRequest`, `ToolResponse` | No implementation authority. |
@@ -55,7 +56,7 @@ This document is the maintained ownership map for request processing. It is a re
 
 ### Reusable runtime boundary
 
-`animus-runtime` owns pure turn-state transitions and a thin dispatch shell over injected loop fabrics plus model/tool adapters. It must not construct provider clients, discover tools, read provider credentials, open network connections, execute processes, read files, inspect environment variables, use clocks, or perform concrete persistence. Validate with `cargo test -p animus-runtime`.
+`animus-runtime` owns pure turn-state transitions, workflow command manifest/registry/argument/output validation, worker task/context/report validation, deterministic worker report merge logic, and thin dispatch shells over injected loop fabrics, worker services, and model/tool adapters. It must not construct provider clients, discover tools, read provider credentials, open network connections, execute processes, read files, inspect environment variables, use clocks, or perform concrete persistence. Validate with `cargo test -p animus-runtime` and `cargo test -p animus-runtime workflow_command --locked` for command contracts.
 
 ### Std-shell boundary
 

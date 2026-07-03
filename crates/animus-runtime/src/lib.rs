@@ -20,6 +20,7 @@ mod shell;
 mod status;
 mod telemetry;
 mod transition;
+mod workflow_commands;
 mod worker_team;
 
 pub use contract::{
@@ -88,6 +89,21 @@ pub use transition::{
     AdapterOutcome, AdapterRequest, AdapterStep, DecisionStep, TurnPlan, TurnState,
     apply_adapter_outcome, apply_decision, complete_with_fabric_error, complete_with_guard_block,
     complete_with_guard_failure, complete_with_steel_policy_denial, plan_next_turn,
+};
+pub use workflow_commands::{
+    WorkflowCommandArgumentType, WorkflowCommandArgumentValue, WorkflowCommandArgumentValueDraft,
+    WorkflowCommandCapability, WorkflowCommandDuplicatePolicy, WorkflowCommandError,
+    WorkflowCommandErrorKind, WorkflowCommandInputField, WorkflowCommandInputFieldDraft,
+    WorkflowCommandManifest, WorkflowCommandManifestDraft, WorkflowCommandOutput,
+    WorkflowCommandOutputContract, WorkflowCommandOutputContractDraft, WorkflowCommandOutputDraft,
+    WorkflowCommandOutputKind, WorkflowCommandPolicy, WorkflowCommandProvenance,
+    WorkflowCommandProvenanceDraft, WorkflowCommandRegistry, WorkflowCommandRegistryDiagnostic,
+    WorkflowCommandRegistryDiagnosticKind, WorkflowCommandRegistryPolicy,
+    WorkflowCommandSideEffectPosture, WorkflowCommandSourceScope, WorkflowCommandTrustStatus,
+    WorkflowInvocationArgument, WorkflowInvocationArgumentDraft, WorkflowInvocationBinding,
+    WorkflowInvocationPlan, WorkflowValidationStatus, bind_workflow_command_arguments,
+    build_workflow_command_registry, prepare_workflow_command_invocation,
+    validate_workflow_command_output,
 };
 pub use worker_team::{
     Claim, Conflict, ConflictReport, ContextAdmissionPolicy, DelegationFailure, EvidenceReference,
