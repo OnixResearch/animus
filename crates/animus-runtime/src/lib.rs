@@ -20,7 +20,7 @@ mod shell;
 mod status;
 mod telemetry;
 mod transition;
-mod workflow_commands;
+mod workcmd;
 mod worker_team;
 
 pub use contract::{
@@ -90,7 +90,7 @@ pub use transition::{
     apply_adapter_outcome, apply_decision, complete_with_fabric_error, complete_with_guard_block,
     complete_with_guard_failure, complete_with_steel_policy_denial, plan_next_turn,
 };
-pub use workflow_commands::{
+pub use workcmd::{
     WorkflowCommandArgumentType, WorkflowCommandArgumentValue, WorkflowCommandArgumentValueDraft,
     WorkflowCommandCapability, WorkflowCommandDuplicatePolicy, WorkflowCommandError,
     WorkflowCommandErrorKind, WorkflowCommandInputField, WorkflowCommandInputFieldDraft,

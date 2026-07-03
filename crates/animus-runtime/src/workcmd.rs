@@ -14,8 +14,6 @@
     unbounded_collection_growth
 )]
 
-use std::collections::{BTreeMap, BTreeSet};
-
 #[cfg(test)]
 const WORKFLOW_COMMAND_SCHEMA: &str = "animus.workflow-command.v1";
 const MAX_COMMAND_NAME_CHARS: usize = 64;
@@ -153,17 +151,20 @@ impl WorkflowCommandArgumentValueDraft<'_> {
     fn to_owned(self) -> Result<WorkflowCommandArgumentValue, WorkflowCommandError> {
         match self {
             Self::Text(value) => Ok(WorkflowCommandArgumentValue::Text(String::from(
-                validate_argument_text(ARGUMENT_VALUE_FIELD, value)?,
+                validate_argument_text(FieldText {
+                    field: ARGUMENT_VALUE_FIELD,
+                    value,
+                })?,
             ))),
             Self::Boolean(value) => Ok(WorkflowCommandArgumentValue::Boolean(value)),
             Self::Integer(value) => Ok(WorkflowCommandArgumentValue::Integer(value)),
             Self::TextList(values) => {
                 let mut owned = Vec::with_capacity(values.len());
                 for value in values {
-                    owned.push(String::from(validate_argument_text(
-                        ARGUMENT_VALUE_FIELD,
+                    owned.push(String::from(validate_argument_text(FieldText {
+                        field: ARGUMENT_VALUE_FIELD,
                         value,
-                    )?));
+                    })?));
                 }
                 Ok(WorkflowCommandArgumentValue::TextList(owned))
             }
@@ -458,9 +459,12 @@ impl WorkflowCommandOutputContract {
         draft: &WorkflowCommandOutputContractDraft<'_>,
     ) -> Result<Self, WorkflowCommandError> {
         let structured_schema = match (draft.kind, draft.structured_schema) {
-            (WorkflowCommandOutputKind::StructuredDto, Some(schema)) => Some(String::from(
-                validate_safe_label(STRUCTURED_SCHEMA_FIELD, schema)?,
-            )),
+            (WorkflowCommandOutputKind::StructuredDto, Some(schema)) => {
+                Some(String::from(validate_safe_label(FieldText {
+                    field: STRUCTURED_SCHEMA_FIELD,
+                    value: schema,
+                })?))
+            }
             (WorkflowCommandOutputKind::StructuredDto, None) => {
                 return Err(WorkflowCommandError::new(
                     WorkflowCommandErrorKind::MissingOutputContract,
@@ -543,7 +547,10 @@ impl WorkflowCommandManifest {
         draft: &WorkflowCommandManifestDraft<'_>,
     ) -> Result<Self, WorkflowCommandError> {
         let name = String::from(validate_command_name(draft.name)?);
-        let summary = String::from(validate_safe_summary("summary", draft.summary)?);
+        let summary = String::from(validate_safe_summary(FieldText {
+            field: "summary",
+            value: draft.summary,
+        })?);
         let input_schema = validate_input_schema(draft.input_schema)?;
         let side_effect_posture = draft.side_effect_posture.ok_or_else(|| {
             WorkflowCommandError::new(
@@ -553,10 +560,10 @@ impl WorkflowCommandManifest {
             )
         })?;
         let capabilities = validate_capabilities(side_effect_posture, draft.capabilities)?;
-        let retrieval_budget = String::from(validate_safe_label(
-            "retrieval_budget",
-            draft.retrieval_budget,
-        )?);
+        let retrieval_budget = String::from(validate_safe_label(FieldText {
+            field: "retrieval_budget",
+            value: draft.retrieval_budget,
+        })?);
         let validation_gates = validate_validation_gates(draft.validation_gates)?;
         let output_contract = draft
             .output_contract
@@ -764,7 +771,8 @@ pub fn build_workflow_command_registry(
     manifests: &[WorkflowCommandManifest],
     policy: WorkflowCommandRegistryPolicy,
 ) -> WorkflowCommandRegistry {
-    let mut groups: BTreeMap<&str, Vec<&WorkflowCommandManifest>> = BTreeMap::new();
+    let mut groups: std::collections::BTreeMap<&str, Vec<&WorkflowCommandManifest>> =
+        std::collections::BTreeMap::new();
     for manifest in manifests {
         groups.entry(manifest.name()).or_default().push(manifest);
     }
@@ -793,14 +801,15 @@ pub fn build_workflow_command_registry(
                 ));
             }
             WorkflowCommandDuplicatePolicy::PreferSourcePrecedence => {
-                let selected = select_precedence_winner(group.as_slice());
-                diagnostics.push(registry_diagnostic(
-                    name,
-                    WorkflowCommandRegistryDiagnosticKind::SelectedByPrecedence,
-                    source_ids,
-                    Some(selected.provenance().source_id()),
-                ));
-                commands.push(selected.clone());
+                if let Some(selected) = select_precedence_winner(group.as_slice()) {
+                    diagnostics.push(registry_diagnostic(
+                        name,
+                        WorkflowCommandRegistryDiagnosticKind::SelectedByPrecedence,
+                        source_ids,
+                        Some(selected.provenance().source_id()),
+                    ));
+                    commands.push(selected.clone());
+                }
             }
         }
     }
@@ -1088,7 +1097,7 @@ pub struct WorkflowCommandOutputDraft<'a> {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct WorkflowCommandOutput {
     kind: WorkflowCommandOutputKind,
-    body_chars: usize,
+    body_chars: u64,
     body_hash: String,
     structured_schema: Option<String>,
     validation_status: Option<WorkflowValidationStatus>,
@@ -1106,10 +1115,13 @@ impl WorkflowCommandOutput {
         draft: &WorkflowCommandOutputDraft<'_>,
     ) -> Result<Self, WorkflowCommandError> {
         validate_output_contract_match(contract, draft)?;
-        let body = validate_safe_summary(OUTPUT_BODY_FIELD, draft.body)?;
+        let body = validate_safe_summary(FieldText {
+            field: OUTPUT_BODY_FIELD,
+            value: draft.body,
+        })?;
         Ok(Self {
             kind: draft.kind,
-            body_chars: body.chars().count(),
+            body_chars: count_chars_u64(body),
             body_hash: blake3_hex(body.as_bytes()),
             structured_schema: draft.structured_schema.map(String::from),
             validation_status: draft.validation_status,
@@ -1124,7 +1136,7 @@ impl WorkflowCommandOutput {
 
     /// Returns the number of Unicode scalar values in the body.
     #[must_use]
-    pub const fn body_chars(&self) -> usize {
+    pub const fn body_chars(&self) -> u64 {
         self.body_chars
     }
 
@@ -1237,6 +1249,12 @@ pub enum WorkflowCommandErrorKind {
     OutputContractMismatch,
 }
 
+fn count_chars_u64(value: &str) -> u64 {
+    value
+        .chars()
+        .fold(0_u64, |count, _character| count.saturating_add(1))
+}
+
 fn validate_input_schema(
     schema: Option<&[WorkflowCommandInputFieldDraft<'_>]>,
 ) -> Result<Vec<WorkflowCommandInputField>, WorkflowCommandError> {
@@ -1254,10 +1272,13 @@ fn validate_input_schema(
             TOO_MANY_INPUTS_VALUE,
         ));
     }
-    let mut seen = BTreeSet::new();
+    let mut seen = std::collections::BTreeSet::new();
     let mut fields = Vec::with_capacity(schema.len());
     for field in schema {
-        let name = validate_safe_label(INPUT_FIELD_NAME_FIELD, field.name)?;
+        let name = validate_safe_label(FieldText {
+            field: INPUT_FIELD_NAME_FIELD,
+            value: field.name,
+        })?;
         if !seen.insert(String::from(name)) {
             return Err(WorkflowCommandError::new(
                 WorkflowCommandErrorKind::InvalidInputSchema,
@@ -1331,10 +1352,10 @@ fn validate_validation_gates(gates: &[&str]) -> Result<Vec<String>, WorkflowComm
     }
     let mut normalized = Vec::with_capacity(gates.len());
     for gate in gates {
-        normalized.push(String::from(validate_safe_label(
-            VALIDATION_GATES_FIELD,
-            gate,
-        )?));
+        normalized.push(String::from(validate_safe_label(FieldText {
+            field: VALIDATION_GATES_FIELD,
+            value: gate,
+        })?));
     }
     normalized.sort();
     normalized.dedup();
@@ -1344,8 +1365,14 @@ fn validate_validation_gates(gates: &[&str]) -> Result<Vec<String>, WorkflowComm
 fn validate_provenance(
     draft: &WorkflowCommandProvenanceDraft<'_>,
 ) -> Result<WorkflowCommandProvenance, WorkflowCommandError> {
-    let source_id = validate_safe_label(SOURCE_ID_FIELD, draft.source_id)?;
-    let content_hash = validate_blake3_hex(CONTENT_HASH_FIELD, draft.content_hash)?;
+    let source_id = validate_safe_label(FieldText {
+        field: SOURCE_ID_FIELD,
+        value: draft.source_id,
+    })?;
+    let content_hash = validate_blake3_hex(FieldText {
+        field: CONTENT_HASH_FIELD,
+        value: draft.content_hash,
+    })?;
     if draft.trust_status != WorkflowCommandTrustStatus::Trusted {
         return Err(WorkflowCommandError::new(
             WorkflowCommandErrorKind::UntrustedSource,
@@ -1363,10 +1390,14 @@ fn validate_provenance(
 
 fn collect_arguments(
     arguments: &[WorkflowInvocationArgumentDraft<'_>],
-) -> Result<BTreeMap<String, WorkflowCommandArgumentValue>, WorkflowCommandError> {
-    let mut provided = BTreeMap::new();
+) -> Result<std::collections::BTreeMap<String, WorkflowCommandArgumentValue>, WorkflowCommandError>
+{
+    let mut provided = std::collections::BTreeMap::new();
     for argument in arguments {
-        let name = validate_safe_label(ARGUMENT_NAME_FIELD, argument.name)?;
+        let name = validate_safe_label(FieldText {
+            field: ARGUMENT_NAME_FIELD,
+            value: argument.name,
+        })?;
         if provided.contains_key(name) {
             return Err(WorkflowCommandError::new(
                 WorkflowCommandErrorKind::DuplicateArgument,
@@ -1452,24 +1483,19 @@ fn sorted_source_ids(manifests: &[&WorkflowCommandManifest]) -> Vec<String> {
 
 fn select_precedence_winner<'a>(
     manifests: &[&'a WorkflowCommandManifest],
-) -> &'a WorkflowCommandManifest {
-    debug_assert!(!manifests.is_empty());
-    manifests
-        .iter()
-        .copied()
-        .max_by(|left, right| {
-            left.provenance()
-                .source_scope()
-                .precedence_rank()
-                .cmp(&right.provenance().source_scope().precedence_rank())
-                .then_with(|| {
-                    right
-                        .provenance()
-                        .source_id()
-                        .cmp(left.provenance().source_id())
-                })
-        })
-        .expect("non-empty duplicate group must select a winner")
+) -> Option<&'a WorkflowCommandManifest> {
+    manifests.iter().copied().max_by(|left, right| {
+        left.provenance()
+            .source_scope()
+            .precedence_rank()
+            .cmp(&right.provenance().source_scope().precedence_rank())
+            .then_with(|| {
+                right
+                    .provenance()
+                    .source_id()
+                    .cmp(left.provenance().source_id())
+            })
+    })
 }
 
 fn validate_command_name(value: &str) -> Result<&str, WorkflowCommandError> {
@@ -1496,60 +1522,95 @@ fn is_command_name(value: &str) -> bool {
         })
 }
 
-fn validate_safe_label<'a>(field: &str, value: &'a str) -> Result<&'a str, WorkflowCommandError> {
-    if value.is_empty()
-        || value.len() > MAX_SAFE_LABEL_CHARS
-        || !value.chars().all(|character| {
-            character.is_ascii_alphanumeric() || matches!(character, '-' | '_' | '.')
-        })
-        || leak_marker(value).is_some()
-    {
-        return Err(WorkflowCommandError::new(
-            WorkflowCommandErrorKind::UnsafeText,
-            field,
-            value,
-        ));
-    }
-    Ok(value)
-}
-
-fn validate_safe_summary<'a>(field: &str, value: &'a str) -> Result<&'a str, WorkflowCommandError> {
-    validate_bounded_text(field, value, MAX_SAFE_SUMMARY_CHARS)
-}
-
-fn validate_argument_text<'a>(
-    field: &str,
+#[derive(Clone, Copy)]
+struct FieldText<'a> {
+    field: &'a str,
     value: &'a str,
-) -> Result<&'a str, WorkflowCommandError> {
-    validate_bounded_text(field, value, MAX_ARGUMENT_TEXT_CHARS)
 }
 
-fn validate_bounded_text<'a>(
-    field: &str,
-    value: &'a str,
+#[derive(Clone, Copy)]
+struct BoundedText<'a> {
+    text: FieldText<'a>,
     max_chars: usize,
-) -> Result<&'a str, WorkflowCommandError> {
-    if value.is_empty() || value.chars().count() > max_chars || leak_marker(value).is_some() {
-        return Err(WorkflowCommandError::new(
-            WorkflowCommandErrorKind::UnsafeText,
-            field,
-            value,
-        ));
-    }
-    Ok(value)
 }
 
-fn validate_blake3_hex<'a>(field: &str, value: &'a str) -> Result<&'a str, WorkflowCommandError> {
-    if value.len() != BLAKE3_HEX_CHARS
-        || !value.chars().all(|character| character.is_ascii_hexdigit())
+fn validate_safe_label<'a>(input: FieldText<'a>) -> Result<&'a str, WorkflowCommandError> {
+    if input.value.is_empty() {
+        return Err(unsafe_text_error(input));
+    }
+    if input.value.len() > MAX_SAFE_LABEL_CHARS {
+        return Err(unsafe_text_error(input));
+    }
+    if !is_safe_label(input.value) {
+        return Err(unsafe_text_error(input));
+    }
+    if leak_marker(input.value).is_some() {
+        return Err(unsafe_text_error(input));
+    }
+    Ok(input.value)
+}
+
+fn validate_safe_summary<'a>(input: FieldText<'a>) -> Result<&'a str, WorkflowCommandError> {
+    validate_bounded_text(BoundedText {
+        text: input,
+        max_chars: MAX_SAFE_SUMMARY_CHARS,
+    })
+}
+
+fn validate_argument_text<'a>(input: FieldText<'a>) -> Result<&'a str, WorkflowCommandError> {
+    validate_bounded_text(BoundedText {
+        text: input,
+        max_chars: MAX_ARGUMENT_TEXT_CHARS,
+    })
+}
+
+fn validate_bounded_text<'a>(input: BoundedText<'a>) -> Result<&'a str, WorkflowCommandError> {
+    if input.text.value.is_empty() {
+        return Err(unsafe_text_error(input.text));
+    }
+    if input.text.value.chars().count() > input.max_chars {
+        return Err(unsafe_text_error(input.text));
+    }
+    if leak_marker(input.text.value).is_some() {
+        return Err(unsafe_text_error(input.text));
+    }
+    Ok(input.text.value)
+}
+
+fn validate_blake3_hex<'a>(input: FieldText<'a>) -> Result<&'a str, WorkflowCommandError> {
+    if input.value.len() != BLAKE3_HEX_CHARS {
+        return Err(WorkflowCommandError::new(
+            WorkflowCommandErrorKind::InvalidProvenance,
+            input.field,
+            input.value,
+        ));
+    }
+    if !input
+        .value
+        .chars()
+        .all(|character| character.is_ascii_hexdigit())
     {
         return Err(WorkflowCommandError::new(
             WorkflowCommandErrorKind::InvalidProvenance,
-            field,
-            value,
+            input.field,
+            input.value,
         ));
     }
-    Ok(value)
+    Ok(input.value)
+}
+
+fn is_safe_label(value: &str) -> bool {
+    value
+        .chars()
+        .all(|character| character.is_ascii_alphanumeric() || matches!(character, '-' | '_' | '.'))
+}
+
+fn unsafe_text_error(input: FieldText<'_>) -> WorkflowCommandError {
+    WorkflowCommandError::new(
+        WorkflowCommandErrorKind::UnsafeText,
+        input.field,
+        input.value,
+    )
 }
 
 fn leak_marker(value: &str) -> Option<&'static str> {
@@ -1672,7 +1733,7 @@ mod tests {
     }
 
     #[test]
-    fn manifest_validation_accepts_typed_safe_commands() {
+    fn workflow_command_manifest_validation_accepts_typed_safe_commands() {
         // r[verify agent_harness_runtime.claude_code_commands.manifest]
         let manifest = valid_manifest();
 
@@ -1688,7 +1749,7 @@ mod tests {
     }
 
     #[test]
-    fn manifest_validation_rejects_unsafe_or_incomplete_commands() {
+    fn workflow_command_manifest_validation_rejects_unsafe_or_incomplete_commands() {
         // r[verify agent_harness_runtime.claude_code_commands.manifest.invalid]
         let invalid_name = WorkflowCommandManifestDraft {
             name: INVALID_NAME,
@@ -1746,7 +1807,7 @@ mod tests {
     }
 
     #[test]
-    fn duplicate_registry_policy_is_deterministic_and_safe() {
+    fn workflow_command_duplicate_registry_policy_is_deterministic_and_safe() {
         // r[verify agent_harness_runtime.claude_code_commands.registry]
         // r[verify agent_harness_runtime.claude_code_commands.registry.duplicate]
         let host = valid_manifest();
@@ -1782,7 +1843,7 @@ mod tests {
     }
 
     #[test]
-    fn invocation_binding_accepts_schema_ordered_arguments() {
+    fn workflow_command_invocation_binding_accepts_schema_ordered_arguments() {
         // r[verify agent_harness_runtime.claude_code_commands.binding]
         let manifest = valid_manifest();
         let binding = bind_workflow_command_arguments(
@@ -1806,7 +1867,7 @@ mod tests {
     }
 
     #[test]
-    fn malformed_arguments_stop_before_prompt_or_dispatch() {
+    fn workflow_command_malformed_arguments_stop_before_prompt_or_dispatch() {
         // r[verify agent_harness_runtime.claude_code_commands.binding.invalid]
         let manifest = valid_manifest();
         let missing_required: &[WorkflowInvocationArgumentDraft<'_>] = &[];
@@ -1842,7 +1903,7 @@ mod tests {
     }
 
     #[test]
-    fn policy_denies_command_text_side_effect_bypass() {
+    fn workflow_command_policy_denies_command_text_side_effect_bypass() {
         // r[verify agent_harness_runtime.claude_code_commands.scope]
         // r[verify agent_harness_runtime.claude_code_commands.scope.no_policy_bypass]
         let mutating = WorkflowCommandManifest::validate(&WorkflowCommandManifestDraft {
@@ -1867,7 +1928,7 @@ mod tests {
     }
 
     #[test]
-    fn output_contract_validation_accepts_declared_shapes() {
+    fn workflow_command_output_contract_validation_accepts_declared_shapes() {
         // r[verify agent_harness_runtime.claude_code_commands.outputs]
         let cases = [
             (WorkflowCommandOutputKind::Explanation, None, None),
@@ -1910,7 +1971,7 @@ mod tests {
     }
 
     #[test]
-    fn output_contract_mismatches_are_not_successful_completion() {
+    fn workflow_command_output_contract_mismatches_are_not_successful_completion() {
         // r[verify agent_harness_runtime.claude_code_commands.outputs.mismatch]
         let validation_contract = WorkflowCommandOutputContract::validate(&output_contract(
             WorkflowCommandOutputKind::ValidationReport,
@@ -1969,7 +2030,7 @@ mod tests {
     }
 
     #[test]
-    fn invalid_provenance_hash_fails_closed() {
+    fn workflow_command_invalid_provenance_hash_fails_closed() {
         let draft = WorkflowCommandManifestDraft {
             provenance: WorkflowCommandProvenanceDraft {
                 source_id: HOST_SOURCE_ID,
