@@ -26,6 +26,7 @@ cd "${repo_root}"
 
 cargo test -p animus-runtime --locked missing_model_service
 cargo test -p animus-runtime --locked missing_tool_service
+cargo test -p animus-runtime --locked missing_worker_service
 cargo test -p animus-runtime --locked model_adapter_failure
 cargo test -p animus-runtime --locked tool_adapter_failure
 cargo test -p animus-runtime --locked blocked_adapter_outcome
@@ -37,13 +38,14 @@ cat > "${receipt_path}" <<EOF
 schema: ${RECEIPT_SCHEMA}
 rail: ${RAIL_NAME}
 status: pass
-boundary: injected model/tool/effect services and fail-closed runtime outcomes
+boundary: injected model/tool/worker/effect services and fail-closed runtime outcomes
 positive_fixtures:
 - completed service outcome carries completed receipt
 - valid BLAKE3 safe evidence hash is accepted
 negative_fixtures:
 - missing model service fails closed before tool dispatch
 - missing tool service fails closed before model dispatch
+- missing worker service fails closed before fallback dispatch
 - model/tool adapter failures stop safely
 - denied adapter outcome emits no success response
 - absent, unavailable, denied, cancelled, timed-out, and malformed-output outcomes are blocking

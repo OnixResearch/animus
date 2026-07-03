@@ -20,6 +20,7 @@ mod shell;
 mod status;
 mod telemetry;
 mod transition;
+mod worker_team;
 
 pub use contract::{
     DEFAULT_MAX_TURNS, MIN_MAX_TURNS, MaxTurns, RunReport, RuntimeConfig, RuntimeError,
@@ -79,4 +80,13 @@ pub use transition::{
     AdapterOutcome, AdapterRequest, AdapterStep, DecisionStep, TurnPlan, TurnState,
     apply_adapter_outcome, apply_decision, complete_with_fabric_error, complete_with_guard_block,
     complete_with_guard_failure, complete_with_steel_policy_denial, plan_next_turn,
+};
+pub use worker_team::{
+    Claim, Conflict, ConflictReport, ContextAdmissionPolicy, DelegationFailure, EvidenceReference,
+    FailureKind, MutationIntent, ParentTrace, Report, ReportMergeOutcome, WorkerAuthority,
+    WorkerBudgets, WorkerCancelOutcome, WorkerCapability, WorkerContextItem, WorkerContextItemKind,
+    WorkerContextPacket, WorkerContextRedaction, WorkerHandle, WorkerMergedReport,
+    WorkerOutputSchema, WorkerScope, WorkerService, WorkerStatus, WorkerTask, WorkerTaskDraft,
+    collect_report, enqueue_task, merge_reports, request_cancel, request_status,
+    validate_context_packet, validate_report, validate_task,
 };
