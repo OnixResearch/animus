@@ -104,6 +104,11 @@ pub enum RuntimeEvent {
         /// Safe failure message.
         message: String,
     },
+    /// Typed lifecycle hook outcome with redacted input metadata.
+    LifecycleHookOutcome {
+        /// Safe lifecycle hook outcome report.
+        outcome: crate::LifecycleHookOutcome,
+    },
     /// Steel policy denied activation before Steel evaluation.
     SteelPolicyDenied {
         /// Safe selected profile label.
@@ -155,6 +160,7 @@ impl RuntimeEvent {
             Self::FabricError { .. } => super::RuntimeEventKind::FabricError,
             Self::HookBlocked { .. } => super::RuntimeEventKind::HookBlocked,
             Self::HookFailed { .. } => super::RuntimeEventKind::HookFailed,
+            Self::LifecycleHookOutcome { .. } => super::RuntimeEventKind::LifecycleHookOutcome,
             Self::SteelPolicyDenied { .. } => super::RuntimeEventKind::SteelPolicyDenied,
             Self::Cancelled { .. } => super::RuntimeEventKind::Cancelled,
             Self::CompactionRequested { .. } => super::RuntimeEventKind::CompactionRequested,

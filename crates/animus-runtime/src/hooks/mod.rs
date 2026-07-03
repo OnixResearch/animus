@@ -1,6 +1,18 @@
 pub(crate) mod chain;
+mod lifecycle;
 
 pub use chain::RuntimeMiddlewareStack;
+pub use lifecycle::{
+    LifecycleHookDefinition, LifecycleHookDefinitionDraft, LifecycleHookDefinitionSource,
+    LifecycleHookEffect, LifecycleHookEffectDraft, LifecycleHookError, LifecycleHookErrorKind,
+    LifecycleHookEventKind, LifecycleHookFailureClass, LifecycleHookInput, LifecycleHookInputDraft,
+    LifecycleHookOutcome, LifecycleHookOutcomeClass, LifecycleHookOutput, LifecycleHookOutputDraft,
+    LifecycleHookPolicyStatus, LifecycleHookRedaction, LifecycleHookRequest,
+    LifecycleHookRoutePlan, LifecycleHookTrustDecision, LifecycleHookTrustRecord,
+    LifecycleHookTrustRecordDraft, LifecycleHookTrustScope, LifecycleHookTrustStatus,
+    bind_lifecycle_hook_output_to_policy, evaluate_lifecycle_hook_trust,
+    route_lifecycle_hook_requests,
+};
 
 const DEFAULT_MIDDLEWARE_LABEL: &str = "runtime_middleware";
 

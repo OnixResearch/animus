@@ -111,6 +111,8 @@ pub enum RuntimeEventKind {
     HookBlocked,
     /// Hook failure event.
     HookFailed,
+    /// Lifecycle hook outcome event.
+    LifecycleHookOutcome,
     /// Steel policy denial event.
     SteelPolicyDenied,
     /// Cancellation event.
@@ -144,6 +146,7 @@ impl RuntimeEventKind {
             Self::FabricError => "fabric_error",
             Self::HookBlocked => "hook_blocked",
             Self::HookFailed => "hook_failed",
+            Self::LifecycleHookOutcome => "lifecycle_hook_outcome",
             Self::SteelPolicyDenied => "steel_policy_denied",
             Self::Cancelled => "cancelled",
             Self::CompactionRequested => "compaction_requested",

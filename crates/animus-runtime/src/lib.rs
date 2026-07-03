@@ -28,8 +28,16 @@ pub use contract::{
 };
 pub use fabric::LoopFabric;
 pub use hooks::{
-    HookAction, HookBoundary, HookDecision, MiddlewareError, RuntimeMiddleware,
-    RuntimeMiddlewareStack,
+    HookAction, HookBoundary, HookDecision, LifecycleHookDefinition, LifecycleHookDefinitionDraft,
+    LifecycleHookDefinitionSource, LifecycleHookEffect, LifecycleHookEffectDraft,
+    LifecycleHookError, LifecycleHookErrorKind, LifecycleHookEventKind, LifecycleHookFailureClass,
+    LifecycleHookInput, LifecycleHookInputDraft, LifecycleHookOutcome, LifecycleHookOutcomeClass,
+    LifecycleHookOutput, LifecycleHookOutputDraft, LifecycleHookPolicyStatus,
+    LifecycleHookRedaction, LifecycleHookRequest, LifecycleHookRoutePlan,
+    LifecycleHookTrustDecision, LifecycleHookTrustRecord, LifecycleHookTrustRecordDraft,
+    LifecycleHookTrustScope, LifecycleHookTrustStatus, MiddlewareError, RuntimeMiddleware,
+    RuntimeMiddlewareStack, bind_lifecycle_hook_output_to_policy, evaluate_lifecycle_hook_trust,
+    route_lifecycle_hook_requests,
 };
 pub use shell::{
     RuntimeAdapters, SteelPolicyRuntime, run_agent_loop, run_with_steel_policy,
