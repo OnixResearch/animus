@@ -20,6 +20,12 @@ pub use crate::batch::{
     render_plan_order_records,
 };
 pub use crate::boundary::{evaluate_sandbox_escalation, sandbox_escalation_event};
+pub use crate::composition_conformance::{
+    CompositionCaseKind, CompositionDiagnostic, CompositionDiagnosticKind,
+    CompositionEvidenceRecord, CompositionRailReport, CompositionScenario, CompositionSurface,
+    composition_conformance_matrix, render_composition_evidence, run_composition_conformance,
+    validate_composition_evidence_text, validate_composition_matrix,
+};
 pub use crate::context_layering::{
     ContextLayerAdmissionPolicy, ContextLayerBoundaryEffect, ContextLayerClass,
     ContextLayerDescriptor, ContextLayerDiagnostic, ContextLayerDiagnosticKind,
@@ -89,12 +95,13 @@ pub use crate::hooks::{
     HookAction, HookBoundary, HookDecision, LifecycleHookCapability, LifecycleHookDefinition,
     LifecycleHookDefinitionDraft, LifecycleHookDefinitionSource, LifecycleHookEffect,
     LifecycleHookEffectDraft, LifecycleHookError, LifecycleHookErrorKind, LifecycleHookEventKind,
-    LifecycleHookFailureClass, LifecycleHookInput, LifecycleHookInputDraft, LifecycleHookOutcome,
-    LifecycleHookOutcomeClass, LifecycleHookOutput, LifecycleHookOutputDraft,
-    LifecycleHookPolicyStatus, LifecycleHookRedaction, LifecycleHookRequest,
-    LifecycleHookRoutePlan, LifecycleHookTrustDecision, LifecycleHookTrustRecord,
-    LifecycleHookTrustRecordDraft, LifecycleHookTrustScope, LifecycleHookTrustStatus,
-    MiddlewareError, RuntimeMiddleware, RuntimeMiddlewareStack,
+    LifecycleHookFailureClass, LifecycleHookInput, LifecycleHookInputDraft,
+    LifecycleHookInputReportDraft, LifecycleHookOutcome, LifecycleHookOutcomeClass,
+    LifecycleHookOutcomeDraft, LifecycleHookOutcomeReportDraft, LifecycleHookOutput,
+    LifecycleHookOutputDraft, LifecycleHookPolicyStatus, LifecycleHookRedaction,
+    LifecycleHookRequest, LifecycleHookRoutePlan, LifecycleHookTrustDecision,
+    LifecycleHookTrustRecord, LifecycleHookTrustRecordDraft, LifecycleHookTrustScope,
+    LifecycleHookTrustStatus, MiddlewareError, RuntimeMiddleware, RuntimeMiddlewareStack,
     bind_lifecycle_hook_output_to_policy, evaluate_lifecycle_hook_trust,
     route_lifecycle_hook_requests,
 };

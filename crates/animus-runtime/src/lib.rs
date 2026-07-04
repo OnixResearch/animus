@@ -33,6 +33,7 @@ mod background;
 #[allow(excessive_file_length)]
 mod batch;
 mod boundary;
+mod composition_conformance;
 mod context_layering;
 mod contract;
 #[allow(excessive_file_length)]

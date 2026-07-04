@@ -180,6 +180,7 @@
                 || baseName == "README.md"
                 || baseName == "check-clankers-product-surfaces"
                 || baseName == "check-clash-ucan-authority"
+                || baseName == "check-composition-conformance"
                 || baseName == "check-exec-policy"
                 || baseName == "check-plugin-manifest-runtime-neutral"
                 || baseName == "check-request-lifecycle"
@@ -370,6 +371,10 @@
             sh scripts/cairn/check-injected-services --root .
           '';
 
+          composition-conformance = cargoCheck "animus-composition-conformance" [ pkgs.b3sum ] ''
+            sh scripts/cairn/check-composition-conformance --root .
+          '';
+
           clash-ucan-authority = cargoCheck "animus-clash-ucan-authority" [ pkgs.nickel ] ''
             sh scripts/cairn/check-clash-ucan-authority --root .
           '';
@@ -516,6 +521,7 @@
           packages = with pkgs; [
             self.packages.${stdenv.hostPlatform.system}.cargo-tigerstyle
             self.packages.${stdenv.hostPlatform.system}.cairn
+            b3sum
             cargo
             rustc
             rustfmt

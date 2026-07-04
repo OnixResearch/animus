@@ -42,6 +42,77 @@ r[agent_harness_runtime.baseline.adapters.missing_service]
 - THEN runtime returns a typed failure before claiming completed effects
 - AND it does not discover ambient config, read credentials, spawn commands, or contact providers as a fallback.
 
+### Requirement: Nickel-authored process-job profiles
+
+r[agent_harness_runtime.clankers_process_job_profiles.nickel] Animus process-job profile schemas and policy MUST be authored as Nickel contracts or checked fixtures covering profile schema, backend choices, command/program shape, args, cwd, writable paths, environment allowlist, timeout/resource bounds, notification policy, and safe metadata.
+
+#### Scenario: Generated profile policy stays in sync
+
+r[agent_harness_runtime.clankers_process_job_profiles.nickel.drift]
+- GIVEN a maintained process-job profile Nickel source and generated runtime fixture
+- WHEN drift validation runs
+- THEN generated data matches the Nickel source
+- AND schema-invalid profiles fail before runtime dispatch.
+
+### Requirement: Pure profile resolution
+
+r[agent_harness_runtime.clankers_process_job_profiles.resolution] Profile resolution MUST be pure over loaded profile sources and policy, producing backend-neutral queue start requests plus safe identity evidence without spawning processes, reading the filesystem, contacting queue backends, or writing storage.
+
+#### Scenario: Valid profile resolves without side effects
+
+r[agent_harness_runtime.clankers_process_job_profiles.resolution.valid]
+- GIVEN loaded profile sources and policy contain a valid profile
+- WHEN the resolver selects that profile
+- THEN it returns a backend-neutral start request and safe identity envelope
+- AND no shell, pueue, systemd, filesystem, or storage operation is invoked.
+
+### Requirement: Deterministic source precedence
+
+r[agent_harness_runtime.clankers_process_job_profiles.precedence] Profile source precedence MUST be deterministic and MUST reject duplicate profile names at the same precedence level.
+
+#### Scenario: Duplicate workspace profiles fail closed
+
+r[agent_harness_runtime.clankers_process_job_profiles.precedence.duplicate]
+- GIVEN two workspace-level sources define the same profile name
+- WHEN profile resolution runs
+- THEN resolution fails with a duplicate-profile diagnostic
+- AND no arbitrary source order is used to choose a winner.
+
+### Requirement: Profile policy validation
+
+r[agent_harness_runtime.clankers_process_job_profiles.policy] Profile validation MUST reject secret-like environment keys, env keys outside allowed prefixes, cwd or writable-path escapes, unsupported backends, conflicting command/program fields, invalid args, and timeout/resource-limit violations before dispatch.
+
+#### Scenario: Secret environment key rejected
+
+r[agent_harness_runtime.clankers_process_job_profiles.policy.secret_env]
+- GIVEN a profile declares an environment key that looks like a token, password, key, or secret
+- WHEN profile validation runs
+- THEN validation rejects the profile with a secret-environment diagnostic
+- AND no backend-neutral start request is produced.
+
+### Requirement: Safe profile identity receipts
+
+r[agent_harness_runtime.clankers_process_job_profiles.identity] Resolved profile identity metadata MUST include schema version, source label, policy hash, profile name, selected backend, and BLAKE3 profile/content identities, and MUST NOT include raw environment values, credentials, full path dumps, or backend-specific secret locators.
+
+#### Scenario: Identity metadata rejects raw env value
+
+r[agent_harness_runtime.clankers_process_job_profiles.identity.rejects_env]
+- GIVEN a profile identity fixture includes a raw environment value or credential-looking backend locator
+- WHEN identity validation runs
+- THEN validation rejects the fixture with a typed leak diagnostic.
+
+### Requirement: Process-job profile verification
+
+r[agent_harness_runtime.clankers_process_job_profiles.verification] The adaptation MUST include focused positive and negative tests for Nickel policy drift, valid profile resolution, duplicate names, invalid command shapes, secret env keys, path escapes, unsupported backends, resource-limit violations, identity envelopes, and leak rejection.
+
+#### Scenario: Closeout evidence covers profile fixtures
+
+r[agent_harness_runtime.clankers_process_job_profiles.verification.closeout]
+- GIVEN maintainers intend to archive the process-job profile adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused Nickel, resolver, precedence, policy, identity, workspace, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
 ### Requirement: Runtime dispatch uses injected services
 
 r[agent_harness_runtime.clankers_injected_services.contracts] Animus runtime dispatch MUST consume injected model/provider, tool, host-effect, capability, cancellation, confirmation, and runtime-policy services through typed contracts rather than constructing concrete clients or reading ambient host state.
@@ -65,6 +136,66 @@ r[agent_harness_runtime.clankers_injected_services.fail_closed.blocks]
 - WHEN the service is absent, unavailable, denied, cancelled, timed out, or returns malformed output
 - THEN runtime returns the corresponding typed outcome
 - AND no receipt or provenance fact claims the effect completed.
+
+### Requirement: Bounded agent-team reference
+
+r[agent_harness_runtime.claude_code_agents.scope] Animus MUST treat Claude Code subagents and background agents as a bounded reference for scoped delegation, and MUST NOT require cloud sessions, inherit full parent context by default, spawn OS processes from reusable core crates, or bypass permission and tool policy.
+
+#### Scenario: Worker cannot bypass parent policy
+
+r[agent_harness_runtime.claude_code_agents.scope.no_bypass]
+- GIVEN a worker task requests a tool or mutation outside its allowed capabilities
+- WHEN runtime evaluates the worker task or report
+- THEN the request is denied or returned as an unresolved mutation intent
+- AND no dispatch occurs without normal permission, capability, and mutation-coordination checks.
+
+### Requirement: Scoped worker task contracts
+
+r[agent_harness_runtime.claude_code_agents.task_contract] Worker tasks MUST declare objective, scope, input context packet, allowed tools or capabilities, budgets, expected output schema, parent trace metadata, and authority/grant metadata before worker execution.
+
+#### Scenario: Overbroad worker task is rejected
+
+r[agent_harness_runtime.claude_code_agents.task_contract.overbroad]
+- GIVEN a worker task omits scope, allowed capabilities, budget, output schema, or parent trace metadata
+- WHEN worker task validation runs
+- THEN validation returns typed diagnostics
+- AND the worker task is not enqueued.
+
+### Requirement: Minimized worker context packets
+
+r[agent_harness_runtime.claude_code_agents.context_packet] Worker context packets MUST be explicitly assembled from selected parent messages, summaries, file observations, memory descriptors, and tool results, and MUST NOT include full parent transcripts, raw hidden memory, credentials, provider payloads, or unbounded tool outputs by default.
+
+#### Scenario: Parent context leak is rejected
+
+r[agent_harness_runtime.claude_code_agents.context_packet.leak]
+- GIVEN a worker context packet attempts to include a full parent transcript or raw credential-looking memory body without policy admission
+- WHEN context packet validation runs
+- THEN validation rejects the packet with a leak diagnostic
+- AND the worker task cannot start with that packet.
+
+### Requirement: Host-injected worker service
+
+r[agent_harness_runtime.claude_code_agents.worker_service] Worker execution MUST use an injected host service for enqueue, status, cancel, and collect operations with typed unavailable-service, cancellation, timeout, and malformed-report failures.
+
+#### Scenario: Missing worker service fails before delegation
+
+r[agent_harness_runtime.claude_code_agents.worker_service.missing]
+- GIVEN a coordinator requests worker delegation
+- WHEN no worker service is injected
+- THEN runtime returns a worker-service-unavailable failure
+- AND no fallback thread, process, shell command, model call, or network request is attempted.
+
+### Requirement: Evidence-bearing worker report merge
+
+r[agent_harness_runtime.claude_code_agents.report_merge] Coordinator merge logic MUST validate worker reports against their output schemas, preserve evidence references, surface conflicts, and require policy or operator resolution before treating conflicting or malformed reports as final.
+
+#### Scenario: Conflicting worker reports require arbitration
+
+r[agent_harness_runtime.claude_code_agents.report_merge.conflict]
+- GIVEN two worker reports make incompatible claims or propose conflicting mutations
+- WHEN coordinator merge evaluates the reports
+- THEN the merge result records a structured conflict with evidence references
+- AND no conflicting mutation is applied until policy or operator arbitration resolves it.
 
 ### Requirement: Bounded workflow command reference
 
@@ -137,6 +268,150 @@ r[agent_harness_runtime.clankers_injected_services.confirmation.default_deny]
 - WHEN no confirmation broker is available
 - THEN runtime records a denied decision
 - AND the protected side effect is not executed.
+
+### Requirement: Typed confirmation requests
+
+r[agent_harness_runtime.clankers_confirmation_broker.requests] Animus confirmation requests MUST be typed protected-action envelopes with request ID, action kind, resource, ability, safe summary, policy hash, session or run identity, required confirmation level, optional expiry, and redaction class.
+
+#### Scenario: Protected mutation requests confirmation
+
+r[agent_harness_runtime.clankers_confirmation_broker.requests.mutation]
+- GIVEN a protected mutating tool action requires confirmation by policy
+- WHEN runtime prepares the action
+- THEN it emits a typed confirmation request with action/resource/ability identity
+- AND the raw tool payload is not embedded in the request receipt.
+
+### Requirement: Default deny confirmation behavior
+
+r[agent_harness_runtime.clankers_confirmation_broker.default_deny] Confirmation evaluation MUST fail closed when the broker is absent, unavailable, timed out, cancelled, stale, malformed, or returns no decision.
+
+#### Scenario: Missing broker denies protected action
+
+r[agent_harness_runtime.clankers_confirmation_broker.default_deny.missing]
+- GIVEN a protected action requires confirmation
+- AND no confirmation broker is injected
+- WHEN confirmation evaluation runs
+- THEN the protected action is denied
+- AND no fallback approval or action dispatch occurs.
+
+### Requirement: Decision binding and freshness
+
+r[agent_harness_runtime.clankers_confirmation_broker.binding] Confirmation decisions MUST bind to the pending request ID, action kind, resource, ability, policy hash, and expiry, and MUST be rejected when stale or mismatched.
+
+#### Scenario: Mismatched approval rejected
+
+r[agent_harness_runtime.clankers_confirmation_broker.binding.mismatch]
+- GIVEN a broker returns an approval for a different request ID or resource
+- WHEN runtime validates the decision
+- THEN the decision is rejected with a mismatched-confirmation failure
+- AND the protected action remains unexecuted.
+
+### Requirement: Host-owned confirmation interaction
+
+r[agent_harness_runtime.clankers_confirmation_broker.host_owned] UI prompts, human approval collection, notification channels, external approval services, and durable approval storage MUST remain host-owned adapter behavior outside reusable runtime crates.
+
+#### Scenario: Runtime does not prompt directly
+
+r[agent_harness_runtime.clankers_confirmation_broker.host_owned.no_ui]
+- GIVEN a confirmation request is required
+- WHEN reusable runtime evaluates the protected action
+- THEN it calls the injected broker contract
+- AND it does not display UI, read terminal input, send notifications, or write approval storage directly.
+
+### Requirement: Safe confirmation receipts
+
+r[agent_harness_runtime.clankers_confirmation_broker.receipts] Confirmation receipts MUST record safe metadata such as request ID hash, action kind, resource and ability labels or hashes, decision status, broker class, policy hash, timing class, expiry class, and BLAKE3 receipt hash, and MUST NOT include raw prompts, credentials, full paths, provider payloads, raw tool payloads, or secret summaries.
+
+#### Scenario: Confirmation receipt leak rejected
+
+r[agent_harness_runtime.clankers_confirmation_broker.receipts.rejects_leaks]
+- GIVEN a confirmation receipt fixture includes raw prompt text, credentials, a full path dump, provider JSON, raw tool payload, or secret-like summary
+- WHEN receipt validation runs
+- THEN validation rejects the fixture with a typed leak diagnostic.
+
+### Requirement: Confirmation broker verification
+
+r[agent_harness_runtime.clankers_confirmation_broker.verification] The adaptation MUST include focused positive and negative tests for typed requests, approved and denied decisions, missing brokers, timeouts, cancellations, stale and mismatched decisions, host-owned interaction boundaries, and receipt redaction.
+
+#### Scenario: Closeout evidence covers confirmation fixtures
+
+r[agent_harness_runtime.clankers_confirmation_broker.verification.closeout]
+- GIVEN maintainers intend to archive the confirmation broker kit adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused request, default-deny, binding, host-boundary, receipt, workspace, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Typed remote/headless admission requests
+
+r[agent_harness_runtime.clankers_remote_admission.requests] Animus MUST represent remote or headless entrypoint admission as typed requests with audience, actor, entrypoint, session or workspace scope, requested action, resource, ability, credential evidence, local caveats, policy hash, and expiry or window metadata.
+
+#### Scenario: Prompt submission admission normalizes
+
+r[agent_harness_runtime.clankers_remote_admission.requests.prompt]
+- GIVEN a headless or remote client requests prompt submission for a session
+- WHEN admission normalization runs
+- THEN Animus produces a typed admission request with audience, actor, entrypoint, session scope, and prompt-submit ability
+- AND the raw prompt body is not embedded in the admission receipt.
+
+### Requirement: Admission before side effects
+
+r[agent_harness_runtime.clankers_remote_admission.before_effects] Admission checks MUST complete before session create, attach or resume, prompt submission, tool execution, memory mutation, artifact delivery, or workflow command side effects occur.
+
+#### Scenario: Missing credential blocks session mutation
+
+r[agent_harness_runtime.clankers_remote_admission.before_effects.missing_credential]
+- GIVEN an entrypoint requires a credential or session grant
+- AND no credential evidence is supplied
+- WHEN admission evaluates the request
+- THEN admission denies the request before session state changes
+- AND no prompt, tool, memory, delivery, or workflow side effect is invoked.
+
+### Requirement: UCAN-aligned authority and local caveats
+
+r[agent_harness_runtime.clankers_remote_admission.authority] Admission MUST evaluate credential audience, expiry, revocation or verifier status, requested resource/ability, and local caveats, and local caveats MUST NOT expand authority beyond verified grants.
+
+#### Scenario: Wrong audience denied
+
+r[agent_harness_runtime.clankers_remote_admission.authority.wrong_audience]
+- GIVEN credential evidence targets a different audience than the current runtime or session entrypoint
+- WHEN admission authority validation runs
+- THEN admission denies the request with a wrong-audience reason
+- AND the local caveat layer cannot override the denial into an allow.
+
+### Requirement: Transport and credential stores are host-owned
+
+r[agent_harness_runtime.clankers_remote_admission.host_owned] Network transports, daemon sockets, iroh, Matrix, MCP, HTTP servers, OAuth stores, credential persistence, revocation databases, and verifier backends MUST remain host-owned adapter behavior outside reusable admission core logic.
+
+#### Scenario: Admission core does not read credential store
+
+r[agent_harness_runtime.clankers_remote_admission.host_owned.no_store]
+- GIVEN admission validation receives typed credential evidence
+- WHEN reusable admission core evaluates the request
+- THEN it validates the supplied evidence and policy inputs
+- AND it does not read credential files, open sockets, contact OAuth endpoints, or query revocation storage directly.
+
+### Requirement: Safe admission receipts
+
+r[agent_harness_runtime.clankers_remote_admission.receipts] Admission receipts MUST record safe metadata such as verdict, reason class, entrypoint label, resource and ability labels, audience hash, actor hash, credential hash, caveat summary, policy hash, expiry class, verifier status, and BLAKE3 receipt hash, and MUST NOT include raw tokens, private keys, raw prompts, provider payloads, transport headers, Matrix room IDs, full paths, or credentials.
+
+#### Scenario: Admission receipt leak rejected
+
+r[agent_harness_runtime.clankers_remote_admission.receipts.rejects_leaks]
+- GIVEN an admission receipt fixture contains a raw token, private key, prompt body, provider JSON, transport header, Matrix room ID, full path, or credential body
+- WHEN receipt validation runs
+- THEN validation rejects the fixture with a typed leak diagnostic.
+
+### Requirement: Remote admission verification
+
+r[agent_harness_runtime.clankers_remote_admission.verification] The adaptation MUST include focused positive and negative tests for request normalization, before-effect gating, authorized admission, missing/expired/revoked/wrong-audience credentials, verifier-unavailable status, local caveat denial, host-owned store/transport boundaries, unsupported entrypoints, and receipt redaction.
+
+#### Scenario: Closeout evidence covers admission fixtures
+
+r[agent_harness_runtime.clankers_remote_admission.verification.closeout]
+- GIVEN maintainers intend to archive the remote admission receipt adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused request, before-effect, authority, host-boundary, receipt, workspace, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
 
 ### Requirement: Provider boundary forbids ambient clients
 
@@ -429,6 +704,66 @@ r[agent_harness_runtime.claude_code_permissions.receipts.denied]
 - THEN the receipt records denial reason, action class, policy hash, and redacted resource metadata
 - AND sensitive request material is omitted or represented only by approved hashes and redaction markers.
 
+### Requirement: Bounded headless automation reference
+
+r[agent_harness_runtime.claude_code_headless.scope] Animus MUST treat Claude Code CLI, CI, and SDK automation as a bounded reference for noninteractive agent runs, and MUST NOT copy Claude Code flags, require cloud sessions, create pull requests by default, or make networked providers mandatory.
+
+#### Scenario: CI run does not open a pull request by default
+
+r[agent_harness_runtime.claude_code_headless.scope.no_default_pr]
+- GIVEN a headless run completes with a patch summary or commit-message proposal
+- WHEN final automation policy is evaluated
+- THEN Animus does not open, merge, ready, or reopen a pull request by default
+- AND any VCS or hosting side effect requires an explicit host adapter and policy grant.
+
+### Requirement: Typed headless run request
+
+r[agent_harness_runtime.claude_code_headless.request] Headless run requests MUST declare objective, session or workspace identity, input message or stdin payload references, policy profile, allowed capabilities, output contract, validation plan, and noninteractive behavior before runtime execution.
+
+#### Scenario: Malformed headless request fails before execution
+
+r[agent_harness_runtime.claude_code_headless.request.invalid]
+- GIVEN a headless request is missing objective, identity, policy profile, output contract, or noninteractive behavior
+- WHEN request validation runs
+- THEN validation returns typed diagnostics
+- AND no model, tool, shell, network, filesystem, or worker service is called.
+
+### Requirement: Stable headless event DTOs
+
+r[agent_harness_runtime.claude_code_headless.events] Headless runs MUST emit stable event DTOs for lifecycle, prompt assembly, model requests and responses, tool dispatch, permission decisions, background work, validation, receipts, and final response using bounded safe payloads.
+
+#### Scenario: Oversized event payload is bounded
+
+r[agent_harness_runtime.claude_code_headless.events.bounded]
+- GIVEN a model, tool, validation, or background event contains large output
+- WHEN the headless event is prepared
+- THEN model-visible and event-visible payloads are bounded according to policy
+- AND safe metadata records truncation state, sizes, and BLAKE3 hashes without embedding raw full bodies.
+
+### Requirement: JSONL and Preserves projections
+
+r[agent_harness_runtime.claude_code_headless.serialization] Headless event DTOs SHOULD provide JSONL and Preserves boundary projections that preserve event identity, ordering metadata, status classes, redaction markers, and BLAKE3 hashes without making either format the core state model.
+
+#### Scenario: Unsupported projection fails safely
+
+r[agent_harness_runtime.claude_code_headless.serialization.unsupported]
+- GIVEN a host requests an unsupported headless event projection
+- WHEN serialization is selected
+- THEN runtime returns a typed unsupported-projection error
+- AND the run does not fall back to lossy or unbounded debug text.
+
+### Requirement: Noninteractive completion statuses
+
+r[agent_harness_runtime.claude_code_headless.completion] Headless completion MUST use typed noninteractive status classes for success, denied, prompt-required, input-required, validation-failed, service-unavailable, cancelled, and execution-failed outcomes with safe evidence references.
+
+#### Scenario: Permission ask becomes prompt-required
+
+r[agent_harness_runtime.claude_code_headless.completion.prompt_required]
+- GIVEN a noninteractive headless run reaches a permission decision that requires user confirmation
+- WHEN policy does not provide a valid preauthorized prompt-decision token
+- THEN the run completes with prompt-required status
+- AND no guarded action is dispatched after the unresolved prompt.
+
 ### Requirement: Rich tool definition metadata
 
 r[agent_harness_runtime.pi_tool_contracts.definition_metadata] Animus tool definitions MUST expose validated name, label, description, parameter schema identity, prompt snippet, prompt guidelines, source/provenance metadata, capability labels, and result metadata shape without embedding concrete tool execution code in the reusable runtime.
@@ -488,6 +823,67 @@ r[agent_harness_runtime.pi_tool_contracts.failure_classes.missing_executor]
 - WHEN runtime evaluates the tool dispatch
 - THEN runtime emits a missing-executor failure class
 - AND no fallback process, shell command, or provider call is attempted.
+
+### Requirement: BLAKE3 snapshot identity
+
+r[agent_harness_runtime.zerostack_hashed_edit.snapshot] Animus hashed edit snapshots MUST identify the edited resource with a full-content BLAKE3 snapshot hash, text normalization mode, line count, and line tag generation metadata before edits can be validated.
+
+#### Scenario: Stale snapshot is rejected
+
+r[agent_harness_runtime.zerostack_hashed_edit.snapshot.stale]
+- GIVEN an edit request references an earlier snapshot hash
+- AND the host reports a different current snapshot hash for the resource
+- WHEN edit validation runs
+- THEN validation fails with a stale-snapshot diagnostic
+- AND no write or partial mutation is performed.
+
+### Requirement: Tagged span edit requests
+
+r[agent_harness_runtime.zerostack_hashed_edit.tagged_spans] Hashed edit requests MUST reference validated tagged lines or contiguous tagged spans plus bounded replacement text rather than relying on fuzzy old-text matching.
+
+#### Scenario: Unknown tag cannot select text
+
+r[agent_harness_runtime.zerostack_hashed_edit.tagged_spans.unknown]
+- GIVEN an edit request contains a tag not present in the supplied snapshot
+- WHEN edit-plan validation runs
+- THEN validation fails with an unknown-tag diagnostic
+- AND the request cannot select or mutate any text.
+
+### Requirement: Pure edit-plan validation
+
+r[agent_harness_runtime.zerostack_hashed_edit.plan_validation] Edit-plan validation MUST be pure deterministic logic over in-memory snapshots and requests, detecting invalid spans, duplicate span selectors, overlapping edits, out-of-order edits, unsupported newline policy, and overlong replacement text.
+
+#### Scenario: Overlapping edits fail closed
+
+r[agent_harness_runtime.zerostack_hashed_edit.plan_validation.overlap]
+- GIVEN two requested edits select overlapping tagged spans
+- WHEN edit-plan validation runs
+- THEN validation fails with an overlap diagnostic
+- AND the host receives no executable edit plan.
+
+### Requirement: Host-owned file mutation
+
+r[agent_harness_runtime.zerostack_hashed_edit.host_mutation] Filesystem reads, writes, locks, atomic replacement, permission checks, and path resolution MUST remain host/tool-adapter responsibilities behind injected tool contracts.
+
+#### Scenario: Core validation performs no ambient I/O
+
+r[agent_harness_runtime.zerostack_hashed_edit.host_mutation.no_io]
+- GIVEN edit-plan validation receives a snapshot and edit request in memory
+- WHEN validation runs
+- THEN it does not read files, inspect environment variables, open locks, spawn processes, or write output files
+- AND mutation remains unavailable until a host adapter applies the validated plan.
+
+### Requirement: Safe edit receipts
+
+r[agent_harness_runtime.zerostack_hashed_edit.receipts] Hashed edit receipts MUST record resource class, redacted path or BLAKE3 resource hash, before and after snapshot hashes, selected span metadata, replacement size metadata, and diagnostics without embedding raw private file bodies by default.
+
+#### Scenario: Receipt omits full private path
+
+r[agent_harness_runtime.zerostack_hashed_edit.receipts.redacted_path]
+- GIVEN an edit targets a private host path
+- WHEN an edit receipt is emitted
+- THEN the path is omitted, relativized, or represented by a BLAKE3 resource hash according to policy
+- AND before/after snapshot hashes remain available for audit.
 
 ### Requirement: Safe receipt DTOs
 
@@ -616,6 +1012,66 @@ r[agent_harness_runtime.clankers_neutral_ledger.closeout]
 - WHEN closeout validation runs
 - THEN evidence includes focused replay tests, unsupported-entry negative tests, missing-service tests, dependency-isolation checks, Cairn validation, and Cairn gates
 - AND skipped checks record a blocker and next-best validation.
+
+### Requirement: Neutral session tree ledger contract
+
+r[agent_harness_runtime.pi_session_tree.ledger_contract] Animus MUST define a neutral append-only session tree ledger contract for runtime-visible entries, parent links, active leaf selection, labels, summaries, replay metadata, and typed ledger errors without depending on Pi session files, a TUI, a database, provider crates, filesystem traversal, or process-global state.
+
+#### Scenario: Ledger snapshot validates tree shape
+
+r[agent_harness_runtime.pi_session_tree.ledger_contract.validate]
+- GIVEN an in-memory ledger snapshot with entry IDs, parent links, and an active leaf
+- WHEN the runtime validates the snapshot before replay
+- THEN duplicate IDs, missing parents, parent cycles, invalid active leaves, and unsupported entry kinds fail with typed ledger errors
+- AND no model or tool adapter is called.
+
+### Requirement: Active-leaf replay context
+
+r[agent_harness_runtime.pi_session_tree.replay_context] Animus MUST rebuild model-visible context by walking from the selected active leaf to the root, preserving root-to-leaf ordering and supported content semantics.
+
+#### Scenario: Replay follows the active branch only
+
+r[agent_harness_runtime.pi_session_tree.replay_context.branch]
+- GIVEN a ledger with two branches from a shared ancestor
+- WHEN runtime rebuilds context for one active leaf
+- THEN only entries on that active branch contribute model-visible messages
+- AND sibling branch messages remain available as ledger history but are not sent to the model.
+
+### Requirement: Summary entries preserve bounded context
+
+r[agent_harness_runtime.pi_session_tree.summary_entries] Animus MUST represent compaction summaries and branch handoff summaries as first-class ledger entries with bounded model-visible summary text and safe replay metadata.
+
+#### Scenario: Summary entry replaces older model-visible span
+
+r[agent_harness_runtime.pi_session_tree.summary_entries.replay]
+- GIVEN a branch contains earlier messages, a compaction summary, and later kept messages
+- WHEN replay context is rebuilt
+- THEN the model-visible context includes the summary and the later kept messages in order
+- AND it does not include the raw older span replaced by the summary.
+
+### Requirement: Labels remain replay-neutral metadata
+
+r[agent_harness_runtime.pi_session_tree.labels] Animus labels MUST attach operator-facing names to ledger entries without changing model-visible replay by default.
+
+#### Scenario: Label does not steer model context
+
+r[agent_harness_runtime.pi_session_tree.labels.replay_neutral]
+- GIVEN a ledger entry has a label used for navigation
+- WHEN runtime rebuilds model-visible context
+- THEN the label is preserved in metadata queries
+- AND the label text is not included in the model request unless an explicit host policy injects it.
+
+### Requirement: Ledger service absence fails closed
+
+r[agent_harness_runtime.pi_session_tree.missing_service] Runtime requests that require resume or replay semantics MUST fail closed with typed missing-ledger, missing-session, or unavailable-ledger-service errors when no suitable ledger service is injected.
+
+#### Scenario: Resume without ledger service halts
+
+r[agent_harness_runtime.pi_session_tree.missing_service.halts]
+- GIVEN a runtime input requests resume from a prior session
+- WHEN no ledger service is available
+- THEN runtime emits a typed missing-ledger-service failure
+- AND no Steel fabric, model adapter, or tool adapter is invoked.
 
 ### Requirement: Candidate inventory
 
@@ -2187,6 +2643,66 @@ r[agent_harness_runtime.openai_codex_hook_trust_lifecycle.outcome_reporting.reda
 - THEN the report includes hook identity, event kind, trust status, and outcome class
 - AND the sensitive input body is omitted or replaced by approved redaction metadata.
 
+### Requirement: Bounded lifecycle hook reference
+
+r[agent_harness_runtime.claude_code_hooks.scope] Animus MUST treat Claude Code hooks as a bounded reference for lifecycle extension points, and MUST NOT adopt arbitrary shell hook execution, hook-file authority, or unvalidated hook-driven state mutation in reusable runtime crates.
+
+#### Scenario: Hook cannot bypass action policy
+
+r[agent_harness_runtime.claude_code_hooks.scope.no_bypass]
+- GIVEN a pre-action hook requests a broader filesystem, exec, network, model, Steel, or tool action
+- WHEN runtime evaluates the hook outcome
+- THEN the proposed action must pass normal DTO validation, permission checks, and capability authorization
+- AND dispatch is denied if those checks fail.
+
+### Requirement: Stable hook point vocabulary
+
+r[agent_harness_runtime.claude_code_hooks.points] Animus hook descriptors MUST use a stable hook-point vocabulary for session lifecycle, prompt assembly, model request/response, tool pre/post, mutation pre/post, validation, receipt emission, and workflow completion events.
+
+#### Scenario: Unknown hook point fails validation
+
+r[agent_harness_runtime.claude_code_hooks.points.unknown]
+- GIVEN a hook descriptor names an unsupported hook point
+- WHEN hook registry validation runs
+- THEN validation returns a typed unknown-hook-point diagnostic
+- AND the hook is not registered.
+
+### Requirement: Safe hook event payloads
+
+r[agent_harness_runtime.claude_code_hooks.payloads] Hook event payloads MUST expose bounded safe metadata such as IDs, classes, redacted resource labels, sizes, hashes, status, and summaries, and MUST NOT include raw prompts, credentials, provider payloads, raw tool bodies, full paths, or unbounded outputs by default.
+
+#### Scenario: Tool post-hook sees bounded result metadata
+
+r[agent_harness_runtime.claude_code_hooks.payloads.bounded]
+- GIVEN a tool call produced a large result
+- WHEN a tool post-hook request is prepared
+- THEN the hook payload includes truncation status, sizes, safe labels, and BLAKE3 hashes where needed
+- AND the raw full result body is absent unless a host-specific policy explicitly grants a separate safe handle.
+
+### Requirement: Host-owned hook execution
+
+r[agent_harness_runtime.claude_code_hooks.execution] Hook execution MUST be performed through injected host adapters with declared capabilities, policy-gated execution, typed unavailable-service failures, and no process, filesystem, network, clock, or shell behavior in reusable core crates.
+
+#### Scenario: Missing hook service fails safely
+
+r[agent_harness_runtime.claude_code_hooks.execution.missing_service]
+- GIVEN policy requires a pre-tool hook before dispatch
+- WHEN no hook service is injected
+- THEN runtime reports a required-hook-unavailable failure
+- AND the guarded action is not dispatched.
+
+### Requirement: Hook outcomes require revalidation
+
+r[agent_harness_runtime.claude_code_hooks.outcomes] Hook outcomes MAY observe, annotate, deny, or request revalidation, but any action or payload modification proposed by a hook MUST pass normal runtime validation and authorization before use.
+
+#### Scenario: Malformed hook modification is rejected
+
+r[agent_harness_runtime.claude_code_hooks.outcomes.invalid_modification]
+- GIVEN a hook returns a malformed or unauthorized modified tool request
+- WHEN runtime processes the hook outcome
+- THEN runtime rejects the modification with typed diagnostics
+- AND the original guarded action is denied or revalidated according to policy without using malformed data.
+
 ### Requirement: Typed model-router recipes
 
 r[agent_harness_runtime.vllm_semantic_router_recipes.contracts] Animus model-router recipes MUST be typed contracts for single-route, confidence escalation, ratings ensemble, ReMoM-style quorum synthesis, fusion judge/finalizer, and bounded role workflow route families, including allowed roles, output contract, budget, concurrency, quorum, synthesis, repair, and fallback fields.
@@ -2269,6 +2785,86 @@ r[agent_harness_runtime.vllm_semantic_router_recipes.verification.closeout]
 - THEN evidence names focused recipe, signal, selection, bounds, output, receipt, roadmap, Cairn validation, and Cairn gate checks
 - AND any skipped rail includes a concrete blocker and next-best validation.
 
+### Requirement: Mode-neutral task graph DTOs
+
+r[agent_harness_runtime.hermes_kanban.task_graph] Animus MUST define mode-neutral task graph DTOs for durable orchestration with task ID, title, body, assignee label, lifecycle state, parent dependencies, child links, priority metadata, workspace scope, tenant label, comments, heartbeats, block records, completion summary, and bounded completion metadata.
+
+#### Scenario: Valid task graph snapshot is accepted
+
+r[agent_harness_runtime.hermes_kanban.task_graph.valid]
+- GIVEN a host supplies a task graph snapshot with unique IDs, valid parent links, workspace scopes, tenant labels, and bounded metadata
+- WHEN task graph validation runs
+- THEN the graph is accepted for orchestration decisions
+- AND no board database, process supervisor, VCS command, or dispatcher service is required by the pure validation logic.
+
+### Requirement: Dependency promotion is deterministic
+
+r[agent_harness_runtime.hermes_kanban.dependencies] Animus MUST provide deterministic parent/child dependency evaluation for fan-out/fan-in orchestration and MUST reject cycles, missing parents, duplicate IDs, and ambiguous dependency state.
+
+#### Scenario: Child becomes ready after all parents complete
+
+r[agent_harness_runtime.hermes_kanban.dependencies.promote]
+- GIVEN a child task depends on two parent tasks
+- WHEN both parents transition to completed with accepted handoff metadata
+- THEN dependency evaluation marks the child eligible for ready state
+- AND repeated evaluation over the same graph snapshot returns the same result.
+
+#### Scenario: Cyclic dependencies fail closed
+
+r[agent_harness_runtime.hermes_kanban.dependencies.cycle]
+- GIVEN task A depends on task B and task B depends on task A
+- WHEN graph validation runs
+- THEN validation returns a typed cycle diagnostic
+- AND neither task is promoted or scheduled.
+
+### Requirement: Workspace scopes are explicit
+
+r[agent_harness_runtime.hermes_kanban.workspace_scope] Task orchestration MUST represent workspace scopes explicitly and MUST NOT infer filesystem mutation authority from ambient process state.
+
+#### Scenario: Worker is constrained to declared workspace
+
+r[agent_harness_runtime.hermes_kanban.workspace_scope.constrained]
+- GIVEN a task declares a scratch workspace with a host-supplied root capability
+- WHEN a worker attempts to record a mutation outside that workspace capability
+- THEN orchestration validation reports an out-of-scope mutation or requires a separate host approval
+- AND the task completion cannot claim unrestricted workspace authority.
+
+### Requirement: Tenant labels prevent context leakage
+
+r[agent_harness_runtime.hermes_kanban.tenant_scope] Task handoffs, comments, memory references, and downstream context summaries MUST preserve tenant labels when supplied and MUST support host enforcement that prevents cross-tenant leakage.
+
+#### Scenario: Cross-tenant handoff is rejected
+
+r[agent_harness_runtime.hermes_kanban.tenant_scope.reject_cross_tenant]
+- GIVEN a child task belongs to tenant `alpha` and a parent handoff belongs to tenant `beta`
+- WHEN dependency promotion or context assembly evaluates the handoff
+- THEN validation rejects or quarantines the cross-tenant dependency according to host policy
+- AND the beta handoff body is not inserted into alpha model context.
+
+### Requirement: Lifecycle handoffs are structured and bounded
+
+r[agent_harness_runtime.hermes_kanban.handoffs] Task lifecycle events MUST support structured heartbeat, block, comment, and completion records with bounded text, safe metadata, and clear actor/source attribution.
+
+#### Scenario: Block reason carries actionable context
+
+r[agent_harness_runtime.hermes_kanban.handoffs.block]
+- GIVEN a worker cannot continue without a human or upstream decision
+- WHEN it emits a block record
+- THEN the record includes a short reason, optional bounded context comment, actor attribution, timestamp or sequence metadata supplied by the shell, and next-action hint
+- AND the task is not marked completed.
+
+### Requirement: Kanban adaptation verification
+
+r[agent_harness_runtime.hermes_kanban.verification] The Kanban adaptation MUST include focused positive and negative tests for graph validation, dependency promotion, cycle rejection, workspace scope checks, tenant isolation, handoff bounds, stale completion rejection, and optional adapter isolation.
+
+#### Scenario: Closeout evidence covers orchestration fixtures
+
+r[agent_harness_runtime.hermes_kanban.verification.closeout]
+- GIVEN maintainers intend to archive the Hermes Kanban adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused graph tests, dependency tests, workspace/tenant tests, handoff tests, workspace checks, Cairn validation, and Cairn gates
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
 ### Requirement: Hermes-style skill manifest descriptors
 
 r[agent_harness_runtime.hermes_skill_manifest.descriptor] Animus MUST define typed skill manifest descriptors for host-provided workflow guidance with validated name, description, version, source category, tags, related skill names, provenance, trust status, and safe content identity.
@@ -2327,6 +2923,86 @@ r[agent_harness_runtime.hermes_skill_manifest.verification.closeout]
 - GIVEN maintainers intend to archive the Hermes skill manifest adaptation
 - WHEN closeout validation runs
 - THEN evidence names focused manifest fixture tests, prompt disclosure tests, workspace checks, Cairn validation, and Cairn gates
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Structured review report DTO
+
+r[agent_harness_runtime.hermes_review_reports.report] Animus MUST define a structured review report contract with a required `VERDICT: PASS | WARN | FAIL` line, parsed sections, metric-bearing findings, diagnostics, source, stage, subject, and safe metadata.
+
+#### Scenario: Valid report parses deterministically
+
+r[agent_harness_runtime.hermes_review_reports.report.valid]
+- GIVEN a markdown review report with `VERDICT: WARN`, a `## Findings` section, tagged finding bullets, and optional `## Gaps` or `## Next Steps` sections
+- WHEN report parsing runs over the in-memory text
+- THEN the parsed report contains verdict `WARN`, normalized sections, parsed findings, and no diagnostics
+- AND parsing does not read files, clocks, environment, process state, or network resources.
+
+### Requirement: Findings are parsed only from Findings section
+
+r[agent_harness_runtime.hermes_review_reports.findings_scope] Animus MUST parse metric-bearing finding bullets only from an explicit `## Findings` section.
+
+#### Scenario: Checklist bullets outside Findings are ignored
+
+r[agent_harness_runtime.hermes_review_reports.findings_scope.ignore_checklists]
+- GIVEN a report contains bracketed checklist bullets in `## OpenSpec Check`, `## Gaps`, or `## Next Steps`
+- WHEN metric findings are extracted
+- THEN only valid bullets inside `## Findings` become findings
+- AND checklist bullets outside that section remain human-readable prose.
+
+### Requirement: Finding tags are validated
+
+r[agent_harness_runtime.hermes_review_reports.finding_tags] Metric-bearing finding bullets MUST include `class`, `scope`, `route`, and `promoted` tags, and `promoted` MUST be either `yes` or `no`.
+
+#### Scenario: Malformed finding tags reject metrics record
+
+r[agent_harness_runtime.hermes_review_reports.finding_tags.invalid]
+- GIVEN a review report has a finding bullet missing `route` or using `promoted=maybe`
+- WHEN a metrics record action validates the report
+- THEN validation fails with typed diagnostics naming the malformed tags
+- AND no durable metrics record is appended.
+
+### Requirement: Metrics read/write behavior is explicit
+
+r[agent_harness_runtime.hermes_review_reports.metrics_boundary] Animus MUST separate read-only report parsing, summary, and promotion-candidate analysis from explicit append-only metrics recording.
+
+#### Scenario: Summary does not write metrics
+
+r[agent_harness_runtime.hermes_review_reports.metrics_boundary.summary_readonly]
+- GIVEN durable review metric records already exist
+- WHEN a host requests a summary or promotion-candidate report
+- THEN the operation reads supplied records and returns bounded aggregate output
+- AND it does not append, rewrite, compact, delete, or promote records.
+
+#### Scenario: Explicit record action appends valid report
+
+r[agent_harness_runtime.hermes_review_reports.metrics_boundary.record_append]
+- GIVEN a valid parsed report, source, stage, subject, and host-supplied timestamp or sequence metadata
+- WHEN an explicit metrics record action runs
+- THEN exactly one append-only record is produced through the host storage adapter
+- AND the record excludes raw prompts, provider payloads, credentials, full host paths, and unbounded tool/model output.
+
+### Requirement: Repeated finding promotion summaries
+
+r[agent_harness_runtime.hermes_review_reports.promotions] Animus SHOULD support read-only repeated-finding grouping that suggests durable prevention routes such as tests, deterministic checks, prompt rails, spec rules, or human checkpoints without mutating tasks or specs automatically.
+
+#### Scenario: Repeated finding becomes promotion candidate
+
+r[agent_harness_runtime.hermes_review_reports.promotions.candidate]
+- GIVEN multiple metric records contain unpromoted findings with the same class, scope, and route tags
+- WHEN promotion-candidate analysis runs with a configured minimum count
+- THEN the output groups those findings, includes representative examples, and suggests a prevention route
+- AND the analysis does not mark anything promoted or edit lifecycle artifacts.
+
+### Requirement: Review report adaptation verification
+
+r[agent_harness_runtime.hermes_review_reports.verification] The review report adaptation MUST include positive and negative tests for verdict parsing, section parsing, finding extraction, malformed tag rejection, metrics append validation, read-only summaries, promotion candidate grouping, and safe metadata redaction.
+
+#### Scenario: Closeout evidence covers report fixtures
+
+r[agent_harness_runtime.hermes_review_reports.verification.closeout]
+- GIVEN maintainers intend to archive the Hermes review report adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused report parser tests, metrics boundary tests, promotion grouping tests, workspace checks, Cairn validation, and Cairn gates
 - AND any skipped rail includes a concrete blocker and next-best validation.
 
 ### Requirement: Typed policy/profile descriptors
@@ -3013,6 +3689,66 @@ r[agent_harness_runtime.openai_codex_execpolicy_rules.sandbox_binding.audit]
 - THEN runtime emits an escalation event with rule identity, decision, sandbox context, and redacted command evidence
 - AND unbounded raw command output is not embedded in the event.
 
+### Requirement: VCS-neutral review run requests
+
+r[agent_harness_runtime.openai_codex_diff_review_mode.review_request] Animus review mode MUST accept VCS-neutral change-set selectors for working copy changes, commits, branch comparisons, and externally supplied patches.
+
+#### Scenario: Unsupported selector fails before review starts
+
+r[agent_harness_runtime.openai_codex_diff_review_mode.review_request.selectors]
+- GIVEN a review request references a change-set selector unsupported by the active VCS adapter
+- WHEN Animus validates the review request
+- THEN validation fails before model or tool calls begin
+- AND the failure identifies the unsupported selector capability.
+
+### Requirement: Review mode is read-only by default
+
+r[agent_harness_runtime.openai_codex_diff_review_mode.read_only_policy] Review mode MUST use a read-only policy profile that forbids file mutation, write-capable tools, and approval escalation by default.
+
+#### Scenario: Review cannot mutate files
+
+r[agent_harness_runtime.openai_codex_diff_review_mode.read_only_policy.no_mutation]
+- GIVEN a review-mode run is active
+- WHEN the loop fabric requests a file edit or write-capable tool
+- THEN runtime denies the request
+- AND the review report records a read-only policy denial without changing workspace files.
+
+### Requirement: Structured review findings
+
+r[agent_harness_runtime.openai_codex_diff_review_mode.finding_schema] Review findings MUST include severity, category, affected span, evidence, rationale, confidence, and remediation guidance.
+
+#### Scenario: Finding with invalid span is rejected
+
+r[agent_harness_runtime.openai_codex_diff_review_mode.finding_schema.validation]
+- GIVEN a review finding references a span outside the reviewed change set
+- WHEN Animus validates the finding
+- THEN the finding is rejected as invalid
+- AND the report records a finding-validation failure.
+
+### Requirement: Bounded review evidence
+
+r[agent_harness_runtime.openai_codex_diff_review_mode.evidence_bounds] Review evidence MUST be source-attributed and bounded to relevant file spans, patch hunks, or external review inputs.
+
+#### Scenario: Full file is not embedded as evidence
+
+r[agent_harness_runtime.openai_codex_diff_review_mode.evidence_bounds.no_unbounded]
+- GIVEN a finding only needs one patch hunk as evidence
+- WHEN Animus renders the review report
+- THEN the report includes the bounded hunk reference or snippet
+- AND it does not embed the full file or unrelated logs.
+
+### Requirement: Rerun finding-state tracking
+
+r[agent_harness_runtime.openai_codex_diff_review_mode.rerun_tracking] Review mode SHOULD compare rerun results against prior review findings to classify findings as open, fixed, dismissed, or newly introduced when prior review state is available.
+
+#### Scenario: Fixed finding is distinguished from new finding
+
+r[agent_harness_runtime.openai_codex_diff_review_mode.rerun_tracking.state]
+- GIVEN a prior review found one issue that has since been fixed and the rerun finds a different issue
+- WHEN Animus compares the review reports
+- THEN the old issue is marked fixed
+- AND the different issue is marked newly introduced.
+
 ### Requirement: Typed resource descriptors
 
 r[agent_harness_runtime.pi_resources.descriptors] Animus MUST define typed descriptors for skills, prompt templates, context guidance, and host-provided resources with name, description, kind, source scope, provenance metadata, trust status, and safe content identity.
@@ -3132,6 +3868,78 @@ r[agent_harness_runtime.hermes_plugin_manifests.verification.closeout]
 - WHEN closeout validation runs
 - THEN evidence names focused manifest tests, executor-boundary tests, prompt metadata tests, workspace checks, Cairn validation, and Cairn gates
 - AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Manifest role declarations
+
+r[agent_harness_runtime.plugin_action_manifests.manifest_roles] Animus MUST define data-only plugin descriptor roles for actions, event hooks, host-pane entrypoints, and link handlers without executing commands, opening panes, registering runtime actions dynamically, or requiring a specific manifest file format.
+
+#### Scenario: Manifest roles validate as data
+
+r[agent_harness_runtime.plugin_action_manifests.manifest_roles.validation]
+- GIVEN a plugin descriptor declares actions, event hooks, pane entrypoints, and link handlers with stable IDs, titles, context labels, and command or artifact labels
+- WHEN descriptor validation runs
+- THEN the roles are accepted as data-only declarations
+- AND duplicate IDs, missing required labels, unsafe command labels, and unsupported roles are rejected with typed diagnostics.
+
+### Requirement: Compatibility gating
+
+r[agent_harness_runtime.plugin_action_manifests.compatibility] Plugin manifests and entrypoints MUST declare or inherit minimum host capability/version and effective platform compatibility before host link or invocation planning treats them as available.
+
+#### Scenario: Unsupported platform blocks invocation
+
+r[agent_harness_runtime.plugin_action_manifests.compatibility.unsupported]
+- GIVEN a plugin action is valid data but its effective platform set excludes the current host platform
+- WHEN invocation planning evaluates that action
+- THEN planning returns a typed platform-unsupported diagnostic
+- AND no command descriptor is dispatched to a host executor.
+
+### Requirement: Safe invocation context
+
+r[agent_harness_runtime.plugin_action_manifests.invocation_context] Action, event, pane, and link-handler planning MUST use typed invocation context DTOs containing safe workspace, tab, pane, agent status, worktree/session provenance, request identity, plugin root/config/state labels, and source metadata while excluding raw prompts, transcripts, credentials, full private paths, unbounded logs, and provider payloads by default.
+
+#### Scenario: Context injection rejects unsafe payloads
+
+r[agent_harness_runtime.plugin_action_manifests.invocation_context.redacted]
+- GIVEN an invocation context fixture contains a raw prompt, terminal transcript, credential-looking value, full private path, unbounded log, or provider payload
+- WHEN context validation runs
+- THEN validation rejects the fixture with a typed leak diagnostic
+- AND the unsafe context is not passed to invocation planning.
+
+### Requirement: Registry operations are host-owned
+
+r[agent_harness_runtime.plugin_action_manifests.host_registry] Link, unlink, enable, disable, list, action-list, invocation planning, event planning, pane-entrypoint planning, registry persistence, plugin logs, install source tracking, command execution, and pane opening MUST be host-owned operations outside reusable runtime core.
+
+#### Scenario: Planning does not execute plugin code
+
+r[agent_harness_runtime.plugin_action_manifests.host_registry.no_execution]
+- GIVEN a validated plugin action descriptor and safe invocation context
+- WHEN reusable invocation planning runs
+- THEN it returns a typed plan for a host adapter to evaluate
+- AND it does not persist registry state, install plugins, execute commands, open panes, read plugin storage, or weaken runtime policy.
+
+### Requirement: Diagnostics distinguish warnings from blockers
+
+r[agent_harness_runtime.plugin_action_manifests.diagnostics] Plugin manifest handling MUST distinguish link-time warnings from invocation-blocking failures for unknown events, disabled plugins, unknown entrypoints, unsupported platforms, newer host requirements, policy denials, malformed contexts, and malformed manifests.
+
+#### Scenario: Disabled plugin fails closed
+
+r[agent_harness_runtime.plugin_action_manifests.diagnostics.fail_closed]
+- GIVEN a linked plugin is disabled by host registry state
+- WHEN a caller requests one of its actions
+- THEN invocation planning returns a typed disabled-plugin failure
+- AND no host executor command, pane entrypoint, event hook, or link handler is dispatched.
+
+### Requirement: Plugin manifest verification
+
+r[agent_harness_runtime.plugin_action_manifests.verification] The adaptation MUST include focused positive and negative tests for manifest roles, compatibility gating, safe invocation contexts, host-owned registry operations, warnings, invocation blockers, disabled plugins, unknown events, unsafe command labels, and no-execution validation.
+
+#### Scenario: Closeout evidence covers plugin manifest rails
+
+r[agent_harness_runtime.plugin_action_manifests.verification.closeout]
+- GIVEN maintainers intend to archive the plugin manifest adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused manifest-role, compatibility, context-redaction, host-registry, diagnostic, workspace, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a blocker and next-best validation.
 
 ### Requirement: Explicit subagent delegation
 
@@ -3264,3 +4072,3140 @@ r[agent_harness_runtime.openai_codex_jsonl_exec_sdk.thread_controller.resume]
 - WHEN the controller validates the resume request
 - THEN the thread is not resumed
 - AND no new model or tool calls are dispatched for that request.
+
+### Requirement: Streaming model adapter contract
+
+r[agent_harness_runtime.model_streaming.adapter_contract] Animus MUST define a streaming model-adapter contract that reports ordered frames for visible content token or delta updates, provider-exposed thought/reasoning updates, tool-call deltas, usage, finish, cancellation, and failure with model-call correlation IDs and per-call ordering.
+
+#### Scenario: Stream frames preserve adapter order
+
+r[agent_harness_runtime.model_streaming.adapter_contract.order]
+- GIVEN an injected model adapter emits visible content frames, thought/reasoning frames, usage metadata, and a finish frame for one model call
+- WHEN runtime consumes the model stream
+- THEN emitted runtime facts preserve the adapter frame order and model-call correlation ID
+- AND final assistant-visible content is assembled from visible content frames unless an explicit policy selects another visible channel.
+
+### Requirement: Streaming capabilities are explicit
+
+r[agent_harness_runtime.model_streaming.capabilities] Effective model settings MUST identify whether the selected model supports visible content streaming, thought/reasoning streaming, tool-call delta streaming, and usage streaming before runtime dispatches a streaming model request.
+
+#### Scenario: Unsupported thought streaming fails explicitly
+
+r[agent_harness_runtime.model_streaming.capabilities.unsupported_thought]
+- GIVEN the selected model does not support thought/reasoning streaming
+- WHEN a host requests thought/reasoning streaming for that model
+- THEN settings resolution returns a typed unsupported-capability failure or an explicit policy-approved content-only downgrade
+- AND runtime does not fabricate thought/reasoning frames.
+
+### Requirement: Provider streaming uses parser-entrypoint fixtures
+
+r[agent_harness_runtime.model_streaming.parser_entrypoint] Any provider or shell adapter that claims streaming support MUST include fixtures that feed raw provider stream bytes or chunks through the same parser entrypoint used by production code.
+
+#### Scenario: Raw stream fixture becomes canonical frames
+
+r[agent_harness_runtime.model_streaming.parser_entrypoint.fixture]
+- GIVEN a raw provider stream fixture contains fragmented content deltas, thought/reasoning deltas, tool-call deltas, usage records, and a finish record
+- WHEN the production parser entrypoint consumes the fixture chunks
+- THEN it emits the expected canonical stream frames in order
+- AND no helper-only parser path is sufficient to satisfy the streaming claim.
+
+#### Scenario: Malformed stream fails closed
+
+r[agent_harness_runtime.model_streaming.parser_entrypoint.malformed]
+- GIVEN raw provider stream input contains invalid records, a missing finish record, out-of-order terminal events, or truncated chunks
+- WHEN the production parser entrypoint consumes the input
+- THEN parsing returns a typed stream failure
+- AND runtime does not report a successful final response from the malformed stream.
+
+### Requirement: Runtime projects streaming events
+
+r[agent_harness_runtime.model_streaming.runtime_events] Runtime MUST project model stream frames into typed runtime events and protocol/UI-neutral DTOs before final response completion, preserving correlation IDs, channel kind, ordering, bounded body policy, and terminal status.
+
+#### Scenario: Subscribers observe incremental output before completion
+
+r[agent_harness_runtime.model_streaming.runtime_events.end_to_end]
+- GIVEN a model call streams visible content frames and authorized thought/reasoning frames before producing a final response
+- WHEN a headless or SDK-style subscriber observes runtime events
+- THEN the subscriber receives ordered stream-start, stream-frame, and stream-end or stream-failure events before final response completion
+- AND each event carries stable correlation metadata without requiring terminal UI state.
+
+### Requirement: Thought and reasoning visibility is policy-gated
+
+r[agent_harness_runtime.model_streaming.thought_visibility] Thought/reasoning stream frames MUST carry visibility and sensitivity metadata, and default runtime sinks MUST NOT treat them as assistant-visible final answer text, receipt bodies, dataset rows, review report bodies, or logs unless policy explicitly authorizes a safe projection.
+
+#### Scenario: Default policy prevents thought leakage
+
+r[agent_harness_runtime.model_streaming.thought_visibility.default_redaction]
+- GIVEN a model stream contains provider-exposed thought/reasoning frames and visible answer frames
+- WHEN runtime builds final output, receipts, dataset export rows, review reports, or logs under the default policy
+- THEN visible answer frames may appear in assistant-visible output according to normal content policy
+- AND thought/reasoning frames are omitted, redacted, or safely summarized without exposing raw private reasoning.
+
+### Requirement: Streaming closeout is evidenced
+
+r[agent_harness_runtime.model_streaming.verification] Model streaming work MUST include positive and negative tests for stream frame ordering, content finalization, thought/reasoning policy, parser-entrypoint fixtures, unsupported capabilities, malformed streams, cancellation or failure, and protocol/UI-neutral event projection before the change is archived.
+
+#### Scenario: Closeout evidence covers streaming behavior
+
+r[agent_harness_runtime.model_streaming.verification.closeout]
+- GIVEN token and thought streaming work is ready to archive
+- WHEN closeout validation runs
+- THEN evidence includes focused streaming tests, parser fixture tests, leak-rejection tests, capability-negotiation tests, runtime event projection tests, workspace checks, Cairn validation, and Cairn gates
+- AND skipped checks record a blocker and next-best validation.
+
+### Requirement: Typed retrieval budget descriptors
+
+r[agent_harness_runtime.hermes_retrieval_budgets.descriptor] Animus MUST define typed retrieval budget descriptors with retrieval purpose, first action guidance, repeat conditions, stop conditions, missing-evidence behavior, citation or source-naming expectations, progress guidance, provenance, and optional host-configured budget limits.
+
+#### Scenario: Valid retrieval budget is advertised with resource
+
+r[agent_harness_runtime.hermes_retrieval_budgets.descriptor.valid]
+- GIVEN a retrieval-capable skill or tool has a validated retrieval budget descriptor
+- WHEN prompt resource context is built
+- THEN the model-visible guidance includes the bounded first/repeat/stop behavior
+- AND the descriptor remains attributable to the resource that introduced it.
+
+### Requirement: Retrieval-capable resources declare budget policy
+
+r[agent_harness_runtime.hermes_retrieval_budgets.resource_policy] Resources that perform web search, browser automation, documentation lookup, repository browsing, multi-lens analysis, or property discovery SHOULD declare whether a retrieval budget is required before they are advertised.
+
+#### Scenario: Required budget is missing
+
+r[agent_harness_runtime.hermes_retrieval_budgets.resource_policy.missing]
+- GIVEN host policy requires retrieval budgets for retrieval-capable resources
+- WHEN a web-search tool or browsing skill lacks a valid budget descriptor
+- THEN resource validation fails or marks the resource unavailable
+- AND prompt construction reports a deterministic missing-budget diagnostic.
+
+### Requirement: Repeat retrieval is justified by missing evidence
+
+r[agent_harness_runtime.hermes_retrieval_budgets.repeat_rules] Retrieval budget descriptors MUST distinguish initial retrieval, permitted repeat retrieval, and stopping behavior, and repeat retrieval MUST be justified by missing required facts, missing artifacts, contradictions, or insufficient evidence for the requested output.
+
+#### Scenario: Evidence is sufficient after first retrieval
+
+r[agent_harness_runtime.hermes_retrieval_budgets.repeat_rules.stop_after_sufficient]
+- GIVEN the first retrieval result supplies the required fact, owner, date, parameter, source, or code artifact
+- WHEN retrieval planning evaluates the next step
+- THEN the budget decision recommends answering from existing evidence
+- AND it does not authorize additional retrieval for nonessential polish.
+
+#### Scenario: Missing required fact authorizes targeted repeat
+
+r[agent_harness_runtime.hermes_retrieval_budgets.repeat_rules.retrieve_missing]
+- GIVEN the first retrieval result lacks a required fact needed for the user's requested output
+- WHEN retrieval planning evaluates the next step
+- THEN the budget decision authorizes one targeted retrieval or asks for the smallest missing input if retrieval cannot supply it
+- AND the missing evidence is named in the report.
+
+### Requirement: Retrieval evidence metadata is bounded
+
+r[agent_harness_runtime.hermes_retrieval_budgets.evidence_metadata] Runtime reports and receipts MAY record retrieval budget decisions, source labels, safe references, counts, truncation status, and BLAKE3 content hashes, but MUST NOT embed raw fetched bodies, credentials, full host paths, or unbounded retrieved content by default.
+
+#### Scenario: Receipt records retrieval decision safely
+
+r[agent_harness_runtime.hermes_retrieval_budgets.evidence_metadata.safe]
+- GIVEN a retrieval-capable tool returns a large document
+- WHEN the runtime records retrieval evidence
+- THEN the report contains source labels, bounded counts, truncation status, and optional BLAKE3 hashes
+- AND it does not store the full raw document body unless an explicit host storage policy permits it outside reusable core receipts.
+
+### Requirement: Retrieval budget adaptation verification
+
+r[agent_harness_runtime.hermes_retrieval_budgets.verification] The retrieval budget adaptation MUST include focused tests for valid descriptors, missing budget diagnostics, repeat/stop decisions, missing-evidence naming, bounded evidence metadata, prompt attribution, and prompt-hygiene checker behavior.
+
+#### Scenario: Closeout evidence covers retrieval fixtures
+
+r[agent_harness_runtime.hermes_retrieval_budgets.verification.closeout]
+- GIVEN maintainers intend to archive the Hermes retrieval budget adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused budget descriptor tests, repeat/stop decision tests, evidence metadata tests, prompt-hygiene checks, workspace checks, Cairn validation, and Cairn gates
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Typed context-reference inputs
+
+r[agent_harness_runtime.clankers_context_references.typed_inputs] Animus MUST represent prompt context references as typed DTOs with raw label, normalized target, reference kind, optional range, requested render mode, and source trust metadata before policy or resolver decisions are trusted.
+
+#### Scenario: Local file reference normalizes
+
+r[agent_harness_runtime.clankers_context_references.typed_inputs.file]
+- GIVEN a prompt includes a local file reference with an optional line range
+- WHEN reference parsing and normalization run
+- THEN Animus produces a typed file-reference DTO with the requested range and a safe target label
+- AND no filesystem read is performed by the parser.
+
+### Requirement: Expansion uses host-injected resolvers
+
+r[agent_harness_runtime.clankers_context_references.resolvers] Context-reference expansion MUST call host-injected resolver services for filesystem, directory, diff, image, and URL references and MUST fail closed when a required resolver or capability is absent, denied, or unavailable.
+
+#### Scenario: URL reference denied by policy
+
+r[agent_harness_runtime.clankers_context_references.resolvers.url_denied]
+- GIVEN a prompt includes an HTTPS reference
+- AND URL retrieval is disabled by the active context-reference policy
+- WHEN expansion is requested
+- THEN Animus returns a typed denied-reference outcome
+- AND no network resolver is invoked.
+
+### Requirement: Context expansion bounds
+
+r[agent_harness_runtime.clankers_context_references.bounds] Expanded context fragments MUST be included, truncated, or rejected according to deterministic budgets before they become model-visible prompt content.
+
+#### Scenario: Oversized file reference truncates safely
+
+r[agent_harness_runtime.clankers_context_references.bounds.oversized]
+- GIVEN a resolver returns text larger than the configured context-reference visible budget
+- WHEN budget evaluation runs
+- THEN the model-visible fragment is truncated or rejected according to policy
+- AND metadata records byte counts, line counts when available, truncation status, and a BLAKE3 hash without embedding the full raw body.
+
+### Requirement: Safe provenance metadata
+
+r[agent_harness_runtime.clankers_context_references.provenance] Context-reference receipts and ledger metadata MUST record safe provenance only, including kind, status, safe target label or hash, range, counts, truncation state, resolver class, policy decision, and optional BLAKE3 content hash.
+
+#### Scenario: Metadata rejects leaks
+
+r[agent_harness_runtime.clankers_context_references.provenance.rejects_leaks]
+- GIVEN a context-reference metadata fixture contains raw expanded content, URL credentials, a full absolute path dump, a credential-looking value, or unbounded output
+- WHEN metadata validation runs
+- THEN validation rejects the fixture with a typed leak diagnostic.
+
+### Requirement: Context-reference verification
+
+r[agent_harness_runtime.clankers_context_references.verification] The adaptation MUST include focused positive and negative tests for parsing, resolver injection, policy denial, malformed targets, path escapes, oversized references, unsupported kinds, missing resolver services, and safe metadata validation.
+
+#### Scenario: Closeout evidence covers reference fixtures
+
+r[agent_harness_runtime.clankers_context_references.verification.closeout]
+- GIVEN maintainers intend to archive the context-reference adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused parser, resolver, policy, budget, metadata, workspace, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Local batch run planning
+
+r[agent_harness_runtime.clankers_batch_runner.planning] Animus MUST validate local batch inputs into a deterministic batch plan with run identity, ordered jobs, output format, concurrency policy, execution mode, and safe output labels before execution begins.
+
+#### Scenario: Remote input fails closed
+
+r[agent_harness_runtime.clankers_batch_runner.planning.remote_rejected]
+- GIVEN a batch request names an HTTP, HTTPS, S3, or otherwise remote input or output location
+- WHEN batch planning validates the request
+- THEN planning returns a typed unsupported-location failure
+- AND no execution service or renderer is invoked.
+
+### Requirement: Injected batch execution
+
+r[agent_harness_runtime.clankers_batch_runner.execution] Batch jobs MUST execute through an injected headless or session execution service and MUST NOT require reusable runtime code to construct providers, spawn daemons, write session stores, or call shell commands directly.
+
+#### Scenario: Execution service unavailable
+
+r[agent_harness_runtime.clankers_batch_runner.execution.unavailable]
+- GIVEN a valid batch plan requires job execution
+- AND no compatible execution service is injected
+- WHEN the runner starts
+- THEN Animus records an unavailable-execution failure
+- AND no provider, daemon, or shell fallback is attempted.
+
+### Requirement: Deterministic resume manifests
+
+r[agent_harness_runtime.clankers_batch_runner.resume] Batch resume MUST use sidecar manifest evidence to skip only completed jobs whose run ID, job ID, output format, redaction policy, and output evidence match the current plan.
+
+#### Scenario: Stale manifest does not skip job
+
+r[agent_harness_runtime.clankers_batch_runner.resume.stale]
+- GIVEN a resume manifest contains a completed job with a mismatched plan hash or output format
+- WHEN resume planning evaluates the manifest
+- THEN the job is not skipped
+- AND the resume report records the stale evidence reason.
+
+### Requirement: Stable trajectory output
+
+r[agent_harness_runtime.clankers_batch_runner.output] Batch renderers MUST produce stable job ordering and safe trajectory metadata even when jobs complete concurrently or are retried.
+
+#### Scenario: Concurrent completions remain ordered
+
+r[agent_harness_runtime.clankers_batch_runner.output.stable_order]
+- GIVEN multiple batch jobs execute with different completion times
+- WHEN results are rendered
+- THEN output records appear in deterministic plan order
+- AND each record carries safe job status and redaction metadata.
+
+### Requirement: Batch metadata redaction
+
+r[agent_harness_runtime.clankers_batch_runner.metadata] Batch run and job receipts MUST record safe metadata such as counts, statuses, prompt sizes, model/session handles, objective summaries, output labels, redaction status, and BLAKE3 hashes, and MUST NOT include raw prompts, provider payloads, credentials, or remote destinations.
+
+#### Scenario: Metadata rejects raw prompt
+
+r[agent_harness_runtime.clankers_batch_runner.metadata.rejects_prompt]
+- GIVEN a batch receipt fixture includes a raw prompt body or provider payload
+- WHEN metadata validation runs
+- THEN validation rejects the fixture with a typed leak diagnostic.
+
+### Requirement: Batch runner verification
+
+r[agent_harness_runtime.clankers_batch_runner.verification] The adaptation MUST include focused positive and negative tests for local planning, remote-path rejection, injected execution, unavailable services, resume manifests, stable ordering, renderer metadata, objective receipts, and redaction.
+
+#### Scenario: Closeout evidence covers batch fixtures
+
+r[agent_harness_runtime.clankers_batch_runner.verification.closeout]
+- GIVEN maintainers intend to archive the batch runner adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused batch planning, execution, resume, output, metadata, workspace, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Headless command-response protocol
+
+r[agent_harness_runtime.pi_headless_protocol.command_response] Animus MUST define a headless command-response protocol for driving runtime turns, queueing steering and follow-up messages, aborting work, inspecting state, selecting models, operating on session ledger state, requesting compaction, and shutting down without requiring a terminal UI.
+
+#### Scenario: Prompt command acknowledges acceptance
+
+r[agent_harness_runtime.pi_headless_protocol.command_response.prompt]
+- GIVEN a headless client sends a valid prompt command with a request ID while runtime is idle
+- WHEN the command is accepted
+- THEN the protocol emits a response carrying the same request ID and an accepted status
+- AND runtime lifecycle events stream separately from that acknowledgement.
+
+### Requirement: Strict record framing
+
+r[agent_harness_runtime.pi_headless_protocol.framing] Text protocol transports MUST use strict LF-delimited records, MUST tolerate a trailing CR before LF, and MUST NOT split records on Unicode line separators inside encoded payloads.
+
+#### Scenario: Unicode separator remains payload data
+
+r[agent_harness_runtime.pi_headless_protocol.framing.unicode_separator]
+- GIVEN a valid encoded command contains a Unicode line separator inside a string payload
+- WHEN the protocol reader consumes bytes
+- THEN it treats the separator as payload data rather than a record boundary
+- AND the command is parsed only when an LF record delimiter is received.
+
+### Requirement: Explicit active-turn queueing
+
+r[agent_harness_runtime.pi_headless_protocol.queueing] Headless prompt-like commands sent while runtime is active MUST declare steering or follow-up semantics, and runtime MUST reject ambiguous active-turn prompts before they enter the ledger or model context.
+
+#### Scenario: Ambiguous mid-turn prompt is rejected
+
+r[agent_harness_runtime.pi_headless_protocol.queueing.reject_ambiguous]
+- GIVEN the runtime is processing a turn
+- WHEN a headless client sends a prompt command without steering or follow-up behavior
+- THEN the command response reports a preflight rejection
+- AND no message is appended to the active session ledger.
+
+### Requirement: Runtime events stream through protocol DTOs
+
+r[agent_harness_runtime.pi_headless_protocol.event_stream] Headless mode MUST stream typed runtime events through protocol DTOs with correlation IDs where applicable and without requiring TUI-specific component state.
+
+#### Scenario: Tool execution events correlate
+
+r[agent_harness_runtime.pi_headless_protocol.event_stream.tool]
+- GIVEN a turn dispatches a tool call
+- WHEN the headless event stream is observed
+- THEN tool-start, tool-update if any, and tool-end events carry a shared tool-call correlation ID
+- AND a client can render progress without inspecting internal runtime state.
+
+### Requirement: Safe bounded protocol errors
+
+r[agent_harness_runtime.pi_headless_protocol.safe_errors] Protocol parse errors, invalid commands, invalid streaming behavior, unavailable services, cancelled operations, and runtime failures MUST produce bounded safe error responses that do not expose credentials, provider payloads, raw ledger dumps, full host paths, or unbounded tool output.
+
+#### Scenario: Malformed record returns bounded error
+
+r[agent_harness_runtime.pi_headless_protocol.safe_errors.malformed]
+- GIVEN a client sends a malformed encoded record
+- WHEN the protocol parser rejects it
+- THEN the response reports a bounded parse error class and optional request ID if recoverable
+- AND the response does not echo the full malformed payload.
+
+### Requirement: VCS-neutral checkpoint DTOs
+
+r[agent_harness_runtime.clankers_checkpoint_rollback.dto] Animus MUST represent checkpoints and rollback targets with VCS-neutral DTOs that include backend kind, opaque checkpoint ID, safe workspace label or hash, content identities, changed-file counts, session/tool attribution when available, and status metadata.
+
+#### Scenario: Checkpoint identity is backend-neutral
+
+r[agent_harness_runtime.clankers_checkpoint_rollback.dto.backend_neutral]
+- GIVEN a host reports a checkpoint created by a jj, git, in-memory, or workspace-isolation backend
+- WHEN Animus records checkpoint metadata
+- THEN the DTO preserves backend kind and opaque checkpoint ID
+- AND reusable runtime logic does not require backend-specific command syntax.
+
+### Requirement: Injected checkpoint service
+
+r[agent_harness_runtime.clankers_checkpoint_rollback.service] Checkpoint create, list, inspect, rollback, and cleanup operations MUST call an injected checkpoint service and MUST fail closed when the service is missing, unavailable, denied, or reports an unsupported operation.
+
+#### Scenario: Missing checkpoint service blocks strict protected mutation
+
+r[agent_harness_runtime.clankers_checkpoint_rollback.service.missing_strict]
+- GIVEN checkpoint policy requires strict pre-mutation checkpoints
+- AND no checkpoint service is injected
+- WHEN a protected mutating tool action is requested
+- THEN Animus returns a missing-checkpoint-service failure
+- AND the mutation is not dispatched.
+
+### Requirement: Explicit rollback confirmation
+
+r[agent_harness_runtime.clankers_checkpoint_rollback.confirmation] Rollback execution MUST require an explicit host/operator confirmation decision before workspace mutation occurs.
+
+#### Scenario: Unconfirmed rollback is rejected
+
+r[agent_harness_runtime.clankers_checkpoint_rollback.confirmation.required]
+- GIVEN a user or agent requests rollback to a checkpoint
+- AND no approval decision authorizes that rollback target
+- WHEN rollback validation runs
+- THEN Animus rejects the rollback before invoking the checkpoint service
+- AND records an unconfirmed rollback status.
+
+### Requirement: Rollback freshness verification
+
+r[agent_harness_runtime.clankers_checkpoint_rollback.freshness] Rollback execution MUST verify that the current workspace identity matches the expected rollback precondition before restoring checkpoint state.
+
+#### Scenario: Stale workspace blocks rollback
+
+r[agent_harness_runtime.clankers_checkpoint_rollback.freshness.stale]
+- GIVEN the workspace changed after rollback preflight selected a checkpoint
+- WHEN rollback execution validates current state
+- THEN Animus rejects the rollback with a stale-workspace failure
+- AND no restore operation is invoked.
+
+### Requirement: Safe checkpoint receipts
+
+r[agent_harness_runtime.clankers_checkpoint_rollback.receipts] Checkpoint and rollback receipts MUST include safe metadata such as operation, status, backend kind, safe workspace label or hash, checkpoint ID, changed-file counts, confirmation status, before/after BLAKE3 hashes, and error class, and MUST NOT include raw diffs, file contents, credentials, environment variables, or full path dumps.
+
+#### Scenario: Receipt leak rejected
+
+r[agent_harness_runtime.clankers_checkpoint_rollback.receipts.rejects_leaks]
+- GIVEN a checkpoint receipt fixture contains a raw diff, file body, credential-looking value, environment dump, or full absolute path list
+- WHEN receipt validation runs
+- THEN validation rejects the fixture with a typed leak diagnostic.
+
+### Requirement: Checkpoint rollback verification
+
+r[agent_harness_runtime.clankers_checkpoint_rollback.verification] The adaptation MUST include focused positive and negative tests for checkpoint DTOs, strict and best-effort policy behavior, missing services, confirmation, freshness checks, unsupported backends, rollback receipts, and leak rejection.
+
+#### Scenario: Closeout evidence covers checkpoint fixtures
+
+r[agent_harness_runtime.clankers_checkpoint_rollback.verification.closeout]
+- GIVEN maintainers intend to archive the checkpoint rollback adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused DTO, service, confirmation, freshness, receipt, workspace, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Typed continuation state
+
+r[agent_harness_runtime.clankers_continuation_policy.state] Animus MUST represent continuation state with typed queued prompt, active loop work, validation follow-up, busy prompt, cancellation, pending dispatch, and completion acknowledgement fields.
+
+#### Scenario: Queued prompt state is explicit
+
+r[agent_harness_runtime.clankers_continuation_policy.state.queued_prompt]
+- GIVEN user input arrives while a prompt is busy
+- WHEN continuation state is updated
+- THEN the queued prompt is represented as typed pending work with an opaque ID
+- AND no shell-local hidden flag is required to decide the next action.
+
+### Requirement: Deterministic continuation priority
+
+r[agent_harness_runtime.clankers_continuation_policy.priority] Continuation decisions MUST apply deterministic policy priority among queued user prompt replay, active loop continuation, validation or auto-test follow-up, and completion.
+
+#### Scenario: Queued user prompt wins over automation
+
+r[agent_harness_runtime.clankers_continuation_policy.priority.queued_wins]
+- GIVEN a queued user prompt and an eligible validation follow-up both exist after a model turn
+- WHEN continuation policy evaluates next action
+- THEN it selects queued prompt replay first
+- AND the validation follow-up remains pending.
+
+### Requirement: Exact dispatch and completion acknowledgements
+
+r[agent_harness_runtime.clankers_continuation_policy.acknowledgements] Shell adapters MUST acknowledge dispatch and completion using the exact pending work ID, and stale, duplicate, missing, or mismatched IDs MUST fail without clearing unrelated continuation state.
+
+#### Scenario: Stale completion is rejected
+
+r[agent_harness_runtime.clankers_continuation_policy.acknowledgements.stale]
+- GIVEN a completion acknowledgement references a stale pending work ID
+- WHEN continuation state validates the acknowledgement
+- THEN it rejects the acknowledgement with a stale-work failure
+- AND current pending work remains intact.
+
+### Requirement: Continuation effects are shell-owned
+
+r[agent_harness_runtime.clankers_continuation_policy.shell_owned] Provider calls, timers, queue waits, session persistence, UI events, and validation command execution MUST remain shell-owned behavior outside the pure continuation decision core.
+
+#### Scenario: Decision core does not execute provider call
+
+r[agent_harness_runtime.clankers_continuation_policy.shell_owned.no_provider]
+- GIVEN continuation policy selects a loop continuation
+- WHEN the pure decision core returns the action
+- THEN it returns a typed decision only
+- AND it does not call providers, spawn commands, read storage, or emit UI events directly.
+
+### Requirement: Safe continuation receipts
+
+r[agent_harness_runtime.clankers_continuation_policy.receipts] Continuation receipts MUST record safe metadata such as prior state class, selected action, pending work ID hash, reason, rejection class, policy hash, and BLAKE3 receipt hash, and MUST NOT include raw prompts, model outputs, tool outputs, provider payloads, full transcripts, or unbounded logs.
+
+#### Scenario: Continuation receipt leak rejected
+
+r[agent_harness_runtime.clankers_continuation_policy.receipts.rejects_leaks]
+- GIVEN a continuation receipt fixture contains raw prompt text, model output, tool output, provider JSON, full transcript, or unbounded log text
+- WHEN receipt validation runs
+- THEN validation rejects the fixture with a typed leak diagnostic.
+
+### Requirement: Continuation policy verification
+
+r[agent_harness_runtime.clankers_continuation_policy.verification] The adaptation MUST include focused positive and negative tests for typed state, priority order, queued prompts, loop continuation, validation follow-ups, dispatch/completion acknowledgements, stale and duplicate IDs, shell-owned effects, cancellation, and receipt redaction.
+
+#### Scenario: Closeout evidence covers continuation fixtures
+
+r[agent_harness_runtime.clankers_continuation_policy.verification.closeout]
+- GIVEN maintainers intend to archive the controller continuation policy adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused state, priority, acknowledgement, shell-boundary, receipt, workspace, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Layered guidance source attribution
+
+r[agent_harness_runtime.openai_codex_guidance_skill_budget.guidance_sources] Animus guidance assembly MUST represent each guidance source with scope, precedence, override semantics, origin, and content hash.
+
+#### Scenario: Nested guidance overrides broader guidance
+
+r[agent_harness_runtime.openai_codex_guidance_skill_budget.guidance_sources.precedence]
+- GIVEN a root guidance source and a nested guidance source both define behavior for the current working scope
+- WHEN Animus assembles guidance for that scope
+- THEN the nested guidance is applied after the root guidance
+- AND the assembly ledger records both sources and their precedence order.
+
+### Requirement: Prompt assembly budget ledger
+
+r[agent_harness_runtime.openai_codex_guidance_skill_budget.budget_ledger] Prompt assembly MUST record included, skipped, truncated, and redacted guidance sources with budget consumption and reasons.
+
+#### Scenario: Over-budget guidance is explicit
+
+r[agent_harness_runtime.openai_codex_guidance_skill_budget.budget_ledger.truncation]
+- GIVEN available guidance exceeds the configured prompt budget
+- WHEN Animus assembles model context
+- THEN lower-priority or over-budget guidance is skipped or truncated according to policy
+- AND the assembly ledger records source identity, budget impact, and truncation reason.
+
+### Requirement: Progressive skill metadata discovery
+
+r[agent_harness_runtime.openai_codex_guidance_skill_budget.skill_metadata] Skill discovery MUST expose bounded metadata for available skills without loading full instructions, references, assets, or scripts into initial model context.
+
+#### Scenario: Initial skill context is metadata-only
+
+r[agent_harness_runtime.openai_codex_guidance_skill_budget.skill_metadata.progressive]
+- GIVEN a repository has multiple skill packages with large references
+- WHEN Animus builds initial model context
+- THEN only bounded skill metadata is included
+- AND full skill instructions and references are not loaded until a skill is selected.
+
+### Requirement: Deferred skill loading respects invocation policy
+
+r[agent_harness_runtime.openai_codex_guidance_skill_budget.deferred_loading] Full skill loading MUST require explicit invocation or a policy-approved implicit invocation decision.
+
+#### Scenario: Implicit invocation is denied for disabled skill
+
+r[agent_harness_runtime.openai_codex_guidance_skill_budget.deferred_loading.denied]
+- GIVEN a skill is disabled or disallows implicit invocation
+- WHEN a task appears to match that skill's description without explicit invocation
+- THEN Animus does not load the full skill
+- AND the selection ledger records the denied invocation reason.
+
+### Requirement: Skill packages are trust-gated resources
+
+r[agent_harness_runtime.openai_codex_guidance_skill_budget.skill_package] Skill package descriptors MUST treat instructions, optional scripts, references, assets, dependencies, and trust metadata as resources subject to runtime policy before use.
+
+#### Scenario: Untrusted skill script cannot execute
+
+r[agent_harness_runtime.openai_codex_guidance_skill_budget.skill_package.trust]
+- GIVEN a selected skill references an untrusted script
+- WHEN the runtime reaches a step that would execute the script
+- THEN execution is denied unless shell policy and trust records authorize it
+- AND the denial is recorded without bypassing hook or tool policy.
+
+### Requirement: Typed prompt sources
+
+r[agent_harness_runtime.clankers_prompt_assembly.sources] Animus prompt assembly MUST consume typed prompt-source DTOs with source kind, scope, trust/admission status, priority, budget class, redaction class, and safe identity before any source can influence model-visible prompt content.
+
+#### Scenario: Host context source assembles without discovery
+
+r[agent_harness_runtime.clankers_prompt_assembly.sources.host_context]
+- GIVEN a host supplies an admitted host-context prompt source
+- WHEN prompt assembly runs in host-context-only mode
+- THEN the source can contribute an attributed bounded section
+- AND no filesystem, memory, skill, URL, or project discovery is attempted.
+
+### Requirement: Deterministic precedence policy
+
+r[agent_harness_runtime.clankers_prompt_assembly.precedence] Prompt assembly MUST apply deterministic policy-defined section ordering, source precedence, conflict behavior, and required/optional source rules.
+
+#### Scenario: Conflicting sources resolve deterministically
+
+r[agent_harness_runtime.clankers_prompt_assembly.precedence.conflict]
+- GIVEN two admitted sources conflict for the same prompt section
+- WHEN assembly applies precedence policy
+- THEN the selected source order and conflict diagnostic are deterministic
+- AND the ledger identifies the skipped or overridden source without leaking raw body text.
+
+### Requirement: Assembly budget ledger
+
+r[agent_harness_runtime.clankers_prompt_assembly.ledger] Prompt assembly MUST produce a ledger recording included, skipped, truncated, redacted, denied, conflicting, and unsupported sources with safe metadata and budget consumption.
+
+#### Scenario: Over-budget source is truncated with evidence
+
+r[agent_harness_runtime.clankers_prompt_assembly.ledger.truncated]
+- GIVEN an admitted prompt source exceeds its configured section budget
+- WHEN assembly evaluates the source
+- THEN model-visible content is truncated or skipped according to policy
+- AND the ledger records budget use, truncation status, and BLAKE3 body identity without embedding the full raw source.
+
+### Requirement: Ambient discovery remains host-owned
+
+r[agent_harness_runtime.clankers_prompt_assembly.discovery] Reusable prompt assembly MUST NOT perform ambient filesystem, project-file, memory-store, skill-store, URL, or tool-discovery side effects; hosts MUST inject admitted sources or swappable discovery adapters, including memory-source adapters for any memory-backed prompt source.
+
+#### Scenario: Missing discovery adapter is explicit
+
+r[agent_harness_runtime.clankers_prompt_assembly.discovery.missing]
+- GIVEN assembly policy references a source kind that requires host discovery, such as a memory-backed source
+- AND no swappable discovery adapter or admitted source exists for that kind
+- WHEN assembly runs
+- THEN the ledger records an unsupported or unavailable source outcome
+- AND no fallback ambient discovery, memory-store lookup, or provider extraction occurs.
+
+### Requirement: Safe prompt assembly receipts
+
+r[agent_harness_runtime.clankers_prompt_assembly.receipts] Prompt assembly receipts MUST record source kind, safe label or hash, trust/admission status, section, budget use, truncation status, conflict reason, policy hash, and BLAKE3 source hashes, and MUST NOT include raw prompt bodies, credentials, full paths, provider payloads, or hidden memory bodies.
+
+#### Scenario: Prompt assembly receipt leak rejected
+
+r[agent_harness_runtime.clankers_prompt_assembly.receipts.rejects_leaks]
+- GIVEN a prompt assembly receipt fixture contains raw prompt body text, a credential-looking value, a full path dump, provider JSON, or hidden memory body
+- WHEN receipt validation runs
+- THEN validation rejects the fixture with a typed leak diagnostic.
+
+### Requirement: Prompt assembly verification
+
+r[agent_harness_runtime.clankers_prompt_assembly.verification] The adaptation MUST include focused positive and negative tests for typed sources, deterministic precedence, ledger states, budget truncation, missing discovery adapters, untrusted sources, unsupported source kinds, and receipt redaction.
+
+#### Scenario: Closeout evidence covers assembly fixtures
+
+r[agent_harness_runtime.clankers_prompt_assembly.verification.closeout]
+- GIVEN maintainers intend to archive the prompt assembly kit adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused source, precedence, ledger, discovery, receipt, workspace, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Bounded audit snapshots
+
+r[agent_harness_runtime.clankers_audit_receipts.snapshots] Animus audit snapshots MUST project runtime state into schema-versioned bounded counts, status classes, timing buckets, over-limit flags, event window identity, and error classes without exposing private pending maps.
+
+#### Scenario: Empty audit snapshot is valid
+
+r[agent_harness_runtime.clankers_audit_receipts.snapshots.empty]
+- GIVEN no model calls, tool calls, confirmations, background work, or delivery attempts are pending or completed in the window
+- WHEN audit projection runs
+- THEN it returns a valid empty snapshot with zero counts and safe schema metadata.
+
+### Requirement: Pending state clamping
+
+r[agent_harness_runtime.clankers_audit_receipts.clamping] Audit projection MUST clamp public pending counts to configured limits and record over-limit diagnostics instead of serializing full pending state.
+
+#### Scenario: Pending tool calls exceed public limit
+
+r[agent_harness_runtime.clankers_audit_receipts.clamping.pending_tools]
+- GIVEN internal pending tool-call state exceeds the configured public pending limit
+- WHEN audit projection runs
+- THEN the receipt reports the configured limit, clamped public count, and over-limit status
+- AND it does not serialize raw pending call IDs, arguments, outputs, or private metadata.
+
+### Requirement: Host-owned audit sinks
+
+r[agent_harness_runtime.clankers_audit_receipts.host_owned] Metrics sinks, telemetry exporters, clocks, persistent storage, and UI rendering MUST remain host-owned behavior outside reusable audit projection logic.
+
+#### Scenario: Sink unavailable does not alter projection
+
+r[agent_harness_runtime.clankers_audit_receipts.host_owned.sink_unavailable]
+- GIVEN audit projection produces a valid snapshot
+- AND a host telemetry sink is unavailable
+- WHEN the host attempts export
+- THEN the reusable projection remains unchanged
+- AND sink failure is recorded as a host adapter outcome rather than a projection mutation.
+
+### Requirement: Audit receipt composition
+
+r[agent_harness_runtime.clankers_audit_receipts.composition] Audit receipts MUST reference safe runtime event, tool dispatch, confirmation, background work, delivery, and receipt status categories rather than raw source payloads.
+
+#### Scenario: Completed failure classes summarize safely
+
+r[agent_harness_runtime.clankers_audit_receipts.composition.failures]
+- GIVEN completed work includes invalid input, denied capability, timeout, cancellation, malformed output, and unavailable service failures
+- WHEN audit projection runs
+- THEN the receipt summarizes counts by stable failure class
+- AND no raw tool arguments, provider payloads, prompts, or output bodies are included.
+
+### Requirement: Safe audit receipts
+
+r[agent_harness_runtime.clankers_audit_receipts.receipts] Audit receipts MUST record safe metadata such as schema version, policy hash, event window identity, bounded counts, status classes, timing buckets, over-limit diagnostics, failure class counts, and BLAKE3 receipt hash, and MUST NOT include raw prompts, tool arguments, tool outputs, provider payloads, credentials, authorization headers, environment values, full paths, or unbounded logs.
+
+#### Scenario: Audit receipt leak rejected
+
+r[agent_harness_runtime.clankers_audit_receipts.receipts.rejects_leaks]
+- GIVEN an audit receipt fixture contains raw prompt text, tool arguments, tool output, provider JSON, credentials, headers, environment values, full paths, or unbounded logs
+- WHEN receipt validation runs
+- THEN validation rejects the fixture with a typed leak diagnostic.
+
+### Requirement: Audit receipt verification
+
+r[agent_harness_runtime.clankers_audit_receipts.verification] The adaptation MUST include focused positive and negative tests for empty snapshots, pending-state clamping, completed summaries, host-owned sink boundaries, failure class composition, over-limit diagnostics, and receipt redaction.
+
+#### Scenario: Closeout evidence covers audit fixtures
+
+r[agent_harness_runtime.clankers_audit_receipts.verification.closeout]
+- GIVEN maintainers intend to archive the observability audit receipt adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused snapshot, clamping, host-boundary, composition, receipt, workspace, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Artifact delivery request DTOs
+
+r[agent_harness_runtime.clankers_tool_gateway.delivery_dto] Animus MUST represent artifact delivery requests with typed artifact handle, artifact kind, target kind, active context label, capability/toolset metadata, policy decision, delivery attempt ID when available, retryability, and adapter outcome.
+
+#### Scenario: Local artifact delivery request normalizes
+
+r[agent_harness_runtime.clankers_tool_gateway.delivery_dto.local]
+- GIVEN a tool produces a local artifact handle and requests session-local delivery
+- WHEN delivery request normalization runs
+- THEN Animus records artifact kind, target kind, safe artifact label, and required capability metadata
+- AND raw file contents are not embedded in the request metadata.
+
+### Requirement: Gateway policy rejects unsafe destinations
+
+r[agent_harness_runtime.clankers_tool_gateway.policy] Tool Gateway policy MUST reject unsupported platform targets, missing active contexts, raw destinations, raw credentials, headers, cloud object URLs, webhook URLs, and raw platform payloads before adapter execution.
+
+#### Scenario: Raw webhook destination rejected
+
+r[agent_harness_runtime.clankers_tool_gateway.policy.raw_destination]
+- GIVEN a delivery request includes a raw webhook URL or authorization header
+- WHEN gateway policy validates the request
+- THEN validation returns an unsafe-destination failure
+- AND no delivery adapter is invoked.
+
+### Requirement: Adapter-backed delivery attempts
+
+r[agent_harness_runtime.clankers_tool_gateway.adapters] Approved delivery MUST execute through an injected delivery adapter and MUST fail closed when the selected adapter is missing, unavailable, denied, or returns malformed output.
+
+#### Scenario: Missing adapter fails before success receipt
+
+r[agent_harness_runtime.clankers_tool_gateway.adapters.missing]
+- GIVEN policy approves a delivery target kind
+- AND no adapter is injected for that target kind
+- WHEN delivery execution starts
+- THEN Animus records a missing-adapter failure
+- AND it does not emit a successful delivery receipt.
+
+### Requirement: Safe delivery outbox and retry
+
+r[agent_harness_runtime.clankers_tool_gateway.outbox] Delivery attempts MUST be representable as bounded local outbox records and retry MUST reference attempt IDs, revalidate current policy, and execute only retryable adapter failures.
+
+#### Scenario: Policy-denied attempt is not retryable
+
+r[agent_harness_runtime.clankers_tool_gateway.outbox.non_retryable]
+- GIVEN a prior delivery attempt failed because policy rejected the target or credentials
+- WHEN retry is requested for that attempt ID
+- THEN Animus refuses retry with a non-retryable failure
+- AND preserves the original safe failure class.
+
+### Requirement: Safe delivery receipts
+
+r[agent_harness_runtime.clankers_tool_gateway.receipts] Delivery receipts MUST record safe metadata such as attempt ID, status, target kind, artifact kind, safe artifact label, retryability, adapter class, optional platform handle, error class, and BLAKE3 receipt hash, and MUST NOT include raw destinations, tokens, headers, full paths, raw artifact bytes, or platform payloads.
+
+#### Scenario: Delivery receipt leak rejected
+
+r[agent_harness_runtime.clankers_tool_gateway.receipts.rejects_leaks]
+- GIVEN a delivery receipt fixture contains a raw destination URL, token, header, full path dump, artifact body, or platform payload
+- WHEN receipt validation runs
+- THEN validation rejects the fixture with a typed leak diagnostic.
+
+### Requirement: Tool Gateway delivery verification
+
+r[agent_harness_runtime.clankers_tool_gateway.verification] The adaptation MUST include focused positive and negative tests for delivery DTOs, gateway policy, adapter-backed execution, missing adapters, outbox retry decisions, non-retryable failures, and receipt redaction.
+
+#### Scenario: Closeout evidence covers delivery fixtures
+
+r[agent_harness_runtime.clankers_tool_gateway.verification.closeout]
+- GIVEN maintainers intend to archive the Tool Gateway delivery adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused DTO, policy, adapter, outbox, receipt, workspace, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Nickel-authored routing policy
+
+r[agent_harness_runtime.clankers_cost_model_routing.policy] Animus model-routing policy MUST be authored as Nickel contracts or checked fixtures defining role names, thresholds, complexity weights, user-hint mappings, budget behavior, downgrade rules, provider constraints, and missing-price behavior.
+
+#### Scenario: Malformed routing policy rejected
+
+r[agent_harness_runtime.clankers_cost_model_routing.policy.invalid]
+- GIVEN a routing policy has duplicate role names, negative weights, unordered thresholds, unknown downgrade targets, or unspecified missing-price behavior
+- WHEN policy validation runs
+- THEN validation rejects the policy before any routing decision is used.
+
+### Requirement: Pure model routing decisions
+
+r[agent_harness_runtime.clankers_cost_model_routing.decision] Model routing MUST be a pure decision over task signals, current usage/cost summaries, model catalog projections, and validated policy, returning selected role/model metadata or typed failure without contacting providers.
+
+#### Scenario: Complex task selects stronger eligible role
+
+r[agent_harness_runtime.clankers_cost_model_routing.decision.complex]
+- GIVEN task signals exceed the configured high-complexity threshold
+- AND an eligible stronger model role is available within policy
+- WHEN routing runs
+- THEN the decision selects that role with a complexity-score reason
+- AND no provider request is sent by routing logic.
+
+### Requirement: Budget-aware routing
+
+r[agent_harness_runtime.clankers_cost_model_routing.budget] Routing MUST account for current usage and configured budget behavior, including soft-budget pressure, hard-budget downgrade, and hard-budget denial when no compliant model is available.
+
+#### Scenario: Hard budget blocks upgrade
+
+r[agent_harness_runtime.clankers_cost_model_routing.budget.hard_limit]
+- GIVEN current cost meets or exceeds the configured hard budget
+- AND the requested or scored model would be a cost upgrade
+- WHEN routing evaluates budget policy
+- THEN the decision downgrades to an allowed cheaper role or denies routing if no cheaper role is available
+- AND the receipt records the hard-budget reason.
+
+### Requirement: Injected safe model catalog projections
+
+r[agent_harness_runtime.clankers_cost_model_routing.catalog] Routing MUST consume injected safe model catalog projections and MUST fail closed when required model capability, availability, or pricing metadata is absent under the active policy.
+
+#### Scenario: Missing price denied by policy
+
+r[agent_harness_runtime.clankers_cost_model_routing.catalog.missing_price]
+- GIVEN policy requires price metadata for budgeted routing
+- AND a candidate model lacks pricing metadata
+- WHEN routing evaluates candidates
+- THEN the candidate is rejected or routing fails according to policy
+- AND no provider fallback is attempted.
+
+### Requirement: Safe routing receipts
+
+r[agent_harness_runtime.clankers_cost_model_routing.receipts] Routing receipts MUST record safe metadata such as decision status, selected role/model label, score bucket, budget status, candidate counts, policy hash, fallback class, and BLAKE3 receipt hash, and MUST NOT include raw prompts, provider payloads, credentials, full pricing-store dumps, or hidden reasoning text.
+
+#### Scenario: Routing receipt leak rejected
+
+r[agent_harness_runtime.clankers_cost_model_routing.receipts.rejects_leaks]
+- GIVEN a routing receipt fixture contains raw prompt text, provider JSON, credentials, full pricing file contents, or hidden reasoning text
+- WHEN receipt validation runs
+- THEN validation rejects the fixture with a typed leak diagnostic.
+
+### Requirement: Cost-aware routing verification
+
+r[agent_harness_runtime.clankers_cost_model_routing.verification] The adaptation MUST include focused positive and negative tests for policy validation, simple/complex task selection, explicit user hints, soft and hard budget behavior, missing prices, unavailable models, malformed policies, and receipt redaction.
+
+#### Scenario: Closeout evidence covers routing fixtures
+
+r[agent_harness_runtime.clankers_cost_model_routing.verification.closeout]
+- GIVEN maintainers intend to archive the cost-aware routing adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused policy, decision, budget, catalog, receipt, workspace, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Bounded Clankers and Toolpath provenance references
+
+r[agent_harness_runtime.provenance_ledger.scope] Animus MUST define its own internal provenance/session-ledger model, MUST treat Clankers as a bounded reference for neutral replay, safe typed facts, BLAKE3 artifact identity, tool-host/effect receipts, and redaction patterns, and MUST treat Toolpath as an optional interchange reference rather than the internal source of truth.
+
+#### Scenario: Reference scope rejects wholesale imports
+
+r[agent_harness_runtime.provenance_ledger.scope.rejects_wholesale]
+- GIVEN maintainers adapt provenance, session-ledger, or receipt behavior from Clankers or Toolpath
+- WHEN the reusable Animus core or adapter crates are reviewed
+- THEN the implementation uses Animus-owned DTOs and traits
+- AND it does not require `toolpath`, `toolpath-convo`, `clankers-session`, `clanker-message`, Automerge, daemon, TUI, Pathbase, GitHub, Git, Matrix, plugin runtime, or global session-directory dependencies in reusable core contracts.
+
+### Requirement: Animus-owned neutral session ledger
+
+r[agent_harness_runtime.provenance_ledger.session_ledger] Animus MUST provide neutral session-ledger DTOs for model-visible messages, summaries, usage observations, safe receipts, and unsupported entries without depending on a concrete storage backend, daemon, UI, provider, transcript compatibility type, or wall-clock construction.
+
+#### Scenario: Ledger replay rebuilds model-visible context
+
+r[agent_harness_runtime.provenance_ledger.session_ledger.replay]
+- GIVEN an in-memory ledger containing user, assistant, tool, summary, usage, and receipt entries
+- WHEN pure replay runs
+- THEN it returns model-visible messages in deterministic order with safe replay metadata counts
+- AND it does not read files, inspect environment, allocate timestamps, spawn processes, call providers, or depend on Clankers desktop transcript IDs.
+
+#### Scenario: Unsupported ledger entries fail closed
+
+r[agent_harness_runtime.provenance_ledger.session_ledger.unsupported]
+- GIVEN replay encounters an unsupported or adapter-owned ledger entry
+- WHEN replay is required for a model request
+- THEN it returns a typed unsupported-entry error
+- AND no raw unsupported payload is included in the error or receipt.
+
+### Requirement: Append-only safe provenance facts
+
+r[agent_harness_runtime.provenance_ledger.typed_facts] Animus MUST define append-only typed provenance facts for model activity, tool activity, runtime blocks, errors, artifact references, authorization decisions, provenance observations, and opaque unknown records with safe query fields only.
+
+#### Scenario: Typed facts are queryable without raw payloads
+
+r[agent_harness_runtime.provenance_ledger.typed_facts.query]
+- GIVEN a ledger contains model, tool, artifact, authorization, and error facts
+- WHEN safe query filtering runs by artifact hash, tool kind, error class, requirement id, request shape, authorization status, effect ability, or effect resource
+- THEN matching facts are returned deterministically
+- AND raw prompts, provider payloads, tool input/output, credentials, and full paths are not required for the query.
+
+#### Scenario: Unknown facts become safe opaque records
+
+r[agent_harness_runtime.provenance_ledger.typed_facts.opaque]
+- GIVEN a future or unknown fact shape is loaded from a compatibility boundary
+- WHEN the fact cannot be decoded as a current typed record
+- THEN Animus preserves only sanitized safe metadata or returns a typed compatibility error
+- AND it does not retain or emit the unknown raw payload by default.
+
+### Requirement: BLAKE3 artifact identity and redaction classes
+
+r[agent_harness_runtime.provenance_ledger.artifacts] Animus artifact identities MUST use versioned canonical envelopes with artifact kind, envelope version, redaction class, normalized payload, sorted dependencies, and BLAKE3 hashes for Animus-owned content identity.
+
+#### Scenario: Canonical artifact hashes are deterministic
+
+r[agent_harness_runtime.provenance_ledger.artifacts.deterministic]
+- GIVEN equivalent artifact envelopes with differently ordered dependency inputs
+- WHEN artifact identity is computed
+- THEN dependencies are sorted and deduplicated before hashing
+- AND the resulting BLAKE3 hash is deterministic.
+
+#### Scenario: Redaction classes gate payload display
+
+r[agent_harness_runtime.provenance_ledger.artifacts.redaction]
+- GIVEN an artifact envelope is marked metadata-only, redacted-payload, or secret
+- WHEN receipt, CLI, or review output is rendered
+- THEN payload display is omitted or replaced by explicit redaction markers
+- AND only public artifacts may expose payload bodies by default.
+
+### Requirement: Pure parent/branch provenance queries
+
+r[agent_harness_runtime.provenance_ledger.branch_queries] Animus MUST provide pure parent/branch query helpers for ancestry, active branch reconstruction, branch divergence, unique branch entries, and abandoned/dead-end attempts over Animus-owned ledger/provenance DTOs.
+
+#### Scenario: Branch queries detect abandoned attempts
+
+r[agent_harness_runtime.provenance_ledger.branch_queries.dead_ends]
+- GIVEN a provenance graph has one active head and a sibling branch that is not an ancestor of that head
+- WHEN dead-end query runs
+- THEN the sibling branch entries are returned as abandoned attempts
+- AND the active branch entries are not misclassified as dead ends.
+
+#### Scenario: Malformed parent references fail without panic
+
+r[agent_harness_runtime.provenance_ledger.branch_queries.invalid]
+- GIVEN a graph contains a missing parent reference, cycle, duplicate entry id, or reversed ordering assumption
+- WHEN validation or query preparation runs
+- THEN it returns a typed graph validation error
+- AND no panic, infinite traversal, or silently accepted invalid ancestry is produced.
+
+### Requirement: Safe runtime and provenance receipts
+
+r[agent_harness_runtime.provenance_ledger.receipts] Animus runtime and provenance receipts MUST expose safe metadata only, including status, issue code, actor/session/trace labels, bounded counts, artifact hashes, mutation or effect kind, backend/interchange labels, and redaction markers, and MUST NOT include raw prompt text, provider payloads, credentials, full paths, raw tool bodies, raw model outputs, or unbounded outputs.
+
+#### Scenario: Safe receipts link evidence without leaking content
+
+r[agent_harness_runtime.provenance_ledger.receipts.safe]
+- GIVEN a model call, tool call, authorization decision, or provenance observation has raw sensitive inputs and outputs
+- WHEN a receipt is constructed
+- THEN the receipt contains only safe labels, bounded counts, redaction markers, and BLAKE3 hashes
+- AND the sensitive raw material is omitted.
+
+#### Scenario: Receipt leak fixture is rejected
+
+r[agent_harness_runtime.provenance_ledger.receipts.rejects_leaks]
+- GIVEN a receipt fixture contains raw prompt text, provider JSON, credential-looking values, an absolute path dump, raw tool input, raw model output, or unbounded output
+- WHEN receipt validation runs
+- THEN validation fails with a typed redaction error
+- AND the invalid receipt is not accepted as review or release evidence.
+
+### Requirement: Tool-host and effect receipts remain adapter-safe
+
+r[agent_harness_runtime.provenance_ledger.tool_effects] Animus MUST model tool-host outcomes, service availability, capability decisions, hook phases, runtime policy decisions, cancellation, truncation metadata, effect requests, and effect results as adapter-safe DTOs before provenance facts or receipts claim tool execution evidence.
+
+#### Scenario: Missing tool service fails before evidence is claimed
+
+r[agent_harness_runtime.provenance_ledger.tool_effects.missing_service]
+- GIVEN a tool action requires storage, search, hooks, process, progress, capability, cancellation, or runtime-policy service support
+- WHEN the service is missing or unavailable
+- THEN dispatch returns a typed unavailable-service or capability-denied outcome
+- AND no provenance receipt claims the tool mutation or effect completed.
+
+#### Scenario: Tool output truncation is recorded safely
+
+r[agent_harness_runtime.provenance_ledger.tool_effects.truncation]
+- GIVEN a tool emits output larger than configured byte or line limits
+- WHEN the tool-host accumulator finishes
+- THEN the model-visible output is bounded
+- AND the receipt records original and truncated counts without storing the omitted output.
+
+### Requirement: Optional Toolpath interchange adapter
+
+r[agent_harness_runtime.provenance_ledger.toolpath_adapter] Animus MAY provide an optional std-only Toolpath adapter that exports redacted Animus provenance as Toolpath Graph/Path/Step documents and imports redacted Toolpath documents into review fixtures, MUST treat Toolpath as an interchange and review vocabulary rather than the internal ledger, and MUST keep Toolpath crates, `toolpath-convo`, Pathbase, provider importers, Git/GitHub derivation, and CLI cache/share/resume behavior out of default reusable contracts.
+
+#### Scenario: Redacted Toolpath export maps Animus DAGs
+
+r[agent_harness_runtime.provenance_ledger.toolpath_adapter.export]
+- GIVEN an Animus provenance ledger contains actors, parent relationships, active heads, artifact hashes, safe structural changes, typed refs, correlation links, and redacted receipts
+- WHEN Toolpath export is explicitly requested
+- THEN the adapter emits a Toolpath graph with equivalent path head, step parents, actor labels, typed refs, artifact hash markers, and safe structural perspectives
+- AND raw prompts, provider payloads, tool input/output, full paths, credentials, raw unified diffs, and unbounded before/after content are omitted or represented by hashes/redaction markers.
+
+#### Scenario: Default Toolpath export remains redacted
+
+r[agent_harness_runtime.provenance_ledger.toolpath_adapter.redacted_default]
+- GIVEN a Toolpath export candidate includes raw prompt text, provider JSON, credential-looking values, absolute path dumps, raw tool input, raw tool output, raw model output, unbounded before/after content, or raw unified diffs
+- WHEN default redacted export validation runs
+- THEN the adapter rejects the unsafe fields or replaces them with explicit redaction markers and BLAKE3 artifact hashes
+- AND full-fidelity raw export is unavailable unless a future explicit policy enables it.
+
+#### Scenario: Toolpath adoption matrix is documented
+
+r[agent_harness_runtime.provenance_ledger.toolpath_adapter.docs]
+- GIVEN maintainers evaluate Toolpath features for Animus
+- WHEN the adoption matrix is reviewed
+- THEN Graph/Path/Step, actor taxonomy, parent/head semantics, dead-end queries, typed refs/correlation, JSONL streaming shape, and Markdown/DOT review surfaces are documented as optional projection or review concerns
+- AND Toolpath is not documented as Animus' internal ledger, runtime conversation IR, hashing authority, provider importer, or default storage format.
+
+#### Scenario: Toolpath dependency isolation is verified
+
+r[agent_harness_runtime.provenance_ledger.toolpath_adapter.isolated]
+- GIVEN default Animus features are built without Toolpath compatibility
+- WHEN workspace dependency checks run
+- THEN reusable core, adapter, Steel, and standard-shell contracts do not require Toolpath crates, `toolpath-convo`, Pathbase clients, provider session importers, GitHub/Git derivation crates, or Toolpath cache/share/resume CLI behavior.
+
+### Requirement: Focused provenance-ledger verification
+
+r[agent_harness_runtime.provenance_ledger.verification] The provenance-ledger adaptation MUST include focused positive and negative verification for bounded reference scope, neutral ledger replay, unsupported-entry failure, typed fact queries, opaque record handling, BLAKE3 artifact identity, redaction classes, branch/dead-end queries, malformed graph rejection, tool/effect outcomes, safe receipts, optional Toolpath export, redacted-by-default Toolpath behavior, Toolpath adoption documentation, and dependency isolation.
+
+#### Scenario: Closeout evidence is reviewable
+
+r[agent_harness_runtime.provenance_ledger.verification.closeout]
+- GIVEN maintainers intend to archive the provenance-ledger adaptation
+- WHEN closeout validation runs
+- THEN evidence names every successful focused rail, workspace test, clippy check, Nickel/config drift check if applicable, Cairn validation, and Cairn gate
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Nickel-governed Steel runtime policy
+
+r[agent_harness_runtime.steel_policy.nickel] Animus Steel runtime policy MUST be authored in Nickel with typed contracts for profile identity, script bindings, runtime budgets, allowed host actions, fallback mode, and receipt redaction.
+
+#### Scenario: Steel policy exports checked runtime data
+
+r[agent_harness_runtime.steel_policy.nickel.export]
+- GIVEN a maintained Steel runtime policy under `policy/steel-runtime/`
+- WHEN the policy export or drift check runs
+- THEN the generated runtime policy data matches the Nickel source
+- AND invalid profile names, missing script bindings, non-positive budgets, unknown host actions, or unsupported fallback modes fail before runtime use.
+
+#### Scenario: Steel policy is enforced before execution
+
+r[agent_harness_runtime.steel_policy.nickel.enforced]
+- GIVEN a Steel script is selected for runtime turn planning
+- WHEN runtime prepares to evaluate that script
+- THEN the selected profile, script hash, budget, host-action allowlist, and fallback mode are validated before Steel evaluation
+- AND a policy denial produces a typed runtime failure without calling model or tool adapters.
+
+### Requirement: Runtime lifecycle ownership document
+
+r[agent_harness_runtime.lifecycle.ownership] Animus documentation MUST define the request lifecycle and identify the source-of-truth type and owning crate for each transition from runtime input through loop decision, adapter dispatch, event emission, report construction, and receipt creation.
+
+#### Scenario: Lifecycle ownership is reviewable
+
+r[agent_harness_runtime.lifecycle.ownership.reviewable]
+- GIVEN a maintainer changes runtime input, Steel decision, adapter dispatch, event, report, or receipt behavior
+- WHEN they inspect the lifecycle document
+- THEN the document identifies the owning crate, source-of-truth type, and forbidden dependencies for that boundary
+- AND it names the focused validation rail that covers the changed boundary.
+
+### Requirement: Safe runtime receipts
+
+r[agent_harness_runtime.receipts.safe_metadata] Runtime and adapter observation receipts MUST expose safe metadata only, including status, issue code, labels, counts, bounded sizes, and BLAKE3 content hashes, and MUST NOT include raw prompts, provider payloads, credentials, full paths, raw tool bodies, or unbounded outputs.
+
+#### Scenario: Receipt redaction is deterministic
+
+r[agent_harness_runtime.receipts.safe_metadata.redacted]
+- GIVEN a runtime turn includes prompt text, model output, tool input, tool output, or adapter error details
+- WHEN a receipt is constructed
+- THEN the receipt contains only approved safe fields and BLAKE3 hashes for sensitive content identity
+- AND raw sensitive fields are omitted or replaced with explicit redaction markers.
+
+#### Scenario: Receipt validation rejects leaks
+
+r[agent_harness_runtime.receipts.safe_metadata.rejects_leaks]
+- GIVEN a receipt fixture contains raw prompt text, a credential-looking field, an absolute path dump, raw provider payload, or unbounded tool output
+- WHEN receipt validation runs
+- THEN validation fails with a typed redaction error
+- AND no receipt is accepted as release evidence.
+
+### Requirement: Neutral session ledger and resume contract
+
+r[agent_harness_runtime.session_ledger.neutral] Animus MUST define a neutral session ledger contract for model-visible messages, tool results, summaries, replay metadata, and resume errors without depending on daemon, TUI, database, filesystem, provider, or concrete JSONL session-store crates.
+
+#### Scenario: Ledger rebuilds model-visible context
+
+r[agent_harness_runtime.session_ledger.neutral.replay]
+- GIVEN an in-memory ledger containing user, assistant, tool, and summary entries
+- WHEN the runtime rebuilds model-visible context for a resumed turn
+- THEN the resulting request history preserves entry order and supported content semantics
+- AND replay metadata remains safe receipt metadata rather than raw storage implementation details.
+
+#### Scenario: Missing ledger service fails closed
+
+r[agent_harness_runtime.session_ledger.neutral.missing_service]
+- GIVEN a runtime request requires resume semantics
+- WHEN no session ledger service is injected or the requested session is missing
+- THEN runtime returns a typed missing-session or unavailable-service failure
+- AND no model or tool adapter is called.
+
+### Requirement: Injected provider and tool dispatch services
+
+r[agent_harness_runtime.dispatch.injected_services] Runtime dispatch MUST consume injected model, provider, and tool services through typed adapter contracts and MUST fail closed when a required service is absent, unavailable, capability-denied, cancelled, or returns malformed output.
+
+#### Scenario: Provider dispatch does not construct clients
+
+r[agent_harness_runtime.dispatch.injected_services.provider]
+- GIVEN a runtime turn requires model or provider execution
+- WHEN dispatch handles the request
+- THEN it calls only the injected service with a validated provider-neutral or adapter request
+- AND it does not read credentials, discover provider configuration, open network connections directly, or construct concrete provider clients internally.
+
+#### Scenario: Tool dispatch rejects unavailable services
+
+r[agent_harness_runtime.dispatch.injected_services.tool_unavailable]
+- GIVEN a loop decision requests a tool that has no injected executor or is denied by capability policy
+- WHEN dispatch evaluates that decision
+- THEN runtime emits a typed missing-tool, unavailable-service, or capability-denied event
+- AND later model, provider, or tool calls for that turn are not executed.
+
+### Requirement: Focused adaptation verification rails
+
+r[agent_harness_runtime.verification.focused_rails] Animus MUST provide focused verification rails for Nickel policy drift, Steel profile validity, receipt redaction invariants, session-ledger replay behavior, and provider/tool dispatch boundary failures before claiming the Clankers pattern adaptation complete.
+
+#### Scenario: Focused rails gate adaptation closeout
+
+r[agent_harness_runtime.verification.focused_rails.closeout]
+- GIVEN the Clankers pattern adaptation is ready for review
+- WHEN maintainers run closeout validation
+- THEN evidence includes successful focused policy, Steel, receipt, ledger, dispatch, workspace test, clippy, flake, Cairn validation, and Cairn gate checks
+- AND any skipped rail is documented with a concrete blocker and next-best validation.
+
+### Requirement: Host-injected background queue service
+
+r[agent_harness_runtime.hermes_background_queue.service] Animus MUST define host-injected background queue service contracts and DTOs for enqueue, status, wait, log, send-input, pause, resume, restart, cancel, clean, group listing, and group parallelism operations without requiring reusable runtime crates to spawn processes directly.
+
+#### Scenario: Queue service handles long-running task
+
+r[agent_harness_runtime.hermes_background_queue.service.enqueue]
+- GIVEN a host injects a background queue service and a tool requests a long-running non-interactive command through an approved queue tool
+- WHEN runtime dispatches the request
+- THEN the queue service receives a typed enqueue request with command identity, group, environment policy, timeout policy, and output bounds
+- AND reusable runtime code does not call shell, process, or pueue APIs directly.
+
+### Requirement: Destructive queue controls require explicit selectors
+
+r[agent_harness_runtime.hermes_background_queue.explicit_targets] Queue operations that pause, kill, restart, clean, resume, or alter group-wide parallelism MUST require explicit task, group, default-group, or all-groups selectors and MUST reject ambiguous default behavior.
+
+#### Scenario: Ambiguous kill request is rejected
+
+r[agent_harness_runtime.hermes_background_queue.explicit_targets.reject_ambiguous]
+- GIVEN a queue-control request asks to kill work but omits task IDs, group name, explicit default-group selector, and all-groups selector
+- WHEN request validation runs
+- THEN validation returns a typed ambiguous-target diagnostic
+- AND no queue backend operation is invoked.
+
+### Requirement: Queue groups and parallelism are typed
+
+r[agent_harness_runtime.hermes_background_queue.groups] Background queue DTOs MUST represent group identity, configured parallelism, pending/running/paused/stashed/completed counts, and backend-specific status labels as safe metadata.
+
+#### Scenario: Group status is inspectable
+
+r[agent_harness_runtime.hermes_background_queue.groups.status]
+- GIVEN a queue backend has multiple groups with different parallelism limits
+- WHEN a host reports queue status to Animus
+- THEN the normalized DTO includes each group, parallelism limit, counts by stable status class, and safe backend labels
+- AND prompt/report rendering can distinguish CPU-heavy, IO-heavy, or default groups when hosts provide labels.
+
+### Requirement: Logs and command output are bounded
+
+r[agent_harness_runtime.hermes_background_queue.logs] Background task logs MUST be exposed through bounded viewports with visible text, total line/byte counts, truncation state, safe references, and BLAKE3 content hashes when full-output identity is needed.
+
+#### Scenario: Large log tail is truncated safely
+
+r[agent_harness_runtime.hermes_background_queue.logs.truncated]
+- GIVEN a completed background task produced a large stdout/stderr log
+- WHEN the model-visible log view is requested
+- THEN the response includes only the configured visible window or tail, line/byte counts, truncation state, and optional BLAKE3 hash
+- AND it does not embed the full raw log body in model-visible content or receipts.
+
+### Requirement: Wait and send semantics are explicit capabilities
+
+r[agent_harness_runtime.hermes_background_queue.wait_send] Background queue tooling MUST model wait, stream, poll, and send-input behavior as explicit capabilities with timeout, paused/stashed/queued handling, and unsupported-operation failures.
+
+#### Scenario: Send input unsupported fails closed
+
+r[agent_harness_runtime.hermes_background_queue.wait_send.unsupported_send]
+- GIVEN a backend task does not support stdin/send-input operations
+- WHEN a tool request attempts to send input to that task
+- THEN the queue service returns an unsupported-operation failure
+- AND runtime does not fall back to shelling out to a backend-specific CLI.
+
+### Requirement: Background queue adaptation verification
+
+r[agent_harness_runtime.hermes_background_queue.verification] The background queue adaptation MUST include focused tests for enqueue/status/log flows, explicit target validation, group/parallelism DTOs, bounded logs, wait behavior, unsupported send failures, missing queue service failures, and backend isolation.
+
+#### Scenario: Closeout evidence covers queue fixtures
+
+r[agent_harness_runtime.hermes_background_queue.verification.closeout]
+- GIVEN maintainers intend to archive the Hermes background queue adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused queue DTO tests, destructive-target tests, log-bound tests, wait/send tests, workspace checks, Cairn validation, and Cairn gates
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Bounded Git AI provenance reference
+
+r[agent_harness_runtime.provenance_git_ai.scope] Animus MUST treat Git AI as a bounded reference for explicit checkpointing, line-level attribution, session/model/tool identity, accepted-line stats, and optional Git AI v3 authorship-log interoperability, and MUST NOT adopt Git AI's daemon, installer, updater, hosted telemetry, SQLite prompt store, Git operation watcher, or Git-only workflow assumptions as reusable runtime architecture.
+
+#### Scenario: Git AI remains a compatibility boundary
+
+r[agent_harness_runtime.provenance_git_ai.scope.boundary]
+- GIVEN maintainers adapt a Git AI-inspired provenance behavior
+- WHEN the behavior is added to Animus
+- THEN reusable runtime and provenance APIs are expressed in VCS-neutral terms
+- AND Git-specific formats, refs, commands, and history-operation names are isolated to optional backend or compatibility modules.
+
+### Requirement: VCS-neutral provenance domain
+
+r[agent_harness_runtime.provenance_git_ai.domain] Animus provenance types MUST model content observations, repository-relative file identities, content hashes, line ranges, session identities, trace IDs, mutating tool kinds, and safe receipt metadata without requiring Git, Git notes, commit SHAs, branch names, hooks, stash, rebase, or any other Git-specific concept.
+
+#### Scenario: Provenance core is directly testable without a VCS
+
+r[agent_harness_runtime.provenance_git_ai.domain.no_vcs]
+- GIVEN a test constructs provenance observations, line ranges, sessions, trace IDs, and content hashes in memory
+- WHEN pure provenance validation and range transformation functions run
+- THEN they return deterministic typed results without reading files, executing commands, invoking Git, opening a repository, or depending on a concrete VCS backend.
+
+#### Scenario: Git terms are rejected from core DTOs
+
+r[agent_harness_runtime.provenance_git_ai.domain.rejects_git_terms]
+- GIVEN a proposed core provenance DTO adds a required Git note ref, commit SHA, branch, stash, rebase, or Git command field
+- WHEN provenance boundary review or focused validation runs
+- THEN the change fails the VCS-neutrality check unless the field is moved behind an optional Git compatibility adapter.
+
+### Requirement: Injected version-control provenance backend
+
+r[agent_harness_runtime.provenance_git_ai.vcs_backend] Runtime provenance persistence MUST use an injected version-control provenance backend or explicitly disabled backend setting, and MUST fail closed with a typed unavailable-backend or unsupported-operation error when provenance recording is required but no suitable backend is injected.
+
+#### Scenario: In-memory non-Git backend records checkpoints
+
+r[agent_harness_runtime.provenance_git_ai.vcs_backend.in_memory]
+- GIVEN runtime dispatch records mutating tool checkpoints through an injected in-memory backend that does not implement Git semantics
+- WHEN the tool call succeeds
+- THEN the backend receives before and after provenance observations with session, trace, file identity, mutation kind, and content-hash metadata
+- AND no Git command, Git hook, or Git note API is called.
+
+#### Scenario: Missing required backend fails before mutation evidence is claimed
+
+r[agent_harness_runtime.provenance_git_ai.vcs_backend.missing]
+- GIVEN provenance recording is required by policy for a mutating tool action
+- WHEN no backend is injected or the selected backend reports unsupported mutation tracking
+- THEN runtime returns a typed provenance-backend failure
+- AND no receipt claims complete line-level attribution for that action.
+
+### Requirement: Nickel-governed mutating-tool checkpoint policy
+
+r[agent_harness_runtime.provenance_git_ai.tool_policy] Mutating-tool checkpoint classification MUST be governed by Nickel-authored policy that maps raw tool names to canonical mutation kinds, file-identity fields, backend requirements, and receipt-redaction behavior before runtime dispatch records provenance.
+
+#### Scenario: Valid policy classifies mutating tools
+
+r[agent_harness_runtime.provenance_git_ai.tool_policy.valid]
+- GIVEN Nickel policy maps raw tools to canonical edit, write, replace, or rename mutation kinds with explicit file-identity fields
+- WHEN runtime dispatch prepares a matching tool action
+- THEN the provenance observer records a before observation, calls the injected tool executor, records an after observation, and emits safe receipt metadata for the selected mutation kind.
+
+#### Scenario: Invalid policy fails closed
+
+r[agent_harness_runtime.provenance_git_ai.tool_policy.invalid]
+- GIVEN Nickel policy references an unknown mutation kind, missing file-identity field, unsupported backend requirement, or unsafe receipt field
+- WHEN policy export, drift check, or runtime loading runs
+- THEN validation fails before the tool action is treated as provenance-trackable
+- AND the failure identifies the policy issue without recording raw tool input or full paths.
+
+### Requirement: Pure line-range and hunk-transform core
+
+r[agent_harness_runtime.provenance_git_ai.range_core] Animus MUST provide pure deterministic line-range, range-compression, overlap, removal, hunk-shift, and accepted-line counting logic for provenance attribution, with explicit validation errors for malformed ranges, unsorted ranges, zero line numbers, underflow, overflow, and impossible hunk shapes.
+
+#### Scenario: Positive range transformations are deterministic
+
+r[agent_harness_runtime.provenance_git_ai.range_core.positive]
+- GIVEN valid line ranges and diff hunk descriptions for insertions, deletions, replacements, and multiple hunks
+- WHEN range transformation functions run
+- THEN preserved lines retain attribution, deleted or replaced lines lose attribution, later lines shift by the accumulated offset, and accepted-line counts are deterministic.
+
+#### Scenario: Malformed ranges fail without panic
+
+r[agent_harness_runtime.provenance_git_ai.range_core.negative]
+- GIVEN malformed line ranges, zero line numbers, reversed ranges, unsorted entries, invalid hunk headers, or arithmetic overflow inputs
+- WHEN range parsing or transformation functions run
+- THEN they return typed validation errors
+- AND no panic, wrapping line number, or silently accepted invalid attribution is produced.
+
+### Requirement: Optional Git AI v3 compatibility adapter
+
+r[agent_harness_runtime.provenance_git_ai.git_ai_adapter] Animus MAY provide an optional Git AI compatibility adapter that reads and writes `authorship/3.0.0` authorship logs for Git repositories, stores Git AI notes under `refs/notes/ai`, and confines Git AI-required SHA-256 key derivation to that adapter boundary while preserving BLAKE3 defaults for Animus-owned hashes and receipts.
+
+#### Scenario: Git AI v3 authorship log round-trips at the adapter boundary
+
+r[agent_harness_runtime.provenance_git_ai.git_ai_adapter.round_trip]
+- GIVEN a valid Git AI v3 authorship log containing session, trace, known-human, legacy prompt, file attestation, and metadata sections
+- WHEN the optional compatibility adapter decodes and re-encodes it
+- THEN the adapter preserves the externally required schema version, key routing, line ranges, metadata maps, and `refs/notes/ai` storage target
+- AND the shared provenance domain receives only VCS-neutral observation data and external compatibility identifiers.
+
+#### Scenario: Git AI-specific data does not become core requirement
+
+r[agent_harness_runtime.provenance_git_ai.git_ai_adapter.not_core]
+- GIVEN an embedder uses a non-Git backend or disables Git AI compatibility
+- WHEN provenance recording runs
+- THEN runtime does not require `refs/notes/ai`, Git commit SHAs, Git CLI availability, or Git AI SHA-256 IDs
+- AND receipts continue to use Animus-owned BLAKE3 content hashes where a hash algorithm is not externally mandated.
+
+### Requirement: Safe provenance receipts and session links
+
+r[agent_harness_runtime.provenance_git_ai.receipts] Provenance receipts MUST expose safe metadata only, including status, issue code, backend kind, mutation kind, labels, bounded counts, BLAKE3 content hashes, external compatibility IDs, session IDs, trace IDs, and explicit redaction markers, and MUST NOT include raw prompts, provider payloads, credentials, full paths, raw tool bodies, or unbounded outputs.
+
+#### Scenario: Provenance receipt links to session without leaking prompt text
+
+r[agent_harness_runtime.provenance_git_ai.receipts.session_link]
+- GIVEN a mutating tool action is associated with an agent session, model, and trace ID
+- WHEN provenance receipt construction runs
+- THEN the receipt records safe session, model, tool, mutation, count, content-hash, and backend metadata
+- AND raw prompt text, raw model output, raw tool input, raw tool output, credentials, and full paths are omitted or explicitly redacted.
+
+#### Scenario: Receipt leak fixture is rejected
+
+r[agent_harness_runtime.provenance_git_ai.receipts.rejects_leaks]
+- GIVEN a provenance receipt fixture contains raw prompt text, credential-looking values, an absolute path dump, raw provider payload, raw tool input, or unbounded tool output
+- WHEN receipt validation runs
+- THEN validation fails with a typed redaction error
+- AND no receipt with leaked content is accepted as release evidence.
+
+### Requirement: Focused VCS-neutral provenance verification
+
+r[agent_harness_runtime.provenance_git_ai.verification] The provenance adaptation MUST include focused positive and negative verification for bounded Git AI scope, VCS-neutral DTOs, Nickel tool policy, non-Git backend recording, missing backend failures, pure range/hunk transforms, optional Git AI v3 round trips, and provenance receipt redaction.
+
+#### Scenario: Verification proves Git is optional
+
+r[agent_harness_runtime.provenance_git_ai.verification.git_optional]
+- GIVEN the provenance adaptation is ready for review
+- WHEN focused verification runs
+- THEN evidence includes a non-Git in-memory backend test that records mutating-tool provenance without Git
+- AND Git AI compatibility tests are isolated behind the optional adapter boundary.
+
+### Requirement: Optional TUI host dependency boundary
+
+r[agent_harness_runtime.ratatui_tool_host.boundary] Animus MUST keep Rats, Ratatui, Crossterm, terminal raw-mode handling, redraw scheduling, and keybinding interpretation out of `animus-core`, `animus-adapters`, `animus-steel`, and reusable default tool contracts. A Ratatui-compatible shell MAY exist as an optional host crate or binary that depends on the reusable runtime contracts.
+
+#### Scenario: Reusable crates remain terminal-free
+
+r[agent_harness_runtime.ratatui_tool_host.boundary.terminal_free]
+- GIVEN maintainers inspect reusable Animus crate dependencies and public DTOs
+- WHEN a Ratatui-compatible host is added
+- THEN terminal UI crates, Rats crates, and terminal-specific types appear only in the optional host shell
+- AND ordinary model and tool adapters remain usable without linking a terminal backend.
+
+### Requirement: Rats dependency is host-only and SSH-pinned
+
+r[agent_harness_runtime.ratatui_tool_host.rats_dependency] The optional TUI host crate MUST depend on the Rats workspace through an SSH-authenticated Cargo Git URL pinned to an explicit revision, and MUST NOT expose Rats types through reusable core, adapter, Steel, std runtime, or tool contract APIs.
+
+#### Scenario: Rats dependency stays inside TUI crate
+
+r[agent_harness_runtime.ratatui_tool_host.rats_dependency.host_only]
+- GIVEN the optional TUI host dependency graph is inspected
+- WHEN the Rats dependency is resolved from `ssh://git@github.com/brittonr/rats.git`
+- THEN only the TUI host crate depends on Rats packages
+- AND the dependency is pinned to a concrete revision rather than a floating branch.
+
+### Requirement: UI-neutral tool host bridge
+
+r[agent_harness_runtime.ratatui_tool_host.bridge] Animus MUST define a UI-neutral tool host bridge for interactive tool execution with typed lifecycle events, progress updates, bounded output observations, approval requests, cancellation notices, final results, and failure classes.
+
+#### Scenario: Tool progress renders without direct drawing
+
+r[agent_harness_runtime.ratatui_tool_host.bridge.progress]
+- GIVEN an interactive tool emits started, progress, output, and finished events through the host bridge
+- WHEN a Ratatui host receives those events
+- THEN it updates its render model from the typed events
+- AND the tool never receives a Ratatui frame, terminal handle, or direct drawing callback.
+
+### Requirement: Hosted execution remains adapter-compatible
+
+r[agent_harness_runtime.ratatui_tool_host.adapter_compat] Hosted tools MUST execute around validated `ToolRequest` and `ToolResponse` values and MUST preserve the existing simple `ToolAdapter` path for noninteractive tools.
+
+#### Scenario: Simple tool runs without TUI services
+
+r[agent_harness_runtime.ratatui_tool_host.adapter_compat.simple]
+- GIVEN a noninteractive tool implements the existing simple tool adapter contract
+- WHEN the runtime dispatches the tool in a headless or test host
+- THEN the tool runs without requiring any TUI host service
+- AND the response still crosses the validated `ToolResponse` boundary.
+
+### Requirement: Interactive commands are finite and correlated
+
+r[agent_harness_runtime.ratatui_tool_host.commands] Interactive tool requests for host input MUST expose finite command choices with a correlation identity, and hosts MUST answer with typed decisions such as approve, deny, continue, or cancel rather than unbounded terminal-specific input.
+
+#### Scenario: Approval denial fails safely
+
+r[agent_harness_runtime.ratatui_tool_host.commands.denied]
+- GIVEN a tool requests approval for a capability-bearing action through the host bridge
+- WHEN the Ratatui host returns a denial decision for the matching correlation identity
+- THEN runtime reports a typed denied or cancelled tool result
+- AND the guarded tool action is not executed after the denial.
+
+### Requirement: Render model is pure and replayable
+
+r[agent_harness_runtime.ratatui_tool_host.render_model] The Ratatui-compatible shell MUST derive visible tool/session state by applying a pure reducer over typed runtime and tool-host events, with terminal I/O, polling, cleanup, channels, and redraw orchestration isolated in the shell.
+
+#### Scenario: Test backend reproduces visible state
+
+r[agent_harness_runtime.ratatui_tool_host.render_model.test_backend]
+- GIVEN a recorded sequence of runtime and tool-host events
+- WHEN the render reducer and a Ratatui test backend render the sequence
+- THEN the visible panels show the expected session summary, active tool state, approval prompt, progress, final result, or failure state
+- AND the test does not require a real terminal.
+
+### Requirement: Terminal failures do not corrupt runtime state
+
+r[agent_harness_runtime.ratatui_tool_host.failure_isolation] Terminal setup failures, render errors, dropped event consumers, closed command channels, and cancellation signals MUST surface as typed host errors or cancellation events without corrupting core state, bypassing tool policy, or leaking unbounded tool output.
+
+#### Scenario: Dropped TUI consumer cancels interactive wait
+
+r[agent_harness_runtime.ratatui_tool_host.failure_isolation.dropped_consumer]
+- GIVEN an interactive tool is waiting for a host approval decision
+- WHEN the TUI event consumer or command channel closes
+- THEN the hosted execution path returns a typed cancellation or host-unavailable failure
+- AND no pending guarded action is executed by default.
+
+### Requirement: TUI host verification rails
+
+r[agent_harness_runtime.ratatui_tool_host.verification] The TUI host surface MUST include focused positive and negative verification for dependency isolation, host bridge event handling, simple adapter compatibility, approval denial, cancellation, pure render reduction, terminal test-backend rendering, and safe failure isolation before closeout.
+
+#### Scenario: Closeout evidence covers TUI and non-TUI hosts
+
+r[agent_harness_runtime.ratatui_tool_host.verification.closeout]
+- GIVEN maintainers intend to archive the Ratatui-compatible tool host change
+- WHEN closeout validation runs
+- THEN evidence names focused bridge tests, render reducer tests, Ratatui test-backend tests, dependency-isolation checks, workspace checks, Cairn validation, and Cairn gates
+- AND any skipped TUI dogfood or live terminal check is recorded as a non-claim with a blocker and next-best validation.
+
+### Requirement: UI-neutral host topology DTOs
+
+r[agent_harness_runtime.host_control.topology_dtos] Animus MUST define UI-neutral host-control DTOs for workspaces, tabs, panes, agents, labels, cwd or provenance summaries, focus state, rename and close operations, revision metadata, and selected semantic status fields without embedding TUI, PTY, socket, or terminal rendering types.
+
+#### Scenario: Topology command validates selectors
+
+r[agent_harness_runtime.host_control.topology_dtos.validation]
+- GIVEN a host-control command targets a workspace, tab, pane, or agent selector
+- WHEN command validation runs
+- THEN valid selectors and supported operations are admitted as typed host commands
+- AND missing selectors, stale selectors, cross-host selectors, duplicate labels, and unsupported operations are rejected with typed diagnostics.
+
+### Requirement: Selector lifetime is explicit
+
+r[agent_harness_runtime.host_control.selector_lifetime] Host-control selectors MUST distinguish live-session selectors from host-declared durable identities, and callers MUST NOT treat compact live topology IDs as durable across topology changes unless the host marks them durable.
+
+#### Scenario: Compact live selector is not durable
+
+r[agent_harness_runtime.host_control.selector_lifetime.not_durable]
+- GIVEN a pane selector was returned before a tab or pane topology change
+- WHEN a caller tries to reuse that selector after the host reports a revision change
+- THEN validation requires re-resolution or matching revision evidence
+- AND the selector is not accepted as a durable identity by default.
+
+### Requirement: Bounded host output reads
+
+r[agent_harness_runtime.host_control.bounded_reads] Host output reads MUST return bounded view DTOs with source class, line and byte counts, truncation status, redaction status, safe references, and optional BLAKE3 content hashes rather than unbounded transcripts.
+
+#### Scenario: Large output is truncated explicitly
+
+r[agent_harness_runtime.host_control.bounded_reads.truncated]
+- GIVEN a host pane has more output than the requested bounded view allows
+- WHEN a caller requests recent output
+- THEN the response contains only the bounded view
+- AND line count, byte count, truncation status, redaction status, and optional safe hash metadata make the omission explicit.
+
+### Requirement: Declarative layout contract
+
+r[agent_harness_runtime.host_control.layout_contract] Animus SHOULD define declarative layout export and apply DTOs for pane and split trees, labels, cwd summaries, optional command descriptors, focus, and zoom state, while explicitly separating layout reconstruction from live process preservation.
+
+#### Scenario: Layout apply does not claim live process preservation
+
+r[agent_harness_runtime.host_control.layout_contract.apply]
+- GIVEN a host applies a declarative layout tree to create or replace a tab
+- WHEN the layout apply response is produced
+- THEN it reports created topology and focus state
+- AND it does not claim that previous live PTYs, scrollback, or running processes were preserved unless a separate host capability provides that evidence.
+
+### Requirement: Event subscriptions and waits share semantics
+
+r[agent_harness_runtime.host_control.events_waits] Event subscriptions and one-shot waits MUST use the same typed event and semantic status contracts for agent status changes, output matches, pane lifecycle, cancellation, timeout, and host errors.
+
+#### Scenario: Wait timeout is typed
+
+r[agent_harness_runtime.host_control.events_waits.timeout]
+- GIVEN a caller waits for an agent to reach `done`
+- AND the semantic state does not reach `done` before the requested timeout
+- WHEN the wait completes
+- THEN the response is a typed timeout outcome
+- AND it does not fabricate a terminal command completion or final agent result.
+
+### Requirement: Transport-neutral command envelopes
+
+r[agent_harness_runtime.host_control.transport_neutral] Host-control commands, responses, errors, and events MUST be transport-neutral DTOs with correlation IDs, typed errors, feature negotiation, and unknown-field handling; sockets, named pipes, CLI wrappers, PTYs, and terminal rendering MUST remain host adapter concerns.
+
+#### Scenario: Command validation needs no IPC server
+
+r[agent_harness_runtime.host_control.transport_neutral.no_ipc_dependency]
+- GIVEN a command envelope and host capability snapshot are available in memory
+- WHEN reusable validation logic checks the command
+- THEN validation succeeds or fails deterministically over those inputs
+- AND no socket, named pipe, PTY, terminal renderer, or CLI wrapper is required.
+
+### Requirement: Host control verification
+
+r[agent_harness_runtime.host_control.verification] The adaptation MUST include focused positive and negative tests for topology DTOs, selector lifetime, bounded reads, layout export/apply, event subscriptions, waits, typed errors, feature negotiation, unknown fields, and transport-neutral validation.
+
+#### Scenario: Closeout evidence covers host-control rails
+
+r[agent_harness_runtime.host_control.verification.closeout]
+- GIVEN maintainers intend to archive the Host control protocol adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused topology, selector, bounded-read, layout, event/wait, transport-neutral, workspace, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a blocker and next-best validation.
+
+### Requirement: Explicit restore matrix
+
+r[agent_harness_runtime.session_restore.restore_matrix] Animus MUST define typed restore modes and capability claims for live process persistence, snapshot layout restore, bounded history replay, native agent session resume, handoff-style transfer, and safe fallback.
+
+#### Scenario: Restore claim states what survived
+
+r[agent_harness_runtime.session_restore.restore_matrix.claims]
+- GIVEN a host reports a restored session plan
+- WHEN Animus validates the plan
+- THEN each restored target explicitly states whether process state survived, layout was reconstructed, display history was replayed, or native conversation resume was requested
+- AND no mode implies stronger survival than the host capability evidence supports.
+
+### Requirement: Safe native session references
+
+r[agent_harness_runtime.session_restore.native_session_reference] Native agent session references MUST be represented as safe typed records with source, agent, kind, bounded value identity, freshness, uniqueness scope, and resume capability metadata before any host attempts resume.
+
+#### Scenario: Invalid reference degrades to fallback
+
+r[agent_harness_runtime.session_restore.native_session_reference.invalid]
+- GIVEN a restore snapshot contains a missing, malformed, duplicated, stale, unsupported, or sensitive native session reference
+- WHEN restore planning evaluates that reference
+- THEN Animus rejects native resume for that target with a typed diagnostic
+- AND the plan degrades to an explicit safe fallback instead of claiming conversation continuity.
+
+### Requirement: History replay is opt-in and display-only
+
+r[agent_harness_runtime.session_restore.history_replay] Pane or transcript history replay MUST be disabled by default, and when enabled MUST be bounded, redacted, classified as display replay, and excluded from model-visible context unless separately admitted by policy.
+
+#### Scenario: Replayed history cannot masquerade as live context
+
+r[agent_harness_runtime.session_restore.history_replay.safe]
+- GIVEN a restore snapshot includes recent display history
+- WHEN history replay planning runs
+- THEN the replay metadata records redaction and truncation status
+- AND the replay is not treated as a live process, native conversation resume, or model-visible context by default.
+
+### Requirement: Restore execution is host-owned
+
+r[agent_harness_runtime.session_restore.host_owned_execution] Reusable Animus runtime crates MUST validate snapshots and produce restore plans without spawning processes, reading files, opening PTYs, constructing shell commands, transferring terminals, or inspecting environment state.
+
+#### Scenario: Pure restore planning has no ambient I/O
+
+r[agent_harness_runtime.session_restore.host_owned_execution.no_ambient_io]
+- GIVEN restore planning receives typed snapshots, host capability declarations, session references, and policy inputs in memory
+- WHEN planning runs
+- THEN the returned plan is deterministic over those inputs
+- AND no reusable runtime code performs filesystem, terminal, process, network, clock, or environment I/O.
+
+### Requirement: Degraded restore outcomes are explicit
+
+r[agent_harness_runtime.session_restore.degraded_outcomes] Unsupported agents, unavailable resume services, failed handoff claims, invalid snapshots, and denied history replay MUST produce explicit degraded-restore outcomes and safe receipts rather than silent blank-shell fallbacks.
+
+#### Scenario: Fallback cannot claim successful resume
+
+r[agent_harness_runtime.session_restore.degraded_outcomes.no_false_claims]
+- GIVEN native resume is unavailable for a restored target
+- WHEN the host creates a fallback shell or replacement process
+- THEN the outcome records fallback status and reason
+- AND receipts do not claim process survival, handoff success, native resume, or conversation continuity.
+
+### Requirement: Restore verification
+
+r[agent_harness_runtime.session_restore.verification] The adaptation MUST include focused positive and negative tests for restore matrix claims, native session references, history replay safety, pure restore planning, host-owned execution, degraded outcomes, and false-survival-claim rejection.
+
+#### Scenario: Closeout evidence covers restore rails
+
+r[agent_harness_runtime.session_restore.verification.closeout]
+- GIVEN maintainers intend to archive the session restore adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused restore matrix, native reference, history replay, host-owned execution, degraded outcome, workspace, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a blocker and next-best validation.
+
+### Requirement: Typed multimodal image parts
+
+r[agent_harness_runtime.multimodal_image_payloads.typed_parts] Animus MUST represent image inputs as typed multimodal content parts with safe source labels, media type, byte count, BLAKE3 content identity, source trust metadata, and optional host-supplied image metadata, and MUST NOT place raw image bytes, base64 payloads, data URLs, credentials, or private absolute paths in reusable runtime content DTOs.
+
+#### Scenario: Valid image descriptor is admitted
+
+r[agent_harness_runtime.multimodal_image_payloads.typed_parts.validation]
+- GIVEN a host-admitted image reference has a safe label, supported image media type, byte count, BLAKE3 content identity, and source trust metadata
+- WHEN multimodal content-part validation runs
+- THEN Animus accepts an image content part that can be ordered with text parts
+- AND the reusable runtime DTO contains no raw image bytes, base64 payload, data URL, credential, or private absolute path.
+
+#### Scenario: Malformed image descriptor is rejected
+
+r[agent_harness_runtime.multimodal_image_payloads.typed_parts.invalid]
+- GIVEN an image descriptor has an invalid media type, missing content identity, missing byte count, raw bytes, base64, a data URL, or a private absolute path
+- WHEN multimodal content-part validation runs
+- THEN Animus rejects the descriptor with a typed diagnostic
+- AND no provider dispatch can be constructed from that descriptor.
+
+### Requirement: Prompt assembly preserves image order and outcomes
+
+r[agent_harness_runtime.multimodal_image_payloads.prompt_assembly] Prompt/model request assembly MUST preserve deterministic ordering of text and image content parts after policy admission and budget decisions, and MUST report explicit included, rejected, or unavailable outcomes for every requested image part before provider dispatch.
+
+#### Scenario: Mixed text and image prompt keeps order
+
+r[agent_harness_runtime.multimodal_image_payloads.prompt_assembly.order]
+- GIVEN an admitted prompt contains text before and after an image part
+- WHEN prompt assembly builds model-visible content
+- THEN the assembled request preserves the relative text and image ordering
+- AND any rejected or unavailable image part is represented by an explicit outcome instead of being silently dropped.
+
+### Requirement: Image dispatch is capability gated
+
+r[agent_harness_runtime.multimodal_image_payloads.capability_gate] Provider dispatch MUST require selected provider/model capability metadata that advertises image input support before sending image content parts, and MUST fail closed when image support is absent, disabled, or unavailable.
+
+#### Scenario: Unsupported model rejects image request
+
+r[agent_harness_runtime.multimodal_image_payloads.capability_gate.unsupported]
+- GIVEN an assembled request contains an image content part
+- AND the selected model metadata does not advertise image input support
+- WHEN dispatch preparation runs
+- THEN Animus returns a typed unsupported-modality diagnostic
+- AND it does not silently switch providers, downgrade to text-only input, or call a provider adapter.
+
+### Requirement: Host adapters own image bytes and native serialization
+
+r[agent_harness_runtime.multimodal_image_payloads.adapter_serialization] Image byte loading, MIME sniffing, decoding, resizing, transcoding, remote handle resolution, and provider-specific URL/base64/file-handle serialization MUST live in host/provider adapters behind injected services, while reusable runtime crates validate descriptors and dispatch decisions only.
+
+#### Scenario: Provider-native fixture serializes image request
+
+r[agent_harness_runtime.multimodal_image_payloads.adapter_serialization.fixtures]
+- GIVEN a provider adapter receives a validated image descriptor and an approved injected image payload service
+- WHEN provider request serialization runs against a fixture
+- THEN the adapter emits the provider-native image request shape expected by that fixture
+- AND tests fail if serialization relies on lossy generic JSON conversion, requires a live provider call, or omits the image part.
+
+### Requirement: Safe image receipts and ledger metadata
+
+r[agent_harness_runtime.multimodal_image_payloads.safe_receipts] Multimodal receipts and session-ledger records MUST store safe image provenance only, including modality, status, safe label or hash, media type, byte count, optional dimensions, truncation or rejection status, adapter class, and BLAKE3 content identity, and MUST reject raw image bytes, base64/data URLs, full private paths, credentials, and unbounded provider payloads.
+
+#### Scenario: Image metadata leak is rejected
+
+r[agent_harness_runtime.multimodal_image_payloads.safe_receipts.rejects_leaks]
+- GIVEN an image receipt fixture contains raw image bytes, base64, a data URL, a full private path, a credential-looking value, or an unbounded provider payload
+- WHEN receipt metadata validation runs
+- THEN validation rejects the fixture with a typed leak diagnostic
+- AND the invalid fixture is not accepted as durable lifecycle evidence.
+
+### Requirement: Multimodal image verification
+
+r[agent_harness_runtime.multimodal_image_payloads.verification] The adaptation MUST include focused positive and negative tests for image content-part validation, prompt ordering, provider capability gating, host image-service injection, provider-native serialization fixtures, unsupported models, malformed descriptors, oversized inputs, missing services, lossy conversions, and safe receipt validation.
+
+#### Scenario: Closeout evidence covers image payload rails
+
+r[agent_harness_runtime.multimodal_image_payloads.verification.closeout]
+- GIVEN maintainers intend to archive the multimodal image payload adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused content-part, prompt assembly, capability gate, adapter serialization, receipt leak, workspace, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Permission modes are advisory defaults
+
+r[agent_harness_runtime.zerostack_permission_kernel.modes] Animus MUST define typed permission modes for restrictive, read-only, guarded, standard, and yolo-style UX defaults, and those modes MUST remain advisory beneath authority, capability, sandbox, and redaction checks.
+
+#### Scenario: Yolo mode cannot bypass authority
+
+r[agent_harness_runtime.zerostack_permission_kernel.modes.authority]
+- GIVEN a guarded action lacks required authority or sandbox allowance
+- AND the active permission mode would locally allow the action
+- WHEN permission resolution runs
+- THEN the action is denied before adapter dispatch
+- AND the receipt separates local mode outcome from missing authority.
+
+### Requirement: Pattern rule descriptors
+
+r[agent_harness_runtime.zerostack_permission_kernel.pattern_rules] Permission rule descriptors MUST support glob-like and regex-like match kinds over action class and resource label with explicit source identity, trust scope, precedence, and allow, ask, or deny outcome.
+
+#### Scenario: Malformed pattern cannot authorize
+
+r[agent_harness_runtime.zerostack_permission_kernel.pattern_rules.invalid]
+- GIVEN a rule descriptor has an unknown match kind, unsupported outcome, missing action class, invalid regex, or absent source identity
+- WHEN rule validation runs
+- THEN validation returns typed diagnostics
+- AND the rule cannot authorize, prompt for, or deny an action.
+
+### Requirement: Scoped session allowlists
+
+r[agent_harness_runtime.zerostack_permission_kernel.session_allowlist] Session allowlist entries MUST be scoped to action identity, redacted resource identity or hash, policy identity, session identity, and invalidation metadata before they can satisfy an ask decision.
+
+#### Scenario: Stale allowlist entry is rejected
+
+r[agent_harness_runtime.zerostack_permission_kernel.session_allowlist.stale]
+- GIVEN an allowlist entry was created for a different action, resource, policy hash, or session
+- WHEN permission resolution evaluates the entry
+- THEN the entry is rejected as stale or mismatched
+- AND the action remains unexecuted until another valid decision is provided.
+
+### Requirement: Repeated action detection
+
+r[agent_harness_runtime.zerostack_permission_kernel.repeated_action] Animus SHOULD detect repeated identical guarded action identities and return policy-selected outcomes for coach, ask, deny, or ignore without directly dispatching the repeated action first.
+
+#### Scenario: Repeated destructive action is denied
+
+r[agent_harness_runtime.zerostack_permission_kernel.repeated_action.deny]
+- GIVEN policy marks an action class as destructive when repeated with the same resource identity
+- AND the repeated action threshold has been reached
+- WHEN permission resolution runs for the repeated action
+- THEN the resolver returns a denied repeated-action outcome
+- AND no filesystem, process, network, model, or tool adapter is called.
+
+### Requirement: Safe permission receipts
+
+r[agent_harness_runtime.zerostack_permission_kernel.receipts] Permission receipts MUST record bounded metadata for action class, redacted resource identity or BLAKE3 resource hash, matched rule identity, mode outcome, authority outcome, repeated-action status, prompt-decision status, and final decision.
+
+#### Scenario: Receipt omits sensitive request material
+
+r[agent_harness_runtime.zerostack_permission_kernel.receipts.redacted]
+- GIVEN a permission request contains a prompt, credential-looking value, provider payload, full host path, or raw tool body
+- WHEN a permission receipt is produced
+- THEN the sensitive value is omitted or represented only by an approved redaction marker or BLAKE3 hash
+- AND the receipt still includes enough typed reason codes to audit the decision.
+
+### Requirement: Typed prompt profile descriptors
+
+r[agent_harness_runtime.zerostack_prompt_profiles.descriptors] Animus MUST represent prompt profiles as typed descriptors with profile ID, purpose, action posture, required capabilities, source identity, trust scope, precedence, body text, and prompt-inclusion policy.
+
+#### Scenario: Untrusted profile is not silently injected
+
+r[agent_harness_runtime.zerostack_prompt_profiles.descriptors.untrusted]
+- GIVEN a prompt profile comes from an untrusted source or lacks source identity
+- WHEN prompt assembly evaluates the profile
+- THEN the profile is rejected or withheld pending host admission according to policy
+- AND its body text is not silently injected into model-visible context.
+
+### Requirement: Prompt directives are parsed metadata
+
+r[agent_harness_runtime.zerostack_prompt_profiles.directives] Prompt directives such as mode or chain hints MUST be parsed into typed metadata before prompt assembly and MUST NOT remain hidden control syntax in model-visible profile body text.
+
+#### Scenario: Unknown mode directive fails closed
+
+r[agent_harness_runtime.zerostack_prompt_profiles.directives.invalid]
+- GIVEN a profile body contains a directive with an unknown mode, malformed syntax, unsupported chain target, or duplicate exclusive directive
+- WHEN directive parsing runs
+- THEN parsing returns typed diagnostics
+- AND the directive cannot change runtime mode or continuation state.
+
+### Requirement: Profile-requested modes are policy inputs
+
+r[agent_harness_runtime.zerostack_prompt_profiles.mode_binding] Profile-requested permission modes MUST flow through permission policy and MUST NOT grant authority, suppress required approvals, or weaken sandbox constraints.
+
+#### Scenario: Code profile cannot grant write authority
+
+r[agent_harness_runtime.zerostack_prompt_profiles.mode_binding.no_grant]
+- GIVEN a code profile requests a write-capable posture
+- AND authority or policy denies the target write action
+- WHEN the runtime resolves the write request
+- THEN the write remains denied or ask-gated according to permission policy
+- AND the profile request is recorded only as posture metadata.
+
+### Requirement: Chain-of-prompts continuation plans
+
+r[agent_harness_runtime.zerostack_prompt_profiles.chain] Animus SHOULD support chain-of-prompts continuation plans that declare source profile, target profile, transition condition, user or host decision, and bounded additional instruction text.
+
+#### Scenario: Chain transition is declined
+
+r[agent_harness_runtime.zerostack_prompt_profiles.chain.declined]
+- GIVEN a prompt profile has a configured transition to another profile
+- WHEN the user or host declines the transition
+- THEN the active profile does not change
+- AND the declined transition is recorded as safe metadata rather than model-visible instruction.
+
+### Requirement: Prompt profile receipts
+
+r[agent_harness_runtime.zerostack_prompt_profiles.receipts] Prompt profile assembly SHOULD emit bounded receipts naming profile IDs, source identities, directive outcomes, chain decisions, prompt section hashes, and omitted-profile reasons without exposing raw secrets or unbounded profile bodies.
+
+#### Scenario: Receipt uses hashes for sensitive profile body
+
+r[agent_harness_runtime.zerostack_prompt_profiles.receipts.hashes]
+- GIVEN a profile body is not safe to include in durable evidence
+- WHEN a prompt profile receipt is emitted
+- THEN the body is represented by a BLAKE3 hash and redaction marker
+- AND source identity, profile ID, and decision reason remain reviewable.
+
+### Requirement: Bounded Claude Code memory reference
+
+r[agent_harness_runtime.claude_code_memory.scope] Animus MUST treat Claude Code memory as a bounded reference for project instructions, session preferences, and learned facts, and MUST NOT adopt Claude Code prompt text, hidden memory writes, provider-specific semantics, or `CLAUDE.md` as the canonical Animus storage contract.
+
+#### Scenario: Compatibility import remains non-authoritative
+
+r[agent_harness_runtime.claude_code_memory.scope.compat_import]
+- GIVEN a host imports project guidance from a Claude Code-style file
+- WHEN Animus prepares prompt context
+- THEN the imported content is represented as typed Animus descriptors
+- AND the original file format does not bypass trust, policy, validation, or redaction checks.
+
+### Requirement: Typed instruction and memory descriptors
+
+r[agent_harness_runtime.claude_code_memory.descriptors] Instruction and learned-memory inputs MUST be represented as typed descriptors with stable ID, source identity, trust scope, precedence class, freshness state, prompt-inclusion policy, and redaction metadata.
+
+#### Scenario: Malformed descriptor is rejected
+
+r[agent_harness_runtime.claude_code_memory.descriptors.invalid]
+- GIVEN a memory descriptor is missing source identity, trust scope, or prompt-inclusion policy
+- WHEN descriptor validation runs
+- THEN validation returns a typed malformed-descriptor error
+- AND the descriptor cannot influence prompt assembly.
+
+### Requirement: Deterministic prompt assembly with attribution
+
+r[agent_harness_runtime.claude_code_memory.prompt_assembly] Prompt assembly MUST deterministically order admitted instruction and memory descriptors by policy-defined precedence and MUST preserve source attribution for every included prompt section.
+
+#### Scenario: Conflicting layers produce diagnostics
+
+r[agent_harness_runtime.claude_code_memory.prompt_assembly.conflict]
+- GIVEN trusted user, project, and session descriptors contain conflicting guidance for the same prompt section
+- WHEN prompt assembly evaluates the descriptors
+- THEN the selected precedence order is deterministic
+- AND the assembly result includes a conflict diagnostic that names descriptor IDs without exposing redacted bodies.
+
+### Requirement: Learned memory admission gate
+
+r[agent_harness_runtime.claude_code_memory.admission] Learned memory candidates MUST require an injected host admission decision before they persist or influence future model prompts.
+
+#### Scenario: Unadmitted candidate is not reused
+
+r[agent_harness_runtime.claude_code_memory.admission.denied]
+- GIVEN runtime proposes a memory candidate from a prior turn
+- WHEN the host denies or omits admission
+- THEN the candidate is not stored for future prompt influence
+- AND the receipt records the denied admission status without embedding the raw candidate body.
+
+### Requirement: Swappable memory adapter boundary
+
+r[agent_harness_runtime.claude_code_memory.adapter_boundary] Memory discovery, storage, deletion, compatibility import, provider-assisted extraction, and admission MUST be represented as swappable injected adapter contracts that exchange typed descriptor, candidate, and admission DTOs; reusable core/runtime logic MUST NOT depend on a concrete memory database, file format, provider client, or host path layout.
+
+#### Scenario: Memory backend swap preserves reusable behavior
+
+r[agent_harness_runtime.claude_code_memory.adapter_boundary.swappable]
+- GIVEN two hosts provide different memory source, store, importer, or extraction adapters
+- WHEN they supply the same validated descriptors and admission outcomes to prompt assembly
+- THEN reusable Animus logic produces equivalent prompt sections, diagnostics, and receipts
+- AND missing adapters produce explicit unavailable outcomes rather than fallback ambient storage or discovery.
+
+### Requirement: Safe memory influence receipts
+
+r[agent_harness_runtime.claude_code_memory.receipts] Memory receipts MUST record safe metadata for prompt influence, including descriptor IDs, source labels, trust status, freshness state, inclusion status, redaction classes, and BLAKE3 hashes for redacted bodies, and MUST NOT include raw credentials, raw provider payloads, absolute path dumps, or unbounded prompt text.
+
+#### Scenario: Secret-looking memory body is redacted
+
+r[agent_harness_runtime.claude_code_memory.receipts.redacted]
+- GIVEN an admitted memory descriptor body matches host redaction policy
+- WHEN prompt-influence receipts are emitted
+- THEN the receipt includes redaction class and BLAKE3 body hash metadata
+- AND the raw body is absent from model-visible receipts and audit metadata.
+
+### Requirement: Separate opt-in controls for memory use and generation
+
+r[agent_harness_runtime.openai_codex_opt_in_memories.policy_controls] Animus memories MUST have independent opt-in controls for using existing memories and generating new memories at user, project, and thread scopes.
+
+#### Scenario: Missing consent blocks memory generation
+
+r[agent_harness_runtime.openai_codex_opt_in_memories.policy_controls.consent]
+- GIVEN a thread does not allow memory generation
+- WHEN the thread ends with content that would otherwise be memorable
+- THEN Animus does not create a memory-generation request
+- AND the report records memory generation as disabled for that thread scope.
+
+### Requirement: Evidence-backed memory records
+
+r[agent_harness_runtime.openai_codex_opt_in_memories.record_contract] Memory records MUST include kind, summary, scope, freshness, source thread identity, supporting evidence handles, redaction status, and confidence.
+
+#### Scenario: Malformed memory record is rejected
+
+r[agent_harness_runtime.openai_codex_opt_in_memories.record_contract.validation]
+- GIVEN a generated memory record has no source thread identity or evidence handle
+- WHEN Animus validates the memory record
+- THEN validation rejects the record
+- AND the memory is not eligible for future prompt injection.
+
+### Requirement: Swappable memory storage and extraction boundary
+
+r[agent_harness_runtime.openai_codex_opt_in_memories.adapter_boundary] Memory storage, retrieval, search, update/delete, and provider-assisted extraction MUST be represented as swappable injected adapter contracts that exchange typed memory records, generation requests, extraction outcomes, and availability statuses; reusable core/runtime logic MUST NOT depend on a concrete memory database, vector index, provider extractor, or host path layout.
+
+#### Scenario: Alternate backend preserves memory semantics
+
+r[agent_harness_runtime.openai_codex_opt_in_memories.adapter_boundary.swappable]
+- GIVEN two hosts back memories with different storage or extraction implementations
+- WHEN the same validated memory records, extraction outcomes, and policy decisions reach reusable logic
+- THEN generation eligibility, prompt injection, and ledgers use only typed adapter DTOs and produce equivalent reusable outcomes
+- AND missing adapters produce explicit unavailable outcomes rather than ambient fallback storage, search, or extraction.
+
+### Requirement: Conservative memory generation eligibility
+
+r[agent_harness_runtime.openai_codex_opt_in_memories.generation_eligibility] Memory generation MUST be denied for threads without consent, disallowed external context, secret-bearing content, failed redaction, or exhausted memory-generation budget.
+
+#### Scenario: External context prevents memory generation
+
+r[agent_harness_runtime.openai_codex_opt_in_memories.generation_eligibility.exclusions]
+- GIVEN a thread consumed external context that policy marks ineligible for persistence
+- WHEN memory generation is considered
+- THEN Animus skips memory generation for that thread
+- AND the skip reason is recorded without storing the external context body.
+
+### Requirement: Bounded memory injection ledger
+
+r[agent_harness_runtime.openai_codex_opt_in_memories.injection_ledger] Prompt assembly MUST record included, skipped, expired, redacted, and over-budget memories with source attribution and bounded content.
+
+#### Scenario: Memory injection is bounded
+
+r[agent_harness_runtime.openai_codex_opt_in_memories.injection_ledger.bounded]
+- GIVEN available memories exceed the configured memory context budget
+- WHEN Animus assembles prompt context
+- THEN only policy-selected bounded memory summaries are injected
+- AND skipped memories are recorded by identity and reason.
+
+### Requirement: Memories are non-authoritative context
+
+r[agent_harness_runtime.openai_codex_opt_in_memories.non_authoritative] Animus MUST treat memories as optional context and MUST keep required rules in guidance, policy, or checked-in contracts.
+
+#### Scenario: Disabled memories do not disable required rules
+
+r[agent_harness_runtime.openai_codex_opt_in_memories.non_authoritative.guidance]
+- GIVEN memories are disabled for a run
+- WHEN prompt assembly loads required project guidance and policy
+- THEN those required rules remain active
+- AND no memory state is required for the rules to apply.
+
+### Requirement: Bounded MCP bridge reference
+
+r[agent_harness_runtime.claude_code_mcp.scope] Animus MUST treat Claude Code MCP support as a bounded interoperability reference, and MUST NOT make MCP a core dependency, auto-discover or auto-trust servers, execute network or process transports from reusable core crates, or replace Animus-owned tool contracts.
+
+#### Scenario: Untrusted MCP server is not advertised
+
+r[agent_harness_runtime.claude_code_mcp.scope.untrusted]
+- GIVEN a host discovers or names an MCP server without a trust decision and explicit registration
+- WHEN tool registry construction runs
+- THEN the server's tools are not advertised to the model
+- AND no server process, network connection, or transport probe is started by reusable runtime code.
+
+### Requirement: MCP descriptors map into Animus tools
+
+r[agent_harness_runtime.claude_code_mcp.mapping] MCP server and tool descriptors MUST be converted into Animus tool definitions with name, schema identity, capability labels, source metadata, result bounds, and resource/ability policy references before dispatch.
+
+#### Scenario: Incomplete MCP mapping is rejected
+
+r[agent_harness_runtime.claude_code_mcp.mapping.incomplete]
+- GIVEN an MCP tool descriptor lacks strict schema identity, capability labels, result bounds, source metadata, or policy resource mapping
+- WHEN bridge mapping validation runs
+- THEN validation returns typed diagnostics
+- AND the tool is not registered as an Animus tool.
+
+### Requirement: MCP dispatch follows normal permission and capability checks
+
+r[agent_harness_runtime.claude_code_mcp.dispatch] MCP-backed tool dispatch MUST pass Animus argument validation, permission resolution, capability authorization, mutation coordination, and result-bound checks before the response is accepted.
+
+#### Scenario: Denied MCP capability prevents call
+
+r[agent_harness_runtime.claude_code_mcp.dispatch.denied]
+- GIVEN an MCP-backed tool maps to a network or filesystem capability denied by current policy
+- WHEN the model requests that tool
+- THEN dispatch returns a typed denied-capability failure
+- AND the MCP server adapter is not called.
+
+### Requirement: MCP transport lifecycle is host-owned
+
+r[agent_harness_runtime.claude_code_mcp.transport] MCP process management, sockets, network access, authentication, server discovery, retries, clocks, and cancellation MUST remain host-owned adapter behavior with typed unavailable, unsupported, denied, timeout, and malformed-response failures.
+
+#### Scenario: Unsupported MCP transport fails safely
+
+r[agent_harness_runtime.claude_code_mcp.transport.unsupported]
+- GIVEN a registered MCP tool requires a transport unsupported by the selected host adapter
+- WHEN dispatch attempts to prepare the call
+- THEN runtime reports an unsupported-transport failure
+- AND no fallback shell command, network probe, or provider call is attempted.
+
+### Requirement: Safe MCP bridge receipts
+
+r[agent_harness_runtime.claude_code_mcp.receipts] MCP bridge receipts MUST include safe metadata such as server label, tool name, capability labels, schema identity, status class, redacted resource identity, truncation status, and BLAKE3 hashes, and MUST NOT include raw transport payloads, credentials, full paths, provider payloads, or unbounded external results by default.
+
+#### Scenario: Malformed MCP response is redacted
+
+r[agent_harness_runtime.claude_code_mcp.receipts.malformed]
+- GIVEN an MCP server returns a malformed or oversized response
+- WHEN the bridge records the failure
+- THEN the receipt records status class, schema identity, truncation state, and safe hashes
+- AND raw transport payloads and sensitive fields are omitted from receipts and model-visible context.
+
+### Requirement: Bounded Sandlock adaptation scope
+
+r[agent_harness_runtime.sandlock_sandbox.scope] Animus MUST treat Sandlock as a bounded reference for Linux sandbox-enforcement patterns, including Landlock-style filesystem and network constraints, seccomp-bpf syscall filtering, seccomp user-notification supervision, COW workdir staging, resource-limit supervision, deterministic execution controls, and network/HTTP ACL intent, and MUST NOT vendor Sandlock, require Sandlock as a runtime dependency, copy its CLI/profile format as the Animus descriptor contract, or expose Linux kernel APIs from `animus-core` as part of this adaptation.
+
+#### Scenario: Scope review rejects dependency coupling
+
+r[agent_harness_runtime.sandlock_sandbox.scope.review]
+- GIVEN a proposed change vendors Sandlock, shells out to the Sandlock CLI from core crates, copies Sandlock profile TOML as the Animus descriptor format, or exposes Landlock/seccomp implementation details through `animus-core`
+- WHEN maintainers compare it with the bounded adaptation scope
+- THEN the change is rejected or split until the portable Animus descriptor boundary and std-shell enforcement boundary are restored
+- AND the review names the Sandlock behavior only as reference evidence.
+
+### Requirement: Portable sandbox descriptors
+
+r[agent_harness_runtime.sandlock_sandbox.descriptor] Animus sandbox descriptors MUST be represented as typed portable execution constraints covering filesystem read/write intent, workdir and COW write disposition, process/resource limits, environment visibility, network egress and bind policy, optional HTTP method/host/path policy, deterministic time/randomness controls, and whether enforcement is required before host dispatch.
+
+#### Scenario: Descriptor captures intent without kernel details
+
+r[agent_harness_runtime.sandlock_sandbox.descriptor.intent]
+- GIVEN a guarded process or tool action requires sandboxed execution
+- WHEN the runtime receives the sandbox descriptor
+- THEN the descriptor names portable constraint intent rather than raw seccomp programs, Landlock ABI values, kernel constants, or Sandlock CLI flags
+- AND missing, empty, duplicate, or unknown required fields fail descriptor validation before dispatch.
+
+### Requirement: Pure descriptor normalization
+
+r[agent_harness_runtime.sandlock_sandbox.normalization] Descriptor parsing, normalization, conflict detection, unsupported-field diagnostics, and receipt-safe projection MUST be pure deterministic logic over typed inputs and MUST NOT read the filesystem, inspect the environment, spawn processes, consult clocks, probe kernels, or mutate host state.
+
+#### Scenario: Conflicting descriptor fails in the core path
+
+r[agent_harness_runtime.sandlock_sandbox.normalization.conflict]
+- GIVEN a descriptor combines mutually exclusive network allowlist and denylist modes or combines incompatible COW commit and dry-run write dispositions
+- WHEN descriptor normalization runs
+- THEN it returns typed diagnostics naming the conflicting constraint classes
+- AND no platform adapter, process executor, filesystem operation, network operation, or kernel probe is invoked.
+
+### Requirement: Policy-reviewed sandbox constraints
+
+r[agent_harness_runtime.sandlock_sandbox.policy] Sandbox descriptor fields MUST be checked against Nickel-authored policy fixtures or contracts before dispatch so unknown, denied, or out-of-profile constraint classes fail before platform enforcement begins.
+
+#### Scenario: Policy denies unsupported constraint class
+
+r[agent_harness_runtime.sandlock_sandbox.policy.denied]
+- GIVEN a descriptor requests HTTP interception, COW commit, broad filesystem write access, or unrestricted network egress
+- AND the active policy fixture does not allow that constraint class for the requested capability
+- WHEN policy validation evaluates the normalized descriptor
+- THEN validation returns a typed policy-denied sandbox reason
+- AND host execution does not start.
+
+### Requirement: Platform capability translation
+
+r[agent_harness_runtime.sandlock_sandbox.platform] The std-shell sandbox adapter SHOULD expose an explicit platform capability model for translating normalized descriptors into enforceable constraints, including Linux capability labels inspired by Landlock, seccomp-bpf, seccomp user notification, COW staging, resource supervision, and HTTP/network ACL support when those mechanisms are available.
+
+#### Scenario: Linux adapter reports enforceable capability set
+
+r[agent_harness_runtime.sandlock_sandbox.platform.linux_matrix]
+- GIVEN a normalized descriptor requests filesystem read/write limits, TCP egress allowlisting, process limits, and dry-run COW staging
+- WHEN the Linux std-shell adapter evaluates platform support
+- THEN it reports the capability labels it can enforce for the selected descriptor
+- AND any descriptor field without a matching platform capability is returned as an unsupported-field diagnostic rather than being silently ignored.
+
+### Requirement: Required sandbox enforcement fails closed
+
+r[agent_harness_runtime.sandlock_sandbox.fail_closed] Runtime dispatch MUST fail closed before host execution when a required sandbox descriptor is malformed, denied by policy, unsupported by the selected platform adapter, or only partially enforceable, and MUST NOT treat sandbox enforcement as authorization proof.
+
+#### Scenario: Required sandbox cannot be partially relaxed
+
+r[agent_harness_runtime.sandlock_sandbox.fail_closed.partial]
+- GIVEN a capability request is already authorized by the relevant contract and grant checks
+- AND its local caveat marks a sandbox descriptor as required
+- AND the selected platform adapter can enforce filesystem constraints but cannot enforce the requested network, HTTP, COW, process, environment, or determinism constraint
+- WHEN dispatch is evaluated
+- THEN the runtime denies dispatch before host execution with a typed sandbox-unavailable or partial-enforcement issue
+- AND the receipt records sandbox failure separately from authorization success.
+
+### Requirement: Redacted sandbox receipts
+
+r[agent_harness_runtime.sandlock_sandbox.receipts] Sandbox dispatch receipts MUST carry safe metadata only, including sandbox status, issue code, normalized descriptor hash, platform capability labels, enforcement outcome, bounded COW summary counts or BLAKE3 hashes, bounded output hashes, and BLAKE3 receipt hash, and MUST NOT include raw prompts, credentials, absolute path dumps, raw network payloads, raw file contents, raw process output, or unbounded event streams.
+
+#### Scenario: Successful sandbox receipt is reviewable
+
+r[agent_harness_runtime.sandlock_sandbox.receipts.success]
+- GIVEN a sandboxed dispatch completes with required filesystem, process, network, COW, and environment constraints enforced
+- WHEN the dispatch receipt is emitted
+- THEN it records the sandbox status, normalized descriptor hash, enforced capability labels, bounded COW/output evidence, and receipt hash
+- AND sensitive path, payload, credential, prompt, file, and process-output material is omitted or represented only by approved hashes and redaction markers.
+
+#### Scenario: Receipt validation rejects sandbox leaks
+
+r[agent_harness_runtime.sandlock_sandbox.receipts.rejects_leaks]
+- GIVEN a sandbox receipt fixture contains raw prompts, credential-looking values, absolute path dumps, raw network payloads, raw file contents, raw process output, or an unbounded event stream
+- WHEN receipt validation runs
+- THEN validation fails with a typed redaction error
+- AND the receipt cannot be used as review or release evidence.
+
+### Requirement: Focused verification for sandbox enforcement
+
+r[agent_harness_runtime.sandlock_sandbox.verification] The Sandlock-inspired adaptation MUST include focused positive and negative tests for descriptor normalization, policy validation, platform capability translation, fail-closed dispatch, COW/dry-run evidence projection, and receipt redaction.
+
+#### Scenario: Positive and negative fixtures gate closeout
+
+r[agent_harness_runtime.sandlock_sandbox.verification.fixtures]
+- GIVEN the Sandlock-inspired sandbox adaptation is ready for review
+- WHEN focused verification runs
+- THEN positive fixtures show normalized descriptors, allowed filesystem and network constraints, platform capability translation, dry-run or COW summary projection, and redacted successful receipts
+- AND negative fixtures show malformed descriptors, conflicting network rules, policy-denied constraints, unsupported platform capabilities, partial enforcement attempts, and receipt leak attempts fail closed.
+
+r[agent_harness_runtime.sandlock_sandbox.closeout] Closeout evidence MUST include successful focused descriptor/platform/sandbox/receipt tests, workspace checks, Cairn validation, and Cairn proposal/design/tasks gates before this adaptation is archived.
+
+#### Scenario: Closeout evidence is reviewable
+
+r[agent_harness_runtime.sandlock_sandbox.closeout.evidence]
+- GIVEN maintainers intend to archive the Sandlock-inspired sandbox adaptation
+- WHEN they collect closeout evidence
+- THEN the evidence names every successful focused rail, workspace check, and Cairn gate
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: VCS-neutral isolated task workspaces
+
+r[agent_harness_runtime.openai_codex_worktree_automations.isolated_workspace] Animus isolated task workspaces MUST be represented through VCS-neutral source identity, workspace identity, writable roots, snapshot identity, restore metadata, and adapter capability records.
+
+#### Scenario: Workspace adapter is not Git-specific
+
+r[agent_harness_runtime.openai_codex_worktree_automations.isolated_workspace.vcs_neutral]
+- GIVEN a workspace adapter reports Jujutsu-oriented capabilities and no Git worktree capability
+- WHEN Animus validates an isolated workspace run
+- THEN validation uses the reported capabilities rather than requiring a Git worktree
+- AND the run is rejected only if a required capability is missing.
+
+### Requirement: Typed automation run contract
+
+r[agent_harness_runtime.openai_codex_worktree_automations.automation_contract] Animus automations MUST define scheduled standalone runs and thread-bound wakeups with prompt, cadence, workspace policy, sandbox profile, and stop criteria.
+
+#### Scenario: Unsafe automation configuration is rejected
+
+r[agent_harness_runtime.openai_codex_worktree_automations.automation_contract.validation]
+- GIVEN an unattended automation requests full-access sandboxing without an allowed policy profile
+- WHEN Animus validates the automation definition
+- THEN validation rejects the automation
+- AND no scheduled run is registered.
+
+### Requirement: Snapshot-based thread handoff
+
+r[agent_harness_runtime.openai_codex_worktree_automations.handoff_snapshot] Moving a thread between foreground and isolated workspace contexts MUST create a snapshot record that identifies source state, target state, included files, and conflict status.
+
+#### Scenario: Dirty-state conflict blocks handoff
+
+r[agent_harness_runtime.openai_codex_worktree_automations.handoff_snapshot.conflict]
+- GIVEN the foreground context and isolated workspace both changed the same tracked resource
+- WHEN a handoff request attempts to merge the isolated context into the foreground
+- THEN the handoff is blocked with a conflict outcome
+- AND the snapshot record preserves enough evidence for manual review.
+
+### Requirement: Explicit ignored-file inclusion
+
+r[agent_harness_runtime.openai_codex_worktree_automations.ignored_file_include] Ignored or local-only files MUST be materialized into isolated workspaces only through explicit allowlist entries with provenance and redaction classification.
+
+#### Scenario: Ignored secret is not copied implicitly
+
+r[agent_harness_runtime.openai_codex_worktree_automations.ignored_file_include.secrets]
+- GIVEN a local ignored file is classified as secret-bearing
+- WHEN an isolated workspace is created without an allowlist entry and redaction approval for that file
+- THEN the file is not copied
+- AND the workspace manifest records a copy-denied entry without exposing the secret body.
+
+### Requirement: Automation cleanup and restore evidence
+
+r[agent_harness_runtime.openai_codex_worktree_automations.cleanup_reporting] Automation and isolated-workspace cleanup MUST record findings, no-op outcomes, failed runs, workspace cleanup, and restore-available states with bounded manifest evidence.
+
+#### Scenario: Cleanup preserves restore manifest
+
+r[agent_harness_runtime.openai_codex_worktree_automations.cleanup_reporting.restore]
+- GIVEN an isolated workspace is eligible for cleanup
+- WHEN cleanup removes the workspace materialization
+- THEN Animus records manifest hashes, source identity, and restore metadata first
+- AND later inspection can report that restore evidence is available.
+
+### Requirement: Typed study contract
+
+r[agent_harness_runtime.hermes_researchspec.study_contract] Animus MUST define a typed ResearchSpec-inspired study contract with study ID, objective, primary metric, metric direction, threshold or noise policy, workload command identity, correctness checks, files in scope, off-limits files, guarded measurement files, promotion thresholds, and provenance.
+
+#### Scenario: Valid study contract is ready for baseline
+
+r[agent_harness_runtime.hermes_researchspec.study_contract.valid]
+- GIVEN a host supplies a complete typed study contract with objective, metric, workload, checks, scope, off-limits files, guardrails, and promotion policy
+- WHEN study validation runs
+- THEN the study is accepted as ready for baseline measurement
+- AND a fresh agent can discover the required lifecycle state without relying on conversation context.
+
+#### Scenario: Incomplete study contract is rejected
+
+r[agent_harness_runtime.hermes_researchspec.study_contract.incomplete]
+- GIVEN a study contract is missing a primary metric, metric direction, workload command identity, correctness checks declaration, scope, or off-limits declaration
+- WHEN study validation runs
+- THEN validation fails before any candidate run can be kept
+- AND the diagnostic names the missing field.
+
+### Requirement: Baseline evidence is immutable and fingerprinted
+
+r[agent_harness_runtime.hermes_researchspec.baseline] Animus MUST require a baseline record before candidate runs can be evaluated, including primary metric value, secondary metrics when configured, check status, config snapshot, workload fingerprints, guarded input fingerprints, and BLAKE3 hashes unless an interoperability constraint requires another algorithm.
+
+#### Scenario: Baseline records guarded fingerprints
+
+r[agent_harness_runtime.hermes_researchspec.baseline.fingerprints]
+- GIVEN a valid study and successful workload/check execution reported by the host
+- WHEN baseline evidence is recorded
+- THEN the baseline includes metric values, check status, config snapshot, guarded file/input fingerprints, and BLAKE3 hashes
+- AND later candidate gates can detect guarded measurement drift.
+
+#### Scenario: Missing primary metric blocks baseline
+
+r[agent_harness_runtime.hermes_researchspec.baseline.missing_metric]
+- GIVEN the workload completes but host-reported output lacks the configured primary metric
+- WHEN baseline validation runs
+- THEN the baseline fails closed
+- AND no candidate run can be marked kept against that baseline.
+
+### Requirement: Hypotheses are first-class artifacts
+
+r[agent_harness_runtime.hermes_researchspec.hypotheses] Animus MUST track optimization hypotheses with stable IDs, claims, planned interventions, expected signals, falsification criteria, risk notes, linked runs, and final decisions.
+
+#### Scenario: Vague hypothesis is rejected
+
+r[agent_harness_runtime.hermes_researchspec.hypotheses.vague]
+- GIVEN a hypothesis only says to try random tweaks or lacks expected signal and falsification criteria
+- WHEN hypothesis validation runs
+- THEN validation rejects it as not actionable
+- AND the diagnostic requests a concrete claim, intervention, expected signal, and discard condition.
+
+### Requirement: Run evidence is complete and resumable
+
+r[agent_harness_runtime.hermes_researchspec.runs] Every run record MUST include study ID, hypothesis ID, run timestamp or sequence metadata, candidate revision or diff fingerprint, primary metric, secondary metrics when configured, status, check status, changed-file summary, side information, rollback reason for discarded or failed runs, and next-action hint.
+
+#### Scenario: Failed run without rollback context is incomplete
+
+r[agent_harness_runtime.hermes_researchspec.runs.failed_requires_context]
+- GIVEN a candidate run crashes, fails checks, or is discarded
+- WHEN the run record lacks rollback reason or next-action hint
+- THEN run validation reports the record as incomplete
+- AND the study cannot be archived as complete until the missing learning is added or explicitly waived.
+
+### Requirement: Keep and promotion gates defend measurement integrity
+
+r[agent_harness_runtime.hermes_researchspec.keep_promotion] A kept run MUST satisfy the configured metric comparison rule, required checks, threshold or noise policy, hypothesis traceability, guarded-file drift policy, and measurement-integrity guardrails before promotion eligibility is reported.
+
+#### Scenario: Suspicious metric improvement is blocked
+
+r[agent_harness_runtime.hermes_researchspec.keep_promotion.suspicious]
+- GIVEN a candidate improves the primary metric but weakens checks, changes metric extraction, excludes benchmark inputs, hardcodes workload inputs, defers measured work, or edits guarded files without approved instrumentation-change metadata
+- WHEN the keep gate evaluates the run
+- THEN the run is rejected or blocked from promotion
+- AND the report classifies the issue as a measurement-integrity risk with concrete evidence labels.
+
+#### Scenario: Promotion groups detect overlap
+
+r[agent_harness_runtime.hermes_researchspec.keep_promotion.overlap]
+- GIVEN multiple kept runs are proposed as independent promotion groups
+- WHEN two groups touch the same file or one group depends on an API introduced by another group
+- THEN promotion evaluation reports the overlap or dependency
+- AND the groups are merged or marked dependent before finalization.
+
+### Requirement: Archive preserves study conclusions
+
+r[agent_harness_runtime.hermes_researchspec.archive] Completed studies MUST archive objective, baseline, best result, kept changes, discarded hypotheses, final metric delta, unresolved ideas, downstream lifecycle links, and run evidence needed to audit keep/discard decisions.
+
+#### Scenario: Unresolved decisions block archive
+
+r[agent_harness_runtime.hermes_researchspec.archive.unresolved]
+- GIVEN a study has linked runs without hypothesis decisions or in-scope ideas without keep, discard, supersede, defer, or waive decisions
+- WHEN archive validation runs
+- THEN archival is rejected
+- AND the report lists unresolved hypotheses, runs, or ideas.
+
+### Requirement: ResearchSpec adaptation verification
+
+r[agent_harness_runtime.hermes_researchspec.verification] The ResearchSpec adaptation MUST include focused tests for study contract validation, baseline evidence, BLAKE3 fingerprints, missing metric rejection, hypothesis validation, run evidence completeness, keep/promotion integrity gates, promotion overlap detection, archive rejection, and optional host-adapter isolation.
+
+#### Scenario: Closeout evidence covers lifecycle gates
+
+r[agent_harness_runtime.hermes_researchspec.verification.closeout]
+- GIVEN maintainers intend to archive the Hermes ResearchSpec adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused study tests, baseline tests, hypothesis/run tests, keep/promotion tests, archive tests, workspace checks, Cairn validation, and Cairn gates
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Reviewed scaffold profile contract
+
+r[agent_harness_runtime.ornith_scaffold.profile_contract] Animus MUST represent runtime scaffold strategies as typed reviewed data with stable profile identity, revision identity, task-class labels, supported strategy knobs, provenance, review status, route constraints, and BLAKE3 content hashes.
+
+#### Scenario: Invalid scaffold profile fails closed
+
+r[agent_harness_runtime.ornith_scaffold.profile_contract.invalid]
+- GIVEN a scaffold profile fixture contains malformed IDs, duplicate active revisions, unsupported strategy knobs, missing provenance, an unreviewed active revision, or a mismatched content hash
+- WHEN scaffold profile validation runs
+- THEN validation returns a typed scaffold-profile error
+- AND the profile is not eligible for prompt, Steel, runtime, or evaluation influence.
+
+### Requirement: Deterministic scaffold selection
+
+r[agent_harness_runtime.ornith_scaffold.selection] Animus MUST select scaffold profiles through pure deterministic planning over in-memory profiles, task-class input, host policy, and route capability labels before task execution begins.
+
+#### Scenario: Route policy controls scaffold eligibility
+
+r[agent_harness_runtime.ornith_scaffold.selection.policy]
+- GIVEN accepted scaffold profiles have task-class labels and route capability constraints
+- WHEN scaffold selection evaluates a task and model route
+- THEN the selected profile is compatible with both the task class and route policy
+- AND disabled, stale, or incompatible profiles are rejected with deterministic diagnostics.
+
+### Requirement: Host-admitted scaffold revision proposals
+
+r[agent_harness_runtime.ornith_scaffold.admission] Animus MAY allow runtime or evaluation flows to propose scaffold revisions, but proposed revisions MUST require an injected host admission outcome before persistence, activation, or future prompt influence.
+
+#### Scenario: Unreviewed revision cannot influence future turns
+
+r[agent_harness_runtime.ornith_scaffold.admission.unreviewed]
+- GIVEN a model or evaluator proposes a new scaffold revision
+- WHEN the host admission service is absent, denies the proposal, or reports a stale base revision
+- THEN Animus records the unavailable, denied, or stale outcome
+- AND the proposed revision is not persisted, activated, or included in future prompt/Steel inputs.
+
+### Requirement: Scaffold influence receipts
+
+r[agent_harness_runtime.ornith_scaffold.receipts] Runtime and evaluation receipts MUST record scaffold influence using safe metadata such as profile ID, revision ID, task class, review status, route labels, validation outcome, and BLAKE3 hashes, and MUST NOT include raw prompt bodies, scaffold bodies, provider payloads, credentials, full paths, raw tool bodies, or unbounded outputs.
+
+#### Scenario: Scaffold receipt rejects sensitive bodies
+
+r[agent_harness_runtime.ornith_scaffold.receipts.redacted]
+- GIVEN a scaffold influence receipt fixture contains a raw prompt, scaffold body, provider payload, credential-looking value, absolute path dump, or unbounded tool output
+- WHEN receipt validation runs
+- THEN validation fails with a typed redaction diagnostic
+- AND the receipt is not accepted as runtime or evaluation evidence.
+
+### Requirement: Route-neutral scaffold scope
+
+r[agent_harness_runtime.ornith_scaffold.scope] Animus scaffold profiles MUST remain route-neutral reviewed strategy data and MUST NOT require reusable runtime code to depend on a concrete provider, model family, training harness, or executable model-authored scaffold.
+
+#### Scenario: Scaffold scope excludes executable harnesses
+
+r[agent_harness_runtime.ornith_scaffold.scope.executable_rejected]
+- GIVEN a scaffold profile attempts to include executable code, shell commands, provider-specific client construction, or verifier mutation instructions
+- WHEN scaffold profile validation evaluates the profile
+- THEN validation rejects the profile before runtime use
+- AND no model, tool, provider, filesystem, process, or network adapter is called.
+
+### Requirement: Scaffold adaptation verification
+
+r[agent_harness_runtime.ornith_scaffold.verification] The Ornith scaffold adaptation MUST include focused positive and negative tests for profile validation, selection policy, admission outcomes, receipt redaction, route-neutral scope, and executable-harness rejection before archive.
+
+#### Scenario: Closeout evidence covers scaffold profile behavior
+
+r[agent_harness_runtime.ornith_scaffold.verification.closeout]
+- GIVEN maintainers intend to archive the scaffold profile adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused scaffold, admission, receipt, workspace, roadmap, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Immutable outer trust boundary
+
+r[agent_harness_runtime.ornith_trust_boundary.outer_boundary] Animus MUST represent the outer trust boundary as immutable typed data covering sanctioned tools, withheld path labels, verifier artifact identity, sandbox profile identity, approval requirements, evidence policy, and BLAKE3 policy hashes before scaffold, Steel, model, or tool execution can claim success.
+
+#### Scenario: Invalid boundary descriptor fails closed
+
+r[agent_harness_runtime.ornith_trust_boundary.outer_boundary.invalid]
+- GIVEN a trust-boundary descriptor has a missing verifier hash, duplicate path label, empty sanctioned-tool set, raw sensitive path serialization, or a request to mutate boundary authority from inside the runtime loop
+- WHEN boundary validation runs
+- THEN validation returns a typed trust-boundary error
+- AND no scaffold, model, tool, verifier, or evidence acceptance path is invoked.
+
+### Requirement: Deterministic boundary monitor
+
+r[agent_harness_runtime.ornith_trust_boundary.monitor] Animus MUST provide a deterministic monitor that evaluates planned and observed action descriptors against the trust boundary and returns typed issue codes for exact violations before evidence is accepted.
+
+#### Scenario: Boundary violations deny trajectory evidence
+
+r[agent_harness_runtime.ornith_trust_boundary.monitor.violations]
+- GIVEN an action descriptor attempts a withheld-path read, verifier modification, unsanctioned tool call, sandbox weakening, approval suppression, or evidence-policy bypass
+- WHEN the deterministic monitor evaluates the action
+- THEN the monitor returns the matching violation issue code
+- AND the trajectory is not accepted as successful runtime, batch, or evaluation evidence.
+
+### Requirement: Judge veto cannot grant authority
+
+r[agent_harness_runtime.ornith_trust_boundary.judge_veto] Animus MAY accept a host-provided judge veto for suspicious intent, but judge output MUST be reject-only and MUST NOT override deterministic monitor denials, grant permissions, mutate boundary descriptors, suppress approvals, or mark denied evidence successful.
+
+#### Scenario: Judge approval cannot override monitor denial
+
+r[agent_harness_runtime.ornith_trust_boundary.judge_veto.no_override]
+- GIVEN the deterministic monitor denies a trajectory for a trust-boundary violation
+- AND a judge output labels the trajectory acceptable
+- WHEN policy binding combines monitor and judge outcomes
+- THEN the denial remains final
+- AND the combined outcome records that judge output cannot grant authority.
+
+### Requirement: Anti-gaming fixture coverage
+
+r[agent_harness_runtime.ornith_trust_boundary.anti_gaming] Animus MUST maintain explicit anti-gaming fixture classes for oracle copying, hardcoded expected outputs or artifacts, visible-test overfitting, verifier edits, and allowed-tool intent gaming.
+
+#### Scenario: Anti-gaming fixtures are reproducible
+
+r[agent_harness_runtime.ornith_trust_boundary.anti_gaming.fixtures]
+- GIVEN anti-gaming fixtures contain both allowed work patterns and gaming attempts
+- WHEN focused monitor validation runs
+- THEN allowed patterns pass with safe evidence
+- AND gaming attempts fail with deterministic issue codes without depending on hidden provider calls.
+
+### Requirement: Redacted boundary violation receipts
+
+r[agent_harness_runtime.ornith_trust_boundary.receipts] Trust-boundary violation receipts MUST expose safe metadata such as policy hash, issue code, sanitized labels, counts, and redaction status, and MUST NOT include hidden paths, raw verifier bodies, prompts, tool inputs, tool outputs, provider payloads, credentials, or full path dumps.
+
+#### Scenario: Boundary receipt rejects leaks
+
+r[agent_harness_runtime.ornith_trust_boundary.receipts.redacted]
+- GIVEN a boundary violation receipt fixture contains hidden paths, raw verifier bodies, prompt text, tool input/output bodies, provider payloads, credential-looking values, or full path dumps
+- WHEN receipt validation runs
+- THEN validation fails with a typed redaction diagnostic
+- AND the receipt is not accepted as review or release evidence.
+
+### Requirement: Trust-boundary monitor verification
+
+r[agent_harness_runtime.ornith_trust_boundary.verification] The trust-boundary monitor adaptation MUST include focused positive and negative tests for boundary validation, monitor denials, judge-veto binding, anti-gaming fixtures, receipt redaction, workspace checks, roadmap validation, Cairn validation, and Cairn gates before archive.
+
+#### Scenario: Closeout evidence covers boundary monitor behavior
+
+r[agent_harness_runtime.ornith_trust_boundary.verification.closeout]
+- GIVEN maintainers intend to archive the trust-boundary monitor adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused monitor, judge-veto, anti-gaming, receipt, workspace, roadmap, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Offline scaffold evaluation plans
+
+r[agent_harness_runtime.ornith_eval_feedback.plan] Animus MUST represent offline scaffold evaluation as deterministic plan data with task-set identity, scaffold revision ID and hash, model route, verifier identity and hash, trust-boundary policy hash, tool-surface hash, sampling profile, resource labels, run count, and output format before execution.
+
+#### Scenario: Invalid evaluation plan fails closed
+
+r[agent_harness_runtime.ornith_eval_feedback.plan.invalid]
+- GIVEN an evaluation plan contains a remote task-set location, missing scaffold hash, missing verifier hash, unsupported output format, non-positive run count, or provider-specific public benchmark claim
+- WHEN plan validation runs
+- THEN validation returns a typed evaluation-plan error
+- AND no batch, model, verifier, tool, filesystem, process, or network execution is started.
+
+### Requirement: Redacted evaluation receipts
+
+r[agent_harness_runtime.ornith_eval_feedback.receipts] Scaffold evaluation receipts MUST expose safe comparison metadata such as model ID, scaffold hash, trust-boundary hash, tool-surface hash, verifier hash, context-window class, sampling labels, timeout/resource labels, run count, aggregate status, and redaction state, and MUST NOT include raw prompts, hidden tests, provider payloads, credentials, full paths, verifier bodies, or unbounded tool outputs.
+
+#### Scenario: Evaluation receipt rejects transcript leaks
+
+r[agent_harness_runtime.ornith_eval_feedback.receipts.redacted]
+- GIVEN an evaluation receipt fixture contains raw prompt text, hidden test content, provider payloads, credential-looking values, absolute path dumps, verifier bodies, or unbounded tool outputs
+- WHEN receipt validation runs
+- THEN validation fails with a typed redaction diagnostic
+- AND the receipt is not accepted as scaffold comparison evidence.
+
+### Requirement: Reviewed feedback candidates
+
+r[agent_harness_runtime.ornith_eval_feedback.review] Evaluation feedback MUST be represented as non-authoritative candidates with explicit host review outcomes for promote, demote, revise, investigate, denied, unavailable, and stale-evidence states.
+
+#### Scenario: Feedback cannot auto-activate a scaffold
+
+r[agent_harness_runtime.ornith_eval_feedback.review.no_auto_accept]
+- GIVEN a feedback candidate is unreviewed, denied, unavailable, or based on stale evidence
+- WHEN scaffold admission is evaluated
+- THEN the candidate cannot activate a scaffold revision
+- AND it cannot change runtime selection policy without a separate host-owned admission decision.
+
+### Requirement: Evaluation evidence freshness policy
+
+r[agent_harness_runtime.ornith_eval_feedback.freshness] Animus MUST classify feedback evidence freshness by comparing model route, scaffold hash, verifier hash, trust-boundary hash, tool-surface hash, runtime version label, and sampling profile against current policy.
+
+#### Scenario: Stale or mismatched feedback is downweighted
+
+r[agent_harness_runtime.ornith_eval_feedback.freshness.stale]
+- GIVEN feedback evidence was produced for an older scaffold hash, verifier hash, tool-surface hash, runtime label, or sampling profile
+- WHEN freshness classification runs
+- THEN the evidence is marked stale or reduced-weight according to policy
+- AND it cannot independently justify scaffold promotion.
+
+### Requirement: Offline-only evaluation feedback scope
+
+r[agent_harness_runtime.ornith_eval_feedback.scope] The scaffold evaluation feedback adaptation MUST remain local and offline and MUST reject RL training, live self-mutation, cloud benchmark runners, hidden-test access, provider-specific evaluation APIs, and public benchmark claims.
+
+#### Scenario: Live self-improvement workflow is rejected
+
+r[agent_harness_runtime.ornith_eval_feedback.scope.live_mutation_rejected]
+- GIVEN an evaluation workflow requests live model fine-tuning, automatic scaffold activation, cloud benchmark submission, hidden tests, or provider evaluation APIs
+- WHEN runtime validation evaluates the workflow metadata
+- THEN validation rejects the workflow as out of scope
+- AND no runtime mutation, network dispatch, or scaffold activation occurs.
+
+### Requirement: Evaluation feedback verification
+
+r[agent_harness_runtime.ornith_eval_feedback.verification] The adaptation MUST include focused positive and negative tests for local plans, invalid plans, redacted receipts, receipt leaks, reviewed feedback candidates, no-auto-accept behavior, freshness classification, stale evidence, and offline-only scope rejection.
+
+#### Scenario: Closeout evidence covers evaluation feedback fixtures
+
+r[agent_harness_runtime.ornith_eval_feedback.verification.closeout]
+- GIVEN maintainers intend to archive the offline evaluation feedback adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused plan, receipt, review, freshness, scope, workspace, roadmap, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Configurable compaction policy
+
+r[agent_harness_runtime.pi_compaction.policy] Animus compaction MUST be governed by typed policy inputs for context budget, response reserve budget, kept-recent budget, summary format, summarizer selection, and redaction behavior.
+
+#### Scenario: Policy drives compaction decision
+
+r[agent_harness_runtime.pi_compaction.policy.trigger]
+- GIVEN a replay context estimate exceeds the configured usable budget
+- WHEN runtime evaluates compaction readiness
+- THEN it prepares a compaction plan according to policy
+- AND it does not compact when policy disables automatic compaction.
+
+### Requirement: Safe compaction cut points
+
+r[agent_harness_runtime.pi_compaction.cut_points] Compaction preparation MUST choose cut points that preserve valid model-visible message ordering and MUST NOT orphan tool results from their corresponding tool calls.
+
+#### Scenario: Tool result boundary is rejected
+
+r[agent_harness_runtime.pi_compaction.cut_points.reject_tool_result]
+- GIVEN a candidate cut point would keep a tool result while removing the tool call that produced it
+- WHEN compaction preparation evaluates the candidate
+- THEN the candidate is rejected or moved to a valid boundary
+- AND the resulting context remains structurally valid.
+
+### Requirement: Split-turn compaction handling
+
+r[agent_harness_runtime.pi_compaction.split_turn] Animus MUST represent split-turn compaction explicitly when a single turn exceeds the kept-recent budget, summarizing the early turn prefix without corrupting the kept suffix.
+
+#### Scenario: Oversized turn gets prefix summary
+
+r[agent_harness_runtime.pi_compaction.split_turn.prefix]
+- GIVEN one user turn contains more model-visible content than the kept-recent budget
+- WHEN compaction preparation runs
+- THEN it identifies the kept suffix and early turn prefix
+- AND the generated summary entry records that a split-turn prefix was summarized.
+
+### Requirement: Branch handoff summaries
+
+r[agent_harness_runtime.pi_compaction.branch_summary] When navigating away from a ledger branch, Animus SHOULD support host-requested branch handoff summaries that preserve bounded context from the abandoned branch at the new navigation point.
+
+#### Scenario: Abandoned branch is summarized at navigation
+
+r[agent_harness_runtime.pi_compaction.branch_summary.navigation]
+- GIVEN a ledger has an old active leaf and a target leaf with a common ancestor
+- WHEN the host requests branch handoff summarization during navigation
+- THEN runtime summarizes the abandoned branch span from old leaf back to the common ancestor
+- AND records a bounded summary entry associated with the navigation.
+
+### Requirement: Injected summarizer service
+
+r[agent_harness_runtime.pi_compaction.injected_summarizer] Runtime compaction and branch summarization MUST call only injected summarizer services and MUST fail closed when summarization is required but no summarizer is available, denied, cancelled, or returns malformed output.
+
+#### Scenario: Missing summarizer halts compaction
+
+r[agent_harness_runtime.pi_compaction.injected_summarizer.missing]
+- GIVEN policy requires summarization before continuing a turn
+- WHEN no summarizer service is injected
+- THEN runtime emits a typed missing-summarizer failure
+- AND it does not construct a provider client or call model/tool adapters as a fallback.
+
+### Requirement: Summary metadata is safe and cumulative
+
+r[agent_harness_runtime.pi_compaction.safe_metadata] Compaction and branch-summary entries MUST store bounded summary text and safe cumulative metadata, including counts, redacted resource identifiers, and BLAKE3 hashes when sensitive content identity is needed.
+
+#### Scenario: Summary metadata rejects raw tool bodies
+
+r[agent_harness_runtime.pi_compaction.safe_metadata.reject_raw]
+- GIVEN a summary result attempts to include raw tool output or unredacted host paths in metadata
+- WHEN runtime validates the summary entry
+- THEN validation fails with a typed redaction or metadata error
+- AND the unsafe summary is not appended to the ledger.
+
+### Requirement: Provider prompt pressure calibration
+
+r[agent_harness_runtime.zerostack_midturn_compaction.prompt_pressure] Animus MUST represent provider-reported prompt pressure separately from estimated replay tokens and MUST account for provider route metadata before using cached-token fields.
+
+#### Scenario: Cached tokens are not double-counted
+
+r[agent_harness_runtime.zerostack_midturn_compaction.prompt_pressure.cache]
+- GIVEN provider usage reports input tokens and cached-token fields
+- AND route metadata says cached tokens are already included in input tokens
+- WHEN prompt pressure is calculated
+- THEN cached-token fields are not added a second time
+- AND the calculation records the route rule used.
+
+### Requirement: Mid-turn compaction planning
+
+r[agent_harness_runtime.zerostack_midturn_compaction.plan] Runtime MUST produce an explicit mid-turn stop, compact, and resume plan when policy enables mid-turn compaction and prompt pressure crosses the configured threshold.
+
+#### Scenario: Disabled mid-turn compaction does not trigger
+
+r[agent_harness_runtime.zerostack_midturn_compaction.plan.disabled]
+- GIVEN prompt pressure crosses the threshold
+- AND mid-turn compaction is disabled by policy
+- WHEN runtime evaluates continuation
+- THEN it does not prepare a mid-turn compaction plan
+- AND it returns the policy-selected continue, warn, or fail outcome.
+
+### Requirement: Explicit ledger summary entries
+
+r[agent_harness_runtime.zerostack_midturn_compaction.ledger_entries] Mid-turn compaction MUST append explicit bounded summary entries to the session ledger and MUST NOT hide compaction as an unrecorded in-memory transcript rewrite.
+
+#### Scenario: Missing ledger service halts required compaction
+
+r[agent_harness_runtime.zerostack_midturn_compaction.ledger_entries.missing]
+- GIVEN policy requires mid-turn compaction before continuing
+- AND no ledger service is injected
+- WHEN runtime attempts to prepare the compaction
+- THEN it returns a missing-ledger-service failure
+- AND it does not call model or tool adapters as a fallback.
+
+### Requirement: Injected summarizer for mid-turn compaction
+
+r[agent_harness_runtime.zerostack_midturn_compaction.summarizer] Mid-turn compaction MUST use only injected summarizer services and MUST validate summary output for bounded text, safe metadata, and supported summary kind.
+
+#### Scenario: Malformed summary fails closed
+
+r[agent_harness_runtime.zerostack_midturn_compaction.summarizer.malformed]
+- GIVEN the summarizer returns empty text, overlong text, unsupported metadata, or raw sensitive output in metadata
+- WHEN runtime validates the summary
+- THEN validation fails with a typed summary diagnostic
+- AND the unsafe summary is not appended to the ledger.
+
+### Requirement: Long tool-output artifactization
+
+r[agent_harness_runtime.zerostack_midturn_compaction.tool_artifacts] Tool outputs that exceed model-visible policy limits SHOULD be represented by bounded head/tail or windowed text plus artifact descriptors, total size metadata, truncation status, and BLAKE3 artifact hashes.
+
+#### Scenario: Unbounded tool output is not embedded
+
+r[agent_harness_runtime.zerostack_midturn_compaction.tool_artifacts.bounded]
+- GIVEN a tool output exceeds the configured model-visible limit
+- WHEN it is recorded in ledger or receipt metadata
+- THEN only the configured bounded window and artifact descriptor are model-visible by default
+- AND the full raw output is not embedded in durable evidence.
+
+### Requirement: Bounded Qualifier quality-record reference
+
+r[agent_harness_runtime.qualifier_quality.scope] Animus MUST treat Qualifier as a bounded reference for ambient review annotations, Metabox-style envelopes, append-only JSONL sidecars, span freshness, unknown-record preservation, annotation lifecycle semantics, and AGENTS-CLI guidance, and MUST NOT adopt Qualifier as a core runtime dependency, session ledger, transcript store, Git-only diff engine, or numeric scoring authority.
+
+#### Scenario: Qualifier remains a compatibility boundary
+
+r[agent_harness_runtime.qualifier_quality.scope.boundary]
+- GIVEN maintainers adapt Qualifier-inspired quality-record behavior
+- WHEN reusable Animus runtime, core, or adapter APIs are reviewed
+- THEN the APIs use Animus-owned DTOs and traits
+- AND they do not require the `qualifier` crate, `.qual` files, Git commands, filesystem discovery, CLI execution, or scoring semantics in reusable core contracts.
+
+#### Scenario: Raw payloads are outside quality records
+
+r[agent_harness_runtime.qualifier_quality.scope.redaction]
+- GIVEN a quality observation is derived from a prompt, provider payload, tool input, tool output, model output, credential-bearing configuration, or absolute host path
+- WHEN an Animus quality/provenance record body is constructed
+- THEN raw sensitive material is omitted or represented only by approved BLAKE3 hashes, bounded counts, labels, and explicit redaction markers
+- AND validation rejects any record body that stores the raw material directly.
+
+### Requirement: Animus-owned Metabox-style record envelope
+
+r[agent_harness_runtime.qualifier_quality.envelope] Animus MUST define a safe record envelope with explicit version, record type, subject, issuer, optional issuer classification, shell-supplied creation metadata, content-addressed BLAKE3 id, and typed body, with deterministic canonicalization and validation implemented as pure functional-core logic.
+
+#### Scenario: Canonical IDs are deterministic
+
+r[agent_harness_runtime.qualifier_quality.envelope.deterministic]
+- GIVEN equivalent safe record envelopes with body fields and nested fields in different source orders
+- WHEN canonicalization and id generation run
+- THEN field order is normalized, optional absent fields are omitted, and the same lowercase BLAKE3 id is produced
+- AND the canonicalization function does not read files, clocks, environment, process state, or network resources.
+
+#### Scenario: Malformed envelopes fail closed
+
+r[agent_harness_runtime.qualifier_quality.envelope.invalid]
+- GIVEN a record envelope has an unsupported version, empty subject, empty issuer, non-URI issuer, invalid id, mismatched id, missing required body field, or malformed issuer classification
+- WHEN envelope validation runs
+- THEN validation returns typed errors naming the failed invariant
+- AND the invalid record is not accepted as runtime, review, or release evidence.
+
+### Requirement: Optional Qualifier sidecar adapter
+
+r[agent_harness_runtime.qualifier_quality.sidecar_adapter] Animus MAY provide an optional std-only Qualifier sidecar adapter that reads and writes `.qual`-compatible JSONL annotations for repository-local quality observations while keeping sidecar persistence, filesystem traversal, ignore handling, and compaction outside no-std core and adapter-contract crates.
+
+#### Scenario: Sidecar export preserves safe annotation semantics
+
+r[agent_harness_runtime.qualifier_quality.sidecar_adapter.export]
+- GIVEN an Animus safe quality observation contains subject, kind, span, summary, suggested fix, references, supersedes, tags, issuer classification, and redaction-safe metadata
+- WHEN Qualifier sidecar export is explicitly requested
+- THEN the adapter writes a `.qual`-compatible annotation record with a deterministic id and safe body fields
+- AND raw prompts, provider payloads, tool/model outputs, credentials, full paths, and unbounded content are not written.
+
+#### Scenario: Unknown sidecar records round-trip without becoming core data
+
+r[agent_harness_runtime.qualifier_quality.sidecar_adapter.unknown]
+- GIVEN a `.qual` file contains unknown record types or future body shapes
+- WHEN the optional sidecar adapter loads, filters, compacts, or rewrites the file
+- THEN unknown records are preserved byte-for-byte or as an explicitly equivalent opaque sidecar record where the sidecar operation requires rewriting
+- AND reusable Animus core receives only sanitized safe metadata or a typed compatibility error, not the raw unknown body.
+
+#### Scenario: Default builds remain isolated
+
+r[agent_harness_runtime.qualifier_quality.sidecar_adapter.isolated]
+- GIVEN default Animus features are built without Qualifier compatibility
+- WHEN dependency and feature-isolation checks run
+- THEN `animus-core`, `animus-adapters`, `animus-preserves`, `animus-steel`, and default `animus-std` contracts do not require Qualifier crates, `.qual` discovery, Git diff libraries, or sidecar compaction code.
+
+### Requirement: Annotation lifecycle state transitions
+
+r[agent_harness_runtime.qualifier_quality.lifecycle] Animus MUST model quality annotation lifecycle behavior as pure state transitions over in-memory records, including built-in and custom kinds, typo warnings, references, supersession chains, resolve records, waiver rationale, suggested fixes, active-record filtering, same-subject supersession checks, and supersession cycle detection.
+
+#### Scenario: References thread context without closing records
+
+r[agent_harness_runtime.qualifier_quality.lifecycle.references]
+- GIVEN one quality record references another record by id
+- WHEN active quality records are computed
+- THEN both records remain active and the referencing record is displayed or queried as thread context
+- AND self-references are rejected with a typed validation error.
+
+#### Scenario: Supersession closes only same-subject records
+
+r[agent_harness_runtime.qualifier_quality.lifecycle.supersession]
+- GIVEN a resolve or replacement record supersedes a prior record
+- WHEN active quality records are computed
+- THEN the superseded record is excluded from the active set and the superseding record remains as the visible tip
+- AND validation rejects cross-subject supersession, duplicate-id ambiguity, and cycles without panicking.
+
+#### Scenario: Agents do not auto-resolve user concerns
+
+r[agent_harness_runtime.qualifier_quality.lifecycle.no_auto_resolve]
+- GIVEN an agent edits code near a human-authored concern or drifted span
+- WHEN runtime or sidecar tooling reports quality status
+- THEN it surfaces the concern, drift, or missing span for review without resolving it automatically
+- AND a resolve record is emitted only when the caller explicitly requests closure.
+
+### Requirement: VCS-neutral span freshness
+
+r[agent_harness_runtime.qualifier_quality.span_freshness] Animus MUST provide VCS-neutral span freshness logic that hashes the full lines covered by a valid span with BLAKE3 and classifies observations as fresh, drifted, missing, or no-hash without requiring Git, branch names, merge-base logic, or Qualifier CLI execution.
+
+#### Scenario: Freshness states are deterministic
+
+r[agent_harness_runtime.qualifier_quality.span_freshness.states]
+- GIVEN file content lines, a valid one-indexed span, and an optional recorded content hash
+- WHEN pure freshness classification runs over the supplied lines
+- THEN matching hashes return fresh, mismatched hashes return drifted with expected and actual hashes, absent hashes return no-hash, and missing span lines return missing
+- AND equivalent line content produces the same BLAKE3 hash regardless of caller or storage backend.
+
+#### Scenario: Invalid spans fail closed
+
+r[agent_harness_runtime.qualifier_quality.span_freshness.invalid]
+- GIVEN a span has zero line numbers, reversed ranges, columns outside allowed bounds, or arithmetic overflow inputs
+- WHEN span parsing or freshness preparation runs
+- THEN it returns typed validation errors
+- AND no panic, wrapped line number, silently clipped range, or raw file dump is produced.
+
+### Requirement: AGENTS-CLI-inspired Animus guidance
+
+r[agent_harness_runtime.qualifier_quality.agents_cli] When Animus exposes a public CLI, it SHOULD provide an `animus agents` entry point that prints version-locked markdown guidance for AI coding agents, lists available topics, supports topic pages for concepts, workflows, pitfalls, and non-trivial commands, advertises the entry point in `animus --help`, and returns a structured unknown-topic error.
+
+#### Scenario: Bare agents invocation orients coding agents
+
+r[agent_harness_runtime.qualifier_quality.agents_cli.orientation]
+- GIVEN the Animus CLI includes the agents guidance feature
+- WHEN an agent runs `animus agents`
+- THEN stdout contains a self-contained orientation explaining what Animus is, when to use it, when not to use it, and which topics are available
+- AND the command exits successfully without reading network resources.
+
+#### Scenario: Topic lookup is deterministic
+
+r[agent_harness_runtime.qualifier_quality.agents_cli.topics]
+- GIVEN a known guidance topic and an unknown guidance topic
+- WHEN an agent runs `animus agents <topic>` for each topic
+- THEN the known topic prints its markdown page and exits successfully
+- AND the unknown topic exits with a structured error that names the unknown topic and every available topic.
+
+### Requirement: Focused Qualifier adaptation verification
+
+r[agent_harness_runtime.qualifier_quality.verification] The Qualifier adaptation MUST include focused positive and negative verification for bounded reference scope, deterministic envelope IDs, malformed envelope rejection, safe body redaction, unknown sidecar preservation, sidecar dependency isolation, annotation lifecycle transitions, span freshness states, invalid span handling, no-auto-resolution behavior, and AGENTS-CLI guidance behavior when implemented.
+
+#### Scenario: Closeout evidence is reviewable
+
+r[agent_harness_runtime.qualifier_quality.verification.closeout]
+- GIVEN maintainers intend to archive the Qualifier quality-record adaptation
+- WHEN closeout validation runs
+- THEN evidence names every successful focused rail, workspace test, clippy check, Nickel/config drift check if applicable, Cairn validation, and Cairn gate
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Typed context file classes
+
+r[agent_harness_runtime.zerostack_context_layering.classes] Animus MUST represent discovered context files as typed descriptors with context class, source identity, trust scope, precedence, freshness metadata, size metadata, redaction classification, and prompt-inclusion policy.
+
+#### Scenario: Unknown context class is withheld
+
+r[agent_harness_runtime.zerostack_context_layering.classes.unknown]
+- GIVEN a discovered context descriptor has an unknown class or missing source identity
+- WHEN prompt assembly evaluates it
+- THEN the descriptor is rejected or withheld with a typed diagnostic
+- AND its body is not injected into model-visible context.
+
+### Requirement: Host-owned discovery plans
+
+r[agent_harness_runtime.zerostack_context_layering.discovery] Directory walking, file reading, path canonicalization, ignore handling, and global/project context discovery MUST remain host-owned behavior that produces in-memory descriptors for reusable runtime logic.
+
+#### Scenario: Core performs no ancestor walk
+
+r[agent_harness_runtime.zerostack_context_layering.discovery.no_io]
+- GIVEN reusable prompt assembly receives context descriptors in memory
+- WHEN it assembles prompt sections
+- THEN it does not inspect the current directory, walk ancestors, read files, or consult environment variables
+- AND missing discovery data is represented as an injected-service or descriptor absence.
+
+### Requirement: Admission before prompt influence
+
+r[agent_harness_runtime.zerostack_context_layering.admission] Discovered context files MUST pass trust, size, freshness, redaction, and precedence policy before their body text can influence model-visible prompt sections.
+
+#### Scenario: Secret-looking body is redacted or rejected
+
+r[agent_harness_runtime.zerostack_context_layering.admission.secret]
+- GIVEN a discovered context body matches policy-defined sensitive-content signals
+- WHEN admission evaluates the descriptor
+- THEN the context is rejected or redacted according to policy
+- AND raw sensitive body text is not included in prompt receipts.
+
+### Requirement: Deterministic precedence and conflict handling
+
+r[agent_harness_runtime.zerostack_context_layering.precedence] Prompt assembly MUST apply deterministic precedence when multiple admitted context descriptors overlap, and MUST expose conflict diagnostics when policy requires review.
+
+#### Scenario: Higher precedence guidance wins deterministically
+
+r[agent_harness_runtime.zerostack_context_layering.precedence.conflict]
+- GIVEN two admitted context descriptors provide conflicting guidance for the same prompt section
+- WHEN precedence policy selects a winner
+- THEN the selected descriptor is deterministic
+- AND the omitted descriptor is recorded with a conflict or lower-precedence reason.
+
+### Requirement: Context layering receipts
+
+r[agent_harness_runtime.zerostack_context_layering.receipts] Context layering receipts MUST record included and omitted context descriptor IDs, context classes, source identity class, BLAKE3 body hashes, precedence decisions, and omission diagnostics without embedding raw private file bodies or full private paths by default.
+
+#### Scenario: Omitted ancestor file is auditable
+
+r[agent_harness_runtime.zerostack_context_layering.receipts.omitted]
+- GIVEN an ancestor context file is discovered but omitted as untrusted, stale, oversized, disabled, malformed, or unsafe
+- WHEN a context layering receipt is emitted
+- THEN the omission reason and safe source identity are recorded
+- AND the raw file body and full private path are omitted unless policy explicitly permits them.
+
+### Requirement: Fresh-context task descriptors
+
+r[agent_harness_runtime.zerostack_fresh_context_tasks.descriptor] Animus MUST represent fresh-context task requests as typed descriptors with goal, admitted context references, allowed tool profile, model/provider policy, token budget, tool-call budget, timeout policy, cancellation policy, and expected result schema.
+
+#### Scenario: Missing scheduler fails closed
+
+r[agent_harness_runtime.zerostack_fresh_context_tasks.descriptor.missing_scheduler]
+- GIVEN a runtime request includes a fresh-context task descriptor
+- AND no task scheduler service is injected
+- WHEN runtime prepares the task
+- THEN it returns a missing-scheduler failure
+- AND it does not spawn processes, call providers, or run tools as a fallback.
+
+### Requirement: Read-only side-question mode
+
+r[agent_harness_runtime.zerostack_fresh_context_tasks.side_question] Side-question requests SHOULD be read-only by construction and MUST NOT write files, edit state, execute shell commands, mutate ledgers, or dispatch non-read tools unless a separate explicit policy admits that behavior.
+
+#### Scenario: Side question mutation attempt is denied
+
+r[agent_harness_runtime.zerostack_fresh_context_tasks.side_question.readonly]
+- GIVEN a side-question child run requests a write, edit, shell, network mutation, ledger mutation, or other non-read action
+- WHEN permission resolution evaluates the child request
+- THEN the action is denied with a read-only side-question reason
+- AND the child result records the denied attempt as safe metadata.
+
+### Requirement: Context and authority isolation
+
+r[agent_harness_runtime.zerostack_fresh_context_tasks.isolation] Fresh-context task runs MUST receive only explicitly admitted context references and capability grants, and MUST NOT inherit hidden parent prompts, credentials, session allowlists, or mutable process-global configuration.
+
+#### Scenario: Parent allowlist is not inherited
+
+r[agent_harness_runtime.zerostack_fresh_context_tasks.isolation.allowlist]
+- GIVEN the parent run has a session allowlist entry for a guarded action
+- WHEN a fresh-context task run requests the same action
+- THEN the child run must satisfy its own authority and permission policy
+- AND the parent allowlist does not authorize the child action.
+
+### Requirement: Attributed task results
+
+r[agent_harness_runtime.zerostack_fresh_context_tasks.results] Task results MUST include child-run identity, task descriptor identity, result status, budget usage, cited context references, uncertainty markers, and redacted evidence summaries before they can influence parent prompt assembly.
+
+#### Scenario: Malformed child result is withheld
+
+r[agent_harness_runtime.zerostack_fresh_context_tasks.results.malformed]
+- GIVEN a child run returns a result missing status, child identity, context references, or result schema fields
+- WHEN parent prompt assembly evaluates the result
+- THEN the result is withheld with a malformed-result diagnostic
+- AND its raw body is not injected into the parent model-visible context.
+
+### Requirement: Task receipts and cancellation
+
+r[agent_harness_runtime.zerostack_fresh_context_tasks.receipts] Fresh-context task receipts MUST record safe task identity, scheduler identity, status, cancellation reason, budget usage, redacted context/resource identifiers, and output hashes without embedding full child transcripts by default.
+
+#### Scenario: Cancelled task records bounded receipt
+
+r[agent_harness_runtime.zerostack_fresh_context_tasks.receipts.cancelled]
+- GIVEN a fresh-context task is cancelled by user, policy, timeout, or scheduler failure
+- WHEN the runtime records the outcome
+- THEN the receipt names the cancellation class and consumed budget metadata
+- AND no unbounded child transcript or raw sensitive output is embedded.
+
+### Requirement: Explicit OpenAI-family API style
+
+r[agent_harness_runtime.zerostack_provider_hardening.api_style] Animus provider registry shells MUST resolve OpenAI-family providers to explicit API style metadata such as Responses or Chat Completions before constructing a model service.
+
+#### Scenario: Custom gateway defaults safely
+
+r[agent_harness_runtime.zerostack_provider_hardening.api_style.gateway]
+- GIVEN a custom OpenAI-compatible provider declares a base endpoint and no explicit API style
+- WHEN shell provider resolution runs
+- THEN the resolver selects the policy-defined compatible default or reports an ambiguous-style diagnostic
+- AND reusable runtime receives only a validated injected model service.
+
+### Requirement: Redacted custom headers
+
+r[agent_harness_runtime.zerostack_provider_hardening.headers] Custom provider header descriptors MUST validate header names, resolve allowed environment references in the shell, and report only redacted source labels or failure classes in receipts and diagnostics.
+
+#### Scenario: Missing header environment variable is safe
+
+r[agent_harness_runtime.zerostack_provider_hardening.headers.missing]
+- GIVEN a custom header references an unavailable environment-backed secret
+- WHEN provider resolution runs
+- THEN resolution fails with a missing-header-secret diagnostic
+- AND the diagnostic does not include raw secret values, environment contents, or unrelated environment variables.
+
+### Requirement: Provider-scoped extra body policy
+
+r[agent_harness_runtime.zerostack_provider_hardening.extra_body] Provider-specific extra request body fields MUST be admitted by policy with provider/model scope, source identity, collision behavior, and receipt redaction before they can be sent with a model request.
+
+#### Scenario: Extra body cannot cross providers silently
+
+r[agent_harness_runtime.zerostack_provider_hardening.extra_body.scope]
+- GIVEN an extra body descriptor is scoped to one provider or model
+- WHEN a different provider or model is selected
+- THEN the descriptor is ignored or rejected according to policy
+- AND the request does not inherit unsupported provider-specific fields silently.
+
+### Requirement: Agent-suitable model filtering
+
+r[agent_harness_runtime.zerostack_provider_hardening.model_filter] Dynamic model listings SHOULD normalize model IDs, display names, model classes, context budgets, modalities, reasoning support, and cost hints, and MUST prevent non-agent model classes from being selected for text agent turns unless an explicit host override is present.
+
+#### Scenario: Embedding model is rejected for agent turn
+
+r[agent_harness_runtime.zerostack_provider_hardening.model_filter.reject]
+- GIVEN model listing metadata identifies a model as embedding, image, audio, moderation, rerank, or another non-agent class
+- WHEN the shell attempts to select it for a text agent turn without override
+- THEN selection fails with a typed unsupported-model-class diagnostic
+- AND runtime model dispatch is not attempted.
+
+### Requirement: Provider selection receipts
+
+r[agent_harness_runtime.zerostack_provider_hardening.receipts] Provider selection receipts MUST record safe provider ID, model ID, endpoint identity class, API style, capability metadata, credential source class, extra body descriptor IDs, and selection diagnostics without exposing raw credentials, headers, provider payloads, or full private endpoints when policy marks them sensitive.
+
+#### Scenario: Sensitive endpoint is hashed
+
+r[agent_harness_runtime.zerostack_provider_hardening.receipts.endpoint]
+- GIVEN a provider endpoint is classified as sensitive
+- WHEN a provider selection receipt is emitted
+- THEN the endpoint is represented by a redaction marker or BLAKE3 hash
+- AND API style, capability class, and diagnostic reason remain reviewable.
+
+### Requirement: Animus sessions are dataset export sources
+
+r[agent_harness_runtime.hf_dataset_export.session_source] Animus MUST export training datasets from validated Animus session snapshots or replay contexts, with typed row identity, source span metadata, target selection, and export errors, without treating Claude Code JSONL, Hugging Face libraries, filesystem paths, tokenizers, or trainer frameworks as core dependencies.
+
+#### Scenario: Export starts from validated replay context
+
+r[agent_harness_runtime.hf_dataset_export.session_source.validated]
+- GIVEN an Animus session snapshot has been validated and replay context has been selected
+- WHEN dataset export begins
+- THEN the exporter consumes the selected Animus replay data and safe metadata
+- AND it does not read provider-native transcripts, external agent session files, filesystem paths, tokenizers, or trainer APIs inside pure export logic.
+
+#### Scenario: Invalid session source fails before row emission
+
+r[agent_harness_runtime.hf_dataset_export.session_source.rejects_invalid]
+- GIVEN an Animus session snapshot has broken parent links, duplicate row source spans, unsupported entry kinds, or no selected replay path
+- WHEN dataset export is requested
+- THEN export returns a typed source-validation error
+- AND no partial dataset rows are emitted unless an explicit partial-export policy is selected.
+
+### Requirement: Hugging Face chat-message export
+
+r[agent_harness_runtime.hf_dataset_export.chat_messages] Animus MUST export supervised fine-tuning rows in a Hugging Face-compatible chat `messages` shape using deterministic user, assistant, system, and tool role mapping from Animus replay context.
+
+#### Scenario: SFT row is chat-template compatible
+
+r[agent_harness_runtime.hf_dataset_export.chat_messages.sft]
+- GIVEN a validated Animus replay path contains user and assistant model-visible turns
+- WHEN the chat-message exporter runs with the default SFT policy
+- THEN it emits a dataset row with ordered `messages` entries containing `role` and `content` fields
+- AND the row is suitable for downstream `tokenizer.apply_chat_template()` without Animus calling a tokenizer.
+
+#### Scenario: Bad chat rows fail closed
+
+r[agent_harness_runtime.hf_dataset_export.chat_messages.rejects_bad_rows]
+- GIVEN replay context contains invalid roles, empty conversations, empty assistant targets, unsupported content blocks, or malformed tool-result ordering
+- WHEN chat-message export runs
+- THEN it returns a typed export error or deterministic skipped-row reason
+- AND it does not silently emit malformed `messages` rows.
+
+### Requirement: Explicit safe export policy
+
+r[agent_harness_runtime.hf_dataset_export.policy] Animus MUST require a typed export policy for lossy or sensitive choices, including system text, tool calls, tool results, hidden reasoning, metadata projection, redaction, and quality thresholds.
+
+#### Scenario: Default policy prevents private leakage
+
+r[agent_harness_runtime.hf_dataset_export.policy.leakage_default]
+- GIVEN a session contains hidden reasoning, raw tool outputs, environment metadata, provider details, and private provenance
+- WHEN export runs with the default policy
+- THEN hidden reasoning, raw tool outputs, private environment fields, and private provenance are excluded from dataset rows
+- AND the inspection report records safe policy decisions without exposing the raw private payloads.
+
+#### Scenario: Opt-in policy is explicit and testable
+
+r[agent_harness_runtime.hf_dataset_export.policy.opt_in]
+- GIVEN a host selects a policy that includes tool calls, tool results, system text, or selected metadata
+- WHEN export runs
+- THEN the emitted rows contain only the explicitly enabled categories
+- AND negative tests prove disabled categories remain absent.
+
+### Requirement: Preference-learning row export
+
+r[agent_harness_runtime.hf_dataset_export.preference_rows] Animus MUST export preference-learning rows only from explicit Animus outcome annotations that identify prompt context, chosen responses, rejected responses, and safe metadata.
+
+#### Scenario: Preference row preserves chosen and rejected alternatives
+
+r[agent_harness_runtime.hf_dataset_export.preference_rows.validated]
+- GIVEN a session records a prompt span with explicit chosen and rejected assistant alternatives
+- WHEN preference export runs
+- THEN it emits a row containing the prompt messages, chosen assistant content, rejected assistant content, row identity, and safe metadata
+- AND it does not infer preference labels from file order or branch order alone.
+
+#### Scenario: Malformed preference examples are rejected
+
+r[agent_harness_runtime.hf_dataset_export.preference_rows.rejects_malformed]
+- GIVEN an example lacks a prompt span, duplicates a candidate, lacks an outcome label, or requests unsafe metadata projection
+- WHEN preference export runs
+- THEN it returns a typed export error or deterministic skipped-row reason
+- AND no fabricated chosen/rejected pair is emitted.
+
+### Requirement: RL trajectory export
+
+r[agent_harness_runtime.hf_dataset_export.rl_trajectories] Animus MUST export RL trajectory rows as ordered prompt, action, observation, reward, terminal outcome, and safe metadata records when sessions contain explicit trajectory annotations.
+
+#### Scenario: Complete trajectory exports deterministically
+
+r[agent_harness_runtime.hf_dataset_export.rl_trajectories.validated]
+- GIVEN an Animus session contains an explicitly annotated trajectory with prompts, actions, observations, rewards, and terminal outcome
+- WHEN RL trajectory export runs
+- THEN it emits the trajectory in deterministic order with safe row identity and metadata
+- AND tool/action links remain structured rather than flattened into ambiguous prose.
+
+#### Scenario: Incomplete trajectory fails closed
+
+r[agent_harness_runtime.hf_dataset_export.rl_trajectories.rejects_incomplete]
+- GIVEN a trajectory has missing rewards, no terminal outcome, orphaned observations, invalid action/tool links, or unsafe metadata requests
+- WHEN RL trajectory export runs
+- THEN it returns a typed export error or deterministic skipped-row reason
+- AND it does not fabricate rewards or terminal outcomes.
+
+### Requirement: Structured dataset inspection
+
+r[agent_harness_runtime.hf_dataset_export.inspection] Animus MUST provide structured dataset inspection reports that summarize row counts, skipped rows, empty or short turns, tool/reasoning leakage warnings, usage or token summaries when available, and export policy decisions.
+
+#### Scenario: Inspection explains export quality safely
+
+r[agent_harness_runtime.hf_dataset_export.inspection.safe_reports]
+- GIVEN a batch of Animus sessions contains exportable rows, skipped rows, and policy-sensitive payloads
+- WHEN inspection runs
+- THEN it returns deterministic aggregate counts, warning classes, skipped-row reasons, and safe metadata summaries
+- AND the report does not include raw hidden reasoning, raw private tool output, or private provenance payloads.
+
+### Requirement: Closeout evidence covers dataset export targets
+
+r[agent_harness_runtime.hf_dataset_export.closeout] Dataset export implementation MUST be closed out with focused positive and negative tests, documentation for Hugging Face/TRL integration, workspace checks for touched crates, pre-commit hooks, Cairn validation, and Cairn gates.
+
+#### Scenario: Export change is ready to archive
+
+r[agent_harness_runtime.hf_dataset_export.closeout.evidence]
+- GIVEN the dataset export change is implemented
+- WHEN closeout validation runs
+- THEN evidence includes SFT chat-message tests, preference-row tests, RL trajectory tests, leakage negative tests, inspection-report tests, documentation review, pre-commit results, Cairn validation, and Cairn gates
+- AND skipped checks record a blocker and next-best validation.
+
+### Requirement: Composition conformance matrix
+
+r[agent_harness_runtime.composability.conformance_matrix] Animus MUST maintain a composition conformance matrix that names representative cross-module scenarios, owners, feature requirements, positive cases, negative cases, and safe evidence labels.
+
+#### Scenario: Matrix entries include positive and negative coverage
+
+r[agent_harness_runtime.composability.conformance_matrix.coverage]
+- GIVEN a conformance matrix entry covers provider/model dispatch, tool/provenance receipts, headless/runtime events, middleware/failure reports, or capability/no-fallback behavior
+- WHEN matrix validation runs
+- THEN each entry has an owner, feature requirements, at least one positive case, at least one negative case, and a safe evidence label
+- AND incomplete entries fail validation.
+
+### Requirement: Positive cross-module conformance
+
+r[agent_harness_runtime.composability.positive_conformance] Composition tests MUST include deterministic positive scenarios that combine independent modules using pure fixtures and fake adapters rather than live host authority.
+
+#### Scenario: Cross-module happy paths compose without live services
+
+r[agent_harness_runtime.composability.positive_conformance.fake_backed]
+- GIVEN fake adapters and in-memory DTO fixtures for selected conformance scenarios
+- WHEN the composition rail runs
+- THEN provider hardening, model dispatch, tool contracts, provenance receipts, headless event projection, middleware, and runtime reports compose according to their typed contracts
+- AND no live provider, tool process, network, terminal, filesystem mutation, or persistence backend is required.
+
+### Requirement: Negative cross-module conformance
+
+r[agent_harness_runtime.composability.negative_conformance] Composition tests MUST include deterministic negative scenarios for malformed responses, unauthorized tools, missing services, oversized output, unsafe receipts, disabled feature surfaces, and ambient fallback attempts.
+
+#### Scenario: Cross-module failure paths fail closed
+
+r[agent_harness_runtime.composability.negative_conformance.fail_closed]
+- GIVEN a conformance scenario receives a malformed response, unauthorized capability, missing service, oversized output, unsafe receipt, disabled surface, or attempted ambient fallback
+- WHEN the composition rail runs
+- THEN runtime returns the matching typed failure or denial
+- AND no downstream module claims completed effects or accepts unsafe evidence.
+
+### Requirement: Focused composition rail
+
+r[agent_harness_runtime.composability.conformance_rail] Animus MUST provide a focused composition conformance command or script that runs deterministic in-memory cross-module scenarios and emits bounded safe evidence.
+
+#### Scenario: Conformance evidence remains safe
+
+r[agent_harness_runtime.composability.conformance_rail.safe_evidence]
+- GIVEN the conformance rail completes or fails
+- WHEN it emits evidence output
+- THEN evidence includes scenario names, classes, counts, and hashes
+- AND raw prompts, provider payloads, credentials, full paths, and unbounded tool outputs are omitted or rejected by leak checks.
+
+### Requirement: Composition conformance verification
+
+r[agent_harness_runtime.composability.conformance.verification] The composition conformance change MUST include focused positive and negative tests for matrix coverage, fake-backed composition, fail-closed composition, safe evidence, workspace checks, optional Nix check coverage, and Cairn gates before archive.
+
+#### Scenario: Closeout evidence covers composition rail behavior
+
+r[agent_harness_runtime.composability.conformance.verification.closeout]
+- GIVEN maintainers intend to archive the composition conformance change
+- WHEN closeout validation runs
+- THEN evidence names matrix, positive conformance, negative conformance, safe evidence, workspace, Nix if added, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.

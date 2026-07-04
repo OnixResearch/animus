@@ -1,0 +1,75 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+readonly RAIL_NAME=composition-conformance
+readonly RECEIPT_SCHEMA=animus.focused-rail.v1
+readonly RECEIPT_DIR=target/cairn/focused-rails
+readonly EXPECTED_SCENARIO_COUNT=5
+readonly EXPECTED_POSITIVE_COUNT=5
+readonly EXPECTED_NEGATIVE_COUNT=9
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+
+if [ "${1:-}" = "--root" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  repo_root=$(CDPATH= cd -- "$2" && pwd)
+fi
+
+if ! command -v cargo >/dev/null 2>&1; then
+  printf '%s\n' 'error: cargo is required. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+
+if ! command -v b3sum >/dev/null 2>&1; then
+  printf '%s\n' 'error: b3sum is required for BLAKE3 rail evidence. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+
+cd "${repo_root}"
+
+cargo test -p animus-runtime --locked composition_conformance
+
+mkdir -p "${RECEIPT_DIR}"
+tmp_body=$(mktemp "${TMPDIR:-/tmp}/animus-composition-conformance.XXXXXX")
+trap 'rm -f "${tmp_body}"' EXIT HUP INT TERM
+
+cat > "${tmp_body}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+scenario_count: ${EXPECTED_SCENARIO_COUNT}
+positive_count: ${EXPECTED_POSITIVE_COUNT}
+negative_count: ${EXPECTED_NEGATIVE_COUNT}
+scenarios:
+- provider-model-dispatch
+- tool-provenance-receipt
+- headless-runtime-events
+- middleware-failure-report
+- capability-no-fallback
+case_classes:
+- positive
+- negative
+safe_evidence:
+- scenario names, case classes, counts, labels, and BLAKE3 hashes only
+- raw prompts, provider payloads, credentials, private paths, and unbounded tool outputs omitted
+EOF
+
+receipt_hash=$(b3sum "${tmp_body}" | awk '{print $1}')
+receipt_path=${RECEIPT_DIR}/${RAIL_NAME}.md
+{
+  cat "${tmp_body}"
+  printf 'receipt_hash: BLAKE3:%s\n' "${receipt_hash}"
+} > "${receipt_path}"
+
+if grep -Eq 'RAW_PROMPT:|PROVIDER_PAYLOAD:|UNBOUNDED_OUTPUT:|BEGIN [A-Z ]*PRIVATE KEY|API_KEY=|AWS_SECRET_ACCESS_KEY|sk-|/home/[^[:space:]]+' "${receipt_path}"; then
+  printf 'error: focused rail %s wrote unsafe evidence\n' "${RAIL_NAME}" >&2
+  exit "${FAILURE}"
+fi
+
+printf 'focused rail %s: pass\n' "${RAIL_NAME}"
+printf 'receipt: %s\n' "${receipt_path}"
