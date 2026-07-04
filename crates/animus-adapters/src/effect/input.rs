@@ -1,5 +1,3 @@
-const CONFIRMATION_SUMMARY_FIELD: crate::validation::FieldName =
-    crate::validation::FieldName::new("confirmation_summary");
 const HOST_SUMMARY_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("host_effect_summary");
 const CAPABILITY_SUMMARY_FIELD: crate::validation::FieldName =
@@ -106,45 +104,6 @@ impl CancellationCheck {
     }
 
     /// Returns the redacted check summary.
-    #[must_use]
-    pub fn summary(&self) -> &str {
-        self.summary.as_str()
-    }
-}
-
-/// Confirmation request passed to an injected confirmation broker.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ConfirmationRequest {
-    capability: super::CapabilityClass,
-    summary: alloc::string::String,
-}
-
-impl ConfirmationRequest {
-    /// Builds a confirmation request with a redacted summary.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`crate::AdapterContractError`] when the summary is empty, too
-    /// long, or contains a NUL character.
-    pub fn new(
-        capability: super::CapabilityClass,
-        summary: &str,
-    ) -> Result<Self, crate::AdapterContractError> {
-        let summary =
-            crate::validation::normalized_adapter_field(CONFIRMATION_SUMMARY_FIELD, summary)?;
-        Ok(Self {
-            capability,
-            summary,
-        })
-    }
-
-    /// Returns the requested capability class.
-    #[must_use]
-    pub const fn capability(&self) -> super::CapabilityClass {
-        self.capability
-    }
-
-    /// Returns the redacted confirmation summary.
     #[must_use]
     pub fn summary(&self) -> &str {
         self.summary.as_str()

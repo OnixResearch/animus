@@ -23,6 +23,10 @@ impl ReplayCounts {
         self.summaries = self.summaries.saturating_add(COUNT_INCREMENT);
     }
 
+    pub(super) fn reset_model_visible_items(&mut self) {
+        self.model_visible_items = 0;
+    }
+
     pub(super) fn record_usage(&mut self) {
         self.usage_observations = self.usage_observations.saturating_add(COUNT_INCREMENT);
     }

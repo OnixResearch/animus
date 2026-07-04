@@ -1,0 +1,51 @@
+#![allow(unknown_lints)]
+#![allow(non_trait_imports, path_segment_repetition)]
+
+use alloc::string::String;
+use alloc::vec::Vec;
+use core::num::NonZeroU32;
+
+use super::guidance::PromptResourceScope;
+use super::prompt_assembly::{
+    PromptAssembly, PromptAssemblyError, PromptAssemblyMode, PromptAssemblyPolicy,
+    PromptAssemblyPolicyDraft, PromptBudgetClass, PromptRedactionClass, PromptSectionKind,
+    PromptSourceAdmissionStatus, PromptSourceDraft, PromptSourceKind, PromptSourcePriority,
+    PromptSourceRequirement, PromptSourceTrustStatus, assemble_prompt_sources,
+};
+
+const DESCRIPTOR_ID_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("memory_descriptor_id");
+const MEMORY_SOURCE_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("memory_source_label");
+const DECISION_LABEL_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("memory_decision_label");
+const RECEIPT_LABEL_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("memory_receipt_label");
+const MEMORY_SUMMARY_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("memory_summary_label");
+const MEMORY_THREAD_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("memory_source_thread_id");
+const MEMORY_EVIDENCE_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("memory_evidence_handle");
+const MAX_MEMORY_DESCRIPTORS: usize = 32;
+const MIN_MEMORY_CONFIDENCE_PERCENT: u8 = 1;
+const MAX_MEMORY_CONFIDENCE_PERCENT: u8 = 100;
+
+const _: () = assert!(MAX_MEMORY_DESCRIPTORS > 0);
+const _: () = assert!(MAX_MEMORY_CONFIDENCE_PERCENT >= MIN_MEMORY_CONFIDENCE_PERCENT);
+
+include!("memory/impl/base/impl001.rs");
+include!("memory/impl/base/impl002.rs");
+include!("memory/impl/base/impl003.rs");
+include!("memory/impl/base/impl004.rs");
+include!("memory/impl/optin/impl005.rs");
+include!("memory/impl/optin/impl006.rs");
+include!("memory/impl/optin/impl007.rs");
+include!("memory/impl/optin/impl008.rs");
+
+#[cfg(test)]
+mod tests {
+    include!("memory/tests/support.rs");
+    include!("memory/tests/tests001.rs");
+    include!("memory/tests/tests002.rs");
+}

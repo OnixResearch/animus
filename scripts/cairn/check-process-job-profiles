@@ -1,0 +1,106 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+readonly RAIL_NAME=process-job-profiles
+readonly RECEIPT_SCHEMA=animus.focused-rail.v1
+readonly RECEIPT_DIR=target/cairn/focused-rails
+readonly LOCAL_TMP_DIR=target/tmp
+readonly POLICY_SOURCE=policy/process-jobs/policy.ncl
+readonly POLICY_FIELD=process_job_profile_policy
+readonly MANIFEST_FIELD=sample_profile_manifest
+readonly INVALID_FIELD=invalid_schema_fixture
+readonly GENERATED_POLICY=policy/process-jobs/generated/process-job-profile-policy.json
+readonly GENERATED_MANIFEST=policy/process-jobs/generated/sample-profile-manifest.json
+readonly DOC_PATH=docs/process-job-profiles.md
+readonly RUNTIME_PATH=crates/animus-runtime/src/background
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+
+if [ "${1:-}" = "--root" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  repo_root=$(CDPATH= cd -- "$2" && pwd)
+fi
+
+if ! command -v cargo >/dev/null 2>&1; then
+  printf '%s\n' 'error: cargo is required. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+
+if ! command -v nickel >/dev/null 2>&1; then
+  printf '%s\n' 'error: nickel is required. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+
+require_contains() {
+  file=$1
+  needle=$2
+  if [ -d "${file}" ]; then
+    if ! grep -R -F -- "${needle}" "${file}" >/dev/null 2>&1; then
+      printf 'error: %s missing marker: %s\n' "${file}" "${needle}" >&2
+      exit "${FAILURE}"
+    fi
+    return
+  fi
+  if ! grep -F -- "${needle}" "${file}" >/dev/null 2>&1; then
+    printf 'error: %s missing marker: %s\n' "${file}" "${needle}" >&2
+    exit "${FAILURE}"
+  fi
+}
+
+cd "${repo_root}"
+
+mkdir -p "${LOCAL_TMP_DIR}"
+tmp_dir=$(mktemp -d "${LOCAL_TMP_DIR}/animus-process-jobs.XXXXXX")
+trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
+
+nickel export --format json --field "${POLICY_FIELD}" "${POLICY_SOURCE}" > "${tmp_dir}/process-job-profile-policy.json"
+nickel export --format json --field "${MANIFEST_FIELD}" "${POLICY_SOURCE}" > "${tmp_dir}/sample-profile-manifest.json"
+diff -u "${GENERATED_POLICY}" "${tmp_dir}/process-job-profile-policy.json"
+diff -u "${GENERATED_MANIFEST}" "${tmp_dir}/sample-profile-manifest.json"
+
+if nickel export --format json --field "${INVALID_FIELD}" "${POLICY_SOURCE}" > "${tmp_dir}/invalid.json" 2> "${tmp_dir}/invalid.err"; then
+  printf '%s\n' 'error: invalid process-job profile schema fixture exported successfully' >&2
+  exit "${FAILURE}"
+fi
+
+TMPDIR="${repo_root}/${LOCAL_TMP_DIR}" cargo test -p animus-runtime --locked background
+
+require_contains "${RUNTIME_PATH}" 'resolve_process_job_profile'
+require_contains "${RUNTIME_PATH}" 'environment key'
+require_contains "${RUNTIME_PATH}" 'duplicate profile names at equal precedence'
+require_contains "${DOC_PATH}" 'Resolving a profile is pure'
+require_contains "${DOC_PATH}" 'Secret-like environment keys'
+require_contains "${DOC_PATH}" 'Duplicate profile names at the same precedence fail closed'
+require_contains "${DOC_PATH}" 'BLAKE3 profile/request hashes'
+
+mkdir -p "${RECEIPT_DIR}"
+receipt_path=${RECEIPT_DIR}/${RAIL_NAME}.md
+cat > "${receipt_path}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+boundary: Nickel-authored process-job profile policy and pure backend-neutral profile resolution
+policy_source: ${POLICY_SOURCE}
+policy_export: checked
+sample_manifest_export: checked
+invalid_schema_fixture: rejected
+positive_fixtures:
+- valid profile resolves to a backend-neutral start request without shell, pueue, systemd, filesystem, queue, storage, or network authority
+- deterministic source precedence selects explicit over workspace over global
+negative_fixtures:
+- duplicate same-precedence profile names fail closed
+- secret env keys, path escapes, unsupported backends, invalid command shapes, args-with-command, resource limit violations, future schema, invalid policy hash, full path source labels, and credential-looking locators are rejected
+safe_evidence:
+- identity metadata carries schema/source/policy/profile/backend/hash fields only
+- raw environment values, credentials, full paths, and backend secret locators are excluded from receipt metadata
+non_claims:
+- this rail does not implement process supervision, pueue/systemd dispatch, filesystem manifest discovery, storage, notifications, TUI behavior, live provider behavior, or production readiness
+EOF
+
+printf 'focused rail %s: pass\n' "${RAIL_NAME}"
+printf 'receipt: %s\n' "${receipt_path}"

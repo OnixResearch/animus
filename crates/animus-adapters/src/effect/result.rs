@@ -56,6 +56,12 @@ pub enum Reason {
     DeadlineExceeded,
     /// The service returned invalid boundary data.
     InvalidBoundaryPayload,
+    /// The broker returned no actionable confirmation decision.
+    NoDecision,
+    /// The confirmation approval did not match the pending request.
+    MismatchedConfirmation,
+    /// The confirmation approval expired before evaluation.
+    StaleConfirmation,
     /// The service completed.
     Completed,
 }
@@ -72,6 +78,9 @@ impl Reason {
             Self::Cancelled => "cancelled",
             Self::DeadlineExceeded => "deadline_exceeded",
             Self::InvalidBoundaryPayload => "invalid_boundary_payload",
+            Self::NoDecision => "no_decision",
+            Self::MismatchedConfirmation => "mismatched_confirmation",
+            Self::StaleConfirmation => "stale_confirmation",
             Self::Completed => "completed",
         }
     }

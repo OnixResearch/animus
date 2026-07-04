@@ -6,111 +6,61 @@
 //! Syndicate dataspaces. The deterministic transition core is separated from the
 //! thin imperative shell that calls fabrics and adapters.
 
+#![cfg_attr(animus_octet, feature(register_tool))]
+#![cfg_attr(animus_octet, register_tool(tigerstyle))]
 #![deny(missing_docs)]
 #![deny(clippy::all)]
 #![deny(clippy::pedantic)]
 #![deny(clippy::undocumented_unsafe_blocks)]
 #![allow(clippy::module_name_repetitions)]
+#![allow(unknown_lints)]
+#![allow(module_file_count)]
+// Octet-only suppression keeps archived compatibility facades reviewable until
+// their public APIs are split by owner without requiring nightly-only lint names
+// in normal stable cargo builds.
+#![cfg_attr(
+    animus_octet,
+    allow(
+        tigerstyle::excessive_file_length,
+        tigerstyle::platform_dependent_cast,
+        tigerstyle::unbounded_loop,
+        tigerstyle::unjustified_allow
+    )
+)]
 #![forbid(unsafe_code)]
 
+mod background;
+#[allow(excessive_file_length)]
+mod batch;
+mod boundary;
+mod context_layering;
 mod contract;
+#[allow(excessive_file_length)]
+#[path = "continuation/mod.rs"]
+mod controller;
+mod dataset_export;
+mod eval_feedback;
+mod exports;
 mod fabric;
+mod fresh_context_tasks;
+mod headless;
 mod hooks;
+#[allow(excessive_file_length)]
+#[path = "kanban.rs"]
+mod orchestration;
+mod pi_compaction;
+mod provenance;
+mod provider_hardening;
+mod quality_records;
+mod researchspec;
+mod scaffold;
 mod shell;
 mod status;
 mod telemetry;
 mod transition;
+mod trust_boundary;
 mod workcmd;
 mod worker_team;
+mod zerostack_midturn;
 
-pub use contract::{
-    DEFAULT_MAX_TURNS, MIN_MAX_TURNS, MaxTurns, RunReport, RuntimeConfig, RuntimeError,
-    RuntimeFailure, RuntimeInput, RuntimeStatus,
-};
-pub use fabric::LoopFabric;
-pub use hooks::{
-    HookAction, HookBoundary, HookDecision, LifecycleHookDefinition, LifecycleHookDefinitionDraft,
-    LifecycleHookDefinitionSource, LifecycleHookEffect, LifecycleHookEffectDraft,
-    LifecycleHookError, LifecycleHookErrorKind, LifecycleHookEventKind, LifecycleHookFailureClass,
-    LifecycleHookInput, LifecycleHookInputDraft, LifecycleHookOutcome, LifecycleHookOutcomeClass,
-    LifecycleHookOutput, LifecycleHookOutputDraft, LifecycleHookPolicyStatus,
-    LifecycleHookRedaction, LifecycleHookRequest, LifecycleHookRoutePlan,
-    LifecycleHookTrustDecision, LifecycleHookTrustRecord, LifecycleHookTrustRecordDraft,
-    LifecycleHookTrustScope, LifecycleHookTrustStatus, MiddlewareError, RuntimeMiddleware,
-    RuntimeMiddlewareStack, bind_lifecycle_hook_output_to_policy, evaluate_lifecycle_hook_trust,
-    route_lifecycle_hook_requests,
-};
-pub use shell::{
-    RuntimeAdapters, SteelPolicyRuntime, run_agent_loop, run_with_steel_policy,
-    run_with_steel_program,
-};
-/// Pure status-selection result.
-pub type AgentStatusSelection = status::choose::Selection;
-/// Safe summary of a rejected status candidate.
-pub type RejectedStatusCandidate = status::types::RejectedCandidate;
-/// Reason an observation was not selected.
-pub type RejectedStatusReason = status::types::RejectedReason;
-/// Safe summary of a selected status authority.
-pub type StatusAuthoritySummary = status::types::AuthoritySummary;
-/// Bounded explanation for a status selection decision.
-pub type StatusDecisionExplanation = status::explain::DecisionExplanation;
-/// Evidence-summary validation error.
-pub type StatusEvidenceError = status::safe::EvidenceError;
-/// Bounded redacted evidence summary for durable explanations.
-pub type StatusEvidenceSummary = status::safe::EvidenceSummary;
-/// Reason a decision selected fallback or unknown state.
-pub type StatusFallbackReason = status::types::FallbackReason;
-/// Freshness class assigned to a status decision.
-pub type StatusFreshness = status::types::Freshness;
-
-/// Selects one semantic status authority for a target without ambient I/O.
-#[must_use]
-pub fn select_agent_status(
-    request: &animus_adapters::HostStatusRequest,
-    current_sequence: animus_adapters::StatusSequence,
-    observations: &[animus_adapters::AgentStatusObservation],
-) -> AgentStatusSelection {
-    status::choose::select(request, current_sequence, observations)
-}
-
-/// Validates a durable status evidence summary.
-///
-/// # Errors
-///
-/// Returns [`StatusEvidenceError`] when the summary is empty, overlong, or
-/// contains raw or unsafe evidence markers.
-pub fn validate_status_evidence_summary(text: &str) -> Result<(), StatusEvidenceError> {
-    status::safe::validate_summary(text)
-}
-pub use telemetry::{
-    AdapterComponent, LoopDecisionKind, RuntimeEvent, RuntimeEventKind, RuntimeTerminalKind,
-};
-pub use transition::{
-    AdapterOutcome, AdapterRequest, AdapterStep, DecisionStep, TurnPlan, TurnState,
-    apply_adapter_outcome, apply_decision, complete_with_fabric_error, complete_with_guard_block,
-    complete_with_guard_failure, complete_with_steel_policy_denial, plan_next_turn,
-};
-pub use workcmd::{
-    WorkflowCommandArgumentType, WorkflowCommandArgumentValue, WorkflowCommandArgumentValueDraft,
-    WorkflowCommandCapability, WorkflowCommandDuplicatePolicy, WorkflowCommandError,
-    WorkflowCommandErrorKind, WorkflowCommandInputField, WorkflowCommandInputFieldDraft,
-    WorkflowCommandManifest, WorkflowCommandManifestDraft, WorkflowCommandOutput,
-    WorkflowCommandOutputContract, WorkflowCommandOutputContractDraft, WorkflowCommandOutputDraft,
-    WorkflowCommandOutputKind, WorkflowCommandPolicy, WorkflowCommandProvenance,
-    WorkflowCommandProvenanceDraft, WorkflowCommandRegistry, WorkflowCommandRegistryDiagnostic,
-    WorkflowCommandRegistryDiagnosticKind, WorkflowCommandRegistryPolicy,
-    WorkflowCommandSideEffectPosture, WorkflowCommandSourceScope, WorkflowCommandTrustStatus,
-    WorkflowInvocationArgument, WorkflowInvocationArgumentDraft, WorkflowInvocationBinding,
-    WorkflowInvocationPlan, WorkflowValidationStatus, bind_workflow_command_arguments,
-    build_workflow_command_registry, prepare_workflow_command_invocation,
-    validate_workflow_command_output,
-};
-pub use worker_team::{
-    Claim, Conflict, ConflictReport, ContextAdmissionPolicy, DelegationFailure, EvidenceReference,
-    FailureKind, MutationIntent, ParentTrace, Report, ReportMergeOutcome, WorkerAuthority,
-    WorkerBudgets, WorkerCancelOutcome, WorkerCapability, WorkerContextItem, WorkerContextItemKind,
-    WorkerContextPacket, WorkerContextRedaction, WorkerHandle, WorkerMergedReport,
-    WorkerOutputSchema, WorkerScope, WorkerService, WorkerStatus, WorkerTask, WorkerTaskDraft,
-    collect_report, enqueue_task, merge_reports, request_cancel, request_status,
-    validate_context_packet, validate_report, validate_task,
-};
+pub use exports::*;

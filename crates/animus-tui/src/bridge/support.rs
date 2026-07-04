@@ -1,0 +1,13 @@
+    pub(crate) const RUN_ID: &str = "tool-run";
+    pub(crate) const CORRELATION_ID: &str = "approval-1";
+    pub(crate) const APPROVAL_PROMPT: &str = "allow guarded action";
+    pub(crate) const TOOL_NAME: &str = "search";
+    pub(crate) const TOOL_INPUT: &str = "query";
+    pub(crate) const TOOL_OUTPUT: &str = "tool output";
+    pub(crate) const LONG_OUTPUT: &str = "alpha beta gamma";
+    pub(crate) const BAD_NUL: &str = "bad\0text";
+    pub(crate) const MISMATCHED_CORRELATION_ID: &str = "approval-other";
+    pub(crate) const COMPLETED_UNITS: u32 = 1;
+    pub(crate) const TOTAL_UNITS: u32 = 3;
+    pub(crate) const TOO_MANY_COMPLETED_UNITS: u32 = 4;
+    pub(crate) const OUTPUT_BUDGET: u32 = 5;

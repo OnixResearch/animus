@@ -29,6 +29,14 @@ impl SafeHash {
         })
     }
 
+    /// Builds a safe hash directly from raw bytes with BLAKE3.
+    #[must_use]
+    pub fn from_blake3_bytes(bytes: &[u8]) -> Self {
+        Self {
+            value: alloc::format!("{}", blake3::hash(bytes).to_hex()),
+        }
+    }
+
     /// Returns the validated hash text.
     #[must_use]
     pub fn as_str(&self) -> &str {

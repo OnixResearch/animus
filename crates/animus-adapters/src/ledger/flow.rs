@@ -1,17 +1,31 @@
+mod fault;
+
+pub use fault::Error;
+
 const SESSION_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("ledger_session_label");
 const EMPTY_ENTRY_COUNT: usize = 0;
+const NO_CONTEXT_ITEMS: usize = 0;
 
 /// Successful replay result for neutral entries.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Report {
     context: alloc::vec::Vec<super::ContextItem>,
     counts: super::ReplayCounts,
+    labels: alloc::vec::Vec<super::Label>,
 }
 
 impl Report {
-    fn new(context: alloc::vec::Vec<super::ContextItem>, counts: super::ReplayCounts) -> Self {
-        Self { context, counts }
+    pub(super) fn new(
+        context: alloc::vec::Vec<super::ContextItem>,
+        counts: super::ReplayCounts,
+        labels: alloc::vec::Vec<super::Label>,
+    ) -> Self {
+        Self {
+            context,
+            counts,
+            labels,
+        }
     }
 
     /// Returns model-visible context in replay order.
@@ -24,6 +38,12 @@ impl Report {
     #[must_use]
     pub const fn counts(&self) -> super::ReplayCounts {
         self.counts
+    }
+
+    /// Returns operator-facing labels preserved as replay-neutral metadata.
+    #[must_use]
+    pub fn labels(&self) -> &[super::Label] {
+        self.labels.as_slice()
     }
 }
 
@@ -53,39 +73,6 @@ impl Request {
     #[must_use]
     pub fn session_label(&self) -> &str {
         self.session_label.as_str()
-    }
-}
-
-/// Replay errors that fail closed without exposing raw adapter-owned payloads.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum Error {
-    /// Replay received no entries.
-    EmptyLedger,
-    /// Replay encountered an unsupported entry class.
-    UnsupportedEntry {
-        /// Safe entry identifier.
-        entry_id: alloc::string::String,
-        /// Safe unsupported kind label.
-        kind_label: alloc::string::String,
-        /// Redaction marker proving raw payload was omitted.
-        redaction: crate::ReceiptRedaction,
-    },
-}
-
-impl core::fmt::Display for Error {
-    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::EmptyLedger => formatter.write_str("ledger replay requires at least one entry"),
-            Self::UnsupportedEntry {
-                entry_id,
-                kind_label,
-                redaction,
-            } => write!(
-                formatter,
-                "ledger entry {entry_id} with kind {kind_label} is unsupported and {}",
-                redaction.as_str()
-            ),
-        }
     }
 }
 
@@ -120,7 +107,7 @@ pub fn replay(entries: &[super::Entry]) -> Result<Report, Error> {
         }
     }
 
-    Ok(Report::new(context, counts))
+    Ok(Report::new(context, counts, alloc::vec::Vec::new()))
 }
 
 /// Builds the fail-closed outcome for an absent session-ledger service.
@@ -135,7 +122,31 @@ pub fn missing_service(_request: &Request) -> crate::ServiceOutcome<Report> {
     crate::ServiceOutcome::absent(receipt)
 }
 
-fn replay_entry(
+/// Builds the typed error for a missing ledger service before execution.
+#[must_use]
+pub fn missing_service_error(request: &Request) -> Error {
+    Error::MissingLedgerService {
+        session_label: alloc::string::String::from(request.session_label()),
+    }
+}
+
+/// Builds the typed error for a missing session before execution.
+#[must_use]
+pub fn missing_session_error(request: &Request) -> Error {
+    Error::MissingSession {
+        session_label: alloc::string::String::from(request.session_label()),
+    }
+}
+
+/// Builds the typed error for an unavailable ledger service before execution.
+#[must_use]
+pub fn unavailable_service_error(request: &Request) -> Error {
+    Error::UnavailableLedgerService {
+        session_label: alloc::string::String::from(request.session_label()),
+    }
+}
+
+pub(super) fn replay_entry(
     entry: &super::Entry,
     counts: &mut super::ReplayCounts,
 ) -> Result<Option<super::ContextItem>, Error> {
@@ -158,7 +169,7 @@ fn replay_entry(
             id,
             content,
         ))),
-        super::Entry::Summary { id, content } => {
+        super::Entry::Summary { id, content, .. } => {
             counts.record_summary();
             Ok(Some(model_item(
                 counts,
@@ -180,7 +191,7 @@ fn replay_entry(
     }
 }
 
-fn model_item(
+pub(super) fn model_item(
     counts: &mut super::ReplayCounts,
     role: super::ContextRole,
     source_id: &super::EntryId,
@@ -194,10 +205,16 @@ fn model_item(
     )
 }
 
-fn unsupported_entry(id: &super::EntryId, kind_label: &str) -> Error {
+pub(super) fn unsupported_entry(id: &super::EntryId, kind_label: &str) -> Error {
     Error::UnsupportedEntry {
-        entry_id: alloc::string::String::from(id.as_str()),
+        entry_id: id_string(id),
         kind_label: alloc::string::String::from(kind_label),
         redaction: crate::ReceiptRedaction::OutputBounded,
     }
 }
+
+pub(super) fn id_string(id: &super::EntryId) -> alloc::string::String {
+    alloc::string::String::from(id.as_str())
+}
+
+const _: () = assert!(NO_CONTEXT_ITEMS == EMPTY_ENTRY_COUNT);

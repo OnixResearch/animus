@@ -12,7 +12,24 @@ type ToolDescriptor = super::ToolDescriptor;
 type ToolDescriptorDraft<'a> = super::ToolDescriptorDraft<'a>;
 type WorkingDirectoryMode = super::WorkingDirectoryMode;
 
+mod launch;
 mod path;
+mod tools;
+
+pub(in crate::manifest) fn validate_launch_policy(
+    runtime_kind: RuntimeKind,
+    draft: &LaunchPolicyDraft<'_>,
+) -> Result<LaunchPolicy, PluginDescriptorError> {
+    launch::prepare_policy(runtime_kind, draft)
+}
+
+pub(in crate::manifest) fn validate_tools(
+    drafts: &[ToolDescriptorDraft<'_>],
+    built_in_tool_names: &[&str],
+    existing_catalog_tool_names: &[&str],
+) -> Result<Collection<ToolDescriptor>, PluginDescriptorError> {
+    tools::collect_descriptors(drafts, built_in_tool_names, existing_catalog_tool_names)
+}
 
 const ENVIRONMENT_ALLOWLIST_FIELD: crate::validation::FieldName =
     super::ENVIRONMENT_ALLOWLIST_FIELD;
@@ -25,6 +42,7 @@ const NETWORK_POLICY_FIELD: crate::validation::FieldName = super::NETWORK_POLICY
 const NETWORK_POLICY_LOOPBACK: &str = super::NETWORK_POLICY_LOOPBACK;
 const NETWORK_POLICY_OUTBOUND: &str = super::NETWORK_POLICY_OUTBOUND;
 const PATH_ESCAPE_SEGMENT: &str = super::PATH_ESCAPE_SEGMENT;
+const PROVENANCE_FIELD: crate::validation::FieldName = super::PROVENANCE_FIELD;
 const RUNTIME_KIND_FIELD: crate::validation::FieldName = super::RUNTIME_KIND_FIELD;
 const RUNTIME_KIND_HOST: &str = super::RUNTIME_KIND_HOST;
 const RUNTIME_KIND_STDIO: &str = super::RUNTIME_KIND_STDIO;
@@ -32,8 +50,17 @@ const RUNTIME_KIND_WASM: &str = super::RUNTIME_KIND_WASM;
 const SANDBOX_MODE_FIELD: crate::validation::FieldName = super::SANDBOX_MODE_FIELD;
 const SANDBOX_MODE_ISOLATED: &str = super::SANDBOX_MODE_ISOLATED;
 const SANDBOX_MODE_UNCONFINED: &str = super::SANDBOX_MODE_UNCONFINED;
+const TOOL_CAPABILITY_FIELD: crate::validation::FieldName = super::TOOL_CAPABILITY_FIELD;
 const TOOL_DESCRIPTION_FIELD: crate::validation::FieldName = super::TOOL_DESCRIPTION_FIELD;
 const TOOL_NAME_FIELD: crate::validation::FieldName = super::TOOL_NAME_FIELD;
+const TOOL_RESULT_FIELD: crate::validation::FieldName = super::TOOL_RESULT_FIELD;
+const TOOL_SCHEMA_FIELD: crate::validation::FieldName = super::TOOL_SCHEMA_FIELD;
+const TOOLSET_KIND_FIELD: crate::validation::FieldName = super::TOOLSET_KIND_FIELD;
+const TOOLSET_KIND_GENERIC: &str = super::TOOLSET_KIND_GENERIC;
+const TOOLSET_KIND_REVIEW_GATE: &str = super::TOOLSET_KIND_REVIEW_GATE;
+const TRUST_STATUS_FIELD: crate::validation::FieldName = super::TRUST_STATUS_FIELD;
+const TRUST_STATUS_TRUSTED: &str = super::TRUST_STATUS_TRUSTED;
+const TRUST_STATUS_UNTRUSTED: &str = super::TRUST_STATUS_UNTRUSTED;
 const UNIX_PATH_SEPARATOR: char = super::UNIX_PATH_SEPARATOR;
 const WINDOWS_DRIVE_SEPARATOR: u8 = super::WINDOWS_DRIVE_SEPARATOR;
 const WINDOWS_DRIVE_SEPARATOR_INDEX: usize = super::WINDOWS_DRIVE_SEPARATOR_INDEX;
@@ -43,87 +70,7 @@ const WORKING_DIRECTORY_MANIFEST_DIRECTORY: &str = super::WORKING_DIRECTORY_MANI
 const WORKING_DIRECTORY_PROJECT_ROOT: &str = super::WORKING_DIRECTORY_PROJECT_ROOT;
 const WRITABLE_ROOT_FIELD: crate::validation::FieldName = super::WRITABLE_ROOT_FIELD;
 
-pub(super) fn validate_tools(
-    drafts: &[ToolDescriptorDraft<'_>],
-    built_in_tool_names: &[&str],
-    existing_catalog_tool_names: &[&str],
-) -> Result<Collection<ToolDescriptor>, PluginDescriptorError> {
-    assert!(
-        drafts.len() <= crate::MAX_ADAPTER_FIELD_CHARS,
-        "manifest tool count must fit the adapter field bound"
-    );
-    assert!(
-        built_in_tool_names.len() <= crate::MAX_ADAPTER_FIELD_CHARS,
-        "built-in tool count must fit the adapter field bound"
-    );
-    assert!(
-        existing_catalog_tool_names.len() <= crate::MAX_ADAPTER_FIELD_CHARS,
-        "catalog tool count must fit the adapter field bound"
-    );
-    let mut tools = Collection::with_capacity(drafts.len());
-    for draft in drafts {
-        let name = required_text(TOOL_NAME_FIELD, draft.name)?;
-        if contains_name(built_in_tool_names, &name)
-            || contains_name(existing_catalog_tool_names, &name)
-        {
-            return Err(PluginDescriptorError::ToolNameCollision { name });
-        }
-        if tools
-            .iter()
-            .any(|tool: &ToolDescriptor| tool.name() == name)
-        {
-            return Err(PluginDescriptorError::DuplicateTool { name });
-        }
-        let description = draft
-            .description
-            .map(|text| optional_text(TOOL_DESCRIPTION_FIELD, text))
-            .transpose()?;
-        tools.push(ToolDescriptor { name, description });
-    }
-    Ok(tools)
-}
-
-pub(super) fn validate_launch_policy(
-    runtime_kind: RuntimeKind,
-    draft: &LaunchPolicyDraft<'_>,
-) -> Result<LaunchPolicy, PluginDescriptorError> {
-    assert!(
-        draft.arguments.len() <= crate::MAX_ADAPTER_FIELD_CHARS,
-        "argument count must fit the adapter field bound"
-    );
-    assert!(
-        draft.environment_allowlist.len() <= crate::MAX_ADAPTER_FIELD_CHARS,
-        "environment allowlist count must fit the adapter field bound"
-    );
-    assert!(
-        draft.writable_roots.len() <= crate::MAX_ADAPTER_FIELD_CHARS,
-        "writable root count must fit the adapter field bound"
-    );
-    let command_label = match draft.command_label {
-        Some(value) => Some(required_text_value(LAUNCH_COMMAND_LABEL_FIELD, value)?),
-        None if runtime_kind.requires_launch_command() => {
-            return Err(PluginDescriptorError::MissingLaunchCommand { runtime_kind });
-        }
-        None => None,
-    };
-    let arguments = validate_optional_texts(LAUNCH_ARGUMENT_FIELD, draft.arguments)?;
-    let working_directory = match draft.working_directory {
-        Some(value) => {
-            parse_working_directory_mode(&required_text_value(WORKING_DIRECTORY_FIELD, value)?)?
-        }
-        None => WorkingDirectoryMode::ProjectRoot,
-    };
-    let environment_allowlist = path::validate_environment_allowlist(draft.environment_allowlist)?;
-    let writable_roots = path::validate_writable_roots(draft.writable_roots)?;
-
-    Ok(LaunchPolicy {
-        command_label,
-        arguments,
-        working_directory,
-        environment_allowlist,
-        writable_roots,
-    })
-}
+const UNSAFE_PROVENANCE_MARKERS: &[&str] = &["../", "/home/", "/tmp/", "C:\\\\", "\\\\Users\\\\"];
 
 pub(super) fn validate_sandbox_requirements(
     draft: &SandboxRequirementsDraft<'_>,
@@ -141,6 +88,46 @@ pub(super) fn assert_network_sandbox_combination(
         return Err(PluginDescriptorError::UnsafeNetworkSandboxCombination { network, sandbox });
     }
     Ok(())
+}
+
+pub(super) fn validate_toolset_kind(
+    value: Option<&str>,
+) -> Result<super::ToolsetKind, PluginDescriptorError> {
+    let normalized = required_text(TOOLSET_KIND_FIELD, value)?;
+    match normalized.as_str() {
+        TOOLSET_KIND_GENERIC => Ok(super::ToolsetKind::Generic),
+        TOOLSET_KIND_REVIEW_GATE => Ok(super::ToolsetKind::ReviewGate),
+        unknown => Err(PluginDescriptorError::UnknownDescriptorValue {
+            field: TOOLSET_KIND_FIELD.as_str(),
+            value: Text::from(unknown),
+        }),
+    }
+}
+
+pub(super) fn validate_trust_status(
+    value: Option<&str>,
+) -> Result<super::TrustStatus, PluginDescriptorError> {
+    let normalized = required_text(TRUST_STATUS_FIELD, value)?;
+    match normalized.as_str() {
+        TRUST_STATUS_TRUSTED => Ok(super::TrustStatus::Trusted),
+        TRUST_STATUS_UNTRUSTED => Ok(super::TrustStatus::Untrusted),
+        unknown => Err(PluginDescriptorError::UnknownDescriptorValue {
+            field: TRUST_STATUS_FIELD.as_str(),
+            value: Text::from(unknown),
+        }),
+    }
+}
+
+pub(super) fn validate_provenance(value: Option<&str>) -> Result<Text, PluginDescriptorError> {
+    let provenance = required_text(PROVENANCE_FIELD, value)?;
+    if provenance.starts_with(super::UNIX_PATH_SEPARATOR)
+        || UNSAFE_PROVENANCE_MARKERS
+            .iter()
+            .any(|marker| provenance.contains(marker))
+    {
+        return Err(PluginDescriptorError::UnsafeProvenance { value: provenance });
+    }
+    Ok(provenance)
 }
 
 pub(super) fn parse_runtime_kind(value: &str) -> Result<RuntimeKind, PluginDescriptorError> {
@@ -199,6 +186,11 @@ pub(super) fn validate_required_texts(
         values.len() <= crate::MAX_ADAPTER_FIELD_CHARS,
         "required text count must fit the adapter field bound"
     );
+    if values.is_empty() {
+        return Err(PluginDescriptorError::MissingField {
+            field: field_name.as_str(),
+        });
+    }
     let mut normalized = Collection::with_capacity(values.len());
     for value in values {
         normalized.push(required_text_value(field_name, value)?);

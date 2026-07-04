@@ -5,16 +5,52 @@ impl super::PluginDescriptor {
         self.identity.as_str()
     }
 
+    /// Returns the descriptor version.
+    #[must_use]
+    pub fn version(&self) -> &str {
+        self.version.as_str()
+    }
+
+    /// Returns the descriptor toolset-kind label.
+    #[must_use]
+    pub const fn toolset_kind(&self) -> super::ToolsetKind {
+        self.toolset_kind
+    }
+
     /// Returns the descriptor runtime-kind label.
     #[must_use]
     pub const fn runtime_kind(&self) -> super::RuntimeKind {
         self.runtime_kind
     }
 
+    /// Returns safe manifest provenance.
+    #[must_use]
+    pub fn provenance(&self) -> &str {
+        self.provenance.as_str()
+    }
+
+    /// Returns host trust status.
+    #[must_use]
+    pub const fn trust_status(&self) -> super::TrustStatus {
+        self.trust_status
+    }
+
     /// Returns declared tools after validation and collision checks.
     #[must_use]
     pub fn declared_tools(&self) -> &[super::ToolDescriptor] {
         self.declared_tools.as_slice()
+    }
+
+    /// Returns data-only action, event-hook, pane-entrypoint, and link-handler roles.
+    #[must_use]
+    pub fn declared_roles(&self) -> &[super::PluginRole] {
+        self.declared_roles.as_slice()
+    }
+
+    /// Returns manifest-level compatibility requirements.
+    #[must_use]
+    pub const fn compatibility(&self) -> &super::PluginCompatibility {
+        &self.compatibility
     }
 
     /// Returns normalized capability labels.
@@ -39,6 +75,28 @@ impl super::PluginDescriptor {
     #[must_use]
     pub const fn redaction(&self) -> &super::RedactionPolicy {
         &self.redaction
+    }
+}
+
+impl super::ToolsetKind {
+    /// Returns the stable descriptor spelling.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Generic => super::TOOLSET_KIND_GENERIC,
+            Self::ReviewGate => super::TOOLSET_KIND_REVIEW_GATE,
+        }
+    }
+}
+
+impl super::TrustStatus {
+    /// Returns the stable descriptor spelling.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Trusted => super::TRUST_STATUS_TRUSTED,
+            Self::Untrusted => super::TRUST_STATUS_UNTRUSTED,
+        }
     }
 }
 
@@ -68,10 +126,35 @@ impl super::ToolDescriptor {
         self.name.as_str()
     }
 
-    /// Returns optional descriptor text.
+    /// Returns descriptor text.
     #[must_use]
-    pub fn description(&self) -> Option<&str> {
-        self.description.as_deref()
+    pub fn description(&self) -> &str {
+        self.description.as_str()
+    }
+
+    /// Returns the parameter schema identity.
+    #[must_use]
+    pub fn parameter_schema_identity(&self) -> &str {
+        self.parameter_schema_identity.as_str()
+    }
+
+    /// Returns the result contract identity.
+    #[must_use]
+    pub fn result_contract_identity(&self) -> &str {
+        self.result_contract_identity.as_str()
+    }
+
+    /// Returns tool-specific capability labels.
+    #[must_use]
+    pub fn capability_labels(&self) -> &[super::Text] {
+        self.capability_labels.as_slice()
+    }
+
+    pub(super) fn capability_label_strs(&self) -> super::Collection<&str> {
+        self.capability_labels
+            .iter()
+            .map(|label| label.as_str())
+            .collect()
     }
 }
 

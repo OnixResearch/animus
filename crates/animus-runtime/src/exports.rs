@@ -1,0 +1,286 @@
+//! Public runtime facade exports.
+
+#![allow(unknown_lints, excessive_file_length)]
+
+pub use crate::background::{
+    ProcessJobBackend, ProcessJobEnvironmentVariable, ProcessJobMetadataField,
+    ProcessJobNotificationPolicy, ProcessJobProfile, ProcessJobProfileError,
+    ProcessJobProfileErrorKind, ProcessJobProfileIdentity, ProcessJobProfileManifest,
+    ProcessJobProfilePolicy, ProcessJobProfileResolveRequest, ProcessJobProfileSource,
+    ProcessJobProfileSourcePrecedence, ProcessJobResourceLimits, ResolvedProcessJobProfile,
+    StartProcessJobRequest, resolve_process_job_profile,
+};
+pub use crate::batch::{
+    BatchConcurrencyPolicy, BatchError, BatchExecutionMode, BatchExecutionService, BatchJob,
+    BatchJobDraft, BatchJobOutcome, BatchJobOutcomeDraft, BatchJobReceipt, BatchJobReceiptDraft,
+    BatchJobStatus, BatchOutputFormat, BatchOutputLabel, BatchOutputRecord, BatchReceipt,
+    BatchReceiptDraft, BatchRedactionPolicy, BatchRenderer, BatchRequestDraft, BatchResumeAction,
+    BatchResumeDecision, BatchResumePlan, BatchRunIdentity, ResumeCompletedJobDraft,
+    ResumeManifestDraft, ResumeStaleReason, evaluate_resume_manifest, execute_batch_plan,
+    render_plan_order_records,
+};
+pub use crate::boundary::{evaluate_sandbox_escalation, sandbox_escalation_event};
+pub use crate::context_layering::{
+    ContextLayerAdmissionPolicy, ContextLayerBoundaryEffect, ContextLayerClass,
+    ContextLayerDescriptor, ContextLayerDiagnostic, ContextLayerDiagnosticKind,
+    ContextLayerDiscoveryBoundary, ContextLayerFreshness, ContextLayerInclusionPolicy,
+    ContextLayerPlan, ContextLayerPolicySwitch, ContextLayerReceipt, ContextLayerReceiptEntry,
+    ContextLayerRedaction, ContextLayerSourceKind, ContextLayerTrust, ContextLayerValidationResult,
+    assemble_context_layers, blake3_context_layer_fingerprint, validate_context_descriptor,
+};
+pub use crate::contract::{
+    DEFAULT_MAX_TURNS, MIN_MAX_TURNS, MaxTurns, RunReport, RuntimeConfig, RuntimeError,
+    RuntimeFailure, RuntimeInput, RuntimeStatus,
+};
+pub use crate::controller::{
+    CompletionAcknowledgement, ContinuationAction, ContinuationCandidate,
+    ContinuationCompletionRecord, ContinuationDecision, ContinuationDispatch, ContinuationError,
+    ContinuationPolicy, ContinuationPriority, ContinuationReason, ContinuationReceipt,
+    ContinuationReceiptDraft, ContinuationState, ContinuationStateClass, ContinuationWorkKind,
+    DispatchAcknowledgement, DispatchAcknowledgementOutcome, PendingContinuationDispatch,
+    PendingContinuationWork, select_next_continuation,
+};
+pub use crate::dataset_export::{
+    DatasetChatMessage, DatasetChatRow, DatasetDiagnostic, DatasetDiagnosticKind,
+    DatasetExportPolicy, DatasetExportResult, DatasetFingerprint, DatasetInspectionReport,
+    DatasetMetadataProjection, DatasetPreferenceExample, DatasetPreferenceRow, DatasetReplayEntry,
+    DatasetReplayRole, DatasetRlStep, DatasetRlStepKind, DatasetRlTrajectory,
+    DatasetRlTrajectoryRow, DatasetSessionSource, DatasetSkippedRow, DatasetTarget,
+    blake3_dataset_export_fingerprint, export_chat_messages_row, export_preference_row,
+    export_rl_trajectory_row, inspect_dataset_exports, render_chat_row_jsonl,
+    render_chat_rows_jsonl,
+};
+pub use crate::eval_feedback::{
+    EvalFeedbackCandidate, EvalFeedbackCandidateKind, EvalFeedbackDiagnostic,
+    EvalFeedbackDiagnosticKind, EvalFeedbackFingerprint, EvalFeedbackFreshnessDecision,
+    EvalFeedbackFreshnessPolicy, EvalFeedbackOutputFormat, EvalFeedbackPlan, EvalFeedbackReceipt,
+    EvalFeedbackReceiptLeak, EvalFeedbackRedactionState, EvalFeedbackReviewDecision,
+    EvalFeedbackReviewOutcome, EvalFeedbackRunStatus, EvalFeedbackScopeRequest,
+    EvalFeedbackTaskSet, EvalFeedbackTaskSetKind, EvalFeedbackValidationResult,
+    EvalFeedbackVerifierIdentity, blake3_eval_feedback_fingerprint,
+    classify_eval_feedback_freshness, evaluate_feedback_review, validate_eval_feedback_plan,
+    validate_eval_feedback_receipt,
+};
+pub use crate::fabric::LoopFabric;
+pub use crate::fresh_context_tasks::{
+    FreshTaskActionKind, FreshTaskBudget, FreshTaskCancellationReason, FreshTaskDescriptor,
+    FreshTaskDiagnostic, FreshTaskDiagnosticKind, FreshTaskDispatchDecision, FreshTaskFingerprint,
+    FreshTaskInheritance, FreshTaskIsolation, FreshTaskMode, FreshTaskReceipt, FreshTaskResult,
+    FreshTaskResultStatus, FreshTaskSchedulerState, FreshTaskValidationResult,
+    blake3_fresh_task_fingerprint, evaluate_fresh_task_dispatch, evaluate_side_question_action,
+    validate_fresh_task_descriptor, validate_fresh_task_result,
+};
+pub use crate::headless::{
+    AutomationEnvelope, AutomationError, AutomationEventDraft, AutomationEventKind,
+    CompletionReceipt, CompletionReceiptDraft, CompletionStatus, EventPayloadSummary,
+    EventProjection, EventRedaction, EventSequence, FinalOutput, HeadlessCommand,
+    HeadlessCommandDraft, HeadlessCommandKind, HeadlessProtocolError, HeadlessProtocolErrorKind,
+    HeadlessProtocolEvent, HeadlessProtocolEventClass, HeadlessQueueing, HeadlessRecordBatch,
+    HeadlessResponse, HeadlessResponseStatus, HeadlessRuntimePhase, NoninteractiveBehavior,
+    OutputPreference, RunIdentity, RunRequest, RunRequestDraft, RuntimeThreadController,
+    SandboxProfile, StructuredOutputDraft, StructuredOutputFailure, StructuredOutputReport,
+    StructuredOutputStatus, StructuredSchemaDraft, ThreadResume, ThreadResumeDraft, ThreadSnapshot,
+    ThreadStatus, acknowledge_headless_command, build_automation_stream,
+    map_runtime_events_to_headless, parse_headless_command_record, project_event,
+    prompt_required_completion, select_final_output, split_lf_records, summarize_event_payload,
+    validate_structured_output, validate_thread_cancellation, validate_thread_resume,
+};
+pub use crate::hooks::{
+    HookAction, HookBoundary, HookDecision, LifecycleHookCapability, LifecycleHookDefinition,
+    LifecycleHookDefinitionDraft, LifecycleHookDefinitionSource, LifecycleHookEffect,
+    LifecycleHookEffectDraft, LifecycleHookError, LifecycleHookErrorKind, LifecycleHookEventKind,
+    LifecycleHookFailureClass, LifecycleHookInput, LifecycleHookInputDraft, LifecycleHookOutcome,
+    LifecycleHookOutcomeClass, LifecycleHookOutput, LifecycleHookOutputDraft,
+    LifecycleHookPolicyStatus, LifecycleHookRedaction, LifecycleHookRequest,
+    LifecycleHookRoutePlan, LifecycleHookTrustDecision, LifecycleHookTrustRecord,
+    LifecycleHookTrustRecordDraft, LifecycleHookTrustScope, LifecycleHookTrustStatus,
+    MiddlewareError, RuntimeMiddleware, RuntimeMiddlewareStack,
+    bind_lifecycle_hook_output_to_policy, evaluate_lifecycle_hook_trust,
+    route_lifecycle_hook_requests,
+};
+pub use crate::orchestration::{
+    KanbanBlockRecord, KanbanBoardService, KanbanComment, KanbanCompletion, KanbanContextAssembly,
+    KanbanContextHandoff, KanbanContextItem, KanbanError, KanbanErrorKind, KanbanHeartbeat,
+    KanbanMutationIntent, KanbanPriority, KanbanPromotionDecision, KanbanPromotionOutcome,
+    KanbanQuarantinedHandoff, KanbanTask, KanbanTaskDraft, KanbanTaskGraph, KanbanTaskGraphDraft,
+    KanbanTaskState, KanbanTenantPolicy, KanbanWorkspaceAdmission, KanbanWorkspaceKind,
+    KanbanWorkspaceScope, append_kanban_handoff, assemble_kanban_context,
+    evaluate_kanban_promotion, load_kanban_graph, validate_kanban_graph,
+    validate_kanban_workspace_mutation,
+};
+pub use crate::pi_compaction::{
+    PiBranchHandoffPlan, PiBranchHandoffRequest, PiBranchSummaryMode, PiCompactionDecision,
+    PiCompactionDiagnostic, PiCompactionDiagnosticKind, PiCompactionFingerprint, PiCompactionPlan,
+    PiCompactionPolicy, PiCompactionRedactionBehavior, PiCompactionReplayEntry,
+    PiCompactionReplayEntryKind, PiCompactionSummarizerRequest, PiCompactionSummarizerSelection,
+    PiCompactionSummarizerState, PiCompactionSummaryEntry, PiCompactionSummaryFormat,
+    PiCompactionToolBinding, PiCompactionTrigger, PiCompactionValidationResult,
+    blake3_pi_compaction_fingerprint, evaluate_pi_compaction_trigger,
+    evaluate_required_pi_summarizer, prepare_pi_branch_handoff_summary, prepare_pi_compaction,
+    validate_pi_summary_entry,
+};
+pub use crate::provenance::{
+    ProvenanceActor, ProvenanceArtifact, ProvenanceArtifactDraft, ProvenanceArtifactKind,
+    ProvenanceAuthorizationStatus, ProvenanceBackendRequirement, ProvenanceBranchReport,
+    ProvenanceContentObservation, ProvenanceContentObservationDraft, ProvenanceDiffHunk,
+    ProvenanceError, ProvenanceErrorKind, ProvenanceFact, ProvenanceFactArtifact,
+    ProvenanceFactAuthorization, ProvenanceFactError, ProvenanceFactModelActivity,
+    ProvenanceFactObservation, ProvenanceFactQuery, ProvenanceFactRuntimeBlock,
+    ProvenanceFactToolActivity, ProvenanceFileIdentity, ProvenanceFileIdentityDraft,
+    ProvenanceGitAiAuthorshipLog, ProvenanceGitAiAuthorshipLogDraft,
+    ProvenanceGitAiFileAttestation, ProvenanceGitAiFileAttestationDraft, ProvenanceGitAiMetadata,
+    ProvenanceGitAiMetadataDraft, ProvenanceGraphEntry, ProvenanceLedgerEntry, ProvenanceLineRange,
+    ProvenanceMessageEntry, ProvenanceMutationKind, ProvenanceOpaqueFact, ProvenanceRangeTransform,
+    ProvenanceReceipt, ProvenanceReceiptDraft, ProvenanceRedactionClass, ProvenanceReplay,
+    ProvenanceReplayMessage, ProvenanceReplayMetadata, ProvenanceReplayRole, ProvenanceSafeField,
+    ProvenanceSummaryEntry, ProvenanceToolCheckpoint, ProvenanceToolCheckpointDraft,
+    ProvenanceToolCheckpointReceipt, ProvenanceToolEffect, ProvenanceToolEffectDraft,
+    ProvenanceToolEffectStatus, ProvenanceToolPolicy, ProvenanceToolPolicyDraft,
+    ProvenanceUnsupportedEntry, ProvenanceUsageEntry, ToolpathExportPolicy, ToolpathProjection,
+    ToolpathStep, VersionControlProvenanceBackend, classify_provenance_tool_policy,
+    compress_line_ranges, export_toolpath_projection, query_provenance_facts,
+    record_provenance_checkpoint, remove_line_ranges, replay_provenance_ledger,
+    transform_line_ranges, validate_provenance_graph, validate_vcs_neutral_field_names,
+};
+pub use crate::provider_hardening::{
+    ProviderApiStyle, ProviderApiStylePolicy, ProviderDiagnostic, ProviderDiagnosticKind,
+    ProviderEndpointSensitivity, ProviderExtraBodyDescriptor, ProviderHeaderDescriptor,
+    ProviderHeaderResolution, ProviderHeaderValueSource, ProviderModelClass, ProviderModelMetadata,
+    ProviderSecretSourceReference, ProviderSelectionReceipt, ProviderSelectionReceiptInput,
+    ProviderValidationResult, blake3_provider_hardening_fingerprint, filter_agent_model,
+    provider_selection_receipt, resolve_extra_body_descriptor, resolve_provider_api_style,
+    validate_provider_header,
+};
+pub use crate::quality_records::{
+    QualityAgentsGuidanceError, QualityAgentsGuidancePage, QualityAnnotationBody,
+    QualityDependencyIsolationReport, QualityDependencyRequirement, QualityDiagnostic,
+    QualityDiagnosticKind, QualityEditReport, QualityFingerprint, QualityFreshness,
+    QualityIssuerClassification, QualityLifecycleReport, QualityMetadataField, QualityRecordBody,
+    QualityRecordEnvelope, QualityRecordKind, QualitySidecarExport, QualitySpan,
+    QualitySpanFreshnessReport, QualityUnknownSidecarRecord, QualityValidationResult,
+    active_quality_records, blake3_quality_fingerprint, classify_quality_span_freshness,
+    export_quality_sidecar_record, quality_dependency_isolation_report, quality_record_id,
+    report_quality_after_edit, resolve_quality_agents_guidance, roundtrip_unknown_sidecar_record,
+    validate_quality_record,
+};
+pub use crate::researchspec::{
+    ResearchSpecArchiveConclusion, ResearchSpecBaselineEvidence, ResearchSpecCheckResult,
+    ResearchSpecCheckStatus, ResearchSpecDiagnostic, ResearchSpecDiagnosticKind,
+    ResearchSpecFingerprint, ResearchSpecGuardedFingerprint, ResearchSpecHypothesis,
+    ResearchSpecHypothesisDecision, ResearchSpecKeepDecision, ResearchSpecKeepOutcome,
+    ResearchSpecMeasurementRisk, ResearchSpecMetricDirection, ResearchSpecMetricSample,
+    ResearchSpecMetricValue, ResearchSpecPromotionDecision, ResearchSpecPromotionGroup,
+    ResearchSpecPromotionOutcome, ResearchSpecProvenance, ResearchSpecRunEvidence,
+    ResearchSpecRunStatus, ResearchSpecStudyContract, ResearchSpecThresholdPolicy,
+    ResearchSpecValidationResult, ResearchSpecWorkloadIdentity, blake3_researchspec_fingerprint,
+    evaluate_research_keep_gate, evaluate_research_promotion_groups, validate_research_archive,
+    validate_research_baseline, validate_research_hypothesis, validate_research_run,
+    validate_research_study_contract,
+};
+pub use crate::scaffold::{
+    ScaffoldAdmissionDecision, ScaffoldAdmissionEffect, ScaffoldAdmissionOutcome,
+    ScaffoldAdmissionRequest, ScaffoldDiagnostic, ScaffoldDiagnosticKind, ScaffoldFingerprint,
+    ScaffoldInfluenceReceipt, ScaffoldInfluenceValidationOutcome, ScaffoldProfile,
+    ScaffoldProfileProvenance, ScaffoldReceiptSensitiveEvidence, ScaffoldReviewStatus,
+    ScaffoldRevision, ScaffoldRevisionProposal, ScaffoldSelectionOutcome, ScaffoldSelectionPlan,
+    ScaffoldSelectionRequest, ScaffoldStrategyKnob, ScaffoldValidationResult,
+    apply_scaffold_admission, blake3_scaffold_fingerprint, select_scaffold_profile,
+    validate_scaffold_influence_receipt, validate_scaffold_profile,
+};
+pub use crate::shell::{
+    RuntimeAdapters, SteelPolicyRuntime, run_agent_loop, run_with_steel_policy,
+    run_with_steel_program,
+};
+pub use crate::telemetry::{
+    AdapterComponent, LoopDecisionKind, RuntimeEvent, RuntimeEventKind, RuntimeTerminalKind,
+    project_model_stream_events,
+};
+pub use crate::transition::{
+    AdapterOutcome, AdapterRequest, AdapterStep, DecisionStep, TurnPlan, TurnState,
+    apply_adapter_outcome, apply_decision, complete_with_fabric_error, complete_with_guard_block,
+    complete_with_guard_failure, complete_with_steel_policy_denial, plan_next_turn,
+};
+pub use crate::trust_boundary::{
+    TrustBoundaryAction, TrustBoundaryActionKind, TrustBoundaryDescriptor, TrustBoundaryDiagnostic,
+    TrustBoundaryDiagnosticKind, TrustBoundaryEvidencePolicy, TrustBoundaryFingerprint,
+    TrustBoundaryIssueCode, TrustBoundaryJudgeBinding, TrustBoundaryJudgeOutcome,
+    TrustBoundaryJudgeVeto, TrustBoundaryMonitorDecision, TrustBoundaryReceiptLeak,
+    TrustBoundaryRedactionStatus, TrustBoundaryValidationResult, TrustBoundaryVerifierArtifact,
+    TrustBoundaryViolationReceipt, bind_trust_boundary_judge, blake3_trust_boundary_fingerprint,
+    monitor_trust_boundary_action, validate_trust_boundary_descriptor,
+    validate_trust_boundary_receipt,
+};
+pub use crate::workcmd::{
+    WorkflowCommandArgumentType, WorkflowCommandArgumentValue, WorkflowCommandArgumentValueDraft,
+    WorkflowCommandCapability, WorkflowCommandDuplicatePolicy, WorkflowCommandError,
+    WorkflowCommandErrorKind, WorkflowCommandInputField, WorkflowCommandInputFieldDraft,
+    WorkflowCommandManifest, WorkflowCommandManifestDraft, WorkflowCommandOutput,
+    WorkflowCommandOutputContract, WorkflowCommandOutputContractDraft, WorkflowCommandOutputDraft,
+    WorkflowCommandOutputKind, WorkflowCommandPolicy, WorkflowCommandProvenance,
+    WorkflowCommandProvenanceDraft, WorkflowCommandRegistry, WorkflowCommandRegistryDiagnostic,
+    WorkflowCommandRegistryDiagnosticKind, WorkflowCommandRegistryPolicy,
+    WorkflowCommandSideEffectPosture, WorkflowCommandSourceScope, WorkflowCommandTrustStatus,
+    WorkflowInvocationArgument, WorkflowInvocationArgumentDraft, WorkflowInvocationBinding,
+    WorkflowInvocationPlan, WorkflowValidationStatus, bind_workflow_command_arguments,
+    build_workflow_command_registry, prepare_workflow_command_invocation,
+    validate_workflow_command_output,
+};
+pub use crate::worker_team::{
+    Claim, Conflict, ConflictReport, ContextAdmissionPolicy, DelegationFailure, EvidenceReference,
+    FailureKind, MutationIntent, ParentTrace, Report, ReportMergeOutcome, WorkerAuthority,
+    WorkerBudgets, WorkerCancelOutcome, WorkerCapability, WorkerContextItem, WorkerContextItemKind,
+    WorkerContextPacket, WorkerContextRedaction, WorkerHandle, WorkerMergedReport,
+    WorkerOutputSchema, WorkerScope, WorkerService, WorkerStatus, WorkerTask, WorkerTaskDraft,
+    collect_report, enqueue_task, merge_reports, request_cancel, request_status,
+    validate_context_packet, validate_report, validate_task,
+};
+pub use crate::zerostack_midturn::{
+    ZerostackCachedTokenRule, ZerostackInjectedServiceState, ZerostackMidturnDecision,
+    ZerostackMidturnDiagnostic, ZerostackMidturnDiagnosticKind, ZerostackMidturnFingerprint,
+    ZerostackMidturnPlan, ZerostackMidturnPolicy, ZerostackMidturnServices,
+    ZerostackMidturnSummary, ZerostackMidturnSummaryKind, ZerostackMidturnValidationResult,
+    ZerostackPromptPressure, ZerostackProviderUsage, ZerostackRouteMetadata,
+    ZerostackToolArtifactDescriptor, ZerostackToolArtifactPolicy,
+    artifactize_zerostack_tool_output, blake3_zerostack_midturn_fingerprint,
+    calculate_zerostack_prompt_pressure, plan_zerostack_midturn_compaction,
+    validate_zerostack_midturn_summary,
+};
+
+/// Pure status-selection result.
+pub type AgentStatusSelection = crate::status::choose::Selection;
+/// Safe summary of a rejected status candidate.
+pub type RejectedStatusCandidate = crate::status::types::RejectedCandidate;
+/// Reason an observation was not selected.
+pub type RejectedStatusReason = crate::status::types::RejectedReason;
+/// Safe summary of a selected status authority.
+pub type StatusAuthoritySummary = crate::status::types::AuthoritySummary;
+/// Bounded explanation for a status selection decision.
+pub type StatusDecisionExplanation = crate::status::explain::DecisionExplanation;
+/// Evidence-summary validation error.
+pub type StatusEvidenceError = crate::status::safe::EvidenceError;
+/// Bounded redacted evidence summary for durable explanations.
+pub type StatusEvidenceSummary = crate::status::safe::EvidenceSummary;
+/// Reason a decision selected fallback or unknown state.
+pub type StatusFallbackReason = crate::status::types::FallbackReason;
+/// Freshness class assigned to a status decision.
+pub type StatusFreshness = crate::status::types::Freshness;
+
+/// Selects one semantic status authority for a target without ambient I/O.
+#[must_use]
+pub fn select_agent_status(
+    request: &animus_adapters::HostStatusRequest,
+    current_sequence: animus_adapters::StatusSequence,
+    observations: &[animus_adapters::AgentStatusObservation],
+) -> AgentStatusSelection {
+    crate::status::choose::select(request, current_sequence, observations)
+}
+
+/// Validates a durable status evidence summary.
+///
+/// # Errors
+///
+/// Returns [`StatusEvidenceError`] when the summary is empty, overlong, or
+/// contains raw or unsafe evidence markers.
+pub fn validate_status_evidence_summary(text: &str) -> Result<(), StatusEvidenceError> {
+    crate::status::safe::validate_summary(text)
+}

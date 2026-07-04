@@ -1,0 +1,19 @@
+#![allow(unknown_lints)]
+#![allow(
+    ambiguous_params,
+    assertion_density,
+    bool_naming,
+    borrowed_argument_types,
+    excessive_file_length,
+    non_trait_imports,
+    numeric_units,
+    path_segment_repetition,
+    raw_arithmetic_overflow,
+    usize_in_public_api
+)]
+
+include!("review/impl/impl001.rs");
+include!("review/impl/impl002.rs");
+include!("review/impl/impl003.rs");
+include!("review/impl/impl004.rs");
+include!("review/impl/impl005.rs");

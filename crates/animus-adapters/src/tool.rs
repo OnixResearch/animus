@@ -1,118 +1,180 @@
+//! Pure tool adapter contracts, validation, output bounding, mutation planning, and dispatch gates.
+
+mod args;
+mod defs;
+mod fault;
+mod gate;
+pub mod hashed;
+mod limit;
+mod message;
+mod schedule;
+
+#[cfg(test)]
+mod tests;
+
+pub use args::{
+    ArgumentCompatibilityRule, ArgumentField, ArgumentFieldDraft, ArgumentPreparationRequest,
+    PreparedArguments,
+};
+pub use defs::{
+    Definition, DefinitionDraft, DefinitionStatus, PromptContextEntry, PromptContextKind,
+    build_prompt_context,
+};
+pub use fault::ContractError;
+pub use gate::{
+    CapabilityStatus, DispatchDecision, DispatchRequest, DispatchStatus, ExecutorStatus,
+    FailureClass, OutputBoundaryStatus, evaluate_dispatch,
+};
+pub use limit::{BoundedOutput, HashRequirement, OutputDraft, OutputPolicy, OutputStatus};
+pub use message::{Request, Response};
+pub use schedule::{
+    MutationCallDraft, MutationWindow, MutationWindowStatus, plan_mutation_windows,
+};
+
+type Text = alloc::string::String;
+type Collection<T> = alloc::vec::Vec<T>;
+
 const NAME_FIELD: crate::validation::FieldName = crate::validation::FieldName::new("tool_name");
 const INPUT_FIELD: crate::validation::FieldName = crate::validation::FieldName::new("tool_input");
 const OUTPUT_FIELD: crate::validation::FieldName = crate::validation::FieldName::new("tool_output");
+const LABEL_FIELD: crate::validation::FieldName = crate::validation::FieldName::new("tool_label");
+const DESCRIPTION_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("tool_description");
+const SCHEMA_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("tool_parameter_schema_identity");
+const PROMPT_SNIPPET_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("tool_prompt_snippet");
+const PROMPT_GUIDELINE_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("tool_prompt_guideline");
+const SOURCE_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("tool_source_identity");
+const PROVENANCE_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("tool_provenance");
+const CAPABILITY_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("tool_capability_label");
+const RESULT_SHAPE_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("tool_result_metadata_shape");
+const ARGUMENT_NAME_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("tool_argument_name");
+const ARGUMENT_VALUE_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("tool_argument_value");
+const MUTATION_CALL_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("tool_mutation_call_id");
+const MUTATION_TARGET_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("tool_mutation_target");
+const OUTPUT_REFERENCE_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("tool_output_reference");
 
-/// Request sent from the harness to a tool component.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Request {
-    name: alloc::string::String,
-    input: alloc::string::String,
-}
+const MAX_TOOL_METADATA_ITEMS: usize = 32;
+const MIN_VISIBLE_OUTPUT_CHARS: u32 = 1;
+const MAX_VISIBLE_OUTPUT_CHARS: u32 = 8_192;
+const HASH_SCHEMA: &str = "animus.pi-tool-contract.v1";
+const HASH_SEPARATOR: &str = "|";
+const ABSOLUTE_PATH_PREFIX: &str = "/";
+const HOME_PATH_PREFIX: &str = "~";
+const URI_SCHEME_MARKER: &str = "://";
+const WINDOWS_SEPARATOR_MARKER: char = '\\';
+const NUL_CHARACTER: char = '\0';
 
-impl Request {
-    /// Builds a tool request from a required tool name and optional input text.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`crate::AdapterContractError`] when the tool name is empty,
-    /// either field is too long, or either field contains a NUL character.
-    pub fn new(name: &str, input: &str) -> Result<Self, crate::AdapterContractError> {
-        crate::validation::validate_required_adapter_field(NAME_FIELD, name)?;
-        crate::validation::validate_optional_adapter_field(INPUT_FIELD, input)?;
-        Ok(Self {
-            name: alloc::string::String::from(name),
-            input: alloc::string::String::from(input),
-        })
-    }
+const _: () = assert!(MAX_TOOL_METADATA_ITEMS > 0);
+const _: () = assert!(MAX_VISIBLE_OUTPUT_CHARS >= MIN_VISIBLE_OUTPUT_CHARS);
 
-    /// Returns the requested tool name.
-    #[must_use]
-    pub fn name(&self) -> &str {
-        self.name.as_str()
-    }
-
-    /// Returns the tool input text.
-    #[must_use]
-    pub fn input(&self) -> &str {
-        self.input.as_str()
-    }
-}
-
-/// Response returned by a tool component.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Response {
-    output: alloc::string::String,
-}
-
-impl Response {
-    /// Builds a tool response from optional output text.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`crate::AdapterContractError`] when the output is too long or
-    /// contains a NUL character.
-    pub fn new(output: &str) -> Result<Self, crate::AdapterContractError> {
-        crate::validation::validate_optional_adapter_field(OUTPUT_FIELD, output)?;
-        Ok(Self {
-            output: alloc::string::String::from(output),
-        })
-    }
-
-    /// Returns the tool output text.
-    #[must_use]
-    pub fn output(&self) -> &str {
-        self.output.as_str()
+fn required_text(
+    field: crate::validation::FieldName,
+    value: Option<&str>,
+) -> Result<Text, ContractError> {
+    match value {
+        Some(raw) => required_text_value(field, raw),
+        None => Err(ContractError::MissingField {
+            field: field.as_str(),
+        }),
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+fn required_text_value(
+    field: crate::validation::FieldName,
+    value: &str,
+) -> Result<Text, ContractError> {
+    crate::validation::normalized_adapter_field(field, value).map_err(ContractError::from)
+}
 
-    const TOOL_NAME: &str = "search";
-    const TOOL_INPUT: &str = "query";
-    const TOOL_OUTPUT: &str = "result";
-    const BLANK_TEXT: &str = "   ";
-
-    #[test]
-    fn request_accepts_empty_input() {
-        let request = Request::new(TOOL_NAME, "").expect("empty input should be allowed");
-
-        assert_eq!(request.name(), TOOL_NAME);
-        assert_eq!(request.input(), "");
+fn required_texts(
+    field: crate::validation::FieldName,
+    values: &[&str],
+) -> Result<Collection<Text>, ContractError> {
+    if values.is_empty() {
+        return Err(crate::AdapterContractError::EmptyCollection {
+            field: field.as_str(),
+        }
+        .into());
     }
+    collect_texts(field, values)
+}
 
-    #[test]
-    fn request_accepts_valid_input() {
-        let request = Request::new(TOOL_NAME, TOOL_INPUT).expect("tool request should parse");
+fn normalized_label_set(
+    field: crate::validation::FieldName,
+    values: &[&str],
+) -> Result<Collection<Text>, ContractError> {
+    let mut labels = collect_texts(field, values)?;
+    labels.sort();
+    labels.dedup();
+    Ok(labels)
+}
 
-        assert_eq!(request.name(), TOOL_NAME);
-        assert_eq!(request.input(), TOOL_INPUT);
+fn collect_texts(
+    field: crate::validation::FieldName,
+    values: &[&str],
+) -> Result<Collection<Text>, ContractError> {
+    validate_item_count(field, values.len())?;
+    let mut normalized = Collection::with_capacity(values.len());
+    for value in values {
+        normalized.push(required_text_value(field, value)?);
     }
+    Ok(normalized)
+}
 
-    #[test]
-    fn request_rejects_missing_name() {
-        let error = Request::new(BLANK_TEXT, TOOL_INPUT).expect_err("blank tool name should fail");
-
-        assert_eq!(
-            error,
-            crate::AdapterContractError::EmptyField {
-                field: NAME_FIELD.as_str(),
-            }
-        );
+fn validate_item_count(
+    field: crate::validation::FieldName,
+    item_count: usize,
+) -> Result<(), ContractError> {
+    if item_count > MAX_TOOL_METADATA_ITEMS {
+        return Err(ContractError::TooManyItems {
+            field: field.as_str(),
+            max_items: MAX_TOOL_METADATA_ITEMS,
+            actual_items: item_count,
+        });
     }
+    Ok(())
+}
 
-    #[test]
-    fn response_accepts_empty_output() {
-        let response = Response::new("").expect("empty output should be allowed");
-
-        assert_eq!(response.output(), "");
+fn validate_no_nul(field: crate::validation::FieldName, value: &str) -> Result<(), ContractError> {
+    if let Some((byte_index, _character)) = value
+        .char_indices()
+        .find(|(_byte_index, character)| *character == NUL_CHARACTER)
+    {
+        return Err(crate::AdapterContractError::NulCharacter {
+            field: field.as_str(),
+            byte_index,
+        }
+        .into());
     }
+    Ok(())
+}
 
-    #[test]
-    fn response_accepts_valid_output() {
-        let response = Response::new(TOOL_OUTPUT).expect("tool output should parse");
+fn hash_parts(parts: &[&str]) -> Text {
+    let mut text = Text::new();
+    for (index, part) in parts.iter().enumerate() {
+        if index > 0 {
+            text.push_str(HASH_SEPARATOR);
+        }
+        text.push_str(part);
+    }
+    alloc::format!("{}", blake3::hash(text.as_bytes()).to_hex())
+}
 
-        assert_eq!(response.output(), TOOL_OUTPUT);
+fn usize_to_u64(value: usize) -> u64 {
+    match u64::try_from(value) {
+        Ok(converted) => converted,
+        Err(_overflow) => u64::MAX,
     }
 }

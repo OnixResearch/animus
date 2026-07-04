@@ -1,3 +1,7 @@
+mod planning;
+mod receipt;
+mod support;
+
 const SOURCE_ID: &str = "repo:animus";
 const WORKSPACE_ID: &str = "ws:child";
 const PARENT_ID: &str = "ws:parent";

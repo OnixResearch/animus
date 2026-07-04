@@ -1,0 +1,40 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+readonly FORBIDDEN_DEPENDENCY_PATTERN='^[[:space:]]*(toolpath|toolpath-convo|clankers-session|clanker-message|automerge|pathbase|github-derivation|git-derivation|provider-session-importer|matrix-sdk|plugin-runtime|global-session-directory)[[:space:]]*='
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+
+if [ "${1:-}" = "--root" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  repo_root=$(CDPATH= cd -- "$2" && pwd)
+fi
+
+if ! command -v cargo >/dev/null 2>&1; then
+  printf '%s\n' 'error: cargo is required. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+
+cd "${repo_root}"
+mkdir -p .pi/tmp
+TMPDIR=${TMPDIR:-"${repo_root}/.pi/tmp"} cargo test -p animus-runtime --locked provenance
+
+violations=$(
+  find . -path ./target -prune -o -path ./.git -prune -o -name Cargo.toml -type f -print \
+    | sort \
+    | xargs grep -HEn "${FORBIDDEN_DEPENDENCY_PATTERN}" 2>/dev/null \
+    || true
+)
+
+if [ -n "${violations}" ]; then
+  printf '%s\n' "${violations}" >&2
+  printf '%s\n' 'error: forbidden default provenance dependency detected' >&2
+  exit "${FAILURE}"
+fi
+
+printf '%s\n' 'provenance ledger: ok'

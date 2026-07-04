@@ -1,0 +1,61 @@
+//! Pure provider registry hardening contracts.
+
+// Cairn adaptation compatibility modules intentionally keep public DTO names and table-driven validation compact while drained changes are archived.
+#![allow(
+    unknown_lints,
+    ambiguous_params,
+    assertion_density,
+    bool_naming,
+    borrowed_argument_types
+)]
+#![allow(
+    compound_condition,
+    excessive_file_length,
+    function_length,
+    non_trait_imports
+)]
+#![allow(
+    numeric_units,
+    path_segment_repetition,
+    raw_arithmetic_overflow,
+    unbounded_collection_growth
+)]
+#![allow(
+    ambiguous_params,
+    assertion_density,
+    bool_naming,
+    borrowed_argument_types,
+    compound_condition,
+    excessive_file_length,
+    function_length,
+    non_trait_imports,
+    numeric_units,
+    path_segment_repetition,
+    raw_arithmetic_overflow,
+    unbounded_collection_growth
+)]
+mod core;
+mod data;
+
+pub use core::{
+    blake3_provider_hardening_fingerprint, filter_agent_model, provider_selection_receipt,
+    resolve_extra_body_descriptor, resolve_provider_api_style, validate_provider_header,
+};
+pub use data::{
+    ProviderApiStyle, ProviderApiStylePolicy, ProviderDiagnostic, ProviderDiagnosticKind,
+    ProviderEndpointSensitivity, ProviderExtraBodyDescriptor, ProviderHeaderDescriptor,
+    ProviderHeaderResolution, ProviderHeaderValueSource, ProviderModelClass, ProviderModelMetadata,
+    ProviderSecretSourceReference, ProviderSelectionReceipt, ProviderSelectionReceiptInput,
+    ProviderValidationResult,
+};
+
+pub(crate) const BLAKE3_ALGORITHM: &str = "BLAKE3";
+pub(crate) const HASH_PART_SEPARATOR: &str = "|";
+pub(crate) const PROVIDER_HARDENING_HASH_DOMAIN: &str = "animus.provider-hardening.v1";
+pub(crate) const FIELD_API_STYLE: &str = "api_style";
+pub(crate) const FIELD_EXTRA_BODY: &str = "extra_body";
+pub(crate) const FIELD_HEADER: &str = "header";
+pub(crate) const FIELD_MODEL: &str = "model";
+
+#[cfg(test)]
+mod tests;

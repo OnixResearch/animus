@@ -1,5 +1,13 @@
 pub mod adapter;
+#[allow(unknown_lints, excessive_file_length)]
+pub mod automation;
+pub mod handoff;
+#[allow(unknown_lints, excessive_file_length)]
+pub mod inclusion;
 pub mod intent;
+pub mod isolation;
+pub mod planning;
+pub mod receipt;
 pub mod result;
 pub mod rules;
 pub mod text;

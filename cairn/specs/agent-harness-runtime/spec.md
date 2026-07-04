@@ -429,6 +429,66 @@ r[agent_harness_runtime.claude_code_permissions.receipts.denied]
 - THEN the receipt records denial reason, action class, policy hash, and redacted resource metadata
 - AND sensitive request material is omitted or represented only by approved hashes and redaction markers.
 
+### Requirement: Rich tool definition metadata
+
+r[agent_harness_runtime.pi_tool_contracts.definition_metadata] Animus tool definitions MUST expose validated name, label, description, parameter schema identity, prompt snippet, prompt guidelines, source/provenance metadata, capability labels, and result metadata shape without embedding concrete tool execution code in the reusable runtime.
+
+#### Scenario: Tool metadata enters prompt construction safely
+
+r[agent_harness_runtime.pi_tool_contracts.definition_metadata.prompt]
+- GIVEN a registered tool with prompt snippet and tool-specific guidelines
+- WHEN runtime builds model-facing tool context
+- THEN only active tool metadata is included
+- AND each guideline remains attributable to the tool name or capability it describes.
+
+### Requirement: Argument preparation and strict validation
+
+r[agent_harness_runtime.pi_tool_contracts.argument_validation] Tool-call arguments MUST pass optional pure compatibility preparation before strict validation against the current public parameter contract.
+
+#### Scenario: Legacy arguments normalize before validation
+
+r[agent_harness_runtime.pi_tool_contracts.argument_validation.compat]
+- GIVEN a resumed ledger contains an older accepted tool-call argument shape
+- WHEN the tool definition provides a compatibility preparer
+- THEN runtime validates the prepared current-shape arguments
+- AND unknown or malformed fields after preparation fail before tool execution.
+
+### Requirement: Bounded tool output contract
+
+r[agent_harness_runtime.pi_tool_contracts.output_bounds] Tool results MUST provide bounded model-visible output and safe metadata for truncated or full outputs, including sizes, truncation status, and BLAKE3 content hashes when full output identity is needed.
+
+#### Scenario: Oversized tool output is truncated
+
+r[agent_harness_runtime.pi_tool_contracts.output_bounds.truncated]
+- GIVEN a tool executor returns output larger than the configured visible-output budget
+- WHEN runtime records the result
+- THEN model-visible content is truncated according to policy
+- AND the result metadata records bounded sizes, truncation status, and a BLAKE3 hash without embedding the full raw body.
+
+### Requirement: Resource mutation serialization
+
+r[agent_harness_runtime.pi_tool_contracts.mutation_queue] Tools that mutate shared resources MUST declare mutation targets so a host-owned mutation coordinator can serialize conflicting mutation windows and avoid lost updates.
+
+#### Scenario: Conflicting mutations serialize
+
+r[agent_harness_runtime.pi_tool_contracts.mutation_queue.conflict]
+- GIVEN two parallel tool calls declare the same mutation target
+- WHEN runtime dispatches the calls through a mutation coordinator
+- THEN the mutation windows execute in a deterministic serialized order
+- AND neither call observes a stale pre-mutation state caused by the other call racing.
+
+### Requirement: Typed tool failure classes
+
+r[agent_harness_runtime.pi_tool_contracts.failure_classes] Tool dispatch MUST report typed failures for invalid input, missing executor, unavailable service, capability denial, cancellation, malformed output, oversized unbounded output, and execution failure.
+
+#### Scenario: Missing executor fails before execution
+
+r[agent_harness_runtime.pi_tool_contracts.failure_classes.missing_executor]
+- GIVEN a loop decision requests a known tool with no injected executor
+- WHEN runtime evaluates the tool dispatch
+- THEN runtime emits a missing-executor failure class
+- AND no fallback process, shell command, or provider call is attempted.
+
 ### Requirement: Safe receipt DTOs
 
 r[agent_harness_runtime.clankers_safe_receipts.dto] Animus runtime and provenance receipts MUST expose safe metadata only, including schema, status, issue code, labels, bounded counts, BLAKE3 hashes, effect or mutation kind, backend/interchange labels, and explicit redaction markers.
@@ -2904,3 +2964,303 @@ r[agent_harness_runtime.branchfs_workspace.closeout.evidence]
 - WHEN they collect closeout evidence
 - THEN the evidence names every successful focused rail, workspace check, and Cairn gate
 - AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Typed exec policy contract
+
+r[agent_harness_runtime.openai_codex_execpolicy_rules.policy_contract] Animus exec policy MUST represent command intents, sandbox context, rule identities, rationales, decisions, and validation examples as typed data before runtime evaluation.
+
+#### Scenario: Policy rule carries validation examples
+
+r[agent_harness_runtime.openai_codex_execpolicy_rules.nickel_source]
+- GIVEN a policy rule with a command prefix, rationale, positive examples, and negative examples
+- WHEN Animus validates the authored policy
+- THEN every positive example matches the rule
+- AND every negative example does not match the rule.
+
+### Requirement: Deterministic prefix-rule evaluation
+
+r[agent_harness_runtime.openai_codex_execpolicy_rules.rule_evaluation] Exec policy evaluation MUST be a deterministic pure function over parsed command intent and sandbox context, returning the most restrictive matching decision.
+
+#### Scenario: Most restrictive matching decision wins
+
+r[agent_harness_runtime.openai_codex_execpolicy_rules.rule_evaluation.examples]
+- GIVEN one matching allow rule and one matching forbid rule for the same command intent
+- WHEN the policy evaluator computes the decision
+- THEN the result is forbid
+- AND the matched-rule evidence includes both contributing rules.
+
+### Requirement: Conservative shell-wrapper handling
+
+r[agent_harness_runtime.openai_codex_execpolicy_rules.shell_splitting] Shell-wrapper analysis MUST split only simple command chains made from plain command words and safe chain operators, and MUST treat unsupported shell constructs as opaque commands requiring conservative policy handling.
+
+#### Scenario: Destructive command cannot hide behind allowed prefix
+
+r[agent_harness_runtime.openai_codex_execpolicy_rules.shell_splitting.smuggling]
+- GIVEN a shell wrapper contains an allowed command followed by a forbidden destructive command in a simple chain
+- WHEN Animus evaluates the wrapper
+- THEN each command in the simple chain is evaluated separately
+- AND the wrapper receives the forbidden decision.
+
+### Requirement: Sandbox escalation binding
+
+r[agent_harness_runtime.openai_codex_execpolicy_rules.sandbox_binding] Runtime sandbox escalation handling MUST use exec policy decisions to allow, prompt, or deny command execution outside the active sandbox boundary.
+
+#### Scenario: Policy decision is recorded without leaking command bodies
+
+r[agent_harness_runtime.openai_codex_execpolicy_rules.sandbox_binding.audit]
+- GIVEN a command requests capability outside the active sandbox
+- WHEN policy evaluation returns a prompt decision
+- THEN runtime emits an escalation event with rule identity, decision, sandbox context, and redacted command evidence
+- AND unbounded raw command output is not embedded in the event.
+
+### Requirement: Typed resource descriptors
+
+r[agent_harness_runtime.pi_resources.descriptors] Animus MUST define typed descriptors for skills, prompt templates, context guidance, and host-provided resources with name, description, kind, source scope, provenance metadata, trust status, and safe content identity.
+
+#### Scenario: Descriptor validation rejects missing descriptions
+
+r[agent_harness_runtime.pi_resources.descriptors.validate]
+- GIVEN a skill descriptor lacks a description
+- WHEN resource descriptors are validated for prompt availability
+- THEN validation fails with a typed descriptor error
+- AND the resource is not advertised to the model.
+
+### Requirement: Host-owned discovery boundary
+
+r[agent_harness_runtime.pi_resources.host_discovery] Animus runtime MUST consume host-provided resource descriptors and MUST NOT scan project directories, install packages, execute package managers, or load extension code as part of core resource discovery.
+
+#### Scenario: Runtime receives descriptors only
+
+r[agent_harness_runtime.pi_resources.host_discovery.no_scan]
+- GIVEN a host supplies an explicit list of resource descriptors
+- WHEN runtime builds prompt resource context
+- THEN it uses only those descriptors
+- AND it performs no filesystem traversal, package installation, or dynamic code loading.
+
+### Requirement: Project trust gating
+
+r[agent_harness_runtime.pi_resources.project_trust] Project-local dynamic resources MUST be unavailable for prompt influence, command expansion, or tool activation until a host-supplied project trust decision permits them.
+
+#### Scenario: Untrusted project resource is ignored
+
+r[agent_harness_runtime.pi_resources.project_trust.denied]
+- GIVEN a project-local skill descriptor is marked untrusted
+- WHEN prompt construction enumerates available skills
+- THEN the skill is omitted or marked unavailable according to policy
+- AND its content is not loaded into model context.
+
+### Requirement: Progressive skill disclosure
+
+r[agent_harness_runtime.pi_resources.skill_disclosure] Skills SHOULD use progressive disclosure where only validated name and description are advertised by default, and full skill content is loaded only by explicit command, host policy, or approved matching decision.
+
+#### Scenario: Full skill loads on explicit command
+
+r[agent_harness_runtime.pi_resources.skill_disclosure.command]
+- GIVEN a trusted skill descriptor is advertised by name and description
+- WHEN an explicit skill-load command selects that skill
+- THEN the host-provided content for that skill is added to the next prompt context
+- AND unrelated skill bodies remain out of context.
+
+### Requirement: Deterministic resource command and collision handling
+
+r[agent_harness_runtime.pi_resources.commands] Resource-backed commands and names MUST resolve deterministically and report duplicate names, unsupported resource kinds, invalid names, and unsafe content handles through typed diagnostics.
+
+#### Scenario: Duplicate skill names produce diagnostic
+
+r[agent_harness_runtime.pi_resources.commands.duplicate]
+- GIVEN two trusted skill descriptors have the same command name
+- WHEN command/resource lookup is built
+- THEN policy selects a deterministic winner or disables the duplicate name
+- AND a diagnostic identifies the collision without exposing unsafe host paths.
+
+### Requirement: Typed plugin toolset manifests
+
+r[agent_harness_runtime.hermes_plugin_manifests.toolset] Animus MUST define typed plugin/toolset manifest descriptors with toolset name, version, kind, provided tool names, descriptions, parameter schema identities, result contract identities, capability labels, provenance, and trust status.
+
+#### Scenario: Valid plugin manifest advertises tools
+
+r[agent_harness_runtime.hermes_plugin_manifests.toolset.valid]
+- GIVEN a host supplies a valid plugin manifest for a review-gate-style toolset
+- WHEN manifest validation and tool definition construction run
+- THEN every provided tool becomes an inactive or active typed tool definition according to trust and executor availability
+- AND prompt metadata includes only validated names, descriptions, capability labels, and safe provenance labels.
+
+### Requirement: Manifest validation rejects ambiguous tools
+
+r[agent_harness_runtime.hermes_plugin_manifests.validation] Animus MUST reject plugin manifests with missing tool descriptions, invalid names, unsupported kinds, missing capability labels, duplicate provided tools, unsafe provenance, malformed schema identities, or malformed result contract identities.
+
+#### Scenario: Duplicate tool names fail closed
+
+r[agent_harness_runtime.hermes_plugin_manifests.validation.duplicate]
+- GIVEN two plugin manifests provide the same public tool name without an explicit host policy override
+- WHEN tool registry construction runs
+- THEN registry construction returns a typed duplicate-tool diagnostic
+- AND neither duplicate is silently selected by map insertion order.
+
+### Requirement: Plugin execution requires host-injected executor
+
+r[agent_harness_runtime.hermes_plugin_manifests.executor_boundary] Plugin manifests MUST NOT cause reusable Animus runtime code to import plugin modules, run scripts, inspect installation directories, or shell out. Tool execution MUST require an injected executor matching the validated tool definition.
+
+#### Scenario: Manifest tool without executor is unavailable
+
+r[agent_harness_runtime.hermes_plugin_manifests.executor_boundary.missing]
+- GIVEN a trusted plugin manifest advertises a tool but the host injects no executor for that tool
+- WHEN the loop requests the tool
+- THEN runtime reports a missing-executor failure class
+- AND no script, shell command, module import, or provider fallback is attempted.
+
+### Requirement: Capability labels separate read-only and mutating actions
+
+r[agent_harness_runtime.hermes_plugin_manifests.capabilities] Every manifest-provided tool MUST declare side-effect capability labels sufficient to distinguish read-only inspection, dry-run planning, explicit metrics writes, filesystem mutation, process execution, and network access when applicable.
+
+#### Scenario: Metrics write is explicit
+
+r[agent_harness_runtime.hermes_plugin_manifests.capabilities.metrics_write]
+- GIVEN a review metrics toolset includes both summary and record actions
+- WHEN tool metadata is built
+- THEN summary actions are labeled read-only
+- AND record actions carry an explicit metrics-write or append-only mutation capability label.
+
+### Requirement: Plugin manifest adaptation verification
+
+r[agent_harness_runtime.hermes_plugin_manifests.verification] The plugin manifest adaptation MUST include focused tests for valid manifests, malformed manifest rejection, duplicate tool diagnostics, capability-label prompt construction, missing executor failure, untrusted plugin omission, and host-injected executor dispatch.
+
+#### Scenario: Closeout evidence covers manifest and executor rails
+
+r[agent_harness_runtime.hermes_plugin_manifests.verification.closeout]
+- GIVEN maintainers intend to archive the Hermes plugin manifest adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused manifest tests, executor-boundary tests, prompt metadata tests, workspace checks, Cairn validation, and Cairn gates
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Explicit subagent delegation
+
+r[agent_harness_runtime.openai_codex_subagent_threads.delegation_request] Animus MUST start subagent threads only from explicit delegation requests that define role, task, allowed tools, workspace scope, model profile, and expected summary shape.
+
+#### Scenario: Implicit subagent spawn is rejected
+
+r[agent_harness_runtime.openai_codex_subagent_threads.delegation_request.explicit]
+- GIVEN a runtime turn has no explicit user, trusted skill, or approved automation delegation request
+- WHEN the loop fabric attempts to start a subagent
+- THEN runtime rejects the subagent start
+- AND no model or tool calls are dispatched for that subagent.
+
+### Requirement: Parent thread is protected from raw subagent logs
+
+r[agent_harness_runtime.openai_codex_subagent_threads.thread_isolation] Subagent intermediate output MUST remain in an isolated subagent thread ledger by default, with only bounded status and summary references imported into the parent thread.
+
+#### Scenario: Raw subagent logs stay out of parent context
+
+r[agent_harness_runtime.openai_codex_subagent_threads.thread_isolation.no_raw_logs]
+- GIVEN a subagent produces long test logs and exploratory notes
+- WHEN the subagent completes successfully
+- THEN the parent thread receives a bounded summary reference
+- AND the raw logs are not inserted into parent model context unless explicitly imported under output bounds.
+
+### Requirement: Typed subagent summary contract
+
+r[agent_harness_runtime.openai_codex_subagent_threads.summary_contract] Subagent completion MUST produce a typed summary containing findings, evidence references, confidence, unresolved questions, and recommended next actions.
+
+#### Scenario: Malformed subagent summary fails aggregation
+
+r[agent_harness_runtime.openai_codex_subagent_threads.summary_contract.validation]
+- GIVEN a subagent returns a summary missing required evidence references for findings
+- WHEN the parent aggregates subagent results
+- THEN aggregation records a malformed-summary failure
+- AND the parent does not treat the incomplete finding as validated evidence.
+
+### Requirement: Subagent role profiles constrain capabilities
+
+r[agent_harness_runtime.openai_codex_subagent_threads.role_profiles] Subagent role profiles MUST constrain model preference, reasoning effort, tool permissions, workspace scope, and output schema before execution.
+
+#### Scenario: Unauthorized subagent tool use is denied
+
+r[agent_harness_runtime.openai_codex_subagent_threads.role_profiles.permissions]
+- GIVEN a review-only subagent profile excludes write-capable tools
+- WHEN the subagent requests a write-capable tool
+- THEN runtime denies the request
+- AND the denial is recorded in the subagent ledger and parent summary status.
+
+### Requirement: Parallel write conflict policy
+
+r[agent_harness_runtime.openai_codex_subagent_threads.write_conflict_policy] Write-capable subagents MUST use isolated workspaces, mutation serialization, or parent-approved handoff before changes to shared resources are merged.
+
+#### Scenario: Parallel writes do not merge silently
+
+r[agent_harness_runtime.openai_codex_subagent_threads.write_conflict_policy.conflict]
+- GIVEN two subagents modify the same shared resource in parallel
+- WHEN their results are aggregated
+- THEN runtime reports a write conflict unless a mutation coordinator or explicit handoff resolved the conflict
+- AND neither change is silently preferred over the other.
+
+### Requirement: Subagent runtime event reporting
+
+r[agent_harness_runtime.openai_codex_subagent_threads.event_reporting] Runtime reports MUST include subagent start, stop, continuation, failure, and aggregation events with parent/subagent correlation identifiers.
+
+#### Scenario: Failed subagent is visible to parent
+
+r[agent_harness_runtime.openai_codex_subagent_threads.event_reporting.failure]
+- GIVEN a subagent fails before producing a valid summary
+- WHEN the parent turn aggregates subagent outcomes
+- THEN the parent report includes the subagent identifier, failure class, and bounded failure evidence
+- AND the parent does not report the subagent task as successful.
+
+### Requirement: Non-interactive run request contract
+
+r[agent_harness_runtime.openai_codex_jsonl_exec_sdk.run_request] Animus MUST represent non-interactive execution as a typed run request containing prompt input, optional external context handles, sandbox profile, output preferences, and optional resume identity.
+
+#### Scenario: Invalid run request fails before runtime start
+
+r[agent_harness_runtime.openai_codex_jsonl_exec_sdk.run_request.validation]
+- GIVEN a non-interactive run request with an invalid sandbox profile
+- WHEN Animus validates the request
+- THEN validation fails before any model, tool, or hook adapter is invoked
+- AND the failure identifies the invalid run-request field.
+
+### Requirement: Versioned machine-readable event stream
+
+r[agent_harness_runtime.openai_codex_jsonl_exec_sdk.event_stream] Runtime automation MUST expose a versioned append-only event stream for thread, turn, item, model, tool, policy, hook, usage, completion, and failure events.
+
+#### Scenario: Events preserve runtime ordering
+
+r[agent_harness_runtime.openai_codex_jsonl_exec_sdk.event_stream.ordering]
+- GIVEN a runtime turn dispatches a model request followed by a tool request and final response
+- WHEN the automation event stream is serialized
+- THEN event order reflects the runtime order
+- AND each event body remains within the configured event-size budget.
+
+### Requirement: Final output derives from terminal response item
+
+r[agent_harness_runtime.openai_codex_jsonl_exec_sdk.final_output] Non-interactive shells MUST derive final output from the terminal runtime response item instead of scraping logs or progress messages.
+
+#### Scenario: Human-readable progress is not final output
+
+r[agent_harness_runtime.openai_codex_jsonl_exec_sdk.final_output.selection]
+- GIVEN a run emits progress messages and a terminal final-response item
+- WHEN the shell writes the final output sink
+- THEN the sink contains the final-response item content
+- AND progress messages are not included unless they are part of that item.
+
+### Requirement: Structured final-output validation
+
+r[agent_harness_runtime.openai_codex_jsonl_exec_sdk.structured_output] Structured final outputs MUST be validated against a schema-identified contract before the run is reported successful.
+
+#### Scenario: Malformed structured output fails the run
+
+r[agent_harness_runtime.openai_codex_jsonl_exec_sdk.structured_output.validation]
+- GIVEN a run requests structured final output with required fields
+- WHEN the model produces a final response missing a required field
+- THEN validation fails before success is reported
+- AND the event stream records a structured-output validation failure.
+
+### Requirement: Thread controller API
+
+r[agent_harness_runtime.openai_codex_jsonl_exec_sdk.thread_controller] Animus MUST provide controller-facing operations to start, resume, run, inspect, and cancel runtime threads through typed thread identities.
+
+#### Scenario: Resume checks thread identity before continuing
+
+r[agent_harness_runtime.openai_codex_jsonl_exec_sdk.thread_controller.resume]
+- GIVEN a resume request references a thread identity with a mismatched ledger hash
+- WHEN the controller validates the resume request
+- THEN the thread is not resumed
+- AND no new model or tool calls are dispatched for that request.

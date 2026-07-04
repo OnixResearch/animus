@@ -28,9 +28,10 @@ const UNRELATED_BODY: &str = "# Other\n\nThis body must stay out of context.";
 const EMPTY_BODY: &str = "   ";
 const EXPECTED_SINGLE_ITEM: usize = 1;
 const EXPECTED_TWO_ITEMS: usize = 2;
+const DESCRIPTION_OVERFLOW_CHARS: usize = 1;
 
-fn valid_draft() -> SkillManifestDraft<'static> {
-    SkillManifestDraft {
+fn valid_draft() -> Draft<'static> {
+    Draft {
         name: Some(NAME),
         description: Some(DESCRIPTION),
         version: Some(VERSION),
@@ -43,8 +44,8 @@ fn valid_draft() -> SkillManifestDraft<'static> {
     }
 }
 
-fn second_draft() -> SkillManifestDraft<'static> {
-    SkillManifestDraft {
+fn second_draft() -> Draft<'static> {
+    Draft {
         name: Some(SECOND_NAME),
         description: Some(SECOND_DESCRIPTION),
         content_identity: Some(SECOND_HASH),
@@ -53,30 +54,30 @@ fn second_draft() -> SkillManifestDraft<'static> {
     }
 }
 
-fn untrusted_draft() -> SkillManifestDraft<'static> {
-    SkillManifestDraft {
+fn untrusted_draft() -> Draft<'static> {
+    Draft {
         name: Some(UNTRUSTED_NAME),
         trust_status: Some(UNTRUSTED_LABEL),
         ..valid_draft()
     }
 }
 
-fn database_draft() -> SkillManifestDraft<'static> {
-    SkillManifestDraft {
+fn database_draft() -> Draft<'static> {
+    Draft {
         category: Some(DATABASE_CATEGORY),
         provenance: Some(DATABASE_PROVENANCE),
         ..valid_draft()
     }
 }
 
-fn valid_manifest() -> SkillManifest {
-    SkillManifest::validate(&valid_draft()).expect("valid skill manifest should validate")
+fn valid_manifest() -> Descriptor {
+    Descriptor::validate(&valid_draft()).expect("valid skill manifest should validate")
 }
 
-fn second_manifest() -> SkillManifest {
-    SkillManifest::validate(&second_draft()).expect("second skill manifest should validate")
+fn second_manifest() -> Descriptor {
+    Descriptor::validate(&second_draft()).expect("second skill manifest should validate")
 }
 
-fn untrusted_manifest() -> SkillManifest {
-    SkillManifest::validate(&untrusted_draft()).expect("untrusted skill manifest should validate")
+fn untrusted_manifest() -> Descriptor {
+    Descriptor::validate(&untrusted_draft()).expect("untrusted skill manifest should validate")
 }

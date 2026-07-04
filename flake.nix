@@ -180,6 +180,7 @@
                 || baseName == "README.md"
                 || baseName == "check-clankers-product-surfaces"
                 || baseName == "check-clash-ucan-authority"
+                || baseName == "check-exec-policy"
                 || baseName == "check-plugin-manifest-runtime-neutral"
                 || baseName == "check-request-lifecycle"
                 || baseName == "check-steel-runtime-policy"
@@ -187,6 +188,7 @@
                 || baseName == "check-trellis-verified-core"
                 || baseName == "check-neutral-ledger"
                 || baseName == "check-injected-services"
+                || baseName == "check-provenance-ledger"
                 || baseName == "check-release-evidence-index"
                 || baseName == "check-runtime-facade-inventory"
                 || baseName == "check-safe-receipts-artifacts"
@@ -352,8 +354,16 @@
             sh scripts/cairn/check-neutral-ledger --root .
           '';
 
+          provenance-ledger = cargoCheck "animus-provenance-ledger" [ ] ''
+            sh scripts/cairn/check-provenance-ledger --root .
+          '';
+
           steel-runtime-policy = cargoCheck "animus-steel-runtime-policy" [ ] ''
             sh scripts/cairn/check-steel-runtime-policy --root .
+          '';
+
+          exec-policy = cargoCheck "animus-exec-policy" [ pkgs.nickel ] ''
+            sh scripts/cairn/check-exec-policy --root .
           '';
 
           injected-services = cargoCheck "animus-injected-services" [ ] ''
@@ -488,6 +498,7 @@
                 export TIGERSTYLE_DRIVER_PATH="${octetDriver}/bin/dylint-driver"
                 export TIGERSTYLE_LINT_LIB="${octetDylintLibPath}"
                 export TIGERSTYLE_TOOLCHAIN="${octetRustupToolchain}"
+                export RUSTFLAGS="''${RUSTFLAGS:-} --cfg animus_octet"
                 cargo-octet check \
                   -p animus \
                   -p animus-adapters \

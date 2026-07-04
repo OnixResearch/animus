@@ -6,6 +6,8 @@
 //! when they want the default standard-library shell.
 
 #![no_std]
+#![allow(unknown_lints)]
+#![allow(module_file_count)]
 #![deny(missing_docs)]
 #![deny(clippy::all)]
 #![deny(clippy::pedantic)]
@@ -18,200 +20,169 @@ extern crate alloc;
 mod actor;
 mod aliases;
 mod artifact;
+mod bridge;
+mod child;
+mod codex;
 mod dataspace;
 mod effect;
+mod flow;
 mod front;
-mod interop;
+mod hostcontrol;
 mod ledger;
 mod manifest;
 mod mcpapp;
 mod model;
+mod multimodal;
+mod port;
 mod profile;
+mod prompt;
+mod queue;
+mod recover;
+mod resource;
+mod review;
 mod router;
 mod safe;
-mod schedule;
 mod security;
 #[cfg(test)]
 mod security_tests;
 mod skill;
 mod status;
-mod subagent;
-mod tool;
+mod timed;
+pub mod tool;
 mod validation;
-mod workflow;
 mod workspace;
 
 pub use aliases::*;
-pub use artifact::BLAKE3_HASH_HEX_CHARS;
+pub use aliases::{
+    DEFAULT_MODEL_PROMPT_IMAGE_BYTE_BUDGET, MAX_MODEL_IMAGE_BYTE_COUNT, ModelContentPart,
+    ModelContentPartDraft, ModelImageDetailPreference, ModelImageMediaType, ModelImageMetadata,
+    ModelImageMetadataDraft, ModelImageOutcome, ModelImageOutcomeStatus, ModelImagePart,
+    ModelImagePartDraft, ModelImagePayloadError, ModelImagePayloadHandle,
+    ModelImagePayloadHandleDraft, ModelImagePayloadHandleKind, ModelImagePayloadService,
+    ModelImageReceipt, ModelImageReceiptDraft, ModelImageSourceTrust, ModelInputModality,
+    ModelMultimodalDispatchPlan, ModelMultimodalError, ModelPromptAssembly,
+    ModelPromptAssemblyPolicy, ModelProviderNativePart, ModelProviderNativeRequest,
+    ModelProviderSerializationMode, ModelProviderSerializationPolicy,
+    ModelProviderSerializationPolicyDraft, ModelTextPart, ModelUnsafeContentReason,
+    SelectedModelInputCapabilities, SelectedModelInputCapabilitiesDraft,
+    assemble_model_content_parts, prepare_model_multimodal_dispatch,
+    serialize_model_provider_native_fixture,
+};
+pub use bridge::{
+    AcpDescriptor, AcpDescriptorDraft, AcpPermissionMode, AcpSessionCorrelation,
+    AcpToolPassThroughPolicy, InteropError, InteropOperationKind, InteropReceipt,
+    InteropReceiptDraft, McpAdvertisementDecision, McpAdvertisementInput, McpArgumentStatus,
+    McpDescriptor, McpDescriptorDraft, McpDispatchDecision, McpDispatchRequest, McpMutationStatus,
+    McpReceipt, McpReceiptDraft, McpReceiptTruncationState, McpServerTrust, McpToolMapping,
+    McpToolMappingDraft, McpTransportDecision, McpTransportFailureClass, McpTransportKind,
+    McpTransportState, PROHIBITED_INTEROP_EFFECTS, ToolPassThroughInput, ToolPassThroughResolution,
+    evaluate_mcp_dispatch, evaluate_mcp_transport, plan_mcp_advertisement,
+    resolve_tool_pass_through, validate_interop_receipt_text, validate_mcp_receipt_text,
+};
+pub use codex::{
+    DiffReviewActionKind, DiffReviewDenialReason, DiffReviewError, DiffReviewEvidence,
+    DiffReviewEvidenceDraft, DiffReviewEvidenceKind, DiffReviewFinding, DiffReviewFindingCategory,
+    DiffReviewFindingDraft, DiffReviewFindingSeverity, DiffReviewFindingState,
+    DiffReviewFindingStateRecord, DiffReviewPolicyDecision, DiffReviewPolicyProfile,
+    DiffReviewReport, DiffReviewReportDraft, DiffReviewRequest, DiffReviewRequestDraft,
+    DiffReviewSelector, DiffReviewSelectorDraft, DiffReviewSelectorKind, DiffReviewSpan,
+    DiffReviewSpanDraft, PROHIBITED_DIFF_REVIEW_EFFECTS, compare_diff_review_rerun,
+};
 pub use dataspace::{
     ActorKind, AdapterService, Assertion, AssertionDraft, AssertionKind, AssertionRedaction,
     AssertionStatus, OrchestrationEvent, OrchestrationEventDraft, OrchestrationEventKind, Scope,
     ScopeDraft, Subscription, SubscriptionDraft, SubscriptionIssue,
 };
 pub use front::*;
-pub use interop::{
-    AcpDescriptor, AcpDescriptorDraft, AcpPermissionMode, AcpSessionCorrelation,
-    AcpToolPassThroughPolicy, InteropError, InteropOperationKind, InteropReceipt,
-    InteropReceiptDraft, McpDescriptor, McpDescriptorDraft, McpTransportKind,
-    PROHIBITED_INTEROP_EFFECTS, ToolPassThroughInput, ToolPassThroughResolution,
-    resolve_tool_pass_through, validate_interop_receipt_text,
+pub use hostcontrol::{
+    HostControlEnvelope, HostControlError, HostEvent, HostEventKind, HostEventSubscription,
+    HostOperation, HostOutputReadDraft, HostOutputSource, HostOutputView, HostRedactionStatus,
+    HostResourceKind, HostSelector, HostSelectorDraft, HostSemanticStatus, HostTopologyResource,
+    HostTopologyResourceDraft, HostTopologySnapshot, HostTopologySnapshotDraft,
+    HostTruncationStatus, HostTypedError, HostUnknownFields, HostWaitOutcome, HostWaitOutcomeKind,
+    HostWaitRequest, LayoutApplyRequest, LayoutApplyResponse, LayoutAxis, LayoutCommandDescriptor,
+    LayoutCommandDescriptorDraft, LayoutNode, LayoutPaneDraft, SelectorLifetime, TopologyCommand,
+    TopologyCommandDraft, filter_host_events, resolve_host_wait,
+};
+pub use recover::{
+    CheckpointBackendKind, CheckpointDraft, CheckpointError, CheckpointFailureClass,
+    CheckpointHash, CheckpointOperation, CheckpointPolicy, CheckpointReceipt,
+    CheckpointReceiptDraft, CheckpointReceiptLeak, CheckpointRecord, CheckpointService,
+    CheckpointServiceRequest, CheckpointServiceResponse, CheckpointServiceState, CheckpointStatus,
+    MutationProtection, ProtectedMutationDecision, ProtectedMutationInput,
+    RollbackConfirmationStatus, RollbackValidation, RollbackValidationInput,
+    evaluate_protected_mutation, validate_checkpoint_receipt_text, validate_rollback,
 };
 
-/// Active envelope version used for Animus-owned BLAKE3 identities.
-pub const ARTIFACT_ENVELOPE_VERSION: u32 = artifact::VERSION;
-/// Largest normalized payload accepted by the no-std DTO layer.
-pub const MAX_ARTIFACT_PAYLOAD_CHARS: usize = artifact::MAX_PAYLOAD_CHARS;
-/// Canonical Animus envelope with deterministic BLAKE3 identity.
-pub type ArtifactEnvelope = artifact::Envelope;
-/// Borrowed inputs used to build a canonical envelope.
-pub type ArtifactEnvelopeDraft<'a> = artifact::Draft<'a>;
-/// Validated lowercase BLAKE3 identity.
-pub type ArtifactHash = artifact::Hash;
-/// Artifact payload class used in canonical envelopes.
-pub type ArtifactKind = artifact::Kind;
-/// Redaction class controlling payload display.
-pub type ArtifactRedactionClass = artifact::RedactionClass;
-/// Errors raised while parsing or building safe artifact envelopes.
-pub type ArtifactValidationError = artifact::Error;
 pub use effect::{
     AuthorizationContext, AuthorizationIssue, AuthorizationLeak, AuthorizationReceipt,
     AuthorizationStatus, CancellationCheck, CancellationDecision, CancellationService,
     CapabilityClass, CapabilityDecision, CapabilityDecisionRequest, CapabilityDecisionService,
-    CapabilityPolicyContract, CapabilityRequest, CaveatSummary, ConfirmationBroker,
-    ConfirmationDecision, ConfirmationRequest, GuardedAction, HostRequest, HostService,
-    LocalCaveat, LocalCaveatDecision, LocalPolicyLayer, ModelProviderService, OutcomeKind,
-    PermissionDecisionReason, PermissionDecisionStatus, PermissionOutcome, PermissionPolicy,
-    PermissionPolicyDraft, PermissionPolicyError, PermissionPromptDecision,
+    CapabilityPolicyContract, CapabilityRequest, CaveatSummary, ConfirmationActionKind,
+    ConfirmationBinding, ConfirmationBindingDraft, ConfirmationBroker, ConfirmationBrokerClass,
+    ConfirmationDecision, ConfirmationEvaluation, ConfirmationExpiry, ConfirmationExpiryClass,
+    ConfirmationIssue, ConfirmationLevel, ConfirmationReceipt, ConfirmationReceiptDraft,
+    ConfirmationReceiptLeak, ConfirmationRequest, ConfirmationRequestDraft, ConfirmationStatus,
+    ConfirmationTick, ConfirmationTimingClass, ExecPolicyCommandIntent,
+    ExecPolicyCommandIntentDraft, ExecPolicyDecision, ExecPolicyError, ExecPolicyEvaluation,
+    ExecPolicyRequest, ExecPolicyRule, ExecPolicyRuleDraft, ExecPolicyRuleEvidence,
+    ExecPolicySandboxContext, ExecPolicySandboxContextDraft, ExecPolicyShellAnalysis,
+    ExecPolicyShellAnalysisKind, GuardedAction, HostRequest, HostService, LocalCaveat,
+    LocalCaveatDecision, LocalPolicyLayer, ModelProviderService, OutcomeKind,
+    PermissionDecisionReason, PermissionDecisionStatus, PermissionKernelReceipt,
+    PermissionKernelReceiptDraft, PermissionMode, PermissionModeDefaultReason,
+    PermissionModeDefaultRequest, PermissionModeDefaultResolution, PermissionOutcome,
+    PermissionPatternMatchKind, PermissionPatternRule, PermissionPatternRuleDraft,
+    PermissionPolicy, PermissionPolicyDraft, PermissionPolicyError, PermissionPromptDecision,
     PermissionPromptDecisionDraft, PermissionPromptRequest, PermissionPromptRequestDraft,
     PermissionPromptStatus, PermissionReceipt, PermissionReceiptDraft, PermissionReceiptLeak,
-    PermissionResolution, PermissionResolutionRequest, PermissionTrustScope, PermissionTrustStatus,
+    PermissionRepeatedActionInput, PermissionRepeatedActionPolicy,
+    PermissionRepeatedActionResolution, PermissionRepeatedActionStatus, PermissionResolution,
+    PermissionResolutionRequest, PermissionSessionAllowlistEntry,
+    PermissionSessionAllowlistEntryDraft, PermissionSessionAllowlistStatus,
+    PermissionSessionAllowlistValidation, PermissionTrustScope, PermissionTrustStatus,
     PromptDecisionOutcome, PromptSummaryPolicy, Reason, Receipt, ReceiptDraft, RedactionMarker,
     RuntimePolicyDecision, RuntimePolicyRequest, RuntimePolicyService, SAFE_HASH_HEX_CHARS,
     SafeHash, SandboxConstraint, SandboxState, ServiceKind, ServiceOutcome, ToolExecutionService,
-    UcanGrant, authorize_capability, default_deny_confirmation, resolve_permission,
-    validate_authorization_receipt_text, validate_permission_receipt_text,
+    UcanGrant, analyze_exec_policy_shell_wrapper, authorize_capability, default_deny_confirmation,
+    detect_permission_repeated_action, evaluate_confirmation_decision,
+    evaluate_confirmation_outcome, evaluate_exec_policy, resolve_permission,
+    resolve_permission_mode_default, validate_authorization_receipt_text,
+    validate_confirmation_receipt_text, validate_permission_receipt_text,
+    validate_permission_session_allowlist,
 };
-pub use ledger::SessionLedgerService;
-
-/// Neutral ledger entry owned by Animus adapter boundaries.
-pub type LedgerEntry = ledger::Entry;
-/// Validated neutral ledger entry identifier.
-pub type LedgerEntryId = ledger::EntryId;
-/// Kind of neutral ledger entry.
-pub type LedgerEntryKind = ledger::EntryKind;
-/// Safe replay metadata counts.
-pub type LedgerReplayCounts = ledger::ReplayCounts;
-/// Replay errors that fail closed without exposing raw adapter-owned payloads.
-pub type LedgerReplayError = ledger::Error;
-/// Successful replay result for neutral entries.
-pub type LedgerReplayReport = ledger::Report;
-/// Replay request sent to an injected session-ledger service.
-pub type LedgerReplayRequest = ledger::Request;
-/// Model-visible context item produced by replay.
-pub type ModelContextItem = ledger::ContextItem;
-/// Model-visible replay role.
-pub type ModelContextRole = ledger::ContextRole;
-
-/// Builds the fail-closed outcome for an absent session-ledger service.
-#[must_use]
-pub fn missing_session_ledger_service(
-    request: &LedgerReplayRequest,
-) -> ServiceOutcome<LedgerReplayReport> {
-    ledger::missing_service(request)
-}
-
-/// Replays neutral entries into model-visible context plus safe counts.
-///
-/// # Errors
-///
-/// Returns [`LedgerReplayError`] when the ledger is empty or contains an
-/// unsupported or adapter-owned entry marker.
-pub fn replay_ledger(entries: &[LedgerEntry]) -> Result<LedgerReplayReport, LedgerReplayError> {
-    ledger::replay(entries)
-}
 pub use manifest::{
     LaunchPolicy, LaunchPolicyDraft, NetworkPolicy, PROHIBITED_PLUGIN_MANIFEST_EFFECTS,
-    PluginDescriptor, PluginDescriptorDraft, PluginDescriptorError, RedactionPolicy,
-    RedactionPolicyDraft, RuntimeKind, SandboxMode, SandboxRequirements, SandboxRequirementsDraft,
-    ToolDescriptor, ToolDescriptorDraft, WorkingDirectoryMode,
+    PluginCompatibility, PluginCompatibilityDraft, PluginDescriptor, PluginDescriptorDraft,
+    PluginDescriptorError, PluginDiagnostic, PluginDiagnosticKind, PluginDiagnosticSeverity,
+    PluginHostCompatibilityDraft, PluginInvocationContext, PluginInvocationContextDraft,
+    PluginInvocationContextLeak, PluginRegistryOperationDraft, PluginRegistryOperationKind,
+    PluginRegistryPlan, PluginRegistryPlanStatus, PluginRole, PluginRoleDraft, PluginRoleKind,
+    RedactionPolicy, RedactionPolicyDraft, RuntimeKind, SandboxMode, SandboxRequirements,
+    SandboxRequirementsDraft, ToolDescriptor, ToolDescriptorDraft, WorkingDirectoryMode,
 };
-pub use safe::receipt::{BoundedCount, BoundedCountDraft};
-pub use skill::{
-    PROHIBITED_SKILL_MANIFEST_EFFECTS, SKILL_CONTENT_HASH_HEX_CHARS, SkillBodyDraft,
-    SkillDisclosureContext, SkillDisclosureRequest, SkillLoadedBody, SkillManifest,
-    SkillManifestDraft, SkillManifestError, SkillManifestTrustStatus, SkillResourceCatalog,
-    SkillResourceDiagnostic, SkillResourceIssue, SkillResourceSummary, advertise_skill_resources,
-    build_skill_disclosure_context,
+pub use port::{ComponentAdapter, HostStatusAdapter, ModelAdapter, ToolAdapter};
+pub use review::{
+    ReviewDiagnostic, ReviewDiagnosticCode, ReviewFinding, ReviewMetricFinding, ReviewMetricRecord,
+    ReviewMetricRecordDraft, ReviewMetricsSummary, ReviewPromotionCandidate, ReviewReport,
+    ReviewReportDraft, ReviewReportError, ReviewSection, ReviewVerdict,
+    append_review_metric_record, parse_review_report, review_promotion_candidates,
+    summarize_review_metrics,
 };
-pub use schedule::{
-    NextRunInput, NextRunPlan, PROHIBITED_SCHEDULE_EFFECTS, ScheduleCadence,
-    ScheduleConcurrencyPolicy, ScheduleControlAction, ScheduleControlDraft, ScheduleControlRequest,
-    ScheduleError, ScheduleExecutionMode, ScheduledConcurrencyDecision, ScheduledConcurrencyInput,
-    ScheduledRunAdmissionDraft, ScheduledRunAdmissionStatus, ScheduledRunDenial,
-    ScheduledRunRecord, ScheduledRunRecordDraft, ScheduledWorkflow, ScheduledWorkflowDraft,
-    admit_scheduled_run, evaluate_scheduled_concurrency, plan_next_run,
-    validate_scheduled_record_text,
-};
-/// Largest accepted bounded count value in a safe receipt.
-pub const MAX_SAFE_RECEIPT_COUNT: u32 = safe::receipt::MAX_COUNT;
-/// Largest accepted safe metadata label length.
-pub const MAX_SAFE_RECEIPT_LABEL_CHARS: usize = safe::receipt::MAX_LABEL_CHARS;
-/// Schema identifier attached to safe receipt DTOs.
-pub const SAFE_RECEIPT_SCHEMA: &str = safe::receipt::SCHEMA;
-/// Issue code recorded by a safe receipt.
-pub type ReceiptIssueCode = safe::receipt::IssueCode;
-/// Unsafe material class rejected by safe receipt validation.
-pub type ReceiptLeakClass = safe::receipt::LeakClass;
-/// Effect or mutation class observed by a safe receipt.
-pub type ReceiptOperation = safe::receipt::Operation;
-/// Redaction marker recorded by a safe receipt.
-pub type ReceiptRedaction = safe::receipt::Redaction;
-/// Status class recorded by a safe receipt.
-pub type ReceiptStatus = safe::receipt::Status;
-/// Safe runtime/provenance receipt containing metadata, counts, hashes, and redactions only.
-pub type SafeReceipt = safe::receipt::Record;
-/// Borrowed inputs used to construct a safe receipt.
-pub type SafeReceiptDraft<'a> = safe::receipt::Draft<'a>;
-/// Errors raised by safe receipt validation.
-pub type SafeReceiptError = safe::receipt::Error;
-pub use status::evidence::SAFE_EVIDENCE_HASH_HEX_CHARS;
-pub use subagent::{
+/// Plugin manifest toolset-kind descriptor label.
+pub type PluginToolsetKind = manifest::ToolsetKind;
+/// Plugin manifest host trust status.
+pub type PluginTrustStatus = manifest::TrustStatus;
+pub use child::{
     ExternalSubagentDescriptor, ExternalSubagentDescriptorDraft, ExternalSubagentProtocol,
     SubagentAggregateReport, SubagentCapabilityDenial, SubagentCapabilityInput,
     SubagentCapabilityResolution, SubagentDelegation, SubagentDelegationDraft,
-    SubagentDelegationSource, SubagentError, SubagentHandoff, SubagentHandoffDraft,
-    SubagentOutcomeDraft, SubagentOutcomeKind, SubagentReturnMode, aggregate_subagent_outcomes,
-    build_subagent_handoff, resolve_subagent_capabilities,
+    SubagentDelegationSource, SubagentError, SubagentEvent, SubagentEventDraft, SubagentEventKind,
+    SubagentHandoff, SubagentHandoffDraft, SubagentOutcomeDraft, SubagentOutcomeKind,
+    SubagentReturnMode, aggregate_subagent_outcomes, build_subagent_handoff,
+    resolve_subagent_capabilities,
 };
-
-/// Optional native host session reference.
-pub type AgentSessionReference = status::identity::Reference;
-/// Borrowed session-reference input.
-pub type AgentSessionReferenceDraft<'a> = status::identity::ReferenceDraft<'a>;
-/// Supported session reference kind.
-pub type AgentSessionReferenceKind = status::identity::Kind;
-/// Validated semantic status observation supplied by a host adapter.
-pub type AgentStatusObservation = status::report::Observation;
-/// Borrowed status observation input.
-pub type AgentStatusObservationDraft<'a> = status::report::ObservationDraft<'a>;
-/// Observation authority class supplied by a host integration.
-pub type AgentStatusObservationKind = status::lifecycle::ObservationKind;
-/// Presentation-only status metadata.
-pub type AgentStatusPresentation = status::view::Presentation;
-/// Borrowed presentation metadata input.
-pub type AgentStatusPresentationDraft<'a> = status::view::PresentationDraft<'a>;
-/// Batch returned by a host status-observation adapter.
-pub type HostStatusObservationBatch = status::report::HostObservationBatch;
-/// Request sent to a host status-observation adapter.
-pub type HostStatusRequest = status::report::HostRequest;
-/// Semantic lifecycle state shared by runtime hosts.
-pub type SemanticAgentState = status::lifecycle::SemanticAgent;
-/// Logical monotonic sequence used for deterministic freshness checks.
-pub type StatusSequence = status::lifecycle::Sequence;
-/// Logical TTL for an observation.
-pub type StatusTtl = status::lifecycle::Ttl;
-pub use validation::{AdapterContractError, MAX_ADAPTER_FIELD_CHARS, MIN_ADAPTER_FIELD_CHARS};
-pub use workflow::{
+pub use flow::{
     RecipeAutomationOutcome, RecipeAutomationStatus, RecipeBinding, RecipeBindingDraft,
     RecipeHostEffectKind, RecipeInfluence, RecipeInfluenceStatus, RecipeOutputDraft,
     RecipeOutputFailure, RecipeOutputFieldDraft, RecipeParameter, RecipeParameterDraft,
@@ -224,101 +195,43 @@ pub use workflow::{
     RecipeWorkflowError, SAFE_TEMPLATE_BUILTINS, bind_recipe_parameters, plan_recipe_retry,
     validate_recipe_output,
 };
-/// Request sent from the harness to a model component.
-pub type ModelRequest = model::Request;
-
-/// Response returned by a model component.
-pub type ModelResponse = model::Response;
-pub use router::{
-    DurationBucket, FallbackEligibility, FallbackPolicy, OutputContract, PrivacyBand, QuorumClass,
-    RouteFamily, RouteResult, RouteResultStatus, SelectionDenial, SignalBand, TaskShape,
-    select_recipe,
+pub use prompt::{
+    ContextLineRange, ContextOversizedPolicy, ContextReference, ContextReferenceBudget,
+    ContextReferenceCounts, ContextReferenceError, ContextReferenceFragment, ContextReferenceKind,
+    ContextReferencePolicy, ContextReferencePolicyDecision, ContextReferenceProvenance,
+    ContextReferenceProvenanceDraft, ContextReferenceStatus, ContextRenderMode,
+    ContextResolutionPlan, ContextResolverKind, ContextResolverSet, ContextSourceTrust,
+    ContextTruncationState, DiffContextResolver, DirectoryContextResolver, FileContextResolver,
+    ImageContextResolver, ProfileAssembly, ProfileAssemblyDiagnostic, ProfileAssemblyPolicy,
+    ProfileCapability, ProfileCapabilityBinding, ProfileCapabilityBindingStatus,
+    ProfileChainDecision, ProfileChainPlan, ProfileChainRequest, ProfileDescriptor,
+    ProfileDescriptorDraft, ProfileDirectiveDiagnostic, ProfileDirectiveIssue,
+    ProfileDirectiveReport, ProfileError, ProfileInclusionPolicy, ProfileMode, ProfileModeBinding,
+    ProfileModeBindingRequest, ProfileOmittedReason, ProfileReceipt, ProfileReceiptRedaction,
+    ProfileSegment, ProfileSourceAdmission, ProfileSourceTrust, ProfileTrustScope,
+    ResolvedContextCandidate, UrlContextResolver, apply_context_budget, assemble_profiles,
+    bind_profile_mode, expand_context_reference, parse_context_reference, parse_profile_directives,
+    plan_context_resolution,
 };
-/// Hard model-router execution bounds.
-pub type ExecutionBounds = router::Bounds;
-/// Borrowed fields used to validate model-router execution bounds.
-pub type ExecutionBoundsDraft<'a> = router::BoundsDraft<'a>;
-/// Safe model catalog projection for router selection.
-pub type ModelCatalogEntry = router::CatalogEntry;
-/// Borrowed safe model catalog projection fields.
-pub type ModelCatalogEntryDraft<'a> = router::CatalogEntryDraft<'a>;
-/// Model role used inside a router recipe.
-pub type ModelRole = router::Role;
-/// Borrowed request-signal projection fields.
-pub type RequestSignalDraft<'a> = router::SignalDraft<'a>;
-/// Bounded request signals for router selection.
-pub type RequestSignals = router::Signals;
-/// Router budget state.
-pub type RouterBudget = router::Budget;
-/// Safe router-recipe receipt.
-pub type RouterReceipt = router::Receipt;
-/// Borrowed fields used to build a safe router receipt.
-pub type RouterReceiptDraft<'a> = router::ReceiptDraft<'a>;
-/// Router receipt leak class.
-pub type RouterReceiptLeak = router::ReceiptLeak;
-/// Router recipe contract checked before provider dispatch.
-pub type RouterRecipe = router::Recipe;
-/// Borrowed fields used to validate a router recipe.
-pub type RouterRecipeDraft<'a> = router::RecipeDraft<'a>;
-/// Router receipt redaction marker.
-pub type RouterRedaction = router::Redaction;
-/// Router validation error.
-pub type RouterValidationError = router::ValidationError;
-/// Selected router plan.
-pub type SelectedRoutePlan = router::SelectedPlan;
-/// Timeout/deadline class for bounded host execution.
-pub type TimeoutClass = router::DeadlineClass;
-/// Validates safe router receipt text for known leak sentinels.
-///
-/// # Errors
-///
-/// Returns [`RouterReceiptLeak`] when unsafe receipt text is detected.
-pub fn validate_router_receipt_text(text: &str) -> Result<(), RouterReceiptLeak> {
-    router::validate_receipt_text(text)
-}
-/// Borrowed final-output validation facts.
-pub type RouteResultDraft<'a> = router::outcome::ResultDraft<'a>;
-
-/// Request sent from the harness to a tool component.
-pub type ToolRequest = tool::Request;
-
-/// Response returned by a tool component.
-pub type ToolResponse = tool::Response;
-
-/// Model-generation adapter contract.
-pub trait ModelAdapter: ComponentAdapter<ModelRequest, ModelResponse> {}
-
-impl<T> ModelAdapter for T where T: ComponentAdapter<ModelRequest, ModelResponse> {}
-
-/// Tool-invocation adapter contract.
-pub trait ToolAdapter: ComponentAdapter<ToolRequest, ToolResponse> {}
-
-impl<T> ToolAdapter for T where T: ComponentAdapter<ToolRequest, ToolResponse> {}
-
-/// Host status-observation adapter contract.
-pub trait HostStatusAdapter:
-    ComponentAdapter<HostStatusRequest, HostStatusObservationBatch>
-{
-}
-
-impl<T> HostStatusAdapter for T where
-    T: ComponentAdapter<HostStatusRequest, HostStatusObservationBatch>
-{
-}
-
-/// Generic port between harness orchestration and a swappable component.
-pub trait ComponentAdapter<Request, Response> {
-    /// Error returned by the concrete adapter implementation.
-    type Error;
-
-    /// Calls the component with one typed request and returns one typed response.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`Self::Error`] when the concrete adapter cannot satisfy the
-    /// request or rejects it at its own boundary.
-    fn call(&mut self, request: &Request) -> Result<Response, Self::Error>;
-}
+pub use queue::{
+    BackgroundQueueService, QueueCapabilities, QueueCapabilityKind, QueueContractError,
+    QueueControlDraft, QueueControlRequest, QueueEnqueueDraft, QueueEnqueueRequest,
+    QueueGroupStatus, QueueGroupStatusDraft, QueueInteractionDraft, QueueInteractionKind,
+    QueueInteractionRequest, QueueLogBounds, QueueLogRequest, QueueLogRequestDraft,
+    QueueLogViewport, QueueLogViewportDraft, QueueOperationKind, QueueServiceRequest,
+    QueueServiceResponse, QueueStatusCounts, QueueTarget, QueueTargetDraft, QueueTargetKind,
+    QueueTaskObservation, QueueTaskObservationDraft, QueueTaskStatus,
+};
+pub use timed::{
+    NextRunInput, NextRunPlan, PROHIBITED_SCHEDULE_EFFECTS, ScheduleCadence,
+    ScheduleConcurrencyPolicy, ScheduleControlAction, ScheduleControlDraft, ScheduleControlRequest,
+    ScheduleError, ScheduleExecutionMode, ScheduledConcurrencyDecision, ScheduledConcurrencyInput,
+    ScheduledRunAdmissionDraft, ScheduledRunAdmissionStatus, ScheduledRunDenial,
+    ScheduledRunRecord, ScheduledRunRecordDraft, ScheduledWorkflow, ScheduledWorkflowDraft,
+    admit_scheduled_run, evaluate_scheduled_concurrency, plan_next_run,
+    validate_scheduled_record_text,
+};
+pub use validation::{AdapterContractError, MAX_ADAPTER_FIELD_CHARS, MIN_ADAPTER_FIELD_CHARS};
 
 #[cfg(test)]
 extern crate std;

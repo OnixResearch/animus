@@ -1,8 +1,8 @@
-const MODEL_COUNT_LIMIT: u32 = u32::MAX;
+const COUNT_LIMIT: u32 = u32::MAX;
 
-/// Pure model input for the authorization issue decision boundary.
+/// Pure input for the authorization issue decision boundary.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) struct AuthorizationModelInput {
+pub(crate) struct Input {
     /// Whether the reviewed policy contract permits the request shape.
     pub(crate) contract_permits: bool,
     /// Number of verified grants matching the request.
@@ -10,12 +10,12 @@ pub(crate) struct AuthorizationModelInput {
     /// Number of local policy caveats that deny the request.
     pub(crate) local_denies: u32,
     /// Required sandbox state after descriptor validation.
-    pub(crate) sandbox: AuthorizationModelSandbox,
+    pub(crate) sandbox: Sandbox,
 }
 
-/// Pure model sandbox state for authorization issue selection.
+/// Pure sandbox state for authorization issue selection.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum AuthorizationModelSandbox {
+pub(crate) enum Sandbox {
     /// No sandbox constraint applies.
     NotRequired,
     /// Required sandbox is enforceable.
@@ -26,32 +26,32 @@ pub(crate) enum AuthorizationModelSandbox {
     Unavailable,
 }
 
-impl AuthorizationModelInput {
+impl Input {
     /// Builds model input from the production authorization context without I/O.
     #[must_use]
     pub(crate) fn from_context(context: &super::AuthorizationContext<'_>) -> Self {
         Self {
             contract_permits: context.contract.permits(context.request),
-            matching_grants: model_count(
+            matching_grants: count(
                 context
                     .grants
                     .iter()
                     .filter(|grant| grant.authorizes(context.request))
                     .count(),
             ),
-            local_denies: model_count(
+            local_denies: count(
                 context
                     .caveats
                     .iter()
                     .filter(|caveat| matches!(caveat.decision(), super::LocalCaveatDecision::Deny))
                     .count(),
             ),
-            sandbox: AuthorizationModelSandbox::from_constraint(context.sandbox),
+            sandbox: Sandbox::from_constraint(context.sandbox),
         }
     }
 }
 
-impl AuthorizationModelSandbox {
+impl Sandbox {
     fn from_constraint(sandbox: &super::SandboxConstraint) -> Self {
         match sandbox {
             super::SandboxConstraint::NotRequired => Self::NotRequired,
@@ -73,9 +73,7 @@ impl AuthorizationModelSandbox {
 
 /// Selects the expected authorization issue for pure model inputs.
 #[must_use]
-pub(crate) const fn model_authorization_issue(
-    input: AuthorizationModelInput,
-) -> super::AuthorizationIssue {
+pub(crate) const fn issue(input: Input) -> super::AuthorizationIssue {
     if !input.contract_permits {
         return super::AuthorizationIssue::ContractMismatch;
     }
@@ -86,14 +84,12 @@ pub(crate) const fn model_authorization_issue(
         return super::AuthorizationIssue::MissingUcanGrant;
     }
     match input.sandbox {
-        AuthorizationModelSandbox::NotRequired | AuthorizationModelSandbox::Enforceable => {
-            super::AuthorizationIssue::None
-        }
-        AuthorizationModelSandbox::Malformed => super::AuthorizationIssue::SandboxMalformed,
-        AuthorizationModelSandbox::Unavailable => super::AuthorizationIssue::SandboxUnavailable,
+        Sandbox::NotRequired | Sandbox::Enforceable => super::AuthorizationIssue::None,
+        Sandbox::Malformed => super::AuthorizationIssue::SandboxMalformed,
+        Sandbox::Unavailable => super::AuthorizationIssue::SandboxUnavailable,
     }
 }
 
-fn model_count(count: usize) -> u32 {
-    u32::try_from(count).unwrap_or(MODEL_COUNT_LIMIT)
+fn count(value: usize) -> u32 {
+    u32::try_from(value).unwrap_or(COUNT_LIMIT)
 }

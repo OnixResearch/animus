@@ -1,10 +1,10 @@
 use super::*;
 
+mod confirmation;
+
 const VALID_HASH: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const UPPERCASE_HASH: &str = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const SHORT_HASH: &str = "abcd";
-const SUMMARY: &str = "redacted request summary";
-const RAW_PAYLOAD: &str = "RAW_PROMPT: do not leak this text";
 const NO_PAYLOADS: u32 = 0;
 
 #[test]
@@ -75,34 +75,6 @@ fn completed_service_outcome_carries_completed_receipt() {
 
     assert!(outcome.is_completed());
     assert_eq!(outcome.kind(), OutcomeKind::Completed);
-}
-
-#[test]
-fn absent_confirmation_broker_denies_by_default_without_raw_payload() {
-    let request = ConfirmationRequest::new(CapabilityClass::ToolExecution, SUMMARY)
-        .expect("confirmation request should parse");
-    let outcome = default_deny_confirmation(&request);
-
-    assert_eq!(outcome.kind(), OutcomeKind::Denied);
-    assert_eq!(outcome.receipt().service_kind(), ServiceKind::Confirmation);
-    assert_eq!(outcome.receipt().reason(), Reason::NotInjected);
-    assert_eq!(outcome.receipt().payload_count(), NO_PAYLOADS);
-    assert_eq!(
-        outcome.receipt().redaction(),
-        RedactionMarker::PayloadNotCaptured
-    );
-    assert!(!std::format!("{outcome:?}").contains(RAW_PAYLOAD));
-}
-
-#[test]
-fn confirmation_request_rejects_empty_summary() {
-    let error = ConfirmationRequest::new(CapabilityClass::Confirmation, "   ")
-        .expect_err("blank confirmation summary should fail");
-
-    assert!(matches!(
-        error,
-        crate::AdapterContractError::EmptyField { .. }
-    ));
 }
 
 fn blocking_receipt(outcome: OutcomeKind) -> Receipt {

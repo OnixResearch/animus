@@ -10,12 +10,12 @@ fn valid_manifest_becomes_summary_without_body_content() {
     assert_eq!(manifest.tags(), &[Text::from(SECOND_TAG), Text::from(TAG)]);
     assert!(manifest.related_skills().is_empty());
     assert_eq!(manifest.provenance(), PROVENANCE);
-    assert_eq!(manifest.trust_status(), SkillManifestTrustStatus::Trusted);
+    assert_eq!(manifest.trust_status(), TrustStatus::Trusted);
     assert_eq!(manifest.trust_status().as_str(), TRUSTED_LABEL);
     assert_eq!(manifest.content_identity().as_str(), VALID_HASH);
-    assert_eq!(SKILL_CONTENT_HASH_HEX_CHARS, VALID_HASH.len());
+    assert_eq!(CONTENT_HASH_HEX_CHARS, VALID_HASH.len());
 
-    let catalog = advertise_skill_resources(&[manifest]);
+    let catalog = advertise(&[manifest]);
     assert!(catalog.diagnostics().is_empty());
     assert_eq!(catalog.summaries().len(), EXPECTED_SINGLE_ITEM);
     let summary = &catalog.summaries()[0];
@@ -33,18 +33,18 @@ fn explicit_load_includes_only_selected_trusted_body() {
     let second = second_manifest();
     let manifests = [first, second];
     let bodies = [
-        SkillBodyDraft {
+        BodyDraft {
             name: NAME,
             content_identity: VALID_HASH,
             body: UNRELATED_BODY,
         },
-        SkillBodyDraft {
+        BodyDraft {
             name: SECOND_NAME,
             content_identity: SECOND_HASH,
             body: SELECTED_BODY,
         },
     ];
-    let context = build_skill_disclosure_context(SkillDisclosureRequest {
+    let context = build_context(Request {
         manifests: &manifests,
         loaded_bodies: &bodies,
         selected_name: Some(SECOND_NAME),
@@ -62,9 +62,9 @@ fn explicit_load_includes_only_selected_trusted_body() {
 
 #[test]
 fn non_hermes_store_uses_same_descriptor_boundary() {
-    let manifest = SkillManifest::validate(&database_draft())
+    let manifest = Descriptor::validate(&database_draft())
         .expect("database-backed descriptor should validate as data");
-    let context = build_skill_disclosure_context(SkillDisclosureRequest {
+    let context = build_context(Request {
         manifests: &[manifest],
         loaded_bodies: &[],
         selected_name: None,
@@ -80,6 +80,6 @@ fn non_hermes_store_uses_same_descriptor_boundary() {
         DATABASE_PROVENANCE
     );
     assert!(context.selected_body().is_none());
-    assert!(PROHIBITED_SKILL_MANIFEST_EFFECTS.contains(&"home-directory scan"));
-    assert!(PROHIBITED_SKILL_MANIFEST_EFFECTS.contains(&"skill body file read"));
+    assert!(PROHIBITED_MANIFEST_EFFECTS.contains(&"home-directory scan"));
+    assert!(PROHIBITED_MANIFEST_EFFECTS.contains(&"skill body file read"));
 }

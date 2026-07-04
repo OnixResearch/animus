@@ -3,12 +3,26 @@ type Collection<T> = alloc::vec::Vec<T>;
 
 const IDENTITY_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("manifest_identity");
+const VERSION_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("manifest_version");
+const TOOLSET_KIND_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("toolset_kind");
 const RUNTIME_KIND_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("runtime_kind");
+const TRUST_STATUS_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("manifest_trust_status");
+const PROVENANCE_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("manifest_provenance");
 const TOOL_NAME_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("declared_tool_name");
 const TOOL_DESCRIPTION_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("declared_tool_description");
+const TOOL_SCHEMA_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("declared_tool_parameter_schema_identity");
+const TOOL_RESULT_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("declared_tool_result_contract_identity");
+const TOOL_CAPABILITY_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("declared_tool_capability");
 const CAPABILITY_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("capability");
 const LAUNCH_COMMAND_LABEL_FIELD: crate::validation::FieldName =
@@ -29,6 +43,10 @@ const NETWORK_POLICY_FIELD: crate::validation::FieldName =
 const RUNTIME_KIND_HOST: &str = "host";
 const RUNTIME_KIND_STDIO: &str = "stdio";
 const RUNTIME_KIND_WASM: &str = "wasm";
+const TOOLSET_KIND_GENERIC: &str = "generic";
+const TOOLSET_KIND_REVIEW_GATE: &str = "review-gate";
+const TRUST_STATUS_TRUSTED: &str = "trusted";
+const TRUST_STATUS_UNTRUSTED: &str = "untrusted";
 const WORKING_DIRECTORY_PROJECT_ROOT: &str = "project-root";
 const WORKING_DIRECTORY_MANIFEST_DIRECTORY: &str = "manifest-directory";
 const SANDBOX_MODE_UNCONFINED: &str = "unconfined";
@@ -43,6 +61,9 @@ const HOME_PATH_PREFIX: char = '~';
 const PATH_ESCAPE_SEGMENT: &str = "..";
 const WINDOWS_DRIVE_SEPARATOR: u8 = b':';
 const WINDOWS_DRIVE_SEPARATOR_INDEX: usize = 1;
+const PROMPT_GUIDELINE_COUNT: usize = 1;
+const INJECTED_EXECUTOR_GUIDELINE: &str =
+    "Use only host-injected executors for this manifest tool.";
 
 /// Descriptor-side effects that manifest validation explicitly does not perform.
 pub const PROHIBITED_PLUGIN_MANIFEST_EFFECTS: &[&str] = &[
@@ -52,80 +73,9 @@ pub const PROHIBITED_PLUGIN_MANIFEST_EFFECTS: &[&str] = &[
     "secret reads",
     "network connections",
     "tool execution",
+    "pane opening",
+    "registry persistence",
 ];
-
-/// Untrusted manifest-shaped data before descriptor validation.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct PluginDescriptorDraft<'a> {
-    /// Optional descriptor identity, required by validation.
-    pub identity: Option<&'a str>,
-    /// Optional runtime-kind label, required by validation.
-    pub runtime_kind: Option<&'a str>,
-    /// Declared tool descriptors owned by this manifest.
-    pub declared_tools: &'a [ToolDescriptorDraft<'a>],
-    /// Capability labels requested by this manifest.
-    pub capabilities: &'a [&'a str],
-    /// Launch-policy metadata. Validation treats this as data only.
-    pub launch_policy: LaunchPolicyDraft<'a>,
-    /// Sandbox and network claims. Validation does not enforce a sandbox.
-    pub sandbox: SandboxRequirementsDraft<'a>,
-    /// Redaction claims for future host-owned logging.
-    pub redaction: RedactionPolicyDraft,
-}
-
-/// Untrusted manifest-shaped tool declaration data.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct ToolDescriptorDraft<'a> {
-    /// Optional tool name, required by validation.
-    pub name: Option<&'a str>,
-    /// Optional human-facing descriptor text.
-    pub description: Option<&'a str>,
-}
-
-/// Untrusted launch metadata from a descriptor.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub struct LaunchPolicyDraft<'a> {
-    /// Optional command or artifact label. This is never executed by validation.
-    pub command_label: Option<&'a str>,
-    /// Optional data-only argument labels.
-    pub arguments: &'a [&'a str],
-    /// Optional working-directory mode label.
-    pub working_directory: Option<&'a str>,
-    /// Environment variable names that a future host may choose to expose.
-    pub environment_allowlist: &'a [&'a str],
-    /// Project-relative writable-root descriptors.
-    pub writable_roots: &'a [&'a str],
-}
-
-/// Untrusted sandbox and network claims from a descriptor.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct SandboxRequirementsDraft<'a> {
-    /// Optional sandbox mode, required by validation.
-    pub mode: Option<&'a str>,
-    /// Optional network policy, required by validation.
-    pub network: Option<&'a str>,
-}
-
-/// Redaction claims from a descriptor.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct RedactionPolicyDraft {
-    /// Whether host logs should redact transcript payloads.
-    pub redact_transcripts: bool,
-    /// Whether host logs should redact secret-looking payloads.
-    pub redact_secrets: bool,
-}
-
-/// Validated descriptor manifest.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct PluginDescriptor {
-    identity: Text,
-    runtime_kind: RuntimeKind,
-    declared_tools: Collection<ToolDescriptor>,
-    capabilities: Collection<Text>,
-    launch_policy: LaunchPolicy,
-    sandbox: SandboxRequirements,
-    redaction: RedactionPolicy,
-}
 
 impl PluginDescriptor {
     /// Validates untrusted manifest-shaped data as a descriptor only.
@@ -141,13 +91,19 @@ impl PluginDescriptor {
         existing_catalog_tool_names: &[&str],
     ) -> Result<Self, PluginDescriptorError> {
         let identity = validation::required_text(IDENTITY_FIELD, draft.identity)?;
+        let version = validation::required_text(VERSION_FIELD, draft.version)?;
+        let toolset_kind = validation::validate_toolset_kind(draft.toolset_kind)?;
         let runtime_text = validation::required_text(RUNTIME_KIND_FIELD, draft.runtime_kind)?;
         let runtime_kind = validation::parse_runtime_kind(&runtime_text)?;
+        let provenance = validation::validate_provenance(draft.provenance)?;
+        let trust_status = validation::validate_trust_status(draft.trust_status)?;
         let declared_tools = validation::validate_tools(
             draft.declared_tools,
             built_in_tool_names,
             existing_catalog_tool_names,
         )?;
+        let compatibility = action::check::validate_manifest_compatibility(&draft.compatibility)?;
+        let declared_roles = action::check::validate_roles(draft.declared_roles, &compatibility)?;
         let capabilities =
             validation::validate_required_texts(CAPABILITY_FIELD, draft.capabilities)?;
         let launch_policy = validation::validate_launch_policy(runtime_kind, &draft.launch_policy)?;
@@ -160,90 +116,96 @@ impl PluginDescriptor {
 
         Ok(Self {
             identity,
+            version,
+            toolset_kind,
             runtime_kind,
+            provenance,
+            trust_status,
             declared_tools,
+            declared_roles,
             capabilities,
+            compatibility,
             launch_policy,
             sandbox,
             redaction,
         })
     }
-}
 
-/// Runtime-kind descriptor labels.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum RuntimeKind {
-    /// Host-owned implementation; no launch command is required.
-    Host,
-    /// Stdio-shaped descriptor; validation records a command label but does not launch it.
-    Stdio,
-    /// Wasm-shaped descriptor; validation records an artifact label but does not load it.
-    Wasm,
-}
+    /// Builds typed tool definitions from manifest metadata and injected executor names.
+    ///
+    /// Definitions are active only when the manifest is trusted and a matching
+    /// executor name is supplied by the host. No process, module, script, or
+    /// provider fallback is attempted here.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::tool::ContractError`] when projected metadata violates
+    /// the tool-definition boundary contract.
+    pub fn tool_definitions(
+        &self,
+        injected_executor_names: &[&str],
+    ) -> Result<Collection<crate::tool::Definition>, crate::tool::ContractError> {
+        assert!(
+            injected_executor_names.len() <= crate::validation::MAX_ADAPTER_FIELD_CHARS,
+            "executor name count must fit the adapter field bound"
+        );
+        let mut definitions = Collection::with_capacity(self.declared_tools.len());
+        for tool in &self.declared_tools {
+            let capability_labels = tool.capability_label_strs();
+            let prompt_guidelines = [INJECTED_EXECUTOR_GUIDELINE; PROMPT_GUIDELINE_COUNT];
+            let draft = crate::tool::DefinitionDraft {
+                name: Some(tool.name()),
+                label: Some(tool.name()),
+                description: Some(tool.description()),
+                parameter_schema_identity: Some(tool.parameter_schema_identity()),
+                prompt_snippet: Some(tool.description()),
+                prompt_guidelines: prompt_guidelines.as_slice(),
+                source_identity: Some(self.identity()),
+                provenance: Some(self.provenance()),
+                capability_labels: capability_labels.as_slice(),
+                result_metadata_shape: Some(tool.result_contract_identity()),
+                status: self.definition_status(tool.name(), injected_executor_names),
+            };
+            definitions.push(crate::tool::Definition::validate(&draft)?);
+        }
+        Ok(definitions)
+    }
 
-/// Validated tool declaration.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ToolDescriptor {
-    name: Text,
-    description: Option<Text>,
-}
-
-/// Working-directory descriptor modes.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum WorkingDirectoryMode {
-    /// Future hosts may interpret paths relative to the project root.
-    ProjectRoot,
-    /// Future hosts may interpret paths relative to the descriptor location.
-    ManifestDirectory,
-}
-
-/// Validated launch metadata.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct LaunchPolicy {
-    command_label: Option<Text>,
-    arguments: Collection<Text>,
-    working_directory: WorkingDirectoryMode,
-    environment_allowlist: Collection<Text>,
-    writable_roots: Collection<Text>,
-}
-
-/// Sandbox-mode descriptor labels.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum SandboxMode {
-    /// No sandbox claim is made by the descriptor.
-    Unconfined,
-    /// A future host must enforce isolation before running anything.
-    Isolated,
-}
-
-/// Network-policy descriptor labels.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum NetworkPolicy {
-    /// Network access is denied.
-    Denied,
-    /// Only loopback network access is claimed.
-    Loopback,
-    /// Outbound network access is claimed.
-    Outbound,
-}
-
-/// Validated sandbox and network claims.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct SandboxRequirements {
-    mode: SandboxMode,
-    network: NetworkPolicy,
-}
-
-/// Validated redaction claims.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct RedactionPolicy {
-    redact_transcripts: bool,
-    redact_secrets: bool,
+    fn definition_status(
+        &self,
+        tool_name: &str,
+        injected_executor_names: &[&str],
+    ) -> crate::tool::DefinitionStatus {
+        if self.trust_status != TrustStatus::Trusted {
+            return crate::tool::DefinitionStatus::Inactive;
+        }
+        if injected_executor_names.contains(&tool_name) {
+            crate::tool::DefinitionStatus::Active
+        } else {
+            crate::tool::DefinitionStatus::Inactive
+        }
+    }
 }
 
 mod accessors;
+mod action;
 mod error;
+mod types;
 mod validation;
+
+pub use action::{
+    PluginCompatibility, PluginCompatibilityDraft, PluginDiagnostic, PluginDiagnosticKind,
+    PluginDiagnosticSeverity, PluginHostCompatibilityDraft, PluginInvocationContext,
+    PluginInvocationContextDraft, PluginInvocationContextLeak, PluginRegistryOperationDraft,
+    PluginRegistryOperationKind, PluginRegistryPlan, PluginRegistryPlanStatus, PluginRole,
+    PluginRoleDraft, PluginRoleKind,
+};
+pub use types::{
+    LaunchPolicy, LaunchPolicyDraft, NetworkPolicy, PluginDescriptor, PluginDescriptorDraft,
+    RedactionPolicy, RedactionPolicyDraft, RuntimeKind, SandboxMode, SandboxRequirements,
+    SandboxRequirementsDraft, ToolDescriptor, ToolDescriptorDraft, ToolsetKind, TrustStatus,
+    WorkingDirectoryMode,
+};
 
 /// Descriptor manifest validation error.
 pub type PluginDescriptorError = self::error::ValidationFailure;

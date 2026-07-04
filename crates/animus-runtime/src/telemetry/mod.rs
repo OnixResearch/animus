@@ -87,6 +87,14 @@ pub enum RuntimeEventKind {
     LoopDecision,
     /// Model request event.
     ModelRequested,
+    /// Model stream-start event.
+    ModelStreamStarted,
+    /// Model stream-frame event.
+    ModelStreamFrame,
+    /// Model stream-end event.
+    ModelStreamEnded,
+    /// Model stream-failure event.
+    ModelStreamFailed,
     /// Model response event.
     ModelResponded,
     /// Model denial event.
@@ -115,6 +123,8 @@ pub enum RuntimeEventKind {
     LifecycleHookOutcome,
     /// Steel policy denial event.
     SteelPolicyDenied,
+    /// Sandbox escalation event.
+    SandboxEscalation,
     /// Cancellation event.
     Cancelled,
     /// Compaction event.
@@ -134,6 +144,10 @@ impl RuntimeEventKind {
             Self::TurnStarted => "turn_started",
             Self::LoopDecision => "loop_decision",
             Self::ModelRequested => "model_requested",
+            Self::ModelStreamStarted => "model_stream_started",
+            Self::ModelStreamFrame => "model_stream_frame",
+            Self::ModelStreamEnded => "model_stream_ended",
+            Self::ModelStreamFailed => "model_stream_failed",
             Self::ModelResponded => "model_responded",
             Self::ModelDenied => "model_denied",
             Self::ToolRequested => "tool_requested",
@@ -148,9 +162,21 @@ impl RuntimeEventKind {
             Self::HookFailed => "hook_failed",
             Self::LifecycleHookOutcome => "lifecycle_hook_outcome",
             Self::SteelPolicyDenied => "steel_policy_denied",
+            Self::SandboxEscalation => "sandbox_escalation",
             Self::Cancelled => "cancelled",
             Self::CompactionRequested => "compaction_requested",
             Self::Shutdown => "shutdown",
         }
     }
+}
+
+/// Projects canonical model stream frames into runtime-order stream events.
+///
+/// # Errors
+///
+/// Returns [`animus_adapters::ModelStreamError`] when the stream is invalid.
+pub fn project_model_stream_events(
+    frames: &[animus_adapters::ModelStreamFrame],
+) -> Result<Vec<RuntimeEvent>, animus_adapters::ModelStreamError> {
+    dto::project_model_stream_events(frames)
 }

@@ -1,0 +1,17 @@
+# Tasks
+
+- [x] [serial] Define typed Animus dataset export inputs, including session snapshot, replay context, export target, row identity, source span metadata, and typed export errors. r[agent_harness_runtime.hf_dataset_export.session_source]
+- [x] [depends:session_source] Implement pure SFT/chat-message export from validated Animus replay context to Hugging Face `messages` rows. r[agent_harness_runtime.hf_dataset_export.chat_messages]
+- [x] [depends:chat_messages] Add positive SFT tests for user/assistant turns, summary-preserved context, branch-selected replay, and chat-template-compatible role ordering. r[agent_harness_runtime.hf_dataset_export.chat_messages.sft]
+- [x] [depends:chat_messages] Add negative SFT tests for invalid roles, empty conversations, empty assistant targets, unsupported content blocks, and malformed tool-result ordering. r[agent_harness_runtime.hf_dataset_export.chat_messages.rejects_bad_rows]
+- [x] [depends:session_source] Define explicit export policy DTOs for system text, tool calls, tool results, hidden reasoning, metadata projection, redaction, and quality thresholds. r[agent_harness_runtime.hf_dataset_export.policy]
+- [x] [depends:policy] Add leakage-focused tests proving hidden reasoning, raw tool outputs, environment metadata, and private provenance are excluded unless policy explicitly allows them. r[agent_harness_runtime.hf_dataset_export.policy.leakage_default]
+- [x] [depends:chat_messages,policy] Add supervised dataset JSONL row rendering in the std shell or host adapter, leaving pure row construction in reusable core logic. r[agent_harness_runtime.hf_dataset_export.chat_messages]
+- [x] [depends:session_source] Implement pure preference-row export for prompt/chosen/rejected examples sourced from explicit Animus outcome annotations. r[agent_harness_runtime.hf_dataset_export.preference_rows]
+- [x] [depends:preference_rows] Add positive and negative preference tests for valid chosen/rejected pairs, missing prompt spans, duplicate candidates, missing outcome labels, and unsafe metadata projection. r[agent_harness_runtime.hf_dataset_export.preference_rows.validated]
+- [x] [depends:session_source] Implement pure RL trajectory export for ordered prompt/action/observation/reward/terminal records with safe metadata. r[agent_harness_runtime.hf_dataset_export.rl_trajectories]
+- [x] [depends:rl_trajectories] Add positive and negative RL tests for complete trajectories, missing rewards, non-terminal endings, orphaned observations, invalid action/tool links, and redacted metadata. r[agent_harness_runtime.hf_dataset_export.rl_trajectories.validated]
+- [x] [depends:policy] Add structured dataset inspection reports covering row counts, skipped rows, empty/short turns, tool/reasoning leakage warnings, usage/token summaries when available, and policy decisions. r[agent_harness_runtime.hf_dataset_export.inspection]
+- [x] [depends:inspection] Add report tests proving skipped-row reasons are deterministic, safe, and free of raw private payloads. r[agent_harness_runtime.hf_dataset_export.inspection.safe_reports]
+- [x] [depends:chat_messages,preference_rows,rl_trajectories,inspection] Document export presets, safe defaults, Hugging Face/TRL integration examples, and non-goals. r[agent_harness_runtime.hf_dataset_export.closeout]
+- [x] [depends:closeout] Run focused dataset export tests, workspace checks for touched crates, pre-commit hooks, Cairn validation, and Cairn gates with reviewable evidence. r[agent_harness_runtime.hf_dataset_export.closeout]

@@ -1,4 +1,3 @@
-use super::model::{AuthorizationModelInput, model_authorization_issue};
 use super::*;
 
 const CONTRACT: &str = "animus.runtime";

@@ -1,3 +1,5 @@
+const STREAM_PROJECTION_EXTRA_EVENTS: usize = 2;
+
 /// Ordered runtime event emitted by the agent loop.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum RuntimeEvent {
@@ -32,6 +34,30 @@ pub enum RuntimeEvent {
     ModelRequested {
         /// Validated model request.
         request: animus_adapters::ModelRequest,
+    },
+    /// A model stream started for a correlated model call.
+    ModelStreamStarted {
+        /// Stable model-call correlation identifier.
+        call_id: animus_adapters::ModelStreamCallId,
+    },
+    /// A non-terminal model stream frame was projected before completion.
+    ModelStreamFrame {
+        /// Canonical model stream frame.
+        frame: animus_adapters::ModelStreamFrame,
+    },
+    /// A model stream ended without a stream failure.
+    ModelStreamEnded {
+        /// Stable model-call correlation identifier.
+        call_id: animus_adapters::ModelStreamCallId,
+        /// Terminal stream status.
+        status: animus_adapters::ModelStreamFrameKind,
+    },
+    /// A model stream failed with a bounded safe reason.
+    ModelStreamFailed {
+        /// Stable model-call correlation identifier.
+        call_id: animus_adapters::ModelStreamCallId,
+        /// Safe failure reason.
+        reason: String,
     },
     /// The model adapter returned a validated response.
     ModelResponded {
@@ -120,6 +146,23 @@ pub enum RuntimeEvent {
         /// Typed denial reason label.
         reason: String,
     },
+    /// Sandbox escalation policy decision was recorded with redacted evidence.
+    SandboxEscalation {
+        /// Exec-policy decision for the escalation.
+        decision: animus_adapters::ExecPolicyDecision,
+        /// Matched rule identities.
+        rule_ids: Vec<String>,
+        /// BLAKE3 command fingerprints only; raw command bodies are omitted.
+        command_fingerprints: Vec<String>,
+        /// Active sandbox label before escalation.
+        active_sandbox: String,
+        /// Requested capability outside the active sandbox.
+        requested_capability: String,
+        /// Safe escalation reason label.
+        escalation_reason: String,
+        /// Redaction marker proving command bodies were not embedded.
+        redaction_marker: String,
+    },
     /// A host cancellation boundary was observed.
     Cancelled {
         /// Safe cancellation reason.
@@ -148,6 +191,10 @@ impl RuntimeEvent {
             Self::TurnStarted { .. } => super::RuntimeEventKind::TurnStarted,
             Self::LoopDecision { .. } => super::RuntimeEventKind::LoopDecision,
             Self::ModelRequested { .. } => super::RuntimeEventKind::ModelRequested,
+            Self::ModelStreamStarted { .. } => super::RuntimeEventKind::ModelStreamStarted,
+            Self::ModelStreamFrame { .. } => super::RuntimeEventKind::ModelStreamFrame,
+            Self::ModelStreamEnded { .. } => super::RuntimeEventKind::ModelStreamEnded,
+            Self::ModelStreamFailed { .. } => super::RuntimeEventKind::ModelStreamFailed,
             Self::ModelResponded { .. } => super::RuntimeEventKind::ModelResponded,
             Self::ModelDenied { .. } => super::RuntimeEventKind::ModelDenied,
             Self::ToolRequested { .. } => super::RuntimeEventKind::ToolRequested,
@@ -162,9 +209,64 @@ impl RuntimeEvent {
             Self::HookFailed { .. } => super::RuntimeEventKind::HookFailed,
             Self::LifecycleHookOutcome { .. } => super::RuntimeEventKind::LifecycleHookOutcome,
             Self::SteelPolicyDenied { .. } => super::RuntimeEventKind::SteelPolicyDenied,
+            Self::SandboxEscalation { .. } => super::RuntimeEventKind::SandboxEscalation,
             Self::Cancelled { .. } => super::RuntimeEventKind::Cancelled,
             Self::CompactionRequested { .. } => super::RuntimeEventKind::CompactionRequested,
             Self::Shutdown { .. } => super::RuntimeEventKind::Shutdown,
         }
     }
+}
+
+pub(super) fn project_model_stream_events(
+    frames: &[animus_adapters::ModelStreamFrame],
+) -> Result<Vec<RuntimeEvent>, animus_adapters::ModelStreamError> {
+    animus_adapters::validate_model_stream_frames(frames)?;
+    let call_id = first_stream_call_id(frames)?;
+    let mut events = Vec::with_capacity(stream_projection_capacity(frames.len()));
+    events.push(RuntimeEvent::ModelStreamStarted { call_id });
+
+    for frame in frames {
+        events.push(project_stream_frame_event(frame));
+    }
+
+    Ok(events)
+}
+
+fn first_stream_call_id(
+    frames: &[animus_adapters::ModelStreamFrame],
+) -> Result<animus_adapters::ModelStreamCallId, animus_adapters::ModelStreamError> {
+    let Some(first) = frames.first() else {
+        return Err(animus_adapters::ModelStreamError::EmptyStream);
+    };
+    Ok(first.call_id().clone())
+}
+
+const fn stream_projection_capacity(frame_count: usize) -> usize {
+    frame_count.saturating_add(STREAM_PROJECTION_EXTRA_EVENTS)
+}
+
+fn project_stream_frame_event(frame: &animus_adapters::ModelStreamFrame) -> RuntimeEvent {
+    match frame.kind() {
+        animus_adapters::ModelStreamFrameKind::Failure => RuntimeEvent::ModelStreamFailed {
+            call_id: frame.call_id().clone(),
+            reason: terminal_reason(frame),
+        },
+        animus_adapters::ModelStreamFrameKind::Finish
+        | animus_adapters::ModelStreamFrameKind::Cancelled => RuntimeEvent::ModelStreamEnded {
+            call_id: frame.call_id().clone(),
+            status: frame.kind(),
+        },
+        animus_adapters::ModelStreamFrameKind::ContentDelta
+        | animus_adapters::ModelStreamFrameKind::ThoughtDelta
+        | animus_adapters::ModelStreamFrameKind::ToolCallDelta
+        | animus_adapters::ModelStreamFrameKind::Usage => RuntimeEvent::ModelStreamFrame {
+            frame: frame.clone(),
+        },
+    }
+}
+
+fn terminal_reason(frame: &animus_adapters::ModelStreamFrame) -> String {
+    frame
+        .body()
+        .map_or_else(|| String::from(frame.kind().as_str()), String::from)
 }

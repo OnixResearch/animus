@@ -1,9 +1,23 @@
+#![allow(unknown_lints)]
+#![allow(
+    ambiguous_params,
+    assertion_density,
+    borrowed_argument_types,
+    excessive_file_length,
+    no_panic,
+    numeric_units,
+    path_segment_repetition,
+    unbounded_collection_growth,
+    usize_in_public_api
+)]
+
 const HOOK_DEFINITION_SCHEMA: &str = "animus.lifecycle_hook.definition.v1";
 const DEFAULT_REDACTION_MARKER: &str = "body_redacted";
 const EMPTY_SENSITIVE_BODY_HASH: &str = "empty_sensitive_body";
 const BLAKE3_HEX_LENGTH: usize = 64;
 const MAX_SAFE_LABEL_BYTES: usize = 128;
 const MAX_SAFE_SUMMARY_BYTES: usize = 512;
+const MAX_DECLARED_HOOK_CAPABILITIES: usize = 8;
 
 const LEAK_MARKERS: &[&str] = &[
     "raw_prompt:",
@@ -15,27 +29,47 @@ const LEAK_MARKERS: &[&str] = &[
 ];
 
 // r[impl agent_harness_runtime.openai_codex_hook_trust_lifecycle.event_registry]
-/// Lifecycle hook event kind adapted from OpenAI Codex hook surfaces.
+// r[impl agent_harness_runtime.claude_code_hooks.scope]
+// r[impl agent_harness_runtime.claude_code_hooks.points]
+/// Stable lifecycle hook point adapted from Claude Code and OpenAI Codex hook surfaces.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum LifecycleHookEventKind {
     /// Session-start lifecycle event.
     SessionStart,
+    /// Session-end lifecycle event.
+    SessionEnd,
     /// User-prompt submission lifecycle event.
     UserPromptSubmit,
+    /// Prompt assembly lifecycle event.
+    PromptAssembly,
+    /// Boundary before a model request crosses the adapter.
+    ModelRequest,
+    /// Boundary after a model response has been validated.
+    ModelResponse,
     /// Boundary before a tool request crosses the adapter.
     PreToolUse,
     /// Boundary where a permission decision is requested.
     PermissionRequest,
     /// Boundary after a tool response has been validated.
     PostToolUse,
+    /// Boundary before a mutation crosses the shell adapter.
+    PreMutation,
+    /// Boundary after a mutation result has been validated.
+    PostMutation,
     /// Boundary before compaction work is requested.
     PreCompact,
     /// Boundary after compaction work is summarized.
     PostCompact,
+    /// Boundary before validation work is requested.
+    Validation,
+    /// Boundary where a receipt is emitted.
+    ReceiptEmission,
     /// Boundary before a subagent starts.
     SubagentStart,
     /// Boundary after a subagent stops.
     SubagentStop,
+    /// Workflow-completion lifecycle event.
+    WorkflowCompletion,
     /// Turn or run stop lifecycle event.
     Stop,
 }
@@ -50,14 +84,23 @@ impl LifecycleHookEventKind {
     pub fn parse(value: &str) -> Result<Self, LifecycleHookError> {
         match value {
             "session_start" => Ok(Self::SessionStart),
+            "session_end" => Ok(Self::SessionEnd),
             "user_prompt_submit" => Ok(Self::UserPromptSubmit),
+            "prompt_assembly" => Ok(Self::PromptAssembly),
+            "model_request" => Ok(Self::ModelRequest),
+            "model_response" => Ok(Self::ModelResponse),
             "pre_tool_use" => Ok(Self::PreToolUse),
             "permission_request" => Ok(Self::PermissionRequest),
             "post_tool_use" => Ok(Self::PostToolUse),
+            "pre_mutation" => Ok(Self::PreMutation),
+            "post_mutation" => Ok(Self::PostMutation),
             "pre_compact" => Ok(Self::PreCompact),
             "post_compact" => Ok(Self::PostCompact),
+            "validation" => Ok(Self::Validation),
+            "receipt_emission" => Ok(Self::ReceiptEmission),
             "subagent_start" => Ok(Self::SubagentStart),
             "subagent_stop" => Ok(Self::SubagentStop),
+            "workflow_completion" => Ok(Self::WorkflowCompletion),
             "stop" => Ok(Self::Stop),
             unsupported => Err(LifecycleHookError::new(
                 LifecycleHookErrorKind::UnknownEvent,
@@ -72,15 +115,45 @@ impl LifecycleHookEventKind {
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::SessionStart => "session_start",
+            Self::SessionEnd => "session_end",
             Self::UserPromptSubmit => "user_prompt_submit",
+            Self::PromptAssembly => "prompt_assembly",
+            Self::ModelRequest => "model_request",
+            Self::ModelResponse => "model_response",
             Self::PreToolUse => "pre_tool_use",
             Self::PermissionRequest => "permission_request",
             Self::PostToolUse => "post_tool_use",
+            Self::PreMutation => "pre_mutation",
+            Self::PostMutation => "post_mutation",
             Self::PreCompact => "pre_compact",
             Self::PostCompact => "post_compact",
+            Self::Validation => "validation",
+            Self::ReceiptEmission => "receipt_emission",
             Self::SubagentStart => "subagent_start",
             Self::SubagentStop => "subagent_stop",
+            Self::WorkflowCompletion => "workflow_completion",
             Self::Stop => "stop",
+        }
+    }
+
+    const fn supports_capability(self, capability: LifecycleHookCapability) -> bool {
+        match capability {
+            LifecycleHookCapability::Observe => true,
+            LifecycleHookCapability::Annotate => true,
+            LifecycleHookCapability::Deny => matches!(
+                self,
+                Self::ModelRequest
+                    | Self::PreToolUse
+                    | Self::PermissionRequest
+                    | Self::PreMutation
+                    | Self::Validation
+                    | Self::Stop
+            ),
+            LifecycleHookCapability::RequestContinuation => matches!(self, Self::Stop),
+            LifecycleHookCapability::RequestRevalidation => matches!(
+                self,
+                Self::ModelRequest | Self::PreToolUse | Self::PreMutation | Self::Validation
+            ),
         }
     }
 
@@ -90,22 +163,55 @@ impl LifecycleHookEventKind {
                 self,
                 Self::SessionStart
                     | Self::UserPromptSubmit
+                    | Self::PromptAssembly
                     | Self::PreCompact
                     | Self::SubagentStart
             ),
             LifecycleHookEffectKind::Warning => true,
             LifecycleHookEffectKind::Deny => {
-                matches!(
-                    self,
-                    Self::PreToolUse | Self::PermissionRequest | Self::Stop
-                )
+                self.supports_capability(LifecycleHookCapability::Deny)
             }
-            LifecycleHookEffectKind::RequestContinuation => matches!(self, Self::Stop),
+            LifecycleHookEffectKind::RequestContinuation => {
+                self.supports_capability(LifecycleHookCapability::RequestContinuation)
+            }
+            LifecycleHookEffectKind::RequestRevalidation => {
+                self.supports_capability(LifecycleHookCapability::RequestRevalidation)
+            }
             LifecycleHookEffectKind::RewriteToolInput
             | LifecycleHookEffectKind::ExecuteTool
             | LifecycleHookEffectKind::RewriteDeniedAction
             | LifecycleHookEffectKind::WeakenSandbox
             | LifecycleHookEffectKind::SuppressApproval => false,
+        }
+    }
+}
+
+// r[impl agent_harness_runtime.claude_code_hooks.execution]
+/// Declared capability a host-owned lifecycle hook adapter is allowed to use.
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub enum LifecycleHookCapability {
+    /// Observe a redacted lifecycle event without effects.
+    Observe,
+    /// Attach bounded annotations such as context summaries or warnings.
+    Annotate,
+    /// Deny a guarded lifecycle action.
+    Deny,
+    /// Request continuation after a stop boundary.
+    RequestContinuation,
+    /// Request normal runtime DTO, permission, and capability revalidation.
+    RequestRevalidation,
+}
+
+impl LifecycleHookCapability {
+    /// Returns the stable capability label.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Observe => "observe",
+            Self::Annotate => "annotate",
+            Self::Deny => "deny",
+            Self::RequestContinuation => "request_continuation",
+            Self::RequestRevalidation => "request_revalidation",
         }
     }
 }
@@ -184,6 +290,8 @@ pub struct LifecycleHookDefinitionDraft<'a> {
     pub event_kind: &'a str,
     /// Source or management scope for the definition.
     pub source: LifecycleHookDefinitionSource,
+    /// Capabilities declared by the host-owned hook adapter.
+    pub capabilities: &'a [LifecycleHookCapability],
     /// Raw definition body that is hashed but not stored by the runtime core.
     pub definition_body: &'a str,
 }
@@ -195,6 +303,7 @@ pub struct LifecycleHookDefinition {
     hook_id: String,
     event_kind: LifecycleHookEventKind,
     source: LifecycleHookDefinitionSource,
+    capabilities: Vec<LifecycleHookCapability>,
     definition_hash: String,
 }
 
@@ -204,10 +313,12 @@ impl LifecycleHookDefinition {
     /// # Errors
     ///
     /// Returns [`LifecycleHookError`] when identifiers are unsafe, the event kind
-    /// is unsupported, or the definition body is empty.
+    /// is unsupported, the capability declaration is invalid, or the definition
+    /// body is empty.
     pub fn validate(draft: &LifecycleHookDefinitionDraft<'_>) -> Result<Self, LifecycleHookError> {
         let hook_id = validate_safe_label("hook_id", draft.hook_id)?;
         let event_kind = LifecycleHookEventKind::parse(draft.event_kind)?;
+        let capabilities = validate_capabilities(event_kind, draft.capabilities)?;
         if draft.definition_body.is_empty() {
             return Err(LifecycleHookError::new(
                 LifecycleHookErrorKind::EmptyDefinition,
@@ -215,12 +326,18 @@ impl LifecycleHookDefinition {
                 "",
             ));
         }
-        let definition_hash =
-            hash_definition(hook_id, event_kind, draft.source, draft.definition_body);
+        let definition_hash = hash_definition(
+            hook_id,
+            event_kind,
+            draft.source,
+            &capabilities,
+            draft.definition_body,
+        );
         Ok(Self {
             hook_id: String::from(hook_id),
             event_kind,
             source: draft.source,
+            capabilities,
             definition_hash,
         })
     }
@@ -241,6 +358,18 @@ impl LifecycleHookDefinition {
     #[must_use]
     pub const fn source(&self) -> LifecycleHookDefinitionSource {
         self.source
+    }
+
+    /// Returns the declared host adapter capabilities.
+    #[must_use]
+    pub fn capabilities(&self) -> &[LifecycleHookCapability] {
+        self.capabilities.as_slice()
+    }
+
+    /// Returns true when the hook declares `capability`.
+    #[must_use]
+    pub fn declares_capability(&self, capability: LifecycleHookCapability) -> bool {
+        self.capabilities.contains(&capability)
     }
 
     /// Returns the BLAKE3 hash of the reviewed hook definition content.
@@ -390,6 +519,7 @@ impl LifecycleHookRedaction {
     }
 }
 
+// r[impl agent_harness_runtime.claude_code_hooks.payloads]
 /// Draft event input that may include a sensitive body to hash and redact.
 pub struct LifecycleHookInputDraft<'a> {
     /// Stable lifecycle event identifier.
@@ -400,6 +530,8 @@ pub struct LifecycleHookInputDraft<'a> {
     pub resource_class: &'a str,
     /// Safe redacted label for the affected resource.
     pub safe_label: &'a str,
+    /// Safe bounded event summary.
+    pub summary: &'a str,
     /// Optional sensitive event body; it is hashed but not stored.
     pub sensitive_body: Option<&'a str>,
     /// Optional safe status class for the event.
@@ -413,6 +545,7 @@ pub struct LifecycleHookInput {
     event_kind: LifecycleHookEventKind,
     resource_class: String,
     safe_label: String,
+    summary: String,
     body_size_bytes: usize,
     body_hash: String,
     redaction: LifecycleHookRedaction,
@@ -431,6 +564,7 @@ impl LifecycleHookInput {
         let event_kind = LifecycleHookEventKind::parse(draft.event_kind)?;
         let resource_class = validate_safe_label("resource_class", draft.resource_class)?;
         let safe_label = validate_safe_label("safe_label", draft.safe_label)?;
+        let summary = validate_safe_summary("summary", draft.summary)?;
         let status = draft
             .status
             .map(|value| validate_safe_label("status", value).map(String::from))
@@ -442,6 +576,7 @@ impl LifecycleHookInput {
             event_kind,
             resource_class: String::from(resource_class),
             safe_label: String::from(safe_label),
+            summary: String::from(summary),
             body_size_bytes,
             body_hash,
             redaction,
@@ -471,6 +606,12 @@ impl LifecycleHookInput {
     #[must_use]
     pub fn safe_label(&self) -> &str {
         self.safe_label.as_str()
+    }
+
+    /// Returns the safe bounded event summary.
+    #[must_use]
+    pub fn summary(&self) -> &str {
+        self.summary.as_str()
     }
 
     /// Returns the sensitive body byte length.
@@ -570,6 +711,7 @@ pub struct LifecycleHookOutputDraft<'a> {
     pub effects: &'a [LifecycleHookEffectDraft<'a>],
 }
 
+// r[impl agent_harness_runtime.claude_code_hooks.outcomes]
 /// Event-scoped hook effect accepted by the runtime core.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum LifecycleHookEffect {
@@ -595,6 +737,11 @@ pub enum LifecycleHookEffect {
         /// Safe continuation reason.
         reason: String,
     },
+    /// Request normal runtime revalidation before using the guarded action.
+    RequestRevalidation {
+        /// Safe revalidation reason.
+        reason: String,
+    },
 }
 
 impl LifecycleHookEffect {
@@ -606,6 +753,7 @@ impl LifecycleHookEffect {
             Self::Warning { .. } => "warning",
             Self::Deny { .. } => "deny",
             Self::RequestContinuation { .. } => "request_continuation",
+            Self::RequestRevalidation { .. } => "request_revalidation",
         }
     }
 }
@@ -633,6 +781,31 @@ impl LifecycleHookOutput {
             effects.push(validate_effect(event_kind, effect)?);
         }
         Ok(Self { effects })
+    }
+
+    /// Validates hook output effects against a definition's event and declared capabilities.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LifecycleHookError`] when an effect is malformed, unsupported by
+    /// the event kind, attempts to bypass policy boundaries, or uses an undeclared
+    /// host hook capability.
+    pub fn validate_for_definition(
+        definition: &LifecycleHookDefinition,
+        draft: &LifecycleHookOutputDraft<'_>,
+    ) -> Result<Self, LifecycleHookError> {
+        let output = Self::validate(definition.event_kind(), draft)?;
+        for effect in output.effects() {
+            let capability = required_capability_for_effect(effect);
+            if !definition.declares_capability(capability) {
+                return Err(LifecycleHookError::new(
+                    LifecycleHookErrorKind::CapabilityDenied,
+                    "effect_kind",
+                    effect.kind_label(),
+                ));
+            }
+        }
+        Ok(output)
     }
 
     /// Returns the validated effects.
@@ -872,6 +1045,14 @@ pub enum LifecycleHookErrorKind {
     UnsupportedEffect,
     /// Hook output attempted to bypass policy or adapter boundaries.
     PolicyBypass,
+    /// Hook definition omitted required capability declarations.
+    MissingCapability,
+    /// Hook definition declared a duplicate capability.
+    DuplicateCapability,
+    /// Hook definition declared a capability unsupported by the hook point.
+    UnsupportedCapability,
+    /// Hook output used an undeclared capability.
+    CapabilityDenied,
 }
 
 /// Evaluates trust for one lifecycle hook definition.
@@ -942,6 +1123,8 @@ pub fn route_lifecycle_hook_requests(
 }
 
 // r[impl agent_harness_runtime.openai_codex_hook_trust_lifecycle.policy_binding]
+// r[impl agent_harness_runtime.claude_code_hooks.scope.no_bypass]
+// r[impl agent_harness_runtime.claude_code_hooks.outcomes.invalid_modification]
 /// Binds accepted hook output to the current runtime policy status.
 ///
 /// Hook output can only keep the current status or make it stricter; it cannot
@@ -970,6 +1153,7 @@ enum LifecycleHookEffectKind {
     Warning,
     Deny,
     RequestContinuation,
+    RequestRevalidation,
     RewriteToolInput,
     ExecuteTool,
     RewriteDeniedAction,
@@ -984,6 +1168,7 @@ impl LifecycleHookEffectKind {
             "warning" => Ok(Self::Warning),
             "deny" => Ok(Self::Deny),
             "request_continuation" => Ok(Self::RequestContinuation),
+            "request_revalidation" => Ok(Self::RequestRevalidation),
             "rewrite_tool_input" => Ok(Self::RewriteToolInput),
             "execute_tool" => Ok(Self::ExecuteTool),
             "rewrite_denied_action" => Ok(Self::RewriteDeniedAction),
@@ -1003,6 +1188,7 @@ impl LifecycleHookEffectKind {
             Self::Warning => "warning",
             Self::Deny => "deny",
             Self::RequestContinuation => "request_continuation",
+            Self::RequestRevalidation => "request_revalidation",
             Self::RewriteToolInput => "rewrite_tool_input",
             Self::ExecuteTool => "execute_tool",
             Self::RewriteDeniedAction => "rewrite_denied_action",
@@ -1056,6 +1242,9 @@ fn validate_effect(
         LifecycleHookEffectKind::RequestContinuation => LifecycleHookEffect::RequestContinuation {
             reason: String::from(value),
         },
+        LifecycleHookEffectKind::RequestRevalidation => LifecycleHookEffect::RequestRevalidation {
+            reason: String::from(value),
+        },
         LifecycleHookEffectKind::RewriteToolInput
         | LifecycleHookEffectKind::ExecuteTool
         | LifecycleHookEffectKind::RewriteDeniedAction
@@ -1071,8 +1260,24 @@ fn first_hook_denial(output: &LifecycleHookOutput) -> Option<String> {
         LifecycleHookEffect::Deny { reason } => Some(reason.clone()),
         LifecycleHookEffect::AdditionalContext { .. }
         | LifecycleHookEffect::Warning { .. }
-        | LifecycleHookEffect::RequestContinuation { .. } => None,
+        | LifecycleHookEffect::RequestContinuation { .. }
+        | LifecycleHookEffect::RequestRevalidation { .. } => None,
     })
+}
+
+fn required_capability_for_effect(effect: &LifecycleHookEffect) -> LifecycleHookCapability {
+    match effect {
+        LifecycleHookEffect::AdditionalContext { .. } | LifecycleHookEffect::Warning { .. } => {
+            LifecycleHookCapability::Annotate
+        }
+        LifecycleHookEffect::Deny { .. } => LifecycleHookCapability::Deny,
+        LifecycleHookEffect::RequestContinuation { .. } => {
+            LifecycleHookCapability::RequestContinuation
+        }
+        LifecycleHookEffect::RequestRevalidation { .. } => {
+            LifecycleHookCapability::RequestRevalidation
+        }
+    }
 }
 
 fn matching_trust_record<'a>(
@@ -1092,6 +1297,39 @@ fn validate_safe_label<'a>(
     value: &'a str,
 ) -> Result<&'a str, LifecycleHookError> {
     validate_safe_text(field, value, MAX_SAFE_LABEL_BYTES)
+}
+
+fn validate_capabilities(
+    event_kind: LifecycleHookEventKind,
+    capabilities: &[LifecycleHookCapability],
+) -> Result<Vec<LifecycleHookCapability>, LifecycleHookError> {
+    if capabilities.is_empty() || capabilities.len() > MAX_DECLARED_HOOK_CAPABILITIES {
+        return Err(LifecycleHookError::new(
+            LifecycleHookErrorKind::MissingCapability,
+            "capabilities",
+            "missing_or_too_many",
+        ));
+    }
+    let mut normalized = Vec::with_capacity(capabilities.len());
+    for capability in capabilities {
+        if normalized.contains(capability) {
+            return Err(LifecycleHookError::new(
+                LifecycleHookErrorKind::DuplicateCapability,
+                "capabilities",
+                capability.as_str(),
+            ));
+        }
+        if !event_kind.supports_capability(*capability) {
+            return Err(LifecycleHookError::new(
+                LifecycleHookErrorKind::UnsupportedCapability,
+                "capabilities",
+                capability.as_str(),
+            ));
+        }
+        normalized.push(*capability);
+    }
+    normalized.sort();
+    Ok(normalized)
 }
 
 fn validate_safe_summary<'a>(
@@ -1163,12 +1401,16 @@ fn hash_definition(
     hook_id: &str,
     event_kind: LifecycleHookEventKind,
     source: LifecycleHookDefinitionSource,
+    capabilities: &[LifecycleHookCapability],
     definition_body: &str,
 ) -> String {
     let mut normalized = String::from(HOOK_DEFINITION_SCHEMA);
     push_hash_part(&mut normalized, hook_id);
     push_hash_part(&mut normalized, event_kind.as_str());
     push_hash_part(&mut normalized, source.as_str());
+    for capability in capabilities {
+        push_hash_part(&mut normalized, capability.as_str());
+    }
     push_hash_part(&mut normalized, definition_body);
     blake3_hex(normalized.as_bytes())
 }
@@ -1192,11 +1434,13 @@ mod tests {
     const PROMPT_HOOK_ID: &str = "prompt_context";
     const STOP_HOOK_ID: &str = "stop_continuation";
     const PERMISSION_HOOK_ID: &str = "permission_guard";
+    const MODEL_HOOK_ID: &str = "model_guard";
     const USER_DEFINITION_BODY: &str = "event=pre_tool_use;effect=deny";
     const CHANGED_DEFINITION_BODY: &str = "event=pre_tool_use;effect=warning";
     const PROMPT_DEFINITION_BODY: &str = "event=user_prompt_submit;effect=additional_context";
     const STOP_DEFINITION_BODY: &str = "event=stop;effect=request_continuation";
     const PERMISSION_DEFINITION_BODY: &str = "event=permission_request;effect=deny";
+    const MODEL_DEFINITION_BODY: &str = "event=model_request;effect=request_revalidation";
     const EVENT_ID: &str = "evt_safe_001";
     const TOOL_LABEL: &str = "shell_exec";
     const PROMPT_LABEL: &str = "prompt_redacted";
@@ -1206,6 +1450,7 @@ mod tests {
     const SAFE_CONTEXT: &str = "safe bounded context";
     const SAFE_DENIAL: &str = "policy_denied";
     const SAFE_CONTINUATION: &str = "continue_after_stop";
+    const SAFE_REVALIDATION: &str = "revalidate_action";
     const RAW_PROMPT_BODY: &str = "raw_prompt: secret user prompt";
     const RAW_COMMAND_BODY: &str = "rm -rf forbidden";
     const APPROVAL_REASON: &str = "approval_required";
@@ -1216,6 +1461,11 @@ mod tests {
             hook_id: TOOL_HOOK_ID,
             event_kind: LifecycleHookEventKind::PreToolUse.as_str(),
             source: LifecycleHookDefinitionSource::User,
+            capabilities: &[
+                LifecycleHookCapability::Observe,
+                LifecycleHookCapability::Deny,
+                LifecycleHookCapability::RequestRevalidation,
+            ],
             definition_body: body,
         })
         .expect("tool hook definition should validate")
@@ -1226,6 +1476,10 @@ mod tests {
             hook_id: PROMPT_HOOK_ID,
             event_kind: LifecycleHookEventKind::UserPromptSubmit.as_str(),
             source: LifecycleHookDefinitionSource::Managed,
+            capabilities: &[
+                LifecycleHookCapability::Observe,
+                LifecycleHookCapability::Annotate,
+            ],
             definition_body: PROMPT_DEFINITION_BODY,
         })
         .expect("prompt hook definition should validate")
@@ -1236,6 +1490,11 @@ mod tests {
             hook_id: STOP_HOOK_ID,
             event_kind: LifecycleHookEventKind::Stop.as_str(),
             source: LifecycleHookDefinitionSource::Project,
+            capabilities: &[
+                LifecycleHookCapability::Observe,
+                LifecycleHookCapability::Deny,
+                LifecycleHookCapability::RequestContinuation,
+            ],
             definition_body: STOP_DEFINITION_BODY,
         })
         .expect("stop hook definition should validate")
@@ -1246,9 +1505,27 @@ mod tests {
             hook_id: PERMISSION_HOOK_ID,
             event_kind: LifecycleHookEventKind::PermissionRequest.as_str(),
             source: LifecycleHookDefinitionSource::Project,
+            capabilities: &[
+                LifecycleHookCapability::Observe,
+                LifecycleHookCapability::Deny,
+            ],
             definition_body: PERMISSION_DEFINITION_BODY,
         })
         .expect("permission hook definition should validate")
+    }
+
+    fn model_definition() -> LifecycleHookDefinition {
+        LifecycleHookDefinition::validate(&LifecycleHookDefinitionDraft {
+            hook_id: MODEL_HOOK_ID,
+            event_kind: LifecycleHookEventKind::ModelRequest.as_str(),
+            source: LifecycleHookDefinitionSource::Managed,
+            capabilities: &[
+                LifecycleHookCapability::Observe,
+                LifecycleHookCapability::RequestRevalidation,
+            ],
+            definition_body: MODEL_DEFINITION_BODY,
+        })
+        .expect("model hook definition should validate")
     }
 
     fn input(
@@ -1268,6 +1545,7 @@ mod tests {
             event_kind: kind.as_str(),
             resource_class,
             safe_label: label,
+            summary: label,
             sensitive_body,
             status: Some("pending"),
         })
@@ -1314,16 +1592,88 @@ mod tests {
     #[test]
     fn unknown_event_kind_fails_validation() {
         // r[verify agent_harness_runtime.openai_codex_hook_trust_lifecycle.event_registry.routing]
+        // r[verify agent_harness_runtime.claude_code_hooks.points.unknown]
         let error = LifecycleHookDefinition::validate(&LifecycleHookDefinitionDraft {
             hook_id: TOOL_HOOK_ID,
             event_kind: "surprise_event",
             source: LifecycleHookDefinitionSource::User,
+            capabilities: &[LifecycleHookCapability::Observe],
             definition_body: USER_DEFINITION_BODY,
         })
         .expect_err("unknown events should fail");
 
         assert_eq!(error.kind(), LifecycleHookErrorKind::UnknownEvent);
         assert_eq!(error.field(), "event_kind");
+    }
+
+    #[test]
+    fn claude_hook_points_cover_required_lifecycle_vocabulary() {
+        // r[verify agent_harness_runtime.claude_code_hooks.points]
+        let event_labels = [
+            ("session_start", LifecycleHookEventKind::SessionStart),
+            ("session_end", LifecycleHookEventKind::SessionEnd),
+            ("prompt_assembly", LifecycleHookEventKind::PromptAssembly),
+            ("model_request", LifecycleHookEventKind::ModelRequest),
+            ("model_response", LifecycleHookEventKind::ModelResponse),
+            ("pre_tool_use", LifecycleHookEventKind::PreToolUse),
+            ("post_tool_use", LifecycleHookEventKind::PostToolUse),
+            ("pre_mutation", LifecycleHookEventKind::PreMutation),
+            ("post_mutation", LifecycleHookEventKind::PostMutation),
+            ("validation", LifecycleHookEventKind::Validation),
+            ("receipt_emission", LifecycleHookEventKind::ReceiptEmission),
+            (
+                "workflow_completion",
+                LifecycleHookEventKind::WorkflowCompletion,
+            ),
+        ];
+
+        for (label, event_kind) in event_labels {
+            assert_eq!(LifecycleHookEventKind::parse(label), Ok(event_kind));
+            assert_eq!(event_kind.as_str(), label);
+        }
+    }
+
+    #[test]
+    fn hook_definitions_require_supported_unique_capabilities() {
+        // r[verify agent_harness_runtime.claude_code_hooks.execution]
+        // r[verify agent_harness_runtime.claude_code_hooks.points.unknown]
+        let missing = LifecycleHookDefinition::validate(&LifecycleHookDefinitionDraft {
+            hook_id: TOOL_HOOK_ID,
+            event_kind: LifecycleHookEventKind::PreToolUse.as_str(),
+            source: LifecycleHookDefinitionSource::User,
+            capabilities: &[],
+            definition_body: USER_DEFINITION_BODY,
+        })
+        .expect_err("missing capabilities should fail");
+        let duplicate = LifecycleHookDefinition::validate(&LifecycleHookDefinitionDraft {
+            hook_id: TOOL_HOOK_ID,
+            event_kind: LifecycleHookEventKind::PreToolUse.as_str(),
+            source: LifecycleHookDefinitionSource::User,
+            capabilities: &[
+                LifecycleHookCapability::Observe,
+                LifecycleHookCapability::Observe,
+            ],
+            definition_body: USER_DEFINITION_BODY,
+        })
+        .expect_err("duplicate capabilities should fail");
+        let unsupported = LifecycleHookDefinition::validate(&LifecycleHookDefinitionDraft {
+            hook_id: PROMPT_HOOK_ID,
+            event_kind: LifecycleHookEventKind::PromptAssembly.as_str(),
+            source: LifecycleHookDefinitionSource::Managed,
+            capabilities: &[LifecycleHookCapability::Deny],
+            definition_body: PROMPT_DEFINITION_BODY,
+        })
+        .expect_err("unsupported capabilities should fail");
+
+        assert_eq!(missing.kind(), LifecycleHookErrorKind::MissingCapability);
+        assert_eq!(
+            duplicate.kind(),
+            LifecycleHookErrorKind::DuplicateCapability
+        );
+        assert_eq!(
+            unsupported.kind(),
+            LifecycleHookErrorKind::UnsupportedCapability
+        );
     }
 
     #[test]
@@ -1400,6 +1750,40 @@ mod tests {
     }
 
     #[test]
+    fn request_revalidation_effect_requires_declared_capability() {
+        // r[verify agent_harness_runtime.claude_code_hooks.outcomes]
+        // r[verify agent_harness_runtime.claude_code_hooks.outcomes.invalid_modification]
+        let model = model_definition();
+        let validated = LifecycleHookOutput::validate_for_definition(
+            &model,
+            &LifecycleHookOutputDraft {
+                effects: &[LifecycleHookEffectDraft {
+                    kind: "request_revalidation",
+                    value: SAFE_REVALIDATION,
+                }],
+            },
+        )
+        .expect("declared request-revalidation effect should validate");
+        let tool = tool_definition(USER_DEFINITION_BODY);
+        let denied = LifecycleHookOutput::validate_for_definition(
+            &tool,
+            &LifecycleHookOutputDraft {
+                effects: &[LifecycleHookEffectDraft {
+                    kind: "warning",
+                    value: SAFE_CONTEXT,
+                }],
+            },
+        )
+        .expect_err("undeclared annotate effect should fail");
+
+        assert!(matches!(
+            validated.effects(),
+            [LifecycleHookEffect::RequestRevalidation { reason }] if reason == SAFE_REVALIDATION
+        ));
+        assert_eq!(denied.kind(), LifecycleHookErrorKind::CapabilityDenied);
+    }
+
+    #[test]
     fn stop_hook_accepts_continuation_request() {
         // r[verify agent_harness_runtime.openai_codex_hook_trust_lifecycle.io_contract]
         let validated = output(
@@ -1473,6 +1857,8 @@ mod tests {
     fn hook_policy_binding_keeps_denied_action_denied() {
         // r[verify agent_harness_runtime.openai_codex_hook_trust_lifecycle.policy_binding]
         // r[verify agent_harness_runtime.openai_codex_hook_trust_lifecycle.policy_binding.bypass]
+        // r[verify agent_harness_runtime.claude_code_hooks.scope]
+        // r[verify agent_harness_runtime.claude_code_hooks.scope.no_bypass]
         let safe_context = output(
             LifecycleHookEventKind::UserPromptSubmit,
             &[LifecycleHookEffectDraft {
@@ -1530,6 +1916,8 @@ mod tests {
     #[test]
     fn policy_bypass_effects_are_rejected_before_binding() {
         // r[verify agent_harness_runtime.openai_codex_hook_trust_lifecycle.policy_binding.bypass]
+        // r[verify agent_harness_runtime.claude_code_hooks.scope.no_bypass]
+        // r[verify agent_harness_runtime.claude_code_hooks.outcomes.invalid_modification]
         let fixtures = [
             "execute_tool",
             "rewrite_denied_action",
@@ -1551,9 +1939,41 @@ mod tests {
     }
 
     #[test]
+    fn hook_input_payload_exposes_bounded_metadata_without_leaks() {
+        // r[verify agent_harness_runtime.claude_code_hooks.payloads]
+        // r[verify agent_harness_runtime.claude_code_hooks.payloads.bounded]
+        let input = input(
+            LifecycleHookEventKind::PostToolUse,
+            TOOL_LABEL,
+            Some("tool result body that stays redacted"),
+        );
+        let leak = LifecycleHookInput::validate(&LifecycleHookInputDraft {
+            event_id: EVENT_ID,
+            event_kind: LifecycleHookEventKind::PostToolUse.as_str(),
+            resource_class: RESOURCE_TOOL,
+            safe_label: TOOL_LABEL,
+            summary: "credential: leaked",
+            sensitive_body: None,
+            status: Some("done"),
+        })
+        .expect_err("leaky summary should fail");
+
+        assert_eq!(input.event_id(), EVENT_ID);
+        assert_eq!(input.resource_class(), RESOURCE_TOOL);
+        assert_eq!(input.safe_label(), TOOL_LABEL);
+        assert_eq!(input.summary(), TOOL_LABEL);
+        assert_eq!(input.status(), Some("pending"));
+        assert_eq!(input.redaction(), LifecycleHookRedaction::BodyRedacted);
+        assert!(input.body_size_bytes() > usize::default());
+        assert_eq!(input.body_hash().len(), BLAKE3_HEX_LENGTH);
+        assert_eq!(leak.kind(), LifecycleHookErrorKind::InvalidLabel);
+    }
+
+    #[test]
     fn outcome_reports_redact_sensitive_input_and_keep_identity_auditable() {
         // r[verify agent_harness_runtime.openai_codex_hook_trust_lifecycle.outcome_reporting]
         // r[verify agent_harness_runtime.openai_codex_hook_trust_lifecycle.outcome_reporting.redacted]
+        // r[verify agent_harness_runtime.claude_code_hooks.payloads.bounded]
         let definition = prompt_definition();
         let trust_status = LifecycleHookTrustStatus::Trusted {
             scope: LifecycleHookTrustScope::Managed,
@@ -1611,6 +2031,7 @@ mod tests {
     #[test]
     fn required_hook_unavailable_is_typed_failed_outcome() {
         // r[verify agent_harness_runtime.openai_codex_hook_trust_lifecycle.outcome_reporting]
+        // r[verify agent_harness_runtime.claude_code_hooks.execution.missing_service]
         let definition = stop_definition();
         let trust_status = LifecycleHookTrustStatus::Trusted {
             scope: LifecycleHookTrustScope::Project,
