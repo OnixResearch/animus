@@ -8,7 +8,6 @@
 )]
 
 pub mod rest;
-#[allow(clippy::wildcard_imports)]
 pub use rest::*;
 
 #[cfg(test)]
