@@ -294,7 +294,7 @@ impl CanonicalModelRole {
     }
 }
 pub mod text;
-#[allow(non_trait_imports)]
+#[allow(clippy::useless_attribute, non_trait_imports)]
 pub(crate) use text::safe_text;
 pub mod rest1;
 pub mod rest2;
