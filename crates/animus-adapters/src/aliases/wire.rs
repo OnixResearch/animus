@@ -1,5 +1,5 @@
-mod provider;
-pub use provider::*;
+mod conformance;
+pub use conformance::*;
 
 /// Stable contract identity for public model request DTOs.
 pub const MODEL_REQUEST_CONTRACT_IDENTITY: &str = crate::model::MODEL_REQUEST_CONTRACT_IDENTITY;
