@@ -590,6 +590,7 @@ fn request_context_units(request: &animus_adapters::CanonicalModelRequest) -> u3
     units
 }
 
+#[allow(fallible_int_fallback, sentinel_fallback)]
 fn usize_to_u32(value: usize) -> u32 {
     u32::try_from(value).unwrap_or(u32::MAX)
 }
