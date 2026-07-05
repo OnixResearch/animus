@@ -295,15 +295,15 @@ impl CanonicalModelRole {
 }
 pub mod text;
 pub(crate) use text::safe_text;
-pub mod mod_rest1;
-pub mod mod_rest2;
-pub mod mod_rest3;
-pub mod mod_rest4;
-pub mod mod_rest5;
-pub mod mod_rest6;
-pub use mod_rest1::*;
-pub use mod_rest2::*;
-pub use mod_rest3::*;
-pub use mod_rest4::*;
-pub use mod_rest5::*;
-pub use mod_rest6::*;
+pub mod rest1;
+pub mod rest2;
+pub mod rest3;
+pub mod rest4;
+pub mod rest5;
+pub mod rest6;
+pub use rest1::*;
+pub use rest2::*;
+pub use rest3::*;
+pub use rest4::*;
+pub use rest5::*;
+pub use rest6::*;
