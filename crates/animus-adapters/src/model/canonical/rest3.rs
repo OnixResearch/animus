@@ -1,6 +1,5 @@
 #![allow(non_trait_imports)]
-#[allow(clippy::wildcard_imports)]
-use super::*;
+use super::{CanonicalModelRequest, CanonicalModelRequestDraft, CanonicalModelContractError, validate_contract_identity, CANONICAL_MODEL_REQUEST_CONTRACT_IDENTITY, require_collection, ROLE_FIELD, MAX_MODEL_MESSAGES, validate_collection_len, TOOL_NAME_FIELD, MAX_MODEL_TOOLS, validate_messages, validate_tools, CanonicalOutputControls, CanonicalResponseFormatIntent, CanonicalReasoningRequest, validate_metadata, CanonicalContentPartDraft, CanonicalModelMessageDraft, ROLE_USER, CanonicalOutputControlsDraft, CanonicalResponseFormatIntentDraft, CanonicalReasoningRequestDraft, CanonicalReasoningEffort, lossy_legacy_request, CanonicalModelRole, CanonicalModelMessage, CanonicalToolDeclaration, CanonicalSafeMetadata, RESPONSE_TEXT_FIELD, INVALID_ZERO_USAGE, INVALID_CACHED_USAGE};
 
 impl CanonicalModelRequest {
     /// Validates a borrowed canonical request draft.

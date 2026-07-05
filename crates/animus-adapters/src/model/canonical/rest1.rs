@@ -1,6 +1,5 @@
 #![allow(non_trait_imports)]
-#[allow(clippy::wildcard_imports)]
-use super::*;
+use super::{CanonicalModelContractError, safe_text, CONTENT_TEXT_FIELD, IMAGE_DESCRIPTOR_FIELD, IMAGE_MEDIA_TYPE_FIELD, IMAGE_HASH_FIELD, CONTENT_PART_KIND_FIELD, RAW_PROVIDER_PAYLOAD_FIELD, CanonicalUnsafeTextReason, CanonicalModelRole, require_collection, MAX_CONTENT_PARTS_PER_MESSAGE, validate_content_parts, validate_tool_call_id, TOOL_NAME_FIELD, TOOL_DESCRIPTION_FIELD, TOOL_SCHEMA_FIELD};
 
 /// Borrowed canonical content part before validation.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
