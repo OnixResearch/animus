@@ -1,4 +1,5 @@
-#![allow(unknown_lints, non_trait_imports, clippy::wildcard_imports)]
+#![allow(unknown_lints)]
+#![allow(non_trait_imports)]
 use super::*;
 
 #[test]
