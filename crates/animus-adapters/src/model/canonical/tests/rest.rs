@@ -1,7 +1,5 @@
 #![allow(clippy::wildcard_imports, non_trait_imports)]
 use super::*;
-use crate::model::*;
-
 
 #[test]
 fn canonical_response_rejects_missing_finish_and_malformed_usage() {
@@ -186,7 +184,7 @@ pub(crate) fn response_with_items(
     })
 }
 
-const fn default_output<'a>() -> CanonicalOutputControlsDraft<'a> {
+pub const fn default_output<'a>() -> CanonicalOutputControlsDraft<'a> {
     CanonicalOutputControlsDraft {
         max_output_tokens: None,
         temperature_millis: None,
@@ -195,7 +193,7 @@ const fn default_output<'a>() -> CanonicalOutputControlsDraft<'a> {
     }
 }
 
-const fn default_reasoning<'a>() -> CanonicalReasoningRequestDraft<'a> {
+pub const fn default_reasoning<'a>() -> CanonicalReasoningRequestDraft<'a> {
     CanonicalReasoningRequestDraft {
         enabled: false,
         effort: CanonicalReasoningEffort::None,

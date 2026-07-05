@@ -1,9 +1,7 @@
 #![allow(clippy::wildcard_imports, non_trait_imports)]
 use super::*;
-use crate::model::*;
 
-
-fn canonical_projection_request() -> CanonicalModelRequest {
+pub fn canonical_projection_request() -> CanonicalModelRequest {
     let developer_content = [CanonicalContentPartDraft::Text {
         text: DEVELOPER_TEXT,
     }];
@@ -59,7 +57,7 @@ fn canonical_projection_request() -> CanonicalModelRequest {
     .expect("canonical request fixture should validate")
 }
 
-fn compatibility_output() -> CanonicalOutputControlsDraft<'static> {
+pub fn compatibility_output() -> CanonicalOutputControlsDraft<'static> {
     CanonicalOutputControlsDraft {
         max_output_tokens: None,
         temperature_millis: None,
@@ -68,7 +66,7 @@ fn compatibility_output() -> CanonicalOutputControlsDraft<'static> {
     }
 }
 
-fn compatibility_reasoning() -> CanonicalReasoningRequestDraft<'static> {
+pub fn compatibility_reasoning() -> CanonicalReasoningRequestDraft<'static> {
     CanonicalReasoningRequestDraft {
         enabled: false,
         effort: CanonicalReasoningEffort::None,
@@ -76,7 +74,7 @@ fn compatibility_reasoning() -> CanonicalReasoningRequestDraft<'static> {
     }
 }
 
-fn full_support(family: ProviderProjectionFamily) -> ProviderProjectionSupport {
+pub fn full_support(family: ProviderProjectionFamily) -> ProviderProjectionSupport {
     ProviderProjectionSupport {
         family,
         developer_role: PRESERVED_FEATURE,
@@ -90,7 +88,7 @@ fn full_support(family: ProviderProjectionFamily) -> ProviderProjectionSupport {
     }
 }
 
-fn expected_literals(
+pub fn expected_literals(
     family: ProviderProjectionFamily,
 ) -> [alloc::string::String; EXPECTED_LITERAL_COUNT] {
     [
@@ -108,7 +106,7 @@ fn expected_literals(
     ]
 }
 
-fn base_response_fixture(finish_reason: Option<&str>) -> ProviderResponseFixtureDraft<'_> {
+pub fn base_response_fixture(finish_reason: Option<&str>) -> ProviderResponseFixtureDraft<'_> {
     ProviderResponseFixtureDraft {
         family: ProviderProjectionFamily::OpenAiResponses.as_str(),
         text: None,
@@ -130,7 +128,7 @@ fn base_response_fixture(finish_reason: Option<&str>) -> ProviderResponseFixture
     }
 }
 
-fn text_response_fixture(
+pub fn text_response_fixture(
     text: &'static str,
     finish_reason: Option<&'static str>,
 ) -> ProviderResponseFixtureDraft<'static> {
@@ -140,7 +138,7 @@ fn text_response_fixture(
     }
 }
 
-fn structured_response_fixture(
+pub fn structured_response_fixture(
     payload_label: &'static str,
     finish_reason: Option<&'static str>,
 ) -> ProviderResponseFixtureDraft<'static> {
@@ -150,7 +148,7 @@ fn structured_response_fixture(
     }
 }
 
-fn tool_response_fixture(
+pub fn tool_response_fixture(
     call_id: &'static str,
     tool_name: &'static str,
     arguments_label: &'static str,
@@ -164,7 +162,7 @@ fn tool_response_fixture(
     }
 }
 
-fn refusal_response_fixture(
+pub fn refusal_response_fixture(
     reason: &'static str,
     finish_reason: Option<&'static str>,
 ) -> ProviderResponseFixtureDraft<'static> {

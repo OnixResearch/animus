@@ -242,5 +242,6 @@ fn response_normalization_preserves_supported_semantics() {
         CanonicalModelResponseItem::MalformedOutput { .. }
     ));
 }
+#[path = "part2.rs"]
 pub mod part2;
 pub use part2::*;

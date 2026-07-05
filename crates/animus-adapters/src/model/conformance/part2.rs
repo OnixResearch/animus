@@ -1,7 +1,5 @@
 #![allow(clippy::wildcard_imports, non_trait_imports)]
 use super::*;
-use crate::model::*;
-
 
 #[test]
 fn response_normalization_fails_closed_for_malformed_and_leaky_fixtures() {
