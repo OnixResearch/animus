@@ -1,9 +1,5 @@
 mod canonical;
-#[cfg(test)]
-mod canonical_tests;
-mod provider_conformance;
-#[cfg(test)]
-mod provider_conformance_tests;
+mod conformance;
 #[cfg(test)]
 mod tests;
 pub(crate) mod wire;
@@ -21,7 +17,7 @@ pub use canonical::{
     CanonicalToolDeclaration, CanonicalToolDeclarationDraft, CanonicalUnsafeTextReason,
     CanonicalUsage, CanonicalUsageDraft,
 };
-pub use provider_conformance::{
+pub use conformance::{
     ProviderProjectionError, ProviderProjectionFamily, ProviderProjectionFeatureSupport,
     ProviderProjectionIndexEntry, ProviderProjectionIndexEntryDraft, ProviderProjectionIndexStatus,
     ProviderProjectionSupport, ProviderRequestProjection, ProviderResponseFixtureDraft,

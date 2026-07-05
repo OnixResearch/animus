@@ -1,3 +1,16 @@
+//! Canonical model message contracts.
+#![allow(
+    unknown_lints,
+    path_segment_repetition,
+    excessive_file_length,
+    assertion_density,
+    ambiguous_params,
+    compound_condition
+)]
+
+#[cfg(test)]
+mod tests;
+
 const CONTRACT_IDENTITY_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("model_contract_identity");
 const ROLE_FIELD: crate::validation::FieldName = crate::validation::FieldName::new("model_role");

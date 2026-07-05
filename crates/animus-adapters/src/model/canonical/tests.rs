@@ -1,4 +1,7 @@
-use super::*;
+//! Tests for canonical model message contracts.
+#![allow(unknown_lints, function_length, numeric_units)]
+
+use crate::model::*;
 
 const USER_PROMPT: &str = "Summarize the safe plan.";
 const SYSTEM_PROMPT: &str = "Stay inside adapter contracts.";
