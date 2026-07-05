@@ -18,20 +18,6 @@
     raw_arithmetic_overflow,
     unbounded_collection_growth
 )]
-#![allow(
-    ambiguous_params,
-    assertion_density,
-    bool_naming,
-    borrowed_argument_types,
-    compound_condition,
-    excessive_file_length,
-    function_length,
-    non_trait_imports,
-    numeric_units,
-    path_segment_repetition,
-    raw_arithmetic_overflow,
-    unbounded_collection_growth
-)]
 use super::{
     BLAKE3_ALGORITHM, DATASET_HASH_DOMAIN, FIELD_POLICY, FIELD_REPLAY, FIELD_ROW,
     HASH_PART_SEPARATOR, REQUIRED_COUNT, ROLE_ASSISTANT, ROLE_SYSTEM, ROLE_TOOL, ROLE_USER,
@@ -223,7 +209,7 @@ pub fn export_rl_trajectory_row(
             && step
                 .link_id
                 .as_deref()
-                .is_none_or(|link| !action_ids.iter().any(|action_id| *action_id == link))
+                .is_none_or(|link| !action_ids.contains(&link))
     });
     let invalid_non_observation_link = trajectory
         .steps

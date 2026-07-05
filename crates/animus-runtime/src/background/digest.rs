@@ -73,6 +73,7 @@ pub(crate) fn policy_hash(policy: &super::ProcessJobProfilePolicy) -> String {
     strings(parts.as_slice())
 }
 
+#[derive(Clone, Copy)]
 pub(crate) struct ProfileHashInput<'a> {
     pub(crate) profile_name: &'a str,
     pub(crate) source_label: &'a str,
@@ -125,9 +126,10 @@ fn sorted(mut hashes: Vec<String>) -> Vec<String> {
 }
 
 fn optional_u64_part(value: Option<u64>) -> String {
-    value
-        .map(|value| value.to_string())
-        .unwrap_or_else(|| String::from(super::EMPTY_HASH_MARKER))
+    value.map_or_else(
+        || String::from(super::EMPTY_HASH_MARKER),
+        |value| value.to_string(),
+    )
 }
 
 fn env_hashes(env: &[super::ProcessJobEnvironmentVariable]) -> Vec<String> {

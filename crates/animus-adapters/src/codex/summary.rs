@@ -136,6 +136,11 @@ impl DiffReviewFindingStateRecord {
 ///
 /// Returns [`super::DiffReviewError`] when dismissed finding identities are malformed
 /// or duplicated.
+///
+/// # Panics
+///
+/// Panics if validated review reports contain more finding records than the
+/// public review bound.
 pub fn compare_diff_review_rerun(
     prior: &DiffReviewReport,
     current: &DiffReviewReport,

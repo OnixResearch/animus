@@ -23,7 +23,9 @@ pub use approval::{
     ConfirmationTick, ConfirmationTimingClass, evaluate_confirmation_decision,
     evaluate_confirmation_outcome, validate_confirmation_receipt_text,
 };
-pub use audit::{Receipt, ReceiptDraft, SAFE_HASH_HEX_CHARS, SafeHash};
+pub use audit::{
+    Receipt, ReceiptDraft, SAFE_HASH_HEX_CHARS, SAFE_RECEIPT_CONTRACT_IDENTITY, SafeHash,
+};
 pub use authority::{
     AuthorizationContext, AuthorizationIssue, AuthorizationLeak, AuthorizationReceipt,
     AuthorizationStatus, CapabilityPolicyContract, CapabilityRequest, CaveatSummary, GuardedAction,

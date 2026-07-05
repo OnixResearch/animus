@@ -1,0 +1,13 @@
+# Tasks
+
+- [x] [serial] Define restore-mode and restore-capability DTOs for live process persistence, snapshot layout restore, bounded history replay, native agent session resume, handoff-style transfer, and safe fallback. r[agent_harness_runtime.session_restore.restore_matrix]
+- [x] [depends:restore_matrix] Add positive restore-matrix tests proving each mode reports what survived and what was reconstructed. r[agent_harness_runtime.session_restore.restore_matrix.claims]
+- [x] [serial] Define native session reference records with source, agent, kind, safe value identity, freshness, uniqueness scope, and resume capability metadata. r[agent_harness_runtime.session_restore.native_session_reference]
+- [x] [depends:native_session_reference] Add negative tests for missing, malformed, duplicated, stale, unsupported, and sensitive native session references. r[agent_harness_runtime.session_restore.native_session_reference.invalid]
+- [x] [serial] Define opt-in bounded history replay metadata with redaction, truncation, storage classification, and display-only semantics. r[agent_harness_runtime.session_restore.history_replay]
+- [x] [depends:history_replay] Add leak and false-survival tests proving replayed history does not contain raw secrets by default and is not treated as a live process or model-visible context. r[agent_harness_runtime.session_restore.history_replay.safe]
+- [x] [serial] Implement pure restore planning over typed snapshots, host capabilities, session references, and policy inputs. r[agent_harness_runtime.session_restore.host_owned_execution]
+- [x] [depends:host_owned_execution] Add tests proving restore planning does not spawn processes, read files, open PTYs, construct shell commands, or inspect environment state. r[agent_harness_runtime.session_restore.host_owned_execution.no_ambient_io]
+- [x] [serial] Define degraded-restore outcomes and safe receipts for fallback shells, unavailable resume services, unsupported agents, and failed handoff claims. r[agent_harness_runtime.session_restore.degraded_outcomes]
+- [x] [depends:degraded_outcomes] Add negative tests proving degraded restore cannot claim conversation continuity, process survival, or successful native resume without host evidence. r[agent_harness_runtime.session_restore.degraded_outcomes.no_false_claims]
+- [x] [depends:restore_matrix.claims,native_session_reference.invalid,history_replay.safe,host_owned_execution.no_ambient_io,degraded_outcomes.no_false_claims] Update docs and run focused restore tests, workspace checks, Cairn validation, and Cairn gates with reviewable evidence. r[agent_harness_runtime.session_restore.verification]

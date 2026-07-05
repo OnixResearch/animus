@@ -8,6 +8,7 @@ const ADAPTER_STATE_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("workspace_adapter_state");
 
 const ADAPTER_KIND_BRANCHFS_LIKE: &str = "branchfs_like";
+const ADAPTER_KIND_JUJUTSU_WORKSPACE: &str = "jujutsu_workspace";
 const ADAPTER_KIND_VCS_WORKTREE: &str = "vcs_worktree";
 const ADAPTER_KIND_TEMPDIR_SNAPSHOT: &str = "tempdir_snapshot";
 const ADAPTER_KIND_UNSUPPORTED: &str = "unsupported";
@@ -20,7 +21,9 @@ const ADAPTER_STATE_PARTIAL: &str = "partially_enforceable";
 pub enum Kind {
     /// BranchFS-like copy-on-write backend.
     BranchFsLike,
-    /// Jujutsu or Git worktree backend.
+    /// Jujutsu workspace backend.
+    JujutsuWorkspace,
+    /// Generic VCS worktree backend.
     VcsWorktree,
     /// Temporary snapshot directory backend.
     TempdirSnapshot,
@@ -37,6 +40,7 @@ impl Kind {
     pub fn parse(value: &str) -> Result<Self, crate::AdapterContractError> {
         super::text::parse_value(ADAPTER_KIND_FIELD, value, |normalized| match normalized {
             ADAPTER_KIND_BRANCHFS_LIKE => Some(Self::BranchFsLike),
+            ADAPTER_KIND_JUJUTSU_WORKSPACE => Some(Self::JujutsuWorkspace),
             ADAPTER_KIND_VCS_WORKTREE => Some(Self::VcsWorktree),
             ADAPTER_KIND_TEMPDIR_SNAPSHOT => Some(Self::TempdirSnapshot),
             ADAPTER_KIND_UNSUPPORTED => Some(Self::Unsupported),
@@ -49,6 +53,7 @@ impl Kind {
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::BranchFsLike => ADAPTER_KIND_BRANCHFS_LIKE,
+            Self::JujutsuWorkspace => ADAPTER_KIND_JUJUTSU_WORKSPACE,
             Self::VcsWorktree => ADAPTER_KIND_VCS_WORKTREE,
             Self::TempdirSnapshot => ADAPTER_KIND_TEMPDIR_SNAPSHOT,
             Self::Unsupported => ADAPTER_KIND_UNSUPPORTED,
@@ -182,6 +187,7 @@ const REQUIRED_CAPABILITY_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("workspace_required_capability");
 
 const CAPABILITY_BRANCHFS_LIKE: &str = "branchfs_like";
+const CAPABILITY_JUJUTSU_WORKSPACE: &str = "jujutsu_workspace";
 const CAPABILITY_VCS_WORKTREE: &str = "vcs_worktree";
 const CAPABILITY_TEMPDIR_SNAPSHOT: &str = "tempdir_snapshot";
 const CAPABILITY_NESTED_WORKSPACES: &str = "nested_workspaces";
@@ -195,7 +201,9 @@ const CAPABILITY_CLEANUP_GUARANTEE: &str = "cleanup_guarantee";
 pub enum Capability {
     /// BranchFS-like copy-on-write branch behavior.
     BranchFsLike,
-    /// Jujutsu or Git worktree behavior.
+    /// Jujutsu workspace behavior without requiring Git worktrees.
+    JujutsuWorkspace,
+    /// Generic VCS worktree behavior.
     VcsWorktree,
     /// Temporary snapshot directory behavior.
     TempdirSnapshot,
@@ -231,6 +239,7 @@ impl Capability {
     fn from_normalized(normalized: &str) -> Option<Self> {
         match normalized {
             CAPABILITY_BRANCHFS_LIKE => Some(Self::BranchFsLike),
+            CAPABILITY_JUJUTSU_WORKSPACE => Some(Self::JujutsuWorkspace),
             CAPABILITY_VCS_WORKTREE => Some(Self::VcsWorktree),
             CAPABILITY_TEMPDIR_SNAPSHOT => Some(Self::TempdirSnapshot),
             CAPABILITY_NESTED_WORKSPACES => Some(Self::NestedWorkspaces),
@@ -247,6 +256,7 @@ impl Capability {
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::BranchFsLike => CAPABILITY_BRANCHFS_LIKE,
+            Self::JujutsuWorkspace => CAPABILITY_JUJUTSU_WORKSPACE,
             Self::VcsWorktree => CAPABILITY_VCS_WORKTREE,
             Self::TempdirSnapshot => CAPABILITY_TEMPDIR_SNAPSHOT,
             Self::NestedWorkspaces => CAPABILITY_NESTED_WORKSPACES,

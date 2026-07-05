@@ -89,6 +89,7 @@
         .expect("native session reference should validate")
     }
 
+    #[expect(clippy::too_many_arguments, reason = "fixture mirrors session draft fields")]
     const fn reference_draft(
         source_label: Option<&'static str>,
         agent_label: Option<&'static str>,

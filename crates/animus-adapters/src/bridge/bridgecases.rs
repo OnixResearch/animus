@@ -51,7 +51,7 @@ fn valid_mapping() -> McpToolMappingDraft<'static> {
     }
 }
 
-fn ready_dispatch_request<'a>(definition: &'a crate::tool::Definition) -> McpDispatchRequest<'a> {
+fn ready_dispatch_request(definition: &crate::tool::Definition) -> McpDispatchRequest<'_> {
     McpDispatchRequest {
         definition: Some(definition),
         argument_status: McpArgumentStatus::Valid,

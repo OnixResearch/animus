@@ -160,10 +160,12 @@ impl ModelCapabilities {
         )?;
 
         Ok(super::flow::ResolvedStreamingModes::new(
-            content,
-            thought,
-            tool_call_delta,
-            usage,
+            super::flow::StreamModeSet {
+                content,
+                thought,
+                tool_call_delta,
+                usage,
+            },
             content_downgraded || thought_downgraded || tool_downgraded || usage_downgraded,
         ))
     }

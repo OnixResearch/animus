@@ -11,7 +11,9 @@ mod secret;
 mod tests;
 
 pub use capability::{
-    ApiKind, EndpointIdentity, InputModality, ModelCapabilities, ModelCapabilitiesDraft, TokenCost,
+    ApiKind, EndpointIdentity, InputModality, ModelCapabilities, ModelCapabilitiesDraft,
+    ModelStreamingCapabilities, ModelStreamingRequest, ResolvedStreamingModes, StreamFeature,
+    StreamRequestMode, StreamSupport, TokenCost, UnsupportedStreamPolicy,
 };
 pub use catalog::{ModelEntry, ProviderEntry, ProviderRegistry};
 pub use choice::{ModelSelection, SelectedModel};
@@ -114,6 +116,11 @@ pub enum RegistryError {
         /// Requested stable thinking-level label.
         requested: &'static str,
     },
+    /// A requested stream capability is not supported under reject policy.
+    UnsupportedStreamCapability {
+        /// Stable stream capability label.
+        capability: &'static str,
+    },
     /// A required credential was absent.
     MissingCredential {
         /// Redacted diagnostic.
@@ -156,6 +163,9 @@ impl std::fmt::Display for RegistryError {
             }
             Self::UnsupportedThinkingLevel { requested } => {
                 write!(formatter, "thinking level {requested} is not supported")
+            }
+            Self::UnsupportedStreamCapability { capability } => {
+                write!(formatter, "stream capability {capability} is not supported")
             }
             Self::MissingCredential { diagnostic } => {
                 write!(formatter, "missing provider credential: {diagnostic}")

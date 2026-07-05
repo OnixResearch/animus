@@ -201,23 +201,26 @@ fn find_outcome<'a>(outcomes: &'a [BatchJobOutcome], job_id: &str) -> Option<&'a
     outcomes.iter().find(|outcome| outcome.job_id() == job_id)
 }
 
-fn header_stale_reason(
-    plan: &BatchPlan,
-    manifest_run_id: &str,
-    manifest_plan_hash: &str,
-    manifest_format: BatchOutputFormat,
-    manifest_redaction: BatchRedactionPolicy,
-) -> Option<ResumeStaleReason> {
-    if manifest_run_id != plan.identity().run_id() {
+#[derive(Clone, Copy)]
+struct ResumeHeaderInput<'a> {
+    plan: &'a BatchPlan,
+    run_id: &'a str,
+    plan_hash: &'a str,
+    output_format: BatchOutputFormat,
+    redaction_policy: BatchRedactionPolicy,
+}
+
+fn header_stale_reason(input: ResumeHeaderInput<'_>) -> Option<ResumeStaleReason> {
+    if input.run_id != input.plan.identity().run_id() {
         return Some(ResumeStaleReason::RunIdMismatch);
     }
-    if manifest_plan_hash != plan.identity().plan_hash() {
+    if input.plan_hash != input.plan.identity().plan_hash() {
         return Some(ResumeStaleReason::PlanHashMismatch);
     }
-    if manifest_format != plan.output_format() {
+    if input.output_format != input.plan.output_format() {
         return Some(ResumeStaleReason::OutputFormatMismatch);
     }
-    if manifest_redaction != plan.redaction_policy() {
+    if input.redaction_policy != input.plan.redaction_policy() {
         return Some(ResumeStaleReason::RedactionPolicyMismatch);
     }
     None

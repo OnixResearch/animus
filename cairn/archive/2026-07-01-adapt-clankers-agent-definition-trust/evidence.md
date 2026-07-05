@@ -9,12 +9,12 @@
 
 ## Verification evidence
 
-- Baseline lifecycle check before edits: `nix run path:/home/brittonr/git/animus#cairn -- validate --root /home/brittonr/git/animus` passed with `valid: true`.
+- Baseline lifecycle check before edits: `nix run .#cairn -- validate --root .` passed with `valid: true`.
 - Cairn gates: `gate proposal`, `gate design`, and `gate tasks` for `adapt-clankers-agent-definition-trust` passed.
 - Focused tests before sync/archive: `nix develop -c cargo test -p animus-adapters actor --locked` passed: 10 passed, 0 failed.
-- Sync dry-run: `nix run path:/home/brittonr/git/animus#cairn -- sync adapt-clankers-agent-definition-trust --root /home/brittonr/git/animus` was unblocked with one `sync_delta_spec` action.
-- Sync execute: `nix run path:/home/brittonr/git/animus#cairn -- sync adapt-clankers-agent-definition-trust --root /home/brittonr/git/animus --execute` completed; accepted spec content required manual promotion because before/after hashes were unchanged.
-- Validation after spec promotion: `nix run path:/home/brittonr/git/animus#cairn -- validate --root /home/brittonr/git/animus` passed with `valid: true`.
+- Sync dry-run: `nix run .#cairn -- sync adapt-clankers-agent-definition-trust --root .` was unblocked with one `sync_delta_spec` action.
+- Sync execute: `nix run .#cairn -- sync adapt-clankers-agent-definition-trust --root . --execute` completed; accepted spec content required manual promotion because before/after hashes were unchanged.
+- Validation after spec promotion: `nix run .#cairn -- validate --root .` passed with `valid: true`.
 - Focused tests after spec promotion: `nix develop -c cargo test -p animus-adapters actor --locked` passed: 10 passed, 0 failed.
 - Workspace check: `nix develop -c cargo check --workspace --all-targets --locked` passed.
 

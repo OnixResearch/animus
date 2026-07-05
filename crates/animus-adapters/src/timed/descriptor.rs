@@ -1,4 +1,8 @@
-use super::*;
+use super::{
+    CALENDAR_FIELD, HASH_FIELD, HashInput, ID_FIELD, MIN_RETENTION_COUNT, PARAMETER_HASH_FIELD,
+    RECIPE_FIELD, ScheduleCadence, ScheduleConcurrencyPolicy, ScheduleError, ScheduleExecutionMode,
+    Text, WORKSPACE_FIELD, required_text, validate_hash, validate_hashes,
+};
 
 /// Untrusted scheduled workflow descriptor.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -68,7 +72,7 @@ impl ScheduledWorkflow {
         let execution_mode = ScheduleExecutionMode::parse(draft.execution_mode)?;
         let concurrency_policy = ScheduleConcurrencyPolicy::parse(draft.concurrency_policy)?;
         let workspace_scope = required_text(WORKSPACE_FIELD, draft.workspace_scope)?;
-        if draft.retry_limit < MIN_RETRY_LIMIT || draft.retention_count < MIN_RETENTION_COUNT {
+        if draft.retention_count < MIN_RETENTION_COUNT {
             return Err(ScheduleError::InvalidBounds);
         }
         validate_hash(HashInput {

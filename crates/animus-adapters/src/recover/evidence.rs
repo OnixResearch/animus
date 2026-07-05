@@ -204,6 +204,7 @@ impl CanonicalText {
     }
 }
 
+#[derive(Clone, Copy)]
 struct CanonicalPair<'a> {
     key: &'a str,
     value: &'a str,

@@ -1,8 +1,10 @@
 /// Renders a deterministic text snapshot of the pure tool render model.
 #[must_use]
 pub fn render_text_snapshot(model: &ToolRenderModel) -> String {
-    assert!(!SESSION_PREFIX.is_empty());
-    assert!(!TOOL_PREFIX.is_empty());
+    const {
+        assert!(!SESSION_PREFIX.is_empty());
+        assert!(!TOOL_PREFIX.is_empty());
+    };
     let mut lines = Vec::new();
     lines.push(format!("{SESSION_PREFIX}{}", model.status().as_str()));
     let lines = with_tool_lines(lines, model);
@@ -71,6 +73,7 @@ const fn terminal_status(status: animus_runtime::RuntimeTerminalKind) -> ToolSes
     }
 }
 
+#[derive(Clone, Copy)]
 struct FailureText<'reason> {
     reason: &'reason str,
     fallback: &'static str,

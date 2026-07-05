@@ -163,8 +163,6 @@ pub(super) fn evidence_kind(
 }
 
 pub(super) fn evidence_bounds(bounds: EvidenceBounds<'_>) -> Result<(), super::DiffReviewError> {
-    assert!(super::MAX_EVIDENCE_LINES >= super::MIN_REVIEW_LINE);
-    assert!(super::MAX_EVIDENCE_BYTES > 0);
     if bounds.line_count < super::MIN_REVIEW_LINE {
         return unbounded_evidence(u64::from(bounds.line_count));
     }
@@ -178,6 +176,18 @@ pub(super) fn evidence_bounds(bounds: EvidenceBounds<'_>) -> Result<(), super::D
             actual_value: bounds.byte_count,
         });
     }
+    assert!(
+        bounds.line_count >= super::MIN_REVIEW_LINE,
+        "minimum line count bound is enforced"
+    );
+    assert!(
+        bounds.line_count <= super::MAX_EVIDENCE_LINES,
+        "maximum line count bound is enforced"
+    );
+    assert!(
+        bounds.byte_count <= super::MAX_EVIDENCE_BYTES,
+        "byte count bounds are enforced"
+    );
     let snippet_bytes = match u64::try_from(bounds.snippet.len()) {
         Ok(value) => value,
         Err(_overflow) => return snippet_length_overflow(),

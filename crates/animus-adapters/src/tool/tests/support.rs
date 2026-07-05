@@ -1,6 +1,7 @@
 use super::super::*;
 
 pub const NAME: &str = "search";
+pub const PADDED_NAME: &str = "  search  ";
 pub const INACTIVE_NAME: &str = "write_file";
 pub const LABEL: &str = "Search";
 pub const INPUT: &str = "query";
@@ -83,6 +84,7 @@ pub fn definition_draft(status: DefinitionStatus, name: &str) -> DefinitionDraft
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct SpanFixture<'a> {
     pub start_tag: &'a str,
     pub end_tag: &'a str,

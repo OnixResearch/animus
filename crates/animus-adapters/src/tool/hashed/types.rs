@@ -180,7 +180,7 @@ pub struct Plan {
     pub(super) snapshot_hash: super::Text,
     pub(super) newline_policy: NewlinePolicy,
     pub(super) spans: super::Collection<Validated>,
-    pub(super) plan_hash: super::Text,
+    pub(super) hash: super::Text,
 }
 
 impl Plan {
@@ -211,6 +211,6 @@ impl Plan {
     /// Returns the BLAKE3 hash of the safe edit-plan fields.
     #[must_use]
     pub fn plan_hash(&self) -> &str {
-        self.plan_hash.as_str()
+        self.hash.as_str()
     }
 }

@@ -52,13 +52,29 @@
             .expect("restore matrix should plan");
 
         assert_eq!(plan.targets().len(), EXPECTED_MATRIX_TARGETS);
-        assert_claim(&plan, TARGET_LIVE, |claims| claims.process_survived());
-        assert_claim(&plan, TARGET_LAYOUT, |claims| claims.layout_reconstructed());
-        assert_claim(&plan, TARGET_HISTORY, |claims| claims.display_replayed());
+        assert_claim(
+            &plan,
+            TARGET_LIVE,
+            RestoreCapabilityClaims::process_survived,
+        );
+        assert_claim(
+            &plan,
+            TARGET_LAYOUT,
+            RestoreCapabilityClaims::layout_reconstructed,
+        );
+        assert_claim(
+            &plan,
+            TARGET_HISTORY,
+            RestoreCapabilityClaims::display_replayed,
+        );
         assert_claim(&plan, TARGET_NATIVE, |claims| {
             claims.native_resume_requested()
         });
-        assert_claim(&plan, TARGET_HANDOFF, |claims| claims.handoff_requested());
+        assert_claim(
+            &plan,
+            TARGET_HANDOFF,
+            RestoreCapabilityClaims::handoff_requested,
+        );
         assert!(plan.targets().iter().all(|target| {
             !target.claims().process_survived()
                 || target.requested_mode() == RestoreMode::LiveProcess

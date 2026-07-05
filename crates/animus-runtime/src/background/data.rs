@@ -11,6 +11,7 @@ pub enum ProcessJobBackend {
 
 impl ProcessJobBackend {
     /// Returns the stable backend label.
+    #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::Native => "native",
@@ -54,6 +55,10 @@ pub struct ProcessJobProfileSource {
 
 impl ProcessJobProfileSource {
     /// Creates a loaded source and validates the safe source label.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`super::ProcessJobProfileError`] when the source label is unsafe.
     pub fn new(
         precedence: ProcessJobProfileSourcePrecedence,
         safe_label: impl Into<String>,
@@ -80,6 +85,7 @@ pub struct ProcessJobProfileManifest {
 
 impl ProcessJobProfileManifest {
     /// Creates a manifest with the current supported schema version.
+    #[must_use]
     pub fn current(profiles: Vec<NamedProcessJobProfile>) -> Self {
         Self {
             schema_version: super::PROCESS_JOB_PROFILE_SCHEMA_VERSION,
@@ -209,6 +215,7 @@ impl Default for ProcessJobProfilePolicy {
 
 impl ProcessJobProfilePolicy {
     /// Returns policy with a deterministic hash derived from its public fields.
+    #[must_use]
     pub fn with_computed_hash(mut self) -> Self {
         self.policy_hash = super::digest::policy_hash(&self);
         self
@@ -243,6 +250,7 @@ pub struct StartProcessJobRequest {
 }
 
 /// Input for resolving one named process-job profile.
+#[derive(Clone, Copy)]
 pub struct ProcessJobProfileResolveRequest<'a> {
     /// Loaded sources, ordered independently from precedence semantics.
     pub sources: &'a [ProcessJobProfileSource],

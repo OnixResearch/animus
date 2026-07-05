@@ -155,6 +155,65 @@ fn missing_tool_service_fails_closed_before_model_dispatch() {
 }
 
 #[test]
+fn unrelated_model_capability_fails_before_adapter_call() {
+    // r[verify agent_harness_runtime.scoped_capabilities.exact_resolution.fail_closed]
+    // r[verify agent_harness_runtime.model_dispatch.runtime_gate.fail_closed]
+    let mut model = super::support::ModelStub::ok();
+    let mut tool = super::support::ToolStub::ok();
+    let result = super::support::run_program_with_unrelated_model_capability(
+        super::support::MODEL_THEN_RESPOND_PROGRAM,
+        &mut model,
+        &mut tool,
+    );
+
+    assert!(matches!(
+        result.status(),
+        crate::RuntimeStatus::Failed {
+            failure: crate::RuntimeFailure::ModelAdapter { message }
+        } if message == super::support::ABSENT_SERVICE
+    ));
+    assert_eq!(model.calls, super::support::NO_ADAPTER_CALLS);
+    assert_eq!(tool.calls, super::support::NO_ADAPTER_CALLS);
+    assert!(result.events().iter().any(|event| matches!(
+        event,
+        crate::RuntimeEvent::AdapterOutcomeClassified {
+            component: crate::AdapterComponent::Model,
+            class: animus_adapters::AdapterCallFailureClass::Absent,
+            ..
+        }
+    )));
+}
+
+#[test]
+fn unrelated_tool_capability_fails_before_adapter_call() {
+    // r[verify agent_harness_runtime.scoped_capabilities.exact_resolution.fail_closed]
+    let mut model = super::support::ModelStub::ok();
+    let mut tool = super::support::ToolStub::ok();
+    let result = super::support::run_program_with_unrelated_tool_capability(
+        super::support::TOOL_THEN_RESPOND_PROGRAM,
+        &mut model,
+        &mut tool,
+    );
+
+    assert!(matches!(
+        result.status(),
+        crate::RuntimeStatus::Failed {
+            failure: crate::RuntimeFailure::ToolAdapter { message }
+        } if message == super::support::ABSENT_SERVICE
+    ));
+    assert_eq!(model.calls, super::support::NO_ADAPTER_CALLS);
+    assert_eq!(tool.calls, super::support::NO_ADAPTER_CALLS);
+    assert!(result.events().iter().any(|event| matches!(
+        event,
+        crate::RuntimeEvent::AdapterOutcomeClassified {
+            component: crate::AdapterComponent::Tool,
+            class: animus_adapters::AdapterCallFailureClass::Absent,
+            ..
+        }
+    )));
+}
+
+#[test]
 fn blocked_adapter_outcome_stops_without_success_receipt() {
     let state = crate::TurnState::new(&super::support::runtime_input());
     let step = crate::apply_adapter_outcome(
@@ -180,6 +239,59 @@ fn blocked_adapter_outcome_stops_without_success_receipt() {
             .iter()
             .all(|event| !matches!(event, crate::RuntimeEvent::ToolResponded { .. }))
     );
+}
+
+#[test]
+fn typed_adapter_outcome_classes_are_preserved_in_failure_events() {
+    // r[verify agent_harness_runtime.adapter_outcomes.runtime_mapping.fail_closed]
+    let classes = [
+        animus_adapters::AdapterCallFailureClass::Denied,
+        animus_adapters::AdapterCallFailureClass::Unavailable,
+        animus_adapters::AdapterCallFailureClass::MalformedOutput,
+        animus_adapters::AdapterCallFailureClass::Cancelled,
+        animus_adapters::AdapterCallFailureClass::TimedOut,
+        animus_adapters::AdapterCallFailureClass::ExecutionFailure,
+    ];
+
+    for class in classes {
+        let outcome =
+            animus_adapters::AdapterCallOutcome::<animus_adapters::ModelResponse>::failed(
+                class,
+                animus_adapters::AdapterCallFailureMetadataDraft {
+                    message: class.as_str(),
+                    correlation_id: None,
+                    receipt_reference: None,
+                },
+            )
+            .expect("safe typed outcome should build");
+        let step = crate::apply_adapter_outcome(
+            crate::TurnState::new(&super::support::runtime_input()),
+            crate::AdapterOutcome::ModelCall { outcome },
+        );
+        let crate::AdapterStep::Complete { report } = step else {
+            panic!("typed failure should complete");
+        };
+        assert!(matches!(
+            report.status(),
+            crate::RuntimeStatus::Failed {
+                failure: crate::RuntimeFailure::ModelAdapter { .. }
+            }
+        ));
+        assert!(report.events().iter().any(|event| matches!(
+            event,
+            crate::RuntimeEvent::AdapterOutcomeClassified {
+                component: crate::AdapterComponent::Model,
+                class: event_class,
+                ..
+            } if *event_class == class
+        )));
+        assert!(
+            report
+                .events()
+                .iter()
+                .all(|event| { !matches!(event, crate::RuntimeEvent::ModelResponded { .. }) })
+        );
+    }
 }
 
 #[test]

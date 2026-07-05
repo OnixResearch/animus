@@ -1,11 +1,13 @@
-#[allow(module_file_count)]
+#[allow(module_file_count, non_trait_imports)]
 mod control;
 mod events;
+#[allow(non_trait_imports)]
 mod fault;
 #[allow(excessive_file_length)]
 mod protocol;
 mod request;
 mod sink;
+#[allow(non_trait_imports)]
 mod structure;
 #[cfg(test)]
 mod tests;

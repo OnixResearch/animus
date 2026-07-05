@@ -1,3 +1,5 @@
+#![allow(non_trait_imports)]
+
 const CHECK_LABEL_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("recipe_retry_check_label");
 const EFFECT_KIND_FIELD: crate::validation::FieldName =

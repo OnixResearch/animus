@@ -1,8 +1,4 @@
-#![allow(
-    unknown_lints,
-    numeric_units,
-    path_segment_repetition
-)]
+#![allow(numeric_units, path_segment_repetition)]
 
 include!("sandbox/modes.rs");
 include!("sandbox/classes.rs");

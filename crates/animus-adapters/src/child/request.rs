@@ -1,4 +1,10 @@
-use super::*;
+use super::{
+    Collection, ExternalSubagentDescriptor, ExternalSubagentDescriptorDraft, ID_FIELD,
+    MIN_TURN_COUNT, MODEL_FIELD, PARAMETER_FIELD, PROFILE_FIELD, RECIPE_FIELD, ROLE_FIELD,
+    SOURCE_USER, SUMMARY_SCHEMA_FIELD, SubagentDelegationSource, SubagentError, SubagentReturnMode,
+    TASK_FIELD, TIMEOUT_FIELD, TOOL_FIELD, Text, WORKSPACE_FIELD, optional_text, required_text,
+    text_collection,
+};
 
 /// Untrusted recipe-backed subagent delegation request.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

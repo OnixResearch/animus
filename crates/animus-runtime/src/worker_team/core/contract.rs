@@ -1,3 +1,4 @@
+#[derive(Clone, Copy)]
 pub(super) struct Input<'a> {
     pub(super) scope: &'a super::super::WorkerScope,
     pub(super) context_packet: &'a super::super::WorkerContextPacket,
@@ -49,13 +50,17 @@ fn validate_budgets(
 pub(super) fn validate_output_schema(
     schema: &super::super::WorkerOutputSchema,
 ) -> Result<(), super::super::DelegationFailure> {
-    debug_assert!(super::super::MAX_LABEL_CHARS <= super::super::MAX_TEXT_CHARS);
-    debug_assert!(super::super::MAX_REPORT_FIELDS <= super::super::MAX_CONTEXT_ITEMS);
-    super::validate_label(super::super::OUTPUT_SCHEMA_FIELD, schema.name.as_str())?;
+    let schema_name =
+        super::validate_label(super::super::OUTPUT_SCHEMA_FIELD, schema.name.as_str())?;
     super::validate_non_empty_slice(
         super::super::OUTPUT_SCHEMA_REQUIRED_FIELD,
         schema.required_fields.as_slice(),
     )?;
+    assert!(!schema_name.is_empty(), "schema name must be validated");
+    assert!(
+        !schema.required_fields.is_empty(),
+        "schema required fields must be non-empty"
+    );
     let mut seen = std::collections::BTreeSet::new();
     for field in &schema.required_fields {
         let field_name =

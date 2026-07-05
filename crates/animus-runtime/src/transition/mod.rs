@@ -1,9 +1,11 @@
 mod boundary;
 mod denial;
+#[cfg(feature = "steel")]
 mod halt;
 
 pub use boundary::{AdapterOutcome, AdapterStep, apply_adapter_outcome};
 pub use denial::{complete_with_guard_block, complete_with_guard_failure};
+#[cfg(feature = "steel")]
 pub use halt::complete_with_steel_policy_denial;
 
 /// Runtime plan before evaluating the next loop-fabric turn.
@@ -14,7 +16,7 @@ pub enum TurnPlan {
         /// State that will consume the fabric decision.
         state: TurnState,
         /// Typed loop-fabric turn input.
-        turn: animus_steel::LoopTurn,
+        turn: crate::RuntimeLoopTurn,
     },
     /// Runtime execution has completed.
     Complete {
@@ -129,8 +131,8 @@ impl TurnState {
         self.events.as_slice()
     }
 
-    fn next_turn(&self) -> Result<animus_steel::LoopTurn, crate::RuntimeError> {
-        animus_steel::LoopTurn::new(
+    fn next_turn(&self) -> Result<crate::RuntimeLoopTurn, crate::RuntimeError> {
+        crate::RuntimeLoopTurn::new(
             self.summary(),
             self.last_model_message(),
             self.last_tool_output(),
@@ -178,9 +180,9 @@ pub fn plan_next_turn(config: crate::RuntimeConfig, state: TurnState) -> TurnPla
 
 /// Applies a validated loop decision to pure state.
 #[must_use]
-pub fn apply_decision(state: TurnState, decision: animus_steel::LoopDecision) -> DecisionStep {
+pub fn apply_decision(state: TurnState, decision: crate::RuntimeLoopDecision) -> DecisionStep {
     match decision {
-        animus_steel::LoopDecision::CallModel { request } => {
+        crate::RuntimeLoopDecision::CallModel { request } => {
             let turn_index = state.turns_completed();
             let state = state
                 .with_event(crate::RuntimeEvent::LoopDecision {
@@ -195,7 +197,7 @@ pub fn apply_decision(state: TurnState, decision: animus_steel::LoopDecision) ->
                 request: AdapterRequest::Model { request },
             }
         }
-        animus_steel::LoopDecision::CallTool { request } => {
+        crate::RuntimeLoopDecision::CallTool { request } => {
             let turn_index = state.turns_completed();
             let state = state
                 .with_event(crate::RuntimeEvent::LoopDecision {
@@ -210,7 +212,7 @@ pub fn apply_decision(state: TurnState, decision: animus_steel::LoopDecision) ->
                 request: AdapterRequest::Tool { request },
             }
         }
-        animus_steel::LoopDecision::Respond { response } => {
+        crate::RuntimeLoopDecision::Respond { response } => {
             let turn_index = state.turns_completed();
             let state = state
                 .with_event(crate::RuntimeEvent::LoopDecision {
@@ -224,7 +226,7 @@ pub fn apply_decision(state: TurnState, decision: animus_steel::LoopDecision) ->
                 report: state.complete(crate::RuntimeStatus::FinalResponse { response }),
             }
         }
-        animus_steel::LoopDecision::Stop => {
+        crate::RuntimeLoopDecision::Stop => {
             let turn_index = state.turns_completed();
             let state = state
                 .with_event(crate::RuntimeEvent::LoopDecision {

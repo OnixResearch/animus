@@ -33,6 +33,7 @@ pub const DISMISSED_RECORD_INDEX: usize = 1;
 pub const NEW_RECORD_INDEX: usize = 2;
 pub const FIXED_RECORD_INDEX: usize = 0;
 
+#[derive(Clone, Copy)]
 pub struct FindingInput<'a> {
     pub finding_id: &'a str,
     pub source_label: &'a str,

@@ -159,21 +159,25 @@ impl ProvenanceError {
     }
 
     /// Returns the stable error class.
+    #[must_use]
     pub const fn kind(&self) -> ProvenanceErrorKind {
         self.kind
     }
 
     /// Returns the field that failed validation.
+    #[must_use]
     pub const fn field(&self) -> &'static str {
         self.field
     }
 
     /// Returns a safe subject label or hash.
+    #[must_use]
     pub fn subject(&self) -> &str {
         self.subject.as_str()
     }
 
     /// Returns a safe diagnostic reason.
+    #[must_use]
     pub fn reason(&self) -> &str {
         self.reason.as_str()
     }

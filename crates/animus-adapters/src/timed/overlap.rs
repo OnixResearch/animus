@@ -1,4 +1,4 @@
-use super::*;
+use super::ScheduleConcurrencyPolicy;
 
 /// Concurrency decision for overlapping runs.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

@@ -6,12 +6,13 @@ const SUMMARY_FIELD: &str = "summary";
 #[cfg(test)]
 const MAX_TURNS_FIELD: &str = "max_turns";
 #[cfg(test)]
-const MAX_TURNS_TOO_LARGE_REASON: &str = "max turns must fit Steel policy budget";
+const MAX_TURNS_TOO_LARGE_REASON: &str = "max turns must fit runtime policy budget";
 
 /// Explicit maximum fabric-turn budget.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct MaxTurns {
     count: usize,
+    #[cfg_attr(not(feature = "steel"), allow(dead_code))]
     policy_count: u32,
 }
 
@@ -27,6 +28,7 @@ impl MaxTurns {
         self.count
     }
 
+    #[cfg(feature = "steel")]
     pub(crate) const fn policy_count(self) -> u32 {
         self.policy_count
     }

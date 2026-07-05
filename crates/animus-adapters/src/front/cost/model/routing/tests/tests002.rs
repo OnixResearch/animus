@@ -127,6 +127,7 @@
         ]
     }
 
+    #[expect(clippy::too_many_arguments, reason = "fixture mirrors catalog entry fields")]
     const fn catalog_entry(
         role_label: &'static str,
         model_label: &'static str,
@@ -148,6 +149,7 @@
         RoutingModelCatalog::validate(entries).expect("routing catalog should validate")
     }
 
+    #[expect(clippy::too_many_arguments, reason = "fixture mirrors routing signal buckets")]
     fn signals(
         token_bucket: u16,
         file_bucket: u16,
@@ -196,6 +198,7 @@
         .expect("usage should validate")
     }
 
+    #[expect(clippy::needless_pass_by_value, reason = "fixtures are consumed as routing input")]
     fn route(
         policy: &ModelRoutingPolicy,
         catalog: &RoutingModelCatalog,

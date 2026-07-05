@@ -18,20 +18,6 @@
     raw_arithmetic_overflow,
     unbounded_collection_growth
 )]
-#![allow(
-    ambiguous_params,
-    assertion_density,
-    bool_naming,
-    borrowed_argument_types,
-    compound_condition,
-    excessive_file_length,
-    function_length,
-    non_trait_imports,
-    numeric_units,
-    path_segment_repetition,
-    raw_arithmetic_overflow,
-    unbounded_collection_growth
-)]
 use std::collections::BTreeSet;
 
 use super::{
@@ -209,7 +195,7 @@ pub fn validate_scaffold_influence_receipt(
     to_validation_result(diagnostics)
 }
 
-fn active_revision<'a>(profile: &'a ScaffoldProfile) -> Option<&'a ScaffoldRevision> {
+fn active_revision(profile: &ScaffoldProfile) -> Option<&ScaffoldRevision> {
     profile
         .revisions
         .iter()
@@ -220,7 +206,7 @@ fn blank(text: &str) -> bool {
     text.trim().is_empty()
 }
 
-fn candidate_profile_ids<'a>(profiles: &'a [ScaffoldProfile]) -> Vec<&'a ScaffoldProfile> {
+fn candidate_profile_ids(profiles: &[ScaffoldProfile]) -> Vec<&ScaffoldProfile> {
     let mut sorted = profiles.iter().collect::<Vec<_>>();
     sorted.sort_by(|left, right| left.profile_id.cmp(&right.profile_id));
     sorted

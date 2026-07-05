@@ -1,4 +1,4 @@
-use super::*;
+use super::{RecipeRetryCheck, RecipeRetryPolicy};
 
 type Text = alloc::string::String;
 type Collection<T> = alloc::vec::Vec<T>;

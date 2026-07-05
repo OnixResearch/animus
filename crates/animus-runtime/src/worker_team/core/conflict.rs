@@ -1,31 +1,23 @@
 pub(super) fn merge_validated_reports(
     task: &super::super::WorkerTask,
     reports: &[super::super::Report],
-) -> Result<super::super::ReportMergeOutcome, super::super::DelegationFailure> {
+) -> super::super::ReportMergeOutcome {
     debug_assert!(!reports.is_empty());
     debug_assert!(!task.allowed_capabilities().is_empty());
     let evidence = collect_evidence(reports);
     let conflicts = detect_conflicts(reports);
     if !conflicts.is_empty() {
-        return Ok(super::super::ReportMergeOutcome::Conflict(
-            super::super::ConflictReport {
-                conflicts,
-                evidence,
-            },
-        ));
-    }
-    Ok(super::super::ReportMergeOutcome::Merged(
-        super::super::WorkerMergedReport {
+        return super::super::ReportMergeOutcome::Conflict(super::super::ConflictReport {
+            conflicts,
             evidence,
-            claims: collect_claims(reports),
-            unresolved_mutation_intents: select_mutations(
-                task,
-                reports,
-                MutationSelection::Allowed,
-            ),
-            denied_mutation_intents: select_mutations(task, reports, MutationSelection::Denied),
-        },
-    ))
+        });
+    }
+    super::super::ReportMergeOutcome::Merged(super::super::WorkerMergedReport {
+        evidence,
+        claims: collect_claims(reports),
+        unresolved_mutation_intents: select_mutations(task, reports, MutationSelection::Allowed),
+        denied_mutation_intents: select_mutations(task, reports, MutationSelection::Denied),
+    })
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

@@ -1,4 +1,7 @@
-use super::*;
+use super::{
+    Collection, EXTERNAL_SERVICE_FIELD, ExternalSubagentProtocol, ID_FIELD, PROFILE_FIELD,
+    SubagentError, TOOL_FIELD, Text, optional_text, required_text, text_collection,
+};
 
 /// Untrusted external subagent descriptor.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

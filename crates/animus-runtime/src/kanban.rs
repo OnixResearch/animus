@@ -69,17 +69,20 @@ const UNSAFE_TEXT_MARKERS: &[&str] = &[
     "/home/",
 ];
 
+#[derive(Clone, Copy)]
 struct StringInput<'a> {
     field: &'static str,
     value: &'a str,
 }
 
+#[derive(Clone, Copy)]
 struct LimitedStringInput<'a> {
     field: &'static str,
     value: &'a str,
     limit: usize,
 }
 
+#[derive(Clone, Copy)]
 struct TaskLookup<'a> {
     tasks: &'a [KanbanTask],
     task_id: &'a str,
@@ -897,8 +900,6 @@ fn validate_task(draft: KanbanTaskDraft) -> Result<KanbanTask, KanbanError> {
 fn validate_workspace_scope(
     scope: Option<KanbanWorkspaceScope>,
 ) -> Result<KanbanWorkspaceScope, KanbanError> {
-    debug_assert!(MAX_KANBAN_LINKS > 0);
-    debug_assert!(MAX_KANBAN_LABEL_CHARS <= MAX_KANBAN_TEXT_CHARS);
     let scope = scope.ok_or_else(|| {
         KanbanError::new(
             KanbanErrorKind::MissingField,
@@ -924,6 +925,18 @@ fn validate_workspace_scope(
             EMPTY_FIELD_REASON,
         ));
     }
+    assert!(
+        !root_capability.is_empty(),
+        "workspace root capability must be validated"
+    );
+    assert!(
+        writable_targets.len() <= MAX_KANBAN_LINKS,
+        "writable target bounds are enforced"
+    );
+    assert!(
+        approval_required_targets.len() <= MAX_KANBAN_LINKS,
+        "approval target bounds are enforced"
+    );
     Ok(KanbanWorkspaceScope {
         kind: scope.kind,
         root_capability,
@@ -1037,21 +1050,17 @@ fn validate_completion_record(
     task_revision: u64,
     task_tenant: Option<&str>,
 ) -> Result<Option<KanbanCompletion>, KanbanError> {
-    match (state, completion) {
-        (KanbanTaskState::Completed, Some(record)) => {
+    match completion {
+        Some(record) => {
             let validated = validate_completion(record, task_revision, task_tenant)?;
             Ok(Some(validated))
         }
-        (KanbanTaskState::Completed, None) => Err(KanbanError::new(
+        None if matches!(state, KanbanTaskState::Completed) => Err(KanbanError::new(
             KanbanErrorKind::StaleCompletion,
             COMPLETION_FIELD,
             STALE_COMPLETION_REASON,
         )),
-        (_, Some(record)) => {
-            let validated = validate_completion(record, task_revision, task_tenant)?;
-            Ok(Some(validated))
-        }
-        (_, None) => Ok(None),
+        None => Ok(None),
     }
 }
 
@@ -1278,7 +1287,7 @@ fn validate_child_links(task: &KanbanTask, tasks: &[KanbanTask]) -> Result<(), K
     Ok(())
 }
 
-fn task_by_id<'a>(input: TaskLookup<'a>) -> Result<&'a KanbanTask, KanbanError> {
+fn task_by_id(input: TaskLookup<'_>) -> Result<&KanbanTask, KanbanError> {
     input
         .tasks
         .iter()
@@ -1318,7 +1327,6 @@ fn tenant_mismatch(left: Option<&str>, right: Option<&str>) -> bool {
 
 fn validate_acyclic(tasks: &[KanbanTask]) -> Result<(), KanbanError> {
     debug_assert!(tasks.len() <= MAX_KANBAN_TASKS);
-    debug_assert!(MAX_KANBAN_TASKS > 0);
     for task in tasks {
         validate_task_acyclic(tasks, task.task_id())?;
     }

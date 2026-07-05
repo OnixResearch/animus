@@ -66,13 +66,13 @@ pub struct RepeatedActionResolution {
 impl RepeatedActionResolution {
     /// Returns repeated-action status.
     #[must_use]
-    pub const fn status(&self) -> RepeatedActionStatus {
+    pub const fn status(self) -> RepeatedActionStatus {
         self.status
     }
 
     /// Returns whether an adapter dispatch has occurred inside detection.
     #[must_use]
-    pub const fn adapter_dispatched(&self) -> bool {
+    pub const fn adapter_dispatched(self) -> bool {
         self.adapter_dispatched
     }
 }

@@ -20,33 +20,24 @@
     raw_arithmetic_overflow,
     unbounded_collection_growth
 )]
-#![allow(
-    ambiguous_params,
-    assertion_density,
-    bool_naming,
-    borrowed_argument_types,
-    compound_condition,
-    excessive_file_length,
-    function_length,
-    non_trait_imports,
-    numeric_units,
-    path_segment_repetition,
-    raw_arithmetic_overflow,
-    unbounded_collection_growth
-)]
 mod core;
 mod data;
 
 pub use core::{
-    blake3_provider_hardening_fingerprint, filter_agent_model, provider_selection_receipt,
-    resolve_extra_body_descriptor, resolve_provider_api_style, validate_provider_header,
+    blake3_provider_hardening_fingerprint, filter_agent_model, negotiate_model_capability,
+    provider_selection_receipt, resolve_extra_body_descriptor, resolve_provider_api_style,
+    validate_model_capability_matrix, validate_provider_header,
 };
 pub use data::{
-    ProviderApiStyle, ProviderApiStylePolicy, ProviderDiagnostic, ProviderDiagnosticKind,
-    ProviderEndpointSensitivity, ProviderExtraBodyDescriptor, ProviderHeaderDescriptor,
-    ProviderHeaderResolution, ProviderHeaderValueSource, ProviderModelClass, ProviderModelMetadata,
-    ProviderSecretSourceReference, ProviderSelectionReceipt, ProviderSelectionReceiptInput,
-    ProviderValidationResult,
+    ModelCapabilityDecisionStatus, ModelCapabilityDowngrade, ModelCapabilityDowngradePolicy,
+    ModelCapabilityIssue, ModelCapabilityIssueKind, ModelCapabilityNegotiationDecision,
+    ModelCapabilityNegotiationInput, ProviderApiStyle, ProviderApiStylePolicy, ProviderDiagnostic,
+    ProviderDiagnosticKind, ProviderEndpointSensitivity, ProviderExtraBodyDescriptor,
+    ProviderHeaderDescriptor, ProviderHeaderResolution, ProviderHeaderValueSource,
+    ProviderModelCapabilityMatrix, ProviderModelClass, ProviderModelContentPartClass,
+    ProviderModelMetadata, ProviderPrivacyPosture, ProviderSecretSourceReference,
+    ProviderSelectionReceipt, ProviderSelectionReceiptInput, ProviderStreamChannel,
+    ProviderStructuredOutputMode, ProviderValidationResult,
 };
 
 pub(crate) const BLAKE3_ALGORITHM: &str = "BLAKE3";

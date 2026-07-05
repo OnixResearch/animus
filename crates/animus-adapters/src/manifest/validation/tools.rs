@@ -1,4 +1,8 @@
-use super::*;
+use super::{
+    Collection, PluginDescriptorError, TOOL_CAPABILITY_FIELD, TOOL_DESCRIPTION_FIELD,
+    TOOL_NAME_FIELD, TOOL_RESULT_FIELD, TOOL_SCHEMA_FIELD, ToolDescriptor, ToolDescriptorDraft,
+    contains_name, required_text, validate_required_texts,
+};
 
 pub(in crate::manifest) fn collect_descriptors(
     drafts: &[ToolDescriptorDraft<'_>],

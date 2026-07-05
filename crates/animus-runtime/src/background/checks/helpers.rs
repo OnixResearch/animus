@@ -1,20 +1,24 @@
+#[derive(Clone, Copy)]
 pub(crate) struct LabelInput<'a> {
     pub(crate) field: &'static str,
     pub(crate) value: &'a str,
     pub(crate) profile_name: &'a str,
 }
 
+#[derive(Clone, Copy)]
 pub(crate) struct CommandShapeErrorInput<'a> {
     pub(crate) profile_name: &'a str,
     pub(crate) reason: &'static str,
 }
 
+#[derive(Clone, Copy)]
 pub(crate) struct EnvErrorInput<'a> {
     pub(crate) profile_name: &'a str,
     pub(crate) key: &'a str,
     pub(crate) class: &'static str,
 }
 
+#[derive(Clone, Copy)]
 pub(crate) struct PathErrorInput<'a> {
     pub(crate) field: &'static str,
     pub(crate) profile_name: &'a str,

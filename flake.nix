@@ -179,6 +179,7 @@
                 || baseName == "config.toml"
                 || baseName == "README.md"
                 || baseName == "check-clankers-product-surfaces"
+                || baseName == "check-adapter-conformance-index"
                 || baseName == "check-clash-ucan-authority"
                 || baseName == "check-composition-conformance"
                 || baseName == "check-exec-policy"
@@ -374,6 +375,24 @@
           composition-conformance = cargoCheck "animus-composition-conformance" [ pkgs.b3sum ] ''
             sh scripts/cairn/check-composition-conformance --root .
           '';
+
+          adapter-conformance-index =
+            pkgs.runCommand "animus-adapter-conformance-index"
+              {
+                nativeBuildInputs = [
+                  pkgs.rustc
+                  pkgs.gcc
+                  pkgs.nickel
+                  pkgs.b3sum
+                ];
+              }
+              ''
+                cp -r ${source} source
+                chmod -R u+w source
+                cd source
+                sh scripts/cairn/check-adapter-conformance-index --root .
+                touch "$out"
+              '';
 
           clash-ucan-authority = cargoCheck "animus-clash-ucan-authority" [ pkgs.nickel ] ''
             sh scripts/cairn/check-clash-ucan-authority --root .

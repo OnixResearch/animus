@@ -129,10 +129,10 @@
         }
     }
 
-    fn receipt<'a>(
-        snapshot: &'a AuditSnapshot,
+    fn receipt(
+        snapshot: &AuditSnapshot,
         fixture: ReceiptLeakFixture,
-    ) -> AuditReceiptDraft<'a> {
+    ) -> AuditReceiptDraft<'_> {
         AuditReceiptDraft {
             snapshot,
             raw_prompt: fixture.raw_prompt,

@@ -135,10 +135,7 @@ impl HeadlessProtocolError {
     }
 
     fn new(request_id: Option<&str>, kind: HeadlessProtocolErrorKind, message: &str) -> Self {
-        match Self::bounded(request_id, kind, message) {
-            Ok(error) => error,
-            Err(error) => error,
-        }
+        Self::bounded(request_id, kind, message).unwrap_or_else(core::convert::identity)
     }
 
     /// Returns the optional request identity recovered for this error.

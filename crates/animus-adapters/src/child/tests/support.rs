@@ -51,9 +51,7 @@ pub(super) fn pending_recipe() -> crate::RecipeTrustReceipt {
     .expect("recipe trust should parse")
 }
 
-pub(super) fn valid_delegation<'a>(
-    recipe: &'a crate::RecipeTrustReceipt,
-) -> SubagentDelegationDraft<'a> {
+pub(super) fn valid_delegation(recipe: &crate::RecipeTrustReceipt) -> SubagentDelegationDraft<'_> {
     SubagentDelegationDraft {
         id: CHILD_ID,
         role: ROLE,

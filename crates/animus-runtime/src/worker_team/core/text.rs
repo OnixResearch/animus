@@ -1,8 +1,10 @@
+#[derive(Clone, Copy)]
 pub(crate) struct HashInput<'a> {
     pub(crate) field: &'static str,
     pub(crate) value: &'a str,
 }
 
+#[derive(Clone, Copy)]
 struct LimitInput<'a> {
     field: &'static str,
     value: &'a str,

@@ -57,6 +57,10 @@ impl McpDispatchDecision {
 // r[impl agent_harness_runtime.claude_code_mcp.dispatch]
 // r[impl agent_harness_runtime.claude_code_mcp.dispatch.denied]
 /// Evaluates MCP dispatch through existing Animus validation and permission gates.
+///
+/// # Panics
+///
+/// Panics if status enums become non-exhaustive without updating the dispatch matrix.
 #[must_use]
 pub const fn evaluate_mcp_dispatch(request: McpDispatchRequest<'_>) -> McpDispatchDecision {
     assert!(

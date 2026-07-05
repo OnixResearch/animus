@@ -3,14 +3,6 @@ use alloc::string::ToString;
 pub(super) fn validate(
     draft: &super::PolicyDraft<'_>,
 ) -> Result<super::Policy, super::super::Error> {
-    assert!(
-        super::super::MIN_PRECEDENCE <= super::super::MAX_PRECEDENCE,
-        "permission precedence range is ordered"
-    );
-    assert!(
-        !super::super::HASH_SCHEMA.is_empty(),
-        "permission hash schema must be nonempty"
-    );
     let fields = Fields::from_draft(draft)?;
     if fields.trust_status == super::TrustStatus::Untrusted {
         return Err(super::super::Error::UntrustedDescriptor {
@@ -85,8 +77,8 @@ impl Fields {
             trust_scope: self.trust_scope,
             trust_status: self.trust_status,
             precedence,
-            prompt_summary_policy: self.prompt_summary_policy,
-            policy_hash,
+            prompt_summary: self.prompt_summary_policy,
+            hash: policy_hash,
         }
     }
 }

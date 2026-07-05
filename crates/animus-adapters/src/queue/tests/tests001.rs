@@ -109,26 +109,26 @@ fn group_status_preserves_parallelism_and_safe_backend_labels() {
     let cpu = QueueGroupStatus::new(QueueGroupStatusDraft {
         group: GROUP_CPU,
         parallelism_limit: CPU_PARALLELISM,
-        counts: QueueStatusCounts::new(
-            CPU_PENDING,
-            CPU_RUNNING,
-            ZERO_COUNT,
-            ZERO_COUNT,
-            ZERO_COUNT,
-        ),
+        counts: QueueStatusCounts::new(QueueStatusCountDraft {
+            pending: CPU_PENDING,
+            running: CPU_RUNNING,
+            paused: ZERO_COUNT,
+            stashed: ZERO_COUNT,
+            completed: ZERO_COUNT,
+        }),
         backend_labels: &["cpu", "nix-build"],
     })
     .expect("cpu group should validate");
     let io = QueueGroupStatus::new(QueueGroupStatusDraft {
         group: GROUP_IO,
         parallelism_limit: IO_PARALLELISM,
-        counts: QueueStatusCounts::new(
-            ZERO_COUNT,
-            IO_RUNNING,
-            ZERO_COUNT,
-            ZERO_COUNT,
-            IO_COMPLETED,
-        ),
+        counts: QueueStatusCounts::new(QueueStatusCountDraft {
+            pending: ZERO_COUNT,
+            running: IO_RUNNING,
+            paused: ZERO_COUNT,
+            stashed: ZERO_COUNT,
+            completed: IO_COMPLETED,
+        }),
         backend_labels: &["io", "download"],
     })
     .expect("io group should validate");
@@ -144,9 +144,13 @@ fn zero_parallelism_is_rejected() {
     let error = QueueGroupStatus::new(QueueGroupStatusDraft {
         group: GROUP_CPU,
         parallelism_limit: ZERO_COUNT,
-        counts: QueueStatusCounts::new(
-            ZERO_COUNT, ZERO_COUNT, ZERO_COUNT, ZERO_COUNT, ZERO_COUNT,
-        ),
+        counts: QueueStatusCounts::new(QueueStatusCountDraft {
+            pending: ZERO_COUNT,
+            running: ZERO_COUNT,
+            paused: ZERO_COUNT,
+            stashed: ZERO_COUNT,
+            completed: ZERO_COUNT,
+        }),
         backend_labels: &[],
     })
     .expect_err("zero parallelism should fail");

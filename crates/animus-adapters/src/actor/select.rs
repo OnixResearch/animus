@@ -81,7 +81,10 @@ fn build_report(ordered: &[&super::Manifest]) -> DiscoveryReport {
         ordered.len() <= super::MAX_ITEMS,
         "ordered manifests are bounded"
     );
-    assert!(super::MAX_ITEMS > 0, "discovery item bound is positive");
+    assert!(
+        ordered.iter().all(|manifest| !manifest.name().is_empty()),
+        "manifest names must be validated before discovery"
+    );
     let mut selected = super::Collection::with_capacity(ordered.len());
     let mut diagnostics = super::Collection::with_capacity(ordered.len());
     let mut group_start = 0;

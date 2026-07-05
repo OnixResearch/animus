@@ -11,6 +11,10 @@ mod task;
 mod text;
 
 /// Validates a minimized worker context packet.
+///
+/// # Errors
+///
+/// Returns [`DelegationFailure`](super::DelegationFailure) when the packet is malformed.
 pub fn validate_context_packet(
     packet: &super::WorkerContextPacket,
 ) -> Result<(), super::DelegationFailure> {
@@ -18,6 +22,10 @@ pub fn validate_context_packet(
 }
 
 /// Validates a scoped worker task draft.
+///
+/// # Errors
+///
+/// Returns [`DelegationFailure`](super::DelegationFailure) when the draft is invalid.
 pub fn validate_task(
     draft: super::WorkerTaskDraft,
 ) -> Result<super::WorkerTask, super::DelegationFailure> {
@@ -25,6 +33,10 @@ pub fn validate_task(
 }
 
 /// Merges validated worker reports without applying mutation intents.
+///
+/// # Errors
+///
+/// Returns [`DelegationFailure`](super::DelegationFailure) when reports are empty, invalid, or conflicting.
 pub fn merge_reports(
     task: &super::WorkerTask,
     reports: &[super::Report],
@@ -39,10 +51,14 @@ pub fn merge_reports(
     for report in reports {
         validate_report(report, task.output_schema())?;
     }
-    conflict::merge_validated_reports(task, reports)
+    Ok(conflict::merge_validated_reports(task, reports))
 }
 
 /// Validates a worker report against an expected schema.
+///
+/// # Errors
+///
+/// Returns [`DelegationFailure`](super::DelegationFailure) when the report violates the schema.
 pub fn validate_report(
     report: &super::Report,
     schema: &super::WorkerOutputSchema,
@@ -56,6 +72,10 @@ pub fn validate_report(
 }
 
 /// Enqueues a worker task through an injected host worker service.
+///
+/// # Errors
+///
+/// Returns [`DelegationFailure`](super::DelegationFailure) when no service is injected or enqueueing fails.
 pub fn enqueue_task(
     service: Option<&mut dyn super::WorkerService>,
     task: &super::WorkerTask,
@@ -64,6 +84,10 @@ pub fn enqueue_task(
 }
 
 /// Requests worker status through an injected host worker service.
+///
+/// # Errors
+///
+/// Returns [`DelegationFailure`](super::DelegationFailure) when no service is injected or status lookup fails.
 pub fn request_status(
     service: Option<&mut dyn super::WorkerService>,
     handle: &super::WorkerHandle,
@@ -72,6 +96,10 @@ pub fn request_status(
 }
 
 /// Requests worker cancellation through an injected host worker service.
+///
+/// # Errors
+///
+/// Returns [`DelegationFailure`](super::DelegationFailure) when no service is injected or cancellation fails.
 pub fn request_cancel(
     service: Option<&mut dyn super::WorkerService>,
     handle: &super::WorkerHandle,
@@ -80,6 +108,10 @@ pub fn request_cancel(
 }
 
 /// Collects a worker report through an injected host worker service.
+///
+/// # Errors
+///
+/// Returns [`DelegationFailure`](super::DelegationFailure) when no service is injected or collection fails.
 pub fn collect_report(
     service: Option<&mut dyn super::WorkerService>,
     handle: &super::WorkerHandle,

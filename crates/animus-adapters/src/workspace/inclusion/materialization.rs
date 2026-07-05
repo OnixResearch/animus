@@ -104,7 +104,9 @@ pub fn plan_ignored_file_materialization(
         .all(|entry| !entry.file_label().is_empty()));
     debug_assert!(matches!(
         request.classification,
-        IgnoredFileRedactionClass::Public | IgnoredFileRedactionClass::Secret
+        IgnoredFileRedactionClass::Public
+            | IgnoredFileRedactionClass::LocalConfig
+            | IgnoredFileRedactionClass::Secret
     ));
 
     let file_label =

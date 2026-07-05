@@ -83,6 +83,12 @@ impl Frame {
         self.visibility
     }
 
+    /// Returns the stable model stream frame contract identity.
+    #[must_use]
+    pub const fn contract_identity() -> &'static str {
+        super::MODEL_STREAM_FRAME_CONTRACT_IDENTITY
+    }
+
     /// Returns true when the default final-answer assembler may include this body.
     #[must_use]
     pub const fn is_default_final_visible(&self) -> bool {

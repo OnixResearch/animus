@@ -67,6 +67,10 @@ impl ProcessJobProfileIdentity {
     }
 
     /// Validates that the identity envelope contains only safe metadata.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`super::ProcessJobProfileError`] when identity metadata is unsafe or malformed.
     pub fn validate(&self) -> Result<(), super::ProcessJobProfileError> {
         debug_assert!(!self.profile_name.is_empty());
         debug_assert!(!self.source_label.is_empty());
@@ -95,36 +99,43 @@ impl ProcessJobProfileIdentity {
     }
 
     /// Returns the manifest schema version.
+    #[must_use]
     pub const fn schema_version(&self) -> u16 {
         self.schema_version
     }
 
     /// Returns the safe source label.
+    #[must_use]
     pub fn source_label(&self) -> &str {
         self.source_label.as_str()
     }
 
     /// Returns the policy hash.
+    #[must_use]
     pub fn policy_hash(&self) -> &str {
         self.policy_hash.as_str()
     }
 
     /// Returns the profile name.
+    #[must_use]
     pub fn profile_name(&self) -> &str {
         self.profile_name.as_str()
     }
 
     /// Returns the selected backend.
+    #[must_use]
     pub const fn selected_backend(&self) -> super::ProcessJobBackend {
         self.selected_backend
     }
 
     /// Returns the profile hash.
+    #[must_use]
     pub fn profile_hash(&self) -> &str {
         self.profile_hash.as_str()
     }
 
     /// Returns the request hash.
+    #[must_use]
     pub fn request_hash(&self) -> &str {
         self.request_hash.as_str()
     }

@@ -59,11 +59,24 @@ impl MemoryGenerationDecision {
 }
 
 /// Evaluates conservative memory-generation eligibility without calling extractors.
+///
+/// # Panics
+///
+/// Panics if callers bypass policy validation before eligibility evaluation.
 #[must_use]
 // r[impl agent_harness_runtime.openai_codex_opt_in_memories.generation_eligibility]
 pub fn evaluate_memory_generation(
     input: MemoryGenerationEligibility<'_>,
 ) -> MemoryGenerationDecision {
+    assert!(
+        !input.policy.policy_hash().as_str().is_empty(),
+        "memory policy hash must be validated"
+    );
+    assert_eq!(
+        input.policy.memory_generation_enabled(),
+        input.policy.generation_controls().enabled(),
+        "generation helper must mirror policy controls"
+    );
     if !input.policy.memory_generation_enabled() {
         return denied_generation(MemoryGenerationDenialReason::MissingConsent);
     }
@@ -79,26 +92,6 @@ pub fn evaluate_memory_generation(
     if input.remaining_budget_units == u32::default() {
         return denied_generation(MemoryGenerationDenialReason::BudgetExhausted);
     }
-    assert!(
-        input.policy.memory_generation_enabled(),
-        "allowed memory generation requires explicit opt-in"
-    );
-    assert!(
-        input.external_context_persistable,
-        "allowed memory generation requires persistable external context"
-    );
-    assert!(
-        !input.contains_secret_bearing_content,
-        "allowed memory generation must reject secret-bearing content"
-    );
-    assert!(
-        input.redaction_succeeded,
-        "allowed memory generation requires successful redaction"
-    );
-    assert!(
-        input.remaining_budget_units > u32::default(),
-        "allowed memory generation requires remaining budget"
-    );
     MemoryGenerationDecision {
         status: MemoryGenerationStatus::Allowed,
         denial_reason: None,

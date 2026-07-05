@@ -1,4 +1,4 @@
-use super::*;
+use super::{Text, ThreadStatus};
 
 /// Automation contract validation error.
 #[derive(Clone, Debug, Eq, PartialEq)]

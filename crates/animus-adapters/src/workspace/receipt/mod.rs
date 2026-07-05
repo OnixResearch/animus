@@ -193,6 +193,7 @@ fn cleanup_hash(
     ])
 }
 
+#[derive(Clone, Copy)]
 struct IdentityInput<'a> {
     plan: &'a super::planning::Plan,
     manifest_hash: &'a str,

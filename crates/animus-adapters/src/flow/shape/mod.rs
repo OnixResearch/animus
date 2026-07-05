@@ -1,3 +1,5 @@
+#![allow(non_trait_imports)]
+
 const SCHEMA_NAME_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("recipe_response_schema_name");
 const FIELD_NAME_FIELD: crate::validation::FieldName =

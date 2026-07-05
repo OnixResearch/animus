@@ -4,6 +4,8 @@ Animus keeps a maintained inventory of runtime-facing public exports so embedder
 
 The source of truth is `cairn/runtime-facade-inventory.ncl`. The focused rail is `scripts/cairn/check-runtime-facade-inventory --root .`.
 
+Each inventory record carries composition metadata: `feature_gate`, `required_authority`, `depends_on`, `composes_with`, and `capability_family`. The checker validates controlled feature/authority/family labels, known dependency targets, known composition links, reusable-to-shell dependency direction, and safe evidence fields.
+
 ## Classes
 
 | Class | Meaning | Allowed side effects |
@@ -15,10 +17,10 @@ The source of truth is `cairn/runtime-facade-inventory.ncl`. The focused rail is
 ## Current summary
 
 - `animus-core` exports are reusable contracts: `Intent`, `AnimusState`, `CoreError`, and intent bounds.
-- `animus-adapters` request/response DTOs, status-observation DTOs, skill-manifest descriptors, progressive-disclosure summaries, and validation errors are reusable contracts; `ComponentAdapter`, `ModelAdapter`, `ToolAdapter`, and `HostStatusAdapter` are host-injection surfaces.
+- `animus-adapters` request/response DTOs, canonical model contracts, provider projection conformance fixtures, public contract identity constants/parser, typed adapter-call outcome envelopes, status-observation DTOs, skill-manifest descriptors, progressive-disclosure summaries, and validation errors are reusable contracts; `ComponentAdapter`, `ComponentOutcomeAdapter`, `ModelAdapter`, `ToolAdapter`, typed outcome adapter traits, and `HostStatusAdapter` are host-injection surfaces.
 - `animus-preserves` exports are optional reusable bridge contracts.
 - `animus-steel` exports are optional reusable loop-fabric boundary contracts; Steel decisions still revalidate through adapter DTOs before dispatch.
-- `animus-runtime` exports reusable event/report/config DTOs, pure transition helpers, pure status-authority selection/explanation helpers, typed workflow command manifest/registry/binding/output DTOs, and host-injection dispatch surfaces over caller-supplied fabrics and adapters.
+- `animus-runtime` exports reusable event/report/config DTOs, pure transition helpers, exact capability-registry descriptors, model dispatch planning and capability-negotiation DTOs, pure status-authority selection/explanation helpers, typed workflow command manifest/registry/binding/output DTOs, and host-injection dispatch surfaces over caller-supplied fabrics and adapters.
 - `animus-std` exports are shell adapters because they own process-facing runtime loading and shell orchestration.
 - `animus-tui` exports are shell adapters because terminal UI authority belongs outside reusable contracts.
 - The root `animus` crate mirrors these classes through feature-gated reexports.
@@ -29,4 +31,6 @@ A `reusable-contract` inventory entry must not require ambient filesystem, envir
 
 ## Evidence
 
-The rail validates the Nickel inventory against runtime-facing crate root exports, checks positive and negative fixtures, and prints class counts plus a BLAKE3 inventory hash when `b3sum` is available. Durable evidence should include only schema/status, checked crates, class counts, fixture names, safe diagnostics, and content hashes. It must omit raw prompts, provider payloads, credentials, environment values, full host paths, and raw tool output.
+The rail validates the Nickel inventory against runtime-facing crate root exports and extended composition metadata, checks positive and negative fixtures, and prints class, feature, authority, family, dependency-link, composition-link counts plus a BLAKE3 inventory hash when `b3sum` is available. Contract identities and model-dispatch plans are recorded as reusable contracts; outcome-returning adapter traits are recorded as injected surfaces. Durable evidence should include only schema/status, checked crates, counts, fixture names, safe diagnostics, and content hashes. It must omit raw prompts, provider payloads, credentials, environment values, full host paths, and raw tool output.
+
+See [runtime composition preludes](runtime-composition-preludes.md) for domain prelude, capability registry, family feature, and Steel integration guidance. Optional dataspace additions are recorded as Preserves `dataspace_dto` reusable contracts and as `animus-std` `syndicate-host` shell seams; reusable core/runtime/adapter crates remain free of live transport dependencies.

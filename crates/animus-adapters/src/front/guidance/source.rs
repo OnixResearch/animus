@@ -1,6 +1,3 @@
-#![allow(unknown_lints)]
-#![allow(non_trait_imports, path_segment_repetition)]
-
 use alloc::string::String;
 use alloc::vec::Vec;
 use core::num::NonZeroU32;

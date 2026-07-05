@@ -4,6 +4,8 @@ pub(super) const TOOL_NAME: &str = "search";
 pub(super) const TOOL_INPUT: &str = "query";
 pub(super) const TOOL_OUTPUT: &str = "tool result";
 pub(super) const ADAPTER_FAILURE: &str = "adapter failed";
+pub(super) const UNRELATED_MODEL_LABEL: &str = "unrelated-model";
+pub(super) const UNRELATED_TOOL_LABEL: &str = "unrelated-tool";
 pub(super) const ABSENT_SERVICE: &str = "absent";
 pub(super) const DENIED_SERVICE: &str = "denied";
 pub(super) const INVALID_CONFIG_TURNS: usize = 0;
@@ -215,6 +217,50 @@ pub(super) fn run_program_with_missing_tool_service(
         &runtime_input(),
         runtime_config_with_followup_turn_budget(),
         super::super::RuntimeAdapters::<ModelStub, ToolStub>::new_optional(Some(model), None),
+    )
+}
+
+pub(super) fn run_program_with_unrelated_model_capability(
+    program: &str,
+    model: &mut ModelStub,
+    tool: &mut ToolStub,
+) -> crate::RunReport {
+    let registry = crate::RuntimeCapabilityRegistry::from_drafts(&[
+        crate::RuntimeCapabilityDescriptorDraft {
+            label: UNRELATED_MODEL_LABEL,
+            service_kind: crate::RuntimeCapabilityServiceKind::Model.as_str(),
+            scope: None,
+        },
+        crate::RuntimeCapabilityDescriptorDraft::default_tool(),
+    ])
+    .expect("registry should validate");
+    super::super::run_with_steel_program(
+        program,
+        &runtime_input(),
+        runtime_config_with_followup_turn_budget(),
+        super::super::RuntimeAdapters::new(model, tool).with_capability_registry(registry),
+    )
+}
+
+pub(super) fn run_program_with_unrelated_tool_capability(
+    program: &str,
+    model: &mut ModelStub,
+    tool: &mut ToolStub,
+) -> crate::RunReport {
+    let registry = crate::RuntimeCapabilityRegistry::from_drafts(&[
+        crate::RuntimeCapabilityDescriptorDraft::default_model(),
+        crate::RuntimeCapabilityDescriptorDraft {
+            label: UNRELATED_TOOL_LABEL,
+            service_kind: crate::RuntimeCapabilityServiceKind::Tool.as_str(),
+            scope: None,
+        },
+    ])
+    .expect("registry should validate");
+    super::super::run_with_steel_program(
+        program,
+        &runtime_input(),
+        runtime_config_with_followup_turn_budget(),
+        super::super::RuntimeAdapters::new(model, tool).with_capability_registry(registry),
     )
 }
 

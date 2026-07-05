@@ -15,21 +15,35 @@ pub enum ScheduledRunDenial {
     StalePolicy,
 }
 
-/// Scheduled run admission input.
+/// Policy-side admission gates for a scheduled run.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct ScheduledRunAdmissionDraft {
+pub struct ScheduledRunPolicyAdmission {
     /// Whether recipe trust is admitted.
     pub recipe_trusted: bool,
     /// Whether capability policy allows the run.
     pub capability_allowed: bool,
     /// Whether sandbox policy allows the run.
     pub sandbox_allowed: bool,
+}
+
+/// Runtime-side admission gates for a scheduled run.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ScheduledRunRuntimeAdmission {
     /// Whether queue service admitted the run.
     pub queue_admitted: bool,
     /// Whether a cancellation handle is available.
     pub cancellation_handle: bool,
     /// Whether active policy is current.
     pub policy_current: bool,
+}
+
+/// Scheduled run admission input.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ScheduledRunAdmissionDraft {
+    /// Policy-side admission gates.
+    pub policy: ScheduledRunPolicyAdmission,
+    /// Runtime-side admission gates.
+    pub runtime: ScheduledRunRuntimeAdmission,
 }
 
 /// Scheduled run admission status.
@@ -61,26 +75,26 @@ const fn scheduled_denial_reason(draft: ScheduledRunAdmissionDraft) -> Option<Sc
 }
 
 const fn trust_or_policy_denial(draft: ScheduledRunAdmissionDraft) -> Option<ScheduledRunDenial> {
-    if !draft.recipe_trusted {
+    if !draft.policy.recipe_trusted {
         return Some(ScheduledRunDenial::UntrustedRecipe);
     }
-    if !draft.capability_allowed {
+    if !draft.policy.capability_allowed {
         return Some(ScheduledRunDenial::Capability);
     }
-    if !draft.sandbox_allowed {
+    if !draft.policy.sandbox_allowed {
         return Some(ScheduledRunDenial::Sandbox);
     }
     None
 }
 
 const fn runtime_denial(draft: ScheduledRunAdmissionDraft) -> Option<ScheduledRunDenial> {
-    if !draft.queue_admitted {
+    if !draft.runtime.queue_admitted {
         return Some(ScheduledRunDenial::QueueService);
     }
-    if !draft.cancellation_handle {
+    if !draft.runtime.cancellation_handle {
         return Some(ScheduledRunDenial::CancellationHandle);
     }
-    if !draft.policy_current {
+    if !draft.runtime.policy_current {
         return Some(ScheduledRunDenial::StalePolicy);
     }
     None

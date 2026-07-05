@@ -13,10 +13,11 @@ impl Request {
     /// Returns [`crate::AdapterContractError`] when the tool name is empty,
     /// either field is too long, or either field contains a NUL character.
     pub fn new(name: &str, input: &str) -> Result<Self, crate::AdapterContractError> {
-        crate::validation::validate_required_adapter_field(super::NAME_FIELD, name)?;
+        // r[impl agent_harness_runtime.boundary_versions.normalized_text]
+        let name = crate::validation::normalized_adapter_field(super::NAME_FIELD, name)?;
         crate::validation::validate_optional_adapter_field(super::INPUT_FIELD, input)?;
         Ok(Self {
-            name: super::Text::from(name),
+            name,
             input: super::Text::from(input),
         })
     }
@@ -31,6 +32,12 @@ impl Request {
     #[must_use]
     pub fn input(&self) -> &str {
         self.input.as_str()
+    }
+
+    /// Returns the stable tool request contract identity.
+    #[must_use]
+    pub const fn contract_identity() -> &'static str {
+        super::TOOL_REQUEST_CONTRACT_IDENTITY
     }
 }
 
@@ -58,5 +65,11 @@ impl Response {
     #[must_use]
     pub fn output(&self) -> &str {
         self.output.as_str()
+    }
+
+    /// Returns the stable tool response contract identity.
+    #[must_use]
+    pub const fn contract_identity() -> &'static str {
+        super::TOOL_RESPONSE_CONTRACT_IDENTITY
     }
 }

@@ -1,4 +1,7 @@
-use super::*;
+use super::{
+    HANDOFF_DETAIL_FIELD, HANDOFF_STATUS_FIELD, HANDOFF_SUMMARY_FIELD, MIN_DETAIL_BOUND_CHARS,
+    SubagentError, SubagentReturnMode, Text, required_text,
+};
 
 /// Untrusted subagent handoff data.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -58,6 +61,10 @@ impl SubagentHandoff {
 ///
 /// Returns [`SubagentError`] when status or summary is malformed, full detail is
 /// unbounded, or full detail exceeds its configured bound.
+///
+/// # Panics
+///
+/// Panics if stable handoff field names are accidentally emptied at compile time.
 pub fn build_subagent_handoff(
     draft: &SubagentHandoffDraft<'_>,
 ) -> Result<SubagentHandoff, SubagentError> {

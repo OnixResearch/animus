@@ -17,6 +17,9 @@ pub(crate) const FAILURE_REASON_FIELD: crate::validation::FieldName =
 pub(crate) const CANCELLATION_REASON_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("model_stream_cancellation_reason");
 
+/// Stable contract identity for public model stream frame DTOs.
+pub const MODEL_STREAM_FRAME_CONTRACT_IDENTITY: &str = "animus.model-stream-frame.v1";
+
 pub(crate) const MIN_ORDER: u64 = 1;
 pub(crate) const RECORD_SEPARATOR: char = '\n';
 pub(crate) const FIELD_SEPARATOR: char = '|';

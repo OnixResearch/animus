@@ -18,20 +18,6 @@
     raw_arithmetic_overflow,
     unbounded_collection_growth
 )]
-#![allow(
-    ambiguous_params,
-    assertion_density,
-    bool_naming,
-    borrowed_argument_types,
-    compound_condition,
-    excessive_file_length,
-    function_length,
-    non_trait_imports,
-    numeric_units,
-    path_segment_repetition,
-    raw_arithmetic_overflow,
-    unbounded_collection_growth
-)]
 /// Fixed-point metric value expressed in metric-owned microunits.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct ResearchSpecMetricValue {
@@ -393,7 +379,7 @@ pub struct ResearchSpecArchiveConclusion {
     pub run_evidence_ids: Vec<String>,
 }
 
-/// Machine-readable diagnostic class for ResearchSpec validation and gates.
+/// Machine-readable diagnostic class for `ResearchSpec` validation and gates.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ResearchSpecDiagnosticKind {
     /// A required scalar field is missing or blank.

@@ -1,0 +1,13 @@
+# Tasks
+
+- [x] [serial] Define immutable trust-boundary DTOs for sanctioned tools, denied/withheld path labels, verifier artifact identity, sandbox profile identity, approval requirements, evidence policy, and BLAKE3 policy hashes. r[agent_harness_runtime.ornith_trust_boundary.outer_boundary]
+- [x] [depends:outer_boundary] Add validation tests for valid boundaries and negative missing verifier hash, duplicate label, empty sanctioned-tool set, unsafe raw path serialization, and mutable-boundary request cases. r[agent_harness_runtime.ornith_trust_boundary.outer_boundary.invalid]
+- [x] [serial] Add a pure deterministic monitor over planned and observed action descriptors with typed issue codes for exact boundary violations. r[agent_harness_runtime.ornith_trust_boundary.monitor]
+- [x] [depends:monitor] Add monitor tests for allowed actions and negative withheld-path read, verifier modification, unsanctioned tool, sandbox weakening, approval suppression, and evidence-policy bypass cases. r[agent_harness_runtime.ornith_trust_boundary.monitor.violations]
+- [x] [serial] Define judge-veto DTOs and policy binding that treats judge output as reject-only and never as an authority grant. r[agent_harness_runtime.ornith_trust_boundary.judge_veto]
+- [x] [depends:judge_veto] Add negative tests proving judge approval cannot override deterministic monitor denial, grant a tool, weaken sandbox, suppress approval, or mark denied evidence successful. r[agent_harness_runtime.ornith_trust_boundary.judge_veto.no_override]
+- [x] [serial] Add explicit anti-gaming fixture classes for oracle copying, hardcoded expected output/artifact creation, visible-test overfitting, verifier edits, and allowed-tool intent gaming. r[agent_harness_runtime.ornith_trust_boundary.anti_gaming]
+- [x] [depends:anti_gaming] Add positive and negative fixture tests proving anti-gaming denials are reproducible and do not depend on hidden provider calls. r[agent_harness_runtime.ornith_trust_boundary.anti_gaming.fixtures]
+- [x] [serial] Define redacted trust-boundary violation receipts with policy hash, issue code, labels, counts, and redaction status. r[agent_harness_runtime.ornith_trust_boundary.receipts]
+- [x] [depends:receipts] Add receipt leak-rejection tests for hidden paths, raw verifier bodies, prompts, tool inputs/outputs, provider payloads, credentials, and full path dumps. r[agent_harness_runtime.ornith_trust_boundary.receipts.redacted]
+- [x] [depends:outer_boundary.invalid,monitor.violations,judge_veto.no_override,anti_gaming.fixtures,receipts.redacted] Update docs and run focused boundary monitor tests, workspace checks, Cairn validation, roadmap validation, and Cairn gates with reviewable evidence. r[agent_harness_runtime.ornith_trust_boundary.verification]

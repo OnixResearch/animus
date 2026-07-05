@@ -1,5 +1,7 @@
 //! Data-only ACP/MCP interop descriptors, pass-through planning, and safe receipts.
 
+#![allow(non_trait_imports)]
+
 const ID_FIELD: crate::validation::FieldName = crate::validation::FieldName::new("interop_id");
 const TRANSPORT_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("mcp_transport");

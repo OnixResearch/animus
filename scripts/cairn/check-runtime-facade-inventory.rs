@@ -9,7 +9,8 @@ const ARG_INVENTORY: &str = "--inventory";
 const ARG_PUBLIC_EXPORTS: &str = "--public-exports";
 const ENTRY_KIND: &str = "entry";
 const FIELD_SEPARATOR: char = '|';
-const ENTRY_FIELD_COUNT: usize = 8;
+const LIST_SEPARATOR: char = ',';
+const ENTRY_FIELD_COUNT: usize = 13;
 const EXPORT_FIELD_COUNT: usize = 2;
 const EXIT_FAILURE: i32 = 1;
 const EXIT_SUCCESS: i32 = 0;
@@ -23,11 +24,21 @@ const SIDE_EFFECT_SHELL: &str = "shell-owned";
 const STABILITY_STABLE: &str = "stable";
 const STABILITY_EXPERIMENTAL: &str = "experimental";
 const STABILITY_OPTIONAL: &str = "optional";
+const FEATURE_COMPAT: &str = "compat";
+const FEATURE_STEEL: &str = "steel";
+const AUTHORITY_NONE: &str = "none";
+const FAMILY_COMPATIBILITY: &str = "compatibility";
 
 const ISSUE_MALFORMED_RECORD: &str = "RUNTIME_FACADE_MALFORMED_RECORD";
 const ISSUE_UNKNOWN_CLASS: &str = "RUNTIME_FACADE_UNKNOWN_CLASS";
 const ISSUE_UNKNOWN_SIDE_EFFECT: &str = "RUNTIME_FACADE_UNKNOWN_SIDE_EFFECT";
 const ISSUE_UNKNOWN_STABILITY: &str = "RUNTIME_FACADE_UNKNOWN_STABILITY";
+const ISSUE_UNKNOWN_FEATURE: &str = "RUNTIME_FACADE_UNKNOWN_FEATURE";
+const ISSUE_UNKNOWN_AUTHORITY: &str = "RUNTIME_FACADE_UNKNOWN_AUTHORITY";
+const ISSUE_UNKNOWN_FAMILY: &str = "RUNTIME_FACADE_UNKNOWN_FAMILY";
+const ISSUE_UNKNOWN_DEPENDENCY: &str = "RUNTIME_FACADE_UNKNOWN_DEPENDENCY";
+const ISSUE_UNKNOWN_COMPOSITION_LINK: &str = "RUNTIME_FACADE_UNKNOWN_COMPOSITION_LINK";
+const ISSUE_DEPENDENCY_DIRECTION: &str = "RUNTIME_FACADE_DEPENDENCY_DIRECTION";
 const ISSUE_DUPLICATE_EXPORT: &str = "RUNTIME_FACADE_DUPLICATE_EXPORT";
 const ISSUE_OWNER_MISMATCH: &str = "RUNTIME_FACADE_OWNER_MISMATCH";
 const ISSUE_CLASS_SIDE_EFFECT_CONTRADICTION: &str =
@@ -37,12 +48,24 @@ const ISSUE_UNCLASSIFIED_EXPORT: &str = "RUNTIME_FACADE_UNCLASSIFIED_EXPORT";
 const ISSUE_UNKNOWN_EXPORT: &str = "RUNTIME_FACADE_UNKNOWN_EXPORT";
 const ISSUE_UNSAFE_EVIDENCE_FIELD: &str = "RUNTIME_FACADE_UNSAFE_EVIDENCE_FIELD";
 
-const CRATE_LIBS: &[(&str, &str)] = &[
+const PUBLIC_EXPORT_SOURCES: &[(&str, &str)] = &[
     ("animus", "src/lib.rs"),
     ("animus-core", "crates/animus-core/src/lib.rs"),
     ("animus-adapters", "crates/animus-adapters/src/lib.rs"),
+    ("animus-adapters", "crates/animus-adapters/src/aliases/wire.rs"),
+    (
+        "animus-adapters",
+        "crates/animus-adapters/src/aliases/facade/component.rs",
+    ),
+    (
+        "animus-adapters",
+        "crates/animus-adapters/src/aliases/facade/lifecycle.rs",
+    ),
+    ("animus-adapters", "crates/animus-adapters/src/front/guidance.rs"),
     ("animus-preserves", "crates/animus-preserves/src/lib.rs"),
     ("animus-runtime", "crates/animus-runtime/src/lib.rs"),
+    ("animus-runtime", "crates/animus-runtime/src/exports.rs"),
+    ("animus-runtime", "crates/animus-runtime/src/prelude.rs"),
     ("animus-std", "crates/animus-std/src/lib.rs"),
     ("animus-steel", "crates/animus-steel/src/lib.rs"),
     ("animus-tui", "crates/animus-tui/src/lib.rs"),
@@ -52,9 +75,58 @@ const DECLARATION_PREFIXES: &[&str] = &[
     "pub const ",
     "pub enum ",
     "pub fn ",
+    "pub mod ",
     "pub struct ",
     "pub trait ",
     "pub type ",
+];
+
+const ALLOWED_FEATURES: &[&str] = &[
+    FEATURE_COMPAT,
+    FEATURE_STEEL,
+    "all-families",
+    "batch",
+    "compaction",
+    "dataset-export",
+    "headless",
+    "loop",
+    "policy",
+    "provenance",
+    "quality",
+    "research",
+    "scaffold",
+    "status",
+    "worker-team",
+];
+
+const ALLOWED_AUTHORITIES: &[&str] = &[
+    AUTHORITY_NONE,
+    SIDE_EFFECT_INJECTED,
+    SIDE_EFFECT_SHELL,
+    "injected-service",
+    "terminal-owned",
+    "process-owned",
+    "persistence-owned",
+    "network-owned",
+    "credential-owned",
+];
+
+const ALLOWED_FAMILIES: &[&str] = &[
+    FAMILY_COMPATIBILITY,
+    "batch",
+    "compaction",
+    "dataset-export",
+    "headless",
+    "loop",
+    "policy",
+    "provenance",
+    "quality",
+    "research",
+    "scaffold",
+    "status",
+    "tool",
+    "worker-team",
+    "steel",
 ];
 
 const AMBIENT_AUTHORITY_MARKERS: &[&str] = &[
@@ -70,6 +142,15 @@ const AMBIENT_AUTHORITY_MARKERS: &[&str] = &[
     "clock",
     "environment",
     "persistence",
+];
+
+const AMBIENT_AUTHORITY_VALUES: &[&str] = &[
+    SIDE_EFFECT_SHELL,
+    "terminal-owned",
+    "process-owned",
+    "persistence-owned",
+    "network-owned",
+    "credential-owned",
 ];
 
 const UNSAFE_FIELD_MARKERS: &[&str] = &[
@@ -99,6 +180,11 @@ struct InventoryEntry {
     side_effect: String,
     stability: String,
     review_note: String,
+    feature_gate: String,
+    required_authority: String,
+    depends_on: Vec<String>,
+    composes_with: Vec<String>,
+    capability_family: String,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
@@ -203,9 +289,23 @@ fn parse_inventory(text: &str) -> (Vec<InventoryEntry>, Vec<Issue>) {
             side_effect: fields[5].to_string(),
             stability: fields[6].to_string(),
             review_note: fields[7].to_string(),
+            feature_gate: fields[8].to_string(),
+            required_authority: fields[9].to_string(),
+            depends_on: parse_list(fields[10]),
+            composes_with: parse_list(fields[11]),
+            capability_family: fields[12].to_string(),
         });
     }
     (entries, issues)
+}
+
+fn parse_list(value: &str) -> Vec<String> {
+    value
+        .split(LIST_SEPARATOR)
+        .map(str::trim)
+        .filter(|item| !item.is_empty())
+        .map(ToOwned::to_owned)
+        .collect()
 }
 
 fn validate_inventory(entries: &[InventoryEntry], public_exports: &BTreeSet<String>) -> Vec<Issue> {
@@ -223,6 +323,10 @@ fn validate_inventory(entries: &[InventoryEntry], public_exports: &BTreeSet<Stri
         }
         entry_by_path.insert(entry.export_path.clone(), entry);
         validate_entry(entry, public_exports, &mut issues);
+    }
+
+    for entry in entries {
+        validate_links(entry, &entry_by_path, &mut issues);
     }
 
     for export in public_exports {
@@ -276,6 +380,30 @@ fn validate_entry(
         ));
     }
 
+    if !contains(ALLOWED_FEATURES, &entry.feature_gate) {
+        issues.push(issue(
+            ISSUE_UNKNOWN_FEATURE,
+            &entry.export_path,
+            &format!("unsupported feature gate: {}", entry.feature_gate),
+        ));
+    }
+
+    if !contains(ALLOWED_AUTHORITIES, &entry.required_authority) {
+        issues.push(issue(
+            ISSUE_UNKNOWN_AUTHORITY,
+            &entry.export_path,
+            &format!("unsupported required authority: {}", entry.required_authority),
+        ));
+    }
+
+    if !contains(ALLOWED_FAMILIES, &entry.capability_family) {
+        issues.push(issue(
+            ISSUE_UNKNOWN_FAMILY,
+            &entry.export_path,
+            &format!("unsupported capability family: {}", entry.capability_family),
+        ));
+    }
+
     if owner_from_export(&entry.export_path) != Some(entry.owning_crate.as_str()) {
         issues.push(issue(
             ISSUE_OWNER_MISMATCH,
@@ -294,6 +422,45 @@ fn validate_entry(
 
     validate_class_side_effect(entry, issues);
     validate_safe_fields(entry, issues);
+}
+
+fn validate_links(
+    entry: &InventoryEntry,
+    entry_by_path: &BTreeMap<String, &InventoryEntry>,
+    issues: &mut Vec<Issue>,
+) {
+    for dependency in &entry.depends_on {
+        let Some(target) = entry_by_path.get(dependency) else {
+            issues.push(issue(
+                ISSUE_UNKNOWN_DEPENDENCY,
+                &entry.export_path,
+                &format!("unknown dependency link: {dependency}"),
+            ));
+            continue;
+        };
+        if entry.class == CLASS_REUSABLE && is_ambient_dependency(target) {
+            issues.push(issue(
+                ISSUE_DEPENDENCY_DIRECTION,
+                &entry.export_path,
+                &format!("reusable contract depends on ambient authority export: {dependency}"),
+            ));
+        }
+    }
+
+    for composition_link in &entry.composes_with {
+        if entry_by_path.contains_key(composition_link) || contains(ALLOWED_FAMILIES, composition_link) {
+            continue;
+        }
+        issues.push(issue(
+            ISSUE_UNKNOWN_COMPOSITION_LINK,
+            &entry.export_path,
+            &format!("unknown composition link: {composition_link}"),
+        ));
+    }
+}
+
+fn is_ambient_dependency(entry: &InventoryEntry) -> bool {
+    entry.class == CLASS_SHELL || contains(AMBIENT_AUTHORITY_VALUES, &entry.required_authority)
 }
 
 fn validate_class_side_effect(entry: &InventoryEntry, issues: &mut Vec<Issue>) {
@@ -317,7 +484,11 @@ fn validate_class_side_effect(entry: &InventoryEntry, issues: &mut Vec<Issue>) {
     }
 
     if entry.class == CLASS_REUSABLE {
-        let searchable = format!("{} {}", entry.source, entry.review_note).to_ascii_lowercase();
+        let searchable = format!(
+            "{} {} {}",
+            entry.source, entry.review_note, entry.required_authority
+        )
+        .to_ascii_lowercase();
         for marker in AMBIENT_AUTHORITY_MARKERS {
             if searchable.contains(&marker.to_ascii_lowercase()) {
                 issues.push(issue(
@@ -327,26 +498,43 @@ fn validate_class_side_effect(entry: &InventoryEntry, issues: &mut Vec<Issue>) {
                 ));
             }
         }
+        if entry.required_authority != AUTHORITY_NONE {
+            issues.push(issue(
+                ISSUE_REUSABLE_AMBIENT_AUTHORITY,
+                &entry.export_path,
+                "reusable contract must not require host authority",
+            ));
+        }
     }
 }
 
 fn validate_safe_fields(entry: &InventoryEntry, issues: &mut Vec<Issue>) {
-    let fields = [
+    let scalar_fields = [
         entry.export_path.as_str(),
         entry.owning_crate.as_str(),
         entry.source.as_str(),
         entry.review_note.as_str(),
+        entry.feature_gate.as_str(),
+        entry.required_authority.as_str(),
+        entry.capability_family.as_str(),
     ];
-    for field in fields {
-        let lower = field.to_ascii_lowercase();
-        for marker in UNSAFE_FIELD_MARKERS {
-            if lower.contains(&marker.to_ascii_lowercase()) {
-                issues.push(issue(
-                    ISSUE_UNSAFE_EVIDENCE_FIELD,
-                    &entry.export_path,
-                    &format!("inventory field contains unsafe evidence marker: {marker}"),
-                ));
-            }
+    for field in scalar_fields {
+        validate_safe_field(entry, field, issues);
+    }
+    for field in entry.depends_on.iter().chain(entry.composes_with.iter()) {
+        validate_safe_field(entry, field, issues);
+    }
+}
+
+fn validate_safe_field(entry: &InventoryEntry, field: &str, issues: &mut Vec<Issue>) {
+    let lower = field.to_ascii_lowercase();
+    for marker in UNSAFE_FIELD_MARKERS {
+        if lower.contains(&marker.to_ascii_lowercase()) {
+            issues.push(issue(
+                ISSUE_UNSAFE_EVIDENCE_FIELD,
+                &entry.export_path,
+                &format!("inventory field contains unsafe evidence marker: {marker}"),
+            ));
         }
     }
 }
@@ -357,11 +545,11 @@ fn owner_from_export(export_path: &str) -> Option<&str> {
 
 fn discover_public_exports(root: &Path) -> Result<BTreeSet<String>, String> {
     let mut exports = BTreeSet::new();
-    for (crate_name, relative_path) in CRATE_LIBS {
+    for (crate_name, relative_path) in PUBLIC_EXPORT_SOURCES {
         let path = root.join(relative_path);
         let text = fs::read_to_string(&path)
             .map_err(|error| format!("failed to read {}: {error}", path.display()))?;
-        collect_exports_from_lib(crate_name, &text, &mut exports);
+        collect_exports_from_source(crate_name, &text, &mut exports);
     }
     Ok(exports)
 }
@@ -383,7 +571,7 @@ fn read_public_exports(path: &Path) -> Result<BTreeSet<String>, String> {
     Ok(exports)
 }
 
-fn collect_exports_from_lib(crate_name: &str, text: &str, exports: &mut BTreeSet<String>) {
+fn collect_exports_from_source(crate_name: &str, text: &str, exports: &mut BTreeSet<String>) {
     let mut pending_pub_use = String::new();
     let mut collecting_pub_use = false;
 
@@ -453,7 +641,7 @@ fn collect_pub_use_exports(crate_name: &str, statement: &str, exports: &mut BTre
 
 fn normalized_export_name(raw: &str) -> Option<String> {
     let trimmed = raw.trim();
-    if trimmed.is_empty() {
+    if trimmed.is_empty() || trimmed == "*" {
         return None;
     }
     let alias_or_name = trimmed.split(" as ").nth(1).unwrap_or(trimmed).trim();
@@ -474,13 +662,23 @@ fn leading_identifier(text: &str) -> Option<&str> {
 fn print_report(entries: &[InventoryEntry], public_exports: &BTreeSet<String>, issues: &[Issue]) {
     println!("runtime facade inventory entries: {}", entries.len());
     println!("runtime-facing public exports: {}", public_exports.len());
-    let mut class_counts: BTreeMap<&str, usize> = BTreeMap::new();
-    for entry in entries {
-        *class_counts.entry(entry.class.as_str()).or_default() += 1;
-    }
-    for (class, count) in class_counts {
-        println!("class {class}: {count}");
-    }
+    print_counts("class", entries.iter().map(|entry| entry.class.as_str()));
+    print_counts(
+        "feature",
+        entries.iter().map(|entry| entry.feature_gate.as_str()),
+    );
+    print_counts(
+        "authority",
+        entries.iter().map(|entry| entry.required_authority.as_str()),
+    );
+    print_counts(
+        "family",
+        entries.iter().map(|entry| entry.capability_family.as_str()),
+    );
+    let dependency_count: usize = entries.iter().map(|entry| entry.depends_on.len()).sum();
+    let composition_count: usize = entries.iter().map(|entry| entry.composes_with.len()).sum();
+    println!("dependency links: {dependency_count}");
+    println!("composition links: {composition_count}");
     if issues.is_empty() {
         println!("runtime facade inventory: ok");
         return;
@@ -488,6 +686,20 @@ fn print_report(entries: &[InventoryEntry], public_exports: &BTreeSet<String>, i
     for issue in issues {
         println!("ERROR {} {} -- {}", issue.code, issue.subject, issue.detail);
     }
+}
+
+fn print_counts<'a>(label: &str, values: impl Iterator<Item = &'a str>) {
+    let mut counts: BTreeMap<&str, usize> = BTreeMap::new();
+    for value in values {
+        *counts.entry(value).or_default() += 1;
+    }
+    for (value, count) in counts {
+        println!("{label} {value}: {count}");
+    }
+}
+
+fn contains(values: &[&str], candidate: &str) -> bool {
+    values.contains(&candidate)
 }
 
 fn issue(code: &'static str, subject: &str, detail: &str) -> Issue {

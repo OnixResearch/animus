@@ -18,8 +18,8 @@ in
     std.string.join
       "\n"
       [
-        "entry|animus-core::Intent|animus-core|crates/animus-core/src/lib.rs|reusable-contract|none|stable|validated intent DTO",
-        "entry|animus-adapters::ModelAdapter|animus-adapters|crates/animus-adapters/src/lib.rs|host-injection-surface|injected-only|stable|model port trait",
-        "entry|animus-std::run|animus-std|crates/animus-std/src/lib.rs|shell-adapter|shell-owned|stable|std shell runner",
+        "entry|animus-core::Intent|animus-core|crates/animus-core/src/lib.rs|reusable-contract|none|stable|validated intent DTO|compat|none|||compatibility",
+        "entry|animus-adapters::ModelAdapter|animus-adapters|crates/animus-adapters/src/lib.rs|host-injection-surface|injected-only|stable|model port trait|compat|injected-only|||tool",
+        "entry|animus-std::run|animus-std|crates/animus-std/src/lib.rs|shell-adapter|shell-owned|stable|std shell runner|compat|shell-owned|||compatibility",
       ],
 } | Fixture

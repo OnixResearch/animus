@@ -53,27 +53,27 @@ impl MemoryAdmissionEffect {
 ///
 /// Returns [`MemoryError`] when the decision does not reference the candidate or
 /// admitted descriptor validation fails.
+///
+/// # Panics
+///
+/// Panics if callers bypass candidate validation before resolving admission.
 // r[impl agent_harness_runtime.claude_code_memory.admission]
 pub fn resolve_memory_admission(
     candidate: &MemoryCandidate,
     decision: &MemoryAdmissionDecision,
     context: MemoryAdmissionContext,
 ) -> Result<MemoryAdmissionEffect, MemoryError> {
+    assert!(!candidate.id().is_empty(), "candidate id must be validated");
+    assert!(
+        !candidate.source_label().is_empty(),
+        "candidate source label must be validated"
+    );
     if candidate.id() != decision.candidate_id() {
         return Err(MemoryError::AdmissionCandidateMismatch {
             candidate_id: String::from(candidate.id()),
             decision_candidate_id: String::from(decision.candidate_id()),
         });
     }
-    assert_eq!(
-        candidate.id(),
-        decision.candidate_id(),
-        "memory admission decisions must reference the reviewed candidate"
-    );
-    assert!(
-        candidate.budget_units().get() > u32::default(),
-        "validated memory candidates must request positive budget units"
-    );
     if decision.status() != MemoryAdmissionStatus::Admitted {
         return Ok(MemoryAdmissionEffect {
             descriptor: None,

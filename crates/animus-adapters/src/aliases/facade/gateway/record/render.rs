@@ -1,11 +1,13 @@
 const RECEIPT_FIELD_SEPARATOR: char = '\n';
 const RECEIPT_KEY_SEPARATOR: &str = "=";
 
+#[derive(Clone, Copy)]
 pub(super) struct LabelPayload<'a> {
     pub(super) label: &'a str,
     pub(super) value: &'a str,
 }
 
+#[derive(Clone, Copy)]
 struct Field<'a> {
     key: &'a str,
     value: &'a str,

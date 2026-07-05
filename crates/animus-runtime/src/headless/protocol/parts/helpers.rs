@@ -18,22 +18,22 @@ pub fn map_runtime_events_to_headless(
 }
 
 fn index_to_sequence(index: usize) -> Result<u64, HeadlessProtocolError> {
-    let shifted = index
-        .checked_add(super::MIN_EVENT_SEQUENCE as usize)
+    let index_value = u64::try_from(index).map_err(|_overflow| {
+        HeadlessProtocolError::new(
+            None,
+            HeadlessProtocolErrorKind::RuntimeFailure,
+            EVENT_SEQUENCE_FIELD,
+        )
+    })?;
+    index_value
+        .checked_add(super::MIN_EVENT_SEQUENCE)
         .ok_or_else(|| {
             HeadlessProtocolError::new(
                 None,
                 HeadlessProtocolErrorKind::RuntimeFailure,
                 EVENT_SEQUENCE_FIELD,
             )
-        })?;
-    u64::try_from(shifted).map_err(|_overflow| {
-        HeadlessProtocolError::new(
-            None,
-            HeadlessProtocolErrorKind::RuntimeFailure,
-            EVENT_SEQUENCE_FIELD,
-        )
-    })
+        })
 }
 
 fn rejected_from_error(error: HeadlessProtocolError) -> HeadlessResponse {

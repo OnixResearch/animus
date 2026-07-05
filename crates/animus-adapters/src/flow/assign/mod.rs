@@ -1,3 +1,5 @@
+#![allow(non_trait_imports)]
+
 const TEMPLATE_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("recipe_template");
 const TEMPLATE_VARIABLE_FIELD: crate::validation::FieldName =

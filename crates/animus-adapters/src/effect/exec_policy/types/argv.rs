@@ -67,10 +67,6 @@ pub(super) fn validate_words(
     field: crate::validation::FieldName,
     words: &[&str],
 ) -> Result<super::super::Collection<super::super::Text>, super::super::Error> {
-    assert!(
-        super::super::MAX_COMMAND_WORDS > 0,
-        "command word bound must be positive"
-    );
     assert!(!field.as_str().is_empty(), "field name must not be empty");
     if words.is_empty() {
         return Err(crate::AdapterContractError::EmptyCollection {
@@ -85,6 +81,10 @@ pub(super) fn validate_words(
             actual_items: words.len(),
         });
     }
+    assert!(
+        words.len() <= super::super::MAX_COMMAND_WORDS,
+        "command word bound is enforced"
+    );
     let mut normalized = super::super::Collection::with_capacity(words.len());
     for word in words {
         normalized.push(super::super::normalized_text(field, word)?);

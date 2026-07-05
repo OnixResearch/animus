@@ -4,6 +4,7 @@ mod dialog;
 mod evidence;
 mod fault;
 mod flow;
+mod kernel;
 mod rule;
 
 #[cfg(test)]
@@ -14,6 +15,14 @@ pub use evidence::{Receipt, ReceiptDraft, ReceiptLeak, validate_text};
 pub use fault::Error;
 pub use flow::{
     DecisionReason, DecisionStatus, PromptStatus, Resolution, ResolutionRequest, resolve,
+};
+pub use kernel::{
+    KernelReceipt, KernelReceiptDraft, ModeDefaultReason, ModeDefaultRequest,
+    ModeDefaultResolution, PatternMatchKind, PatternRule, PatternRuleDraft, PermissionMode,
+    RepeatedActionInput, RepeatedActionPolicy, RepeatedActionResolution, RepeatedActionStatus,
+    SessionAllowlistEntry, SessionAllowlistEntryDraft, SessionAllowlistStatus,
+    SessionAllowlistValidation, detect_repeated_action, resolve_mode_default,
+    validate_session_allowlist,
 };
 pub use rule::{Outcome, Policy, PolicyDraft, PromptSummaryPolicy, TrustScope, TrustStatus};
 
@@ -34,6 +43,10 @@ pub(super) const TRUST_STATUS_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("permission_trust_status");
 pub(super) const PROMPT_POLICY_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("permission_prompt_summary_policy");
+pub(super) const PATTERN_MATCH_KIND_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("permission_pattern_match_kind");
+pub(super) const PATTERN_RESOURCE_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("permission_pattern_resource");
 pub(super) const PROMPT_SUMMARY_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("permission_prompt_summary");
 pub(super) const SESSION_FIELD: crate::validation::FieldName =

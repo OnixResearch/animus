@@ -55,7 +55,7 @@
         }
     }
 
-    fn receipt<'a>(plan: &'a RestorePlan, fixture: ReceiptLeakFixture) -> RestoreReceiptDraft<'a> {
+    fn receipt(plan: &RestorePlan, fixture: ReceiptLeakFixture) -> RestoreReceiptDraft<'_> {
         RestoreReceiptDraft {
             plan,
             raw_history: fixture.raw_history,

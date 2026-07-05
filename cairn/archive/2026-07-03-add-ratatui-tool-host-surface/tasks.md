@@ -1,0 +1,17 @@
+# Tasks
+
+- [x] [serial] Define the optional TUI host dependency boundary and document that Ratatui/Crossterm types stay out of reusable Animus crates and default tool contracts. r[agent_harness_runtime.ratatui_tool_host.boundary]
+- [x] [depends:boundary] Add a dependency or marker rail proving reusable crates remain terminal-free when a Ratatui-compatible host exists. r[agent_harness_runtime.ratatui_tool_host.boundary.terminal_free]
+- [x] [depends:boundary] Wire the optional TUI crate to the Rats workspace through an SSH-authenticated, revision-pinned Cargo Git dependency while keeping Rats types host-only. r[agent_harness_runtime.ratatui_tool_host.rats_dependency]
+- [x] [depends:rats_dependency] Add dependency-graph or manifest tests proving Rats resolves only for the TUI crate and uses `ssh://git@github.com/brittonr/rats.git` with a concrete revision. r[agent_harness_runtime.ratatui_tool_host.rats_dependency.host_only]
+- [x] [serial] Define UI-neutral tool host DTOs and traits for lifecycle events, progress, bounded output, approval requests, cancellation notices, final results, and failure classes. r[agent_harness_runtime.ratatui_tool_host.bridge]
+- [x] [depends:bridge] Add fake-host positive tests proving tool progress updates a host render model without direct terminal drawing. r[agent_harness_runtime.ratatui_tool_host.bridge.progress]
+- [x] [serial] Add hosted execution integration that wraps validated `ToolRequest` and `ToolResponse` values while preserving the existing simple `ToolAdapter` path. r[agent_harness_runtime.ratatui_tool_host.adapter_compat]
+- [x] [depends:adapter_compat] Add compatibility tests proving noninteractive tools run in headless or test hosts without TUI services. r[agent_harness_runtime.ratatui_tool_host.adapter_compat.simple]
+- [x] [serial] Add finite interactive command choices with correlation identities for approval, denial, continue, and cancellation decisions. r[agent_harness_runtime.ratatui_tool_host.commands]
+- [x] [depends:commands] Add negative approval-denial tests proving guarded tool actions do not execute after denial. r[agent_harness_runtime.ratatui_tool_host.commands.denied]
+- [x] [serial] Implement a pure TUI render reducer that derives visible tool/session state from typed runtime and tool-host events. r[agent_harness_runtime.ratatui_tool_host.render_model]
+- [x] [depends:render_model] Add Ratatui test-backend or equivalent snapshot tests for session summary, active tool state, approval prompts, progress, final results, and failure states. r[agent_harness_runtime.ratatui_tool_host.render_model.test_backend]
+- [x] [serial] Isolate terminal setup failures, render errors, dropped event consumers, closed command channels, and cancellations as typed host errors or cancellation events. r[agent_harness_runtime.ratatui_tool_host.failure_isolation]
+- [x] [depends:failure_isolation] Add negative tests for dropped consumers and closed command channels proving pending guarded actions fail closed. r[agent_harness_runtime.ratatui_tool_host.failure_isolation.dropped_consumer]
+- [x] [depends:boundary.terminal_free,rats_dependency.host_only,bridge.progress,adapter_compat.simple,commands.denied,render_model.test_backend,failure_isolation.dropped_consumer] Run focused bridge/render tests, dependency-isolation checks, workspace checks, Cairn validation, and Cairn gates with reviewable evidence. r[agent_harness_runtime.ratatui_tool_host.verification]

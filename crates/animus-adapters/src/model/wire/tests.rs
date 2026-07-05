@@ -27,6 +27,10 @@ fn frames_preserve_order_and_visible_final_text() {
 
     assert_eq!(response.message(), "Hello");
     assert_eq!(
+        super::types::Frame::contract_identity(),
+        super::MODEL_STREAM_FRAME_CONTRACT_IDENTITY
+    );
+    assert_eq!(
         frames[THOUGHT_FRAME_INDEX].visibility(),
         super::parts::Visibility::Redacted
     );

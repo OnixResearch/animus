@@ -175,6 +175,9 @@ impl RuntimeProjection {
             crate::RuntimeEvent::RuntimeStarted { summary }
             | crate::RuntimeEvent::LoopStarted { summary }
             | crate::RuntimeEvent::ContextReplayed { summary }
+            | crate::RuntimeEvent::AdapterOutcomeClassified {
+                message: summary, ..
+            }
             | crate::RuntimeEvent::AdapterError {
                 message: summary, ..
             }

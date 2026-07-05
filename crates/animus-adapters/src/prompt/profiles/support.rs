@@ -135,6 +135,7 @@ pub(super) fn hash_parts(parts: &[&str]) -> Text {
     rendered
 }
 
+#[derive(Clone, Copy)]
 pub(super) struct BodyHashInput<'a> {
     pub(super) profile_id: &'a str,
     pub(super) source_identity: &'a str,
@@ -150,9 +151,6 @@ pub(super) fn profile_body_hash(input: BodyHashInput<'_>) -> Text {
     ])
 }
 
-pub(super) fn count_to_u32(value: usize) -> u32 {
-    match u32::try_from(value) {
-        Ok(count) => count,
-        Err(_overflow) => u32::MAX,
-    }
+pub(super) fn count_to_u64(value: usize) -> u64 {
+    value as u64
 }

@@ -11,15 +11,15 @@
 
 ## Verification evidence
 
-- Baseline lifecycle validation before edits: `nix run path:/home/brittonr/git/animus#cairn -- validate --root /home/brittonr/git/animus` passed with `valid: true`.
+- Baseline lifecycle validation before edits: `nix run .#cairn -- validate --root .` passed with `valid: true`.
 - Baseline Cairn gates before implementation: `gate proposal`, `gate design`, and `gate tasks` for `evaluate-clankers-tool-catalog-packs` passed.
-- Focused rail: `nix develop -c scripts/cairn/check-tool-catalog --root /home/brittonr/git/animus` passed and wrote `target/cairn/focused-rails/tool-catalog.md`.
+- Focused rail: `nix develop -c scripts/cairn/check-tool-catalog --root .` passed and wrote `target/cairn/focused-rails/tool-catalog.md`.
 - Workspace dependency check: `nix develop -c cargo check --workspace --all-targets --locked` passed.
 - Cairn closeout checks after implementation: `validate`, `gate proposal`, `gate design`, and `gate tasks` passed.
-- Sync dry-run: `nix run path:/home/brittonr/git/animus#cairn -- sync evaluate-clankers-tool-catalog-packs --root /home/brittonr/git/animus` was unblocked with one `sync_delta_spec` action.
-- Sync execute: `nix run path:/home/brittonr/git/animus#cairn -- sync evaluate-clankers-tool-catalog-packs --root /home/brittonr/git/animus --execute` completed; accepted spec content required manual promotion because before/after hashes were unchanged.
-- Validation after spec promotion: `nix run path:/home/brittonr/git/animus#cairn -- validate --root /home/brittonr/git/animus` passed with `valid: true`.
-- Task gate after spec promotion: `nix run path:/home/brittonr/git/animus#cairn -- gate tasks evaluate-clankers-tool-catalog-packs --root /home/brittonr/git/animus` passed.
+- Sync dry-run: `nix run .#cairn -- sync evaluate-clankers-tool-catalog-packs --root .` was unblocked with one `sync_delta_spec` action.
+- Sync execute: `nix run .#cairn -- sync evaluate-clankers-tool-catalog-packs --root . --execute` completed; accepted spec content required manual promotion because before/after hashes were unchanged.
+- Validation after spec promotion: `nix run .#cairn -- validate --root .` passed with `valid: true`.
+- Task gate after spec promotion: `nix run .#cairn -- gate tasks evaluate-clankers-tool-catalog-packs --root .` passed.
 
 ## Non-claims
 

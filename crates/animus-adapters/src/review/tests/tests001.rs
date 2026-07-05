@@ -9,6 +9,7 @@ const TWO_FINDING_COUNT: usize = 2;
 const THREE_RECORD_COUNT: usize = 3;
 const ZERO_COUNT: usize = 0;
 
+#[derive(Clone, Copy)]
 struct RecordInput<'a> {
     markdown: &'a str,
     sequence: &'a str,

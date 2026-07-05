@@ -2,6 +2,10 @@
 ///
 /// # Errors
 /// Returns [`MemoryError`] when the record count exceeds the memory bound.
+///
+/// # Panics
+///
+/// Panics if callers bypass budget or policy validation before planning injection.
 // r[impl agent_harness_runtime.openai_codex_opt_in_memories.injection_ledger]
 pub fn plan_opt_in_memory_injection(
     records: &[OptInMemoryRecord],
@@ -15,8 +19,12 @@ pub fn plan_opt_in_memory_injection(
             actual_items: records.len(),
         });
     }
-    assert!(records.len() <= MAX_MEMORY_DESCRIPTORS);
-    assert!(budget.units().get() > u32::default());
+    assert!(records.len() <= MAX_MEMORY_DESCRIPTORS, "record bound is enforced");
+    assert!(budget.units().get() > u32::default(), "budget must be validated");
+    assert!(
+        !policy.policy_hash().as_str().is_empty(),
+        "memory policy hash must be validated"
+    );
     let mut ordered: Vec<&OptInMemoryRecord> = records.iter().collect();
     ordered.sort_by(|left, right| compare_opt_in_records(left, right));
     let mut used_units = u32::default();

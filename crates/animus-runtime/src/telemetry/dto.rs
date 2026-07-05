@@ -100,6 +100,15 @@ pub enum RuntimeEvent {
         /// Configured maximum number of fabric turns.
         max_turns: usize,
     },
+    /// A typed adapter outcome failed closed before completion.
+    AdapterOutcomeClassified {
+        /// Adapter component that failed closed.
+        component: super::AdapterComponent,
+        /// Stable fail-closed class.
+        class: animus_adapters::AdapterCallFailureClass,
+        /// Bounded safe outcome message.
+        message: String,
+    },
     /// An adapter returned an error and the runtime halted.
     AdapterError {
         /// Adapter component that failed.
@@ -203,6 +212,9 @@ impl RuntimeEvent {
             Self::FinalResponse { .. } => super::RuntimeEventKind::FinalResponse,
             Self::Stopped => super::RuntimeEventKind::Stopped,
             Self::MaxTurnsExceeded { .. } => super::RuntimeEventKind::MaxTurnsExceeded,
+            Self::AdapterOutcomeClassified { .. } => {
+                super::RuntimeEventKind::AdapterOutcomeClassified
+            }
             Self::AdapterError { .. } => super::RuntimeEventKind::AdapterError,
             Self::FabricError { .. } => super::RuntimeEventKind::FabricError,
             Self::HookBlocked { .. } => super::RuntimeEventKind::HookBlocked,

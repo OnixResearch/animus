@@ -84,7 +84,7 @@ fn send_input_requires_advertised_capability_and_safe_hash() {
         kind: QueueInteractionKind::SendInput,
         task_id: TASK_ID,
         timeout_policy: TIMEOUT_POLICY,
-        capabilities: QueueCapabilities::new(true, true, true, true),
+        capabilities: QueueCapabilities::all(),
         input_hash: Some(SAFE_HASH),
     })
     .expect("send-input with capability and hash should validate");
@@ -106,7 +106,7 @@ fn unsupported_send_input_fails_without_backend_fallback() {
         kind: QueueInteractionKind::SendInput,
         task_id: TASK_ID,
         timeout_policy: TIMEOUT_POLICY,
-        capabilities: QueueCapabilities::new(true, true, true, false),
+        capabilities: QueueCapabilities::wait_stream_poll(),
         input_hash: Some(SAFE_HASH),
     })
     .expect_err("unsupported send-input should fail closed");
@@ -125,7 +125,7 @@ fn send_input_omitting_hash_is_rejected() {
         kind: QueueInteractionKind::SendInput,
         task_id: TASK_ID,
         timeout_policy: TIMEOUT_POLICY,
-        capabilities: QueueCapabilities::new(true, true, true, true),
+        capabilities: QueueCapabilities::all(),
         input_hash: None,
     })
     .expect_err("send-input cannot carry raw input or omit identity hash");

@@ -1,4 +1,7 @@
-use super::*;
+use super::{
+    CAPABILITY_FIELD, CapabilitySetCheck, Collection, SubagentError, Text, contains_all,
+    text_collection,
+};
 
 /// Capability intersection input for a subagent request.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -55,6 +58,11 @@ impl SubagentCapabilityResolution {
 /// # Errors
 ///
 /// Returns [`SubagentError`] when a capability label is malformed or duplicated.
+///
+/// # Panics
+///
+/// Panics if normalized required capability requests become empty after passing
+/// required collection validation.
 pub fn resolve_subagent_capabilities(
     input: SubagentCapabilityInput<'_>,
 ) -> Result<SubagentCapabilityResolution, SubagentError> {
@@ -72,13 +80,13 @@ pub fn resolve_subagent_capabilities(
     let mut effective = Collection::with_capacity(request_count);
     let mut denied = Collection::with_capacity(request_count);
     for capability in request {
-        if contains_all(
-            capability.as_str(),
-            &parent_policy,
-            &recipe_or_profile,
-            &workspace_scope,
-            &host_admission,
-        ) {
+        if contains_all(CapabilitySetCheck {
+            capability: capability.as_str(),
+            parent_policy: &parent_policy,
+            recipe_or_profile: &recipe_or_profile,
+            workspace_scope: &workspace_scope,
+            host_admission: &host_admission,
+        }) {
             effective.push(capability);
         } else {
             denied.push(SubagentCapabilityDenial { capability });

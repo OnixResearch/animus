@@ -1,0 +1,13 @@
+# Tasks
+
+- [x] [serial] Define typed multimodal content-part DTOs for text and image inputs with safe labels, media type, byte count, BLAKE3 identity, source trust metadata, and optional host-supplied image metadata. r[agent_harness_runtime.multimodal_image_payloads.typed_parts]
+- [x] [depends:typed_parts] Add positive text+image DTO validation tests and negative malformed media type, missing identity/count, raw-bytes, base64, data-URL, and absolute-path descriptor tests. r[agent_harness_runtime.multimodal_image_payloads.typed_parts.validation]
+- [x] [serial] Extend prompt/model request assembly to preserve ordered text and image parts after policy admission and deterministic budget decisions. r[agent_harness_runtime.multimodal_image_payloads.prompt_assembly]
+- [x] [depends:prompt_assembly] Add ordering, rejection, and no-silent-drop tests for mixed text/image prompts and oversized image descriptors. r[agent_harness_runtime.multimodal_image_payloads.prompt_assembly.order]
+- [x] [serial] Gate image dispatch on provider/model input-modality metadata from the provider registry or selected model capabilities. r[agent_harness_runtime.multimodal_image_payloads.capability_gate]
+- [x] [depends:capability_gate] Add negative unsupported-model and unavailable-adapter tests proving image parts fail closed without provider fallback or text-only downgrade. r[agent_harness_runtime.multimodal_image_payloads.capability_gate.unsupported]
+- [x] [serial] Define host-injected image payload service and provider-native serialization fixture contracts for approved image bytes or provider-ready handles. r[agent_harness_runtime.multimodal_image_payloads.adapter_serialization]
+- [x] [depends:adapter_serialization] Add positive provider-native request fixtures and negative lossy generic-conversion, missing-service, invalid-handle, and live-call-required tests. r[agent_harness_runtime.multimodal_image_payloads.adapter_serialization.fixtures]
+- [x] [serial] Define safe receipt and session-ledger metadata for multimodal image outcomes. r[agent_harness_runtime.multimodal_image_payloads.safe_receipts]
+- [x] [depends:safe_receipts] Add leak fixtures for raw image bytes, base64/data URLs, full private paths, credentials, and unbounded provider payloads. r[agent_harness_runtime.multimodal_image_payloads.safe_receipts.rejects_leaks]
+- [x] [depends:typed_parts.validation,prompt_assembly.order,capability_gate.unsupported,adapter_serialization.fixtures,safe_receipts.rejects_leaks] Update docs and run focused multimodal tests, workspace checks, Cairn validation, and Cairn gates with reviewable evidence. r[agent_harness_runtime.multimodal_image_payloads.verification]

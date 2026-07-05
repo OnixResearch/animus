@@ -59,7 +59,7 @@ pub struct Receipt {
     plan_hash: super::Text,
     spans: super::Collection<SpanMetadata>,
     diagnostics: super::Collection<super::Text>,
-    receipt_hash: super::Text,
+    hash: super::Text,
 }
 
 impl Receipt {
@@ -94,7 +94,7 @@ impl Receipt {
             plan_hash: super::Text::from(draft.plan.plan_hash()),
             spans,
             diagnostics,
-            receipt_hash,
+            hash: receipt_hash,
         })
     }
 
@@ -149,7 +149,7 @@ impl Receipt {
     /// Returns the BLAKE3 hash of safe receipt fields.
     #[must_use]
     pub fn receipt_hash(&self) -> &str {
-        self.receipt_hash.as_str()
+        self.hash.as_str()
     }
 }
 

@@ -122,15 +122,19 @@ impl HostWaitOutcome {
 }
 
 /// Resolves a wait request over in-memory events.
+///
+/// # Panics
+///
+/// Panics if callers bypass wait-request validation before resolution.
 #[must_use]
 pub fn resolve_host_wait(request: &HostWaitRequest, events: &[HostEvent]) -> HostWaitOutcome {
     assert!(
         !request.correlation_id.is_empty(),
-        "validated wait correlation id is non-empty"
+        "wait correlation must be validated"
     );
     assert!(
-        !request.selector.resource_id.is_empty(),
-        "validated wait selector resource id is non-empty"
+        request.timeout_ticks > NO_TIMEOUT_TICKS,
+        "wait timeout must be finite"
     );
     for event in events {
         if event.correlation_id != request.correlation_id

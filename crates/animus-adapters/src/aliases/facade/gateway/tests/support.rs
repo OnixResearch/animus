@@ -78,9 +78,9 @@ pub(super) fn draft<'a>(
     }
 }
 
-pub(super) fn credential<'a>(
-    fixture: CredentialFixture<'a>,
-) -> super::super::CredentialEvidenceDraft<'a> {
+pub(super) fn credential(
+    fixture: CredentialFixture<'_>,
+) -> super::super::CredentialEvidenceDraft<'_> {
     super::super::CredentialEvidenceDraft {
         audience: fixture.audience,
         actor: ACTOR,

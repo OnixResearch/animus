@@ -16,6 +16,6 @@ in
     std.string.join
       "\n"
       [
-        "entry|animus-core::ReadCredential|animus-core|crates/animus-core/src/lib.rs|reusable-contract|none|stable|credential reader example",
+        "entry|animus-core::ReadCredential|animus-core|crates/animus-core/src/lib.rs|reusable-contract|none|stable|credential reader example|compat|none|||compatibility",
       ],
 } | Fixture

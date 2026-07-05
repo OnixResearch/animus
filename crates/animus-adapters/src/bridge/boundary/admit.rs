@@ -1,4 +1,4 @@
-use super::*;
+use super::McpDescriptor;
 
 // r[impl agent_harness_runtime.claude_code_mcp.scope]
 /// Trust state supplied by a host before MCP tools become model-visible.

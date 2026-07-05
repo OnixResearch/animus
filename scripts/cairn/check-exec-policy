@@ -1,0 +1,74 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+readonly RAIL_NAME=exec-policy
+readonly RECEIPT_SCHEMA=animus.focused-rail.v1
+readonly RECEIPT_DIR=target/cairn/focused-rails
+readonly POLICY_SOURCE=policy/exec-policy/policy.ncl
+readonly POLICY_GENERATED=policy/exec-policy/generated/exec-policy.json
+readonly POLICY_FIELD=exec_policy
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+
+if [ "${1:-}" = "--root" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  repo_root=$(CDPATH= cd -- "$2" && pwd)
+fi
+
+if ! command -v cargo >/dev/null 2>&1; then
+  printf '%s\n' 'error: cargo is required. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+
+if ! command -v nickel >/dev/null 2>&1; then
+  printf '%s\n' 'error: nickel is required. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+
+cd "${repo_root}"
+
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/animus-exec-policy.XXXXXX")
+trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
+
+nickel export --format json --field "${POLICY_FIELD}" "${POLICY_SOURCE}" > "${tmp_dir}/exec-policy.json"
+diff -u "${POLICY_GENERATED}" "${tmp_dir}/exec-policy.json"
+
+cargo test -p animus-adapters --locked exec_policy
+cargo test -p animus-runtime --locked sandbox_escalation
+cargo test -p animus-preserves --locked sandbox_escalation
+
+mkdir -p "${RECEIPT_DIR}"
+receipt_path=${RECEIPT_DIR}/${RAIL_NAME}.md
+cat > "${receipt_path}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+boundary: Nickel-authored exec policy fixtures, pure prefix-rule evaluation, conservative shell splitting, and sandbox escalation telemetry
+policy_source: ${POLICY_SOURCE}
+policy_export: checked
+positive_fixtures:
+- Nickel exec_policy export matches checked generated JSON
+- valid allow, prompt, and forbid rules carry positive and negative examples
+- most restrictive matching decision wins with matched rule evidence
+- simple shell chains split into separately evaluated command fingerprints
+- runtime sandbox escalation events record allow, prompt, and forbid outcomes
+- Preserves runtime-event envelopes round-trip sandbox escalation events with hash-only evidence
+negative_fixtures:
+- empty prefixes, empty examples, unsupported decisions, positive mismatches, and negative matches fail validation
+- unsupported shell syntax is opaque and forbidden by default
+- Preserves rejects malformed command fingerprints and unknown redaction markers
+- unmatched sandbox escalation fails closed
+safe_evidence:
+- command bodies are represented by BLAKE3 fingerprints only
+- sandbox events record rule identities, decision labels, sandbox labels, and redaction marker only
+non_claims:
+- this rail does not add a concrete process executor or OS sandbox implementation
+EOF
+
+printf 'focused rail %s: pass\n' "${RAIL_NAME}"
+printf 'receipt: %s\n' "${receipt_path}"

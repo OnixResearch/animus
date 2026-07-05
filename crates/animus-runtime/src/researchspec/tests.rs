@@ -18,20 +18,6 @@
     raw_arithmetic_overflow,
     unbounded_collection_growth
 )]
-#![allow(
-    ambiguous_params,
-    assertion_density,
-    bool_naming,
-    borrowed_argument_types,
-    compound_condition,
-    excessive_file_length,
-    function_length,
-    non_trait_imports,
-    numeric_units,
-    path_segment_repetition,
-    raw_arithmetic_overflow,
-    unbounded_collection_growth
-)]
 
 use super::*;
 
@@ -166,13 +152,7 @@ fn vague_hypothesis_is_rejected_with_actionable_diagnostic() {
 fn failed_run_requires_rollback_reason_and_next_action() {
     // r[verify agent_harness_runtime.hermes_researchspec.runs.failed_requires_context]
     let study = study();
-    let valid = run(
-        &study,
-        ResearchSpecRunStatus::Completed,
-        BETTER_METRIC,
-        Vec::new(),
-        guarded(GUARDED_LABEL),
-    );
+    let valid = run(&study, BETTER_METRIC, Vec::new(), guarded(GUARDED_LABEL));
     assert!(validate_research_run(&study, &valid).is_ok());
 
     let failed = ResearchSpecRunEvidence {
@@ -199,13 +179,7 @@ fn keep_gate_accepts_clean_improvement_and_blocks_suspicious_changes() {
     let study = study();
     let baseline = baseline(&study);
     let hypothesis = linked_hypothesis(ResearchSpecHypothesisDecision::Undecided);
-    let clean_run = run(
-        &study,
-        ResearchSpecRunStatus::Completed,
-        BETTER_METRIC,
-        Vec::new(),
-        guarded(GUARDED_LABEL),
-    );
+    let clean_run = run(&study, BETTER_METRIC, Vec::new(), guarded(GUARDED_LABEL));
 
     let decision = evaluate_research_keep_gate(&study, &baseline, &hypothesis, &clean_run);
     assert_eq!(decision.outcome, ResearchSpecKeepOutcome::Eligible);
@@ -255,7 +229,6 @@ fn keep_gate_honors_minimize_direction() {
     let hypothesis = linked_hypothesis(ResearchSpecHypothesisDecision::Undecided);
     let run = run(
         &study,
-        ResearchSpecRunStatus::Completed,
         MINIMIZE_BETTER_METRIC,
         Vec::new(),
         guarded(GUARDED_LABEL),
@@ -276,13 +249,7 @@ fn keep_gate_rejects_metric_regression() {
     let study = study();
     let baseline = baseline(&study);
     let hypothesis = linked_hypothesis(ResearchSpecHypothesisDecision::Undecided);
-    let regressed_run = run(
-        &study,
-        ResearchSpecRunStatus::Completed,
-        WORSE_METRIC,
-        Vec::new(),
-        guarded(GUARDED_LABEL),
-    );
+    let regressed_run = run(&study, WORSE_METRIC, Vec::new(), guarded(GUARDED_LABEL));
 
     let decision = evaluate_research_keep_gate(&study, &baseline, &hypothesis, &regressed_run);
 
@@ -338,13 +305,7 @@ fn archive_rejects_unresolved_hypotheses_runs_and_ideas() {
     let baseline = baseline(&study);
     let kept_run = ResearchSpecRunEvidence {
         status: ResearchSpecRunStatus::Kept,
-        ..run(
-            &study,
-            ResearchSpecRunStatus::Completed,
-            BETTER_METRIC,
-            Vec::new(),
-            guarded(GUARDED_LABEL),
-        )
+        ..run(&study, BETTER_METRIC, Vec::new(), guarded(GUARDED_LABEL))
     };
     let kept_hypothesis = linked_hypothesis(ResearchSpecHypothesisDecision::Kept);
     let valid_archive = archive(&study, &baseline, Some(RUN_ID), Vec::new());
@@ -352,7 +313,7 @@ fn archive_rejects_unresolved_hypotheses_runs_and_ideas() {
         validate_research_archive(
             &study,
             &[kept_hypothesis],
-            &[kept_run.clone()],
+            std::slice::from_ref(&kept_run),
             &valid_archive,
         )
         .is_ok()
@@ -485,7 +446,6 @@ fn promotion_group(
 
 fn run(
     study: &ResearchSpecStudyContract,
-    status: ResearchSpecRunStatus,
     primary_metric_value: i64,
     measurement_integrity_risks: Vec<ResearchSpecMeasurementRisk>,
     guarded_fingerprint: ResearchSpecGuardedFingerprint,
@@ -498,7 +458,7 @@ fn run(
         diff_fingerprint: fp(DIFF_LABEL),
         primary_metric: metric(PRIMARY_METRIC, primary_metric_value),
         secondary_metrics: Vec::new(),
-        status,
+        status: ResearchSpecRunStatus::Completed,
         checks: vec![passing_check()],
         changed_files: vec![CHANGED_FILE.to_string()],
         side_information: vec![SIDE_INFO.to_string()],

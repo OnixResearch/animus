@@ -11,10 +11,12 @@ fn request_accepts_empty_input() {
 
 #[test]
 fn request_accepts_valid_input() {
-    let request = Request::new(NAME, INPUT).expect("tool request should parse");
+    // r[verify agent_harness_runtime.boundary_versions.normalized_text.validation]
+    let request = Request::new(PADDED_NAME, INPUT).expect("tool request should parse");
 
     assert_eq!(request.name(), NAME);
     assert_eq!(request.input(), INPUT);
+    assert_eq!(Request::contract_identity(), TOOL_REQUEST_CONTRACT_IDENTITY);
 }
 
 #[test]
@@ -26,9 +28,14 @@ fn response_accepts_empty_output() {
 
 #[test]
 fn response_accepts_valid_output() {
+    // r[verify agent_harness_runtime.boundary_versions.contract_identities.validation]
     let response = Response::new(OUTPUT).expect("tool output should parse");
 
     assert_eq!(response.output(), OUTPUT);
+    assert_eq!(
+        Response::contract_identity(),
+        TOOL_RESPONSE_CONTRACT_IDENTITY
+    );
 }
 
 #[test]

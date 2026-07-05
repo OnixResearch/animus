@@ -153,7 +153,7 @@ impl super::ToolDescriptor {
     pub(super) fn capability_label_strs(&self) -> super::Collection<&str> {
         self.capability_labels
             .iter()
-            .map(|label| label.as_str())
+            .map(alloc::string::String::as_str)
             .collect()
     }
 }

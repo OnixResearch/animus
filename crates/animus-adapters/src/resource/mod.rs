@@ -6,6 +6,8 @@
 //! directories, installs packages, resolves symlinks, reads full bodies by
 //! ambient path, or executes extension code.
 
+#![allow(non_trait_imports)]
+
 mod catalog;
 mod fault;
 mod record;

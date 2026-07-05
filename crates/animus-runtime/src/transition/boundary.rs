@@ -1,6 +1,16 @@
 /// Adapter result normalized for pure transition handling.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum AdapterOutcome {
+    /// Model adapter returned a typed completed or fail-closed outcome.
+    ModelCall {
+        /// Typed model adapter-call envelope.
+        outcome: animus_adapters::AdapterCallOutcome<animus_adapters::ModelResponse>,
+    },
+    /// Tool adapter returned a typed completed or fail-closed outcome.
+    ToolCall {
+        /// Typed tool adapter-call envelope.
+        outcome: animus_adapters::AdapterCallOutcome<animus_adapters::ToolResponse>,
+    },
     /// Model adapter returned a validated response.
     ModelOk {
         /// Validated model response.
@@ -45,13 +55,59 @@ pub enum AdapterStep {
 /// Applies an adapter outcome to pure state.
 #[must_use]
 pub fn apply_adapter_outcome(state: super::TurnState, outcome: AdapterOutcome) -> AdapterStep {
+    // r[impl agent_harness_runtime.adapter_outcomes.runtime_mapping]
     match outcome {
+        AdapterOutcome::ModelCall { outcome } => model_call_outcome(state, outcome),
+        AdapterOutcome::ToolCall { outcome } => tool_call_outcome(state, outcome),
         AdapterOutcome::ModelOk { response } => model_success(state, response),
         AdapterOutcome::ToolOk { response } => tool_success(state, response),
         AdapterOutcome::Blocked { component, outcome } => {
             adapter_blocked(state, component, outcome)
         }
-        AdapterOutcome::Err { component, message } => adapter_failure(state, component, message),
+        AdapterOutcome::Err { component, message } => adapter_classified_failure(
+            state,
+            component,
+            animus_adapters::AdapterCallFailureClass::ExecutionFailure,
+            message,
+        ),
+    }
+}
+
+fn model_call_outcome(
+    state: super::TurnState,
+    outcome: animus_adapters::AdapterCallOutcome<animus_adapters::ModelResponse>,
+) -> AdapterStep {
+    match outcome {
+        animus_adapters::AdapterCallOutcome::Completed { response } => {
+            model_success(state, response)
+        }
+        animus_adapters::AdapterCallOutcome::Failed { class, metadata } => {
+            adapter_classified_failure(
+                state,
+                crate::AdapterComponent::Model,
+                class,
+                String::from(metadata.message()),
+            )
+        }
+    }
+}
+
+fn tool_call_outcome(
+    state: super::TurnState,
+    outcome: animus_adapters::AdapterCallOutcome<animus_adapters::ToolResponse>,
+) -> AdapterStep {
+    match outcome {
+        animus_adapters::AdapterCallOutcome::Completed { response } => {
+            tool_success(state, response)
+        }
+        animus_adapters::AdapterCallOutcome::Failed { class, metadata } => {
+            adapter_classified_failure(
+                state,
+                crate::AdapterComponent::Tool,
+                class,
+                String::from(metadata.message()),
+            )
+        }
     }
 }
 
@@ -84,14 +140,19 @@ fn adapter_blocked(
     component: crate::AdapterComponent,
     outcome: animus_adapters::OutcomeKind,
 ) -> AdapterStep {
-    adapter_failure(state, component, String::from(outcome.as_str()))
+    let class = animus_adapters::AdapterCallFailureClass::from_outcome_kind(outcome)
+        .unwrap_or(animus_adapters::AdapterCallFailureClass::ExecutionFailure);
+    adapter_classified_failure(state, component, class, String::from(outcome.as_str()))
 }
 
-fn adapter_failure(
+fn adapter_classified_failure(
     state: super::TurnState,
     component: crate::AdapterComponent,
+    class: animus_adapters::AdapterCallFailureClass,
     message: String,
 ) -> AdapterStep {
+    debug_assert!(!class.as_str().is_empty());
+    debug_assert!(!message.is_empty());
     let failure = match component {
         crate::AdapterComponent::Model => crate::RuntimeFailure::ModelAdapter {
             message: message.clone(),
@@ -100,7 +161,13 @@ fn adapter_failure(
             message: message.clone(),
         },
     };
-    let state = state.with_event(crate::RuntimeEvent::AdapterError { component, message });
+    let state = state
+        .with_event(crate::RuntimeEvent::AdapterOutcomeClassified {
+            component,
+            class,
+            message: message.clone(),
+        })
+        .with_event(crate::RuntimeEvent::AdapterError { component, message });
     AdapterStep::Complete {
         report: state.complete(crate::RuntimeStatus::Failed { failure }),
     }

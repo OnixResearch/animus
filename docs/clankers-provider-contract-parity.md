@@ -1,6 +1,6 @@
 # Clankers Provider Contract Parity Evaluation
 
-Animus should adopt Clankers-style provider/router parity rails only when Animus grows multiple provider or router request DTOs. Today Animus has a small model adapter contract plus shell-owned provider registry metadata, so this note records future adoption criteria without adding provider clients, routers, OAuth, credential lookup, network transport, or live provider checks.
+Animus adopts Clankers-style provider projection parity as reusable conformance fixtures, not as live provider clients. Animus has canonical model request/response contracts, a pure model dispatch plan, shell-owned provider registry metadata, and a provider-family projection conformance harness; it still does not add provider clients, routers, OAuth, credential lookup, network transport, or live provider checks.
 
 ## Source patterns evaluated
 
@@ -12,14 +12,20 @@ Reference material inspected in the sibling Clankers repo:
 
 ## Activation rule
 
-Provider parity rails activate when Animus has more than one provider request shape for the same dispatch path. Examples:
+Provider projection fixture rails are active for claimed provider families once a family/API style is named in the conformance index. Live provider/router rails activate when Animus has more than one concrete provider request shape for the same dispatch path. Examples:
 
 - an adapter DTO plus a routed provider DTO;
 - multiple provider-specific request DTOs;
 - a local provider path and a router/RPC provider path;
 - streaming provider backends with normalized event DTOs.
 
-Until then, provider registry work stays shell-owned and runtime dispatch consumes injected `ModelAdapter` services only.
+Until live provider/router DTOs exist, provider registry work stays shell-owned and runtime dispatch consumes injected `ModelAdapter` services only after `plan_model_dispatch` admits the selected capability, request contract, prompt budget, stream policy, receipt policy, cancellation/timeout posture, and deny-by-default fallback policy.
+
+## Current provider projection conformance rails
+
+The reusable fixture harness lives in `crates/animus-adapters/src/model/provider_conformance.rs` and is indexed by `cairn/provider-projection-conformance-index.ncl`. It covers OpenAI Responses, OpenAI-compatible chat/local HTTP, Anthropic Messages, and deterministic mock families with literal request projection fixtures, lossy projection rejection, provider-native response normalization, response leak sentinels, and streaming parser-entrypoint fixtures.
+
+Expected request payloads are reviewed literal fixture strings, including ordered roles, text/image content, tool declarations, structured-output intent, reasoning controls, streaming intent, and safe provenance metadata. Response fixtures normalize assistant text, structured payloads, tool calls, refusals, safety blocks, malformed-output diagnostics, usage, and finish reasons into `CanonicalModelResponseEnvelope`. Hidden reasoning, credentials, raw provider payloads, missing finish reasons, malformed usage, impossible response combinations, truncated streams, streams without terminals, and out-of-order terminal events fail closed.
 
 ## Future shared request fields
 
@@ -52,8 +58,8 @@ Future streaming claims need at least one parser-entrypoint test per stream fami
 
 ## Known provider prefix fail-closed behavior
 
-If Animus adopts provider-qualified model IDs, known-but-unavailable providers must fail closed. A request for a known prefix with missing credentials, disabled backend, failed entitlement, or unavailable route must not silently fall back to another provider.
+If Animus adopts provider-qualified model IDs, known-but-unavailable providers must fail closed. A request for a known prefix with missing credentials, disabled backend, failed entitlement, unavailable route, or denied fallback policy must not silently fall back to another provider. The current provider-neutral plan already records fallback denial as a fail-closed planning issue before adapter execution.
 
 ## Non-claims
 
-This evaluation does not add live providers, network clients, OAuth, credential storage, router daemons, provider discovery, streaming parsers, or live checks. It defines the future rails that must exist before those surfaces are treated as stable.
+This evaluation does not add live providers, network clients, OAuth, credential storage, router daemons, provider discovery, streaming parsers, or live checks. The provider-neutral dispatch plan is pure metadata and admission logic only. This note defines the future rails that must exist before concrete provider surfaces are treated as stable.

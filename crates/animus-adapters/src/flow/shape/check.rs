@@ -1,4 +1,4 @@
-use super::*;
+use super::{Collection, FIELD_NAME_FIELD, RecipeResponseFieldKind, RecipeResponseSchema, Text};
 
 /// Untrusted observed final output facts.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -85,6 +85,10 @@ impl RecipeAutomationOutcome {
 /// Returns [`super::RecipeWorkflowError`] when observed field labels are malformed
 /// or repeated. Missing or wrong-typed fields produce a failure outcome instead
 /// of an error so automation can record the denial explicitly.
+///
+/// # Panics
+///
+/// Panics if a response schema was constructed without required fields.
 pub fn validate_recipe_output(
     schema: &RecipeResponseSchema,
     output: &RecipeOutputDraft<'_>,
@@ -94,10 +98,17 @@ pub fn validate_recipe_output(
         "schemas require output fields"
     );
     assert!(
-        output.fields.len() <= output.fields.iter().count(),
-        "output field slice is bounded"
+        schema
+            .required_fields()
+            .iter()
+            .all(|field| !field.name().is_empty()),
+        "schema field names must be validated"
     );
     let observed = collect_output_fields(output.fields)?;
+    assert!(
+        observed.len() <= output.fields.len(),
+        "deduplicated output fields never exceed observed fields"
+    );
     for required in schema.required_fields() {
         match find_field(observed.as_slice(), required.name()) {
             None => {

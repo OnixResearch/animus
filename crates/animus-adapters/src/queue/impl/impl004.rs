@@ -1,46 +1,86 @@
+const QUEUE_CAPABILITY_EMPTY_MASK: u8 = 0;
+const QUEUE_CAPABILITY_WAIT_BIT: u8 = 0;
+const QUEUE_CAPABILITY_STREAM_BIT: u8 = 1;
+const QUEUE_CAPABILITY_POLL_BIT: u8 = 2;
+const QUEUE_CAPABILITY_SEND_INPUT_BIT: u8 = 3;
+const QUEUE_CAPABILITY_WAIT_MASK: u8 = 1_u8 << QUEUE_CAPABILITY_WAIT_BIT;
+const QUEUE_CAPABILITY_STREAM_MASK: u8 = 1_u8 << QUEUE_CAPABILITY_STREAM_BIT;
+const QUEUE_CAPABILITY_POLL_MASK: u8 = 1_u8 << QUEUE_CAPABILITY_POLL_BIT;
+const QUEUE_CAPABILITY_SEND_INPUT_MASK: u8 = 1_u8 << QUEUE_CAPABILITY_SEND_INPUT_BIT;
+const QUEUE_CAPABILITY_ALL_MASK: u8 = QUEUE_CAPABILITY_WAIT_MASK
+    | QUEUE_CAPABILITY_STREAM_MASK
+    | QUEUE_CAPABILITY_POLL_MASK
+    | QUEUE_CAPABILITY_SEND_INPUT_MASK;
+const QUEUE_CAPABILITY_WAIT_STREAM_POLL_MASK: u8 =
+    QUEUE_CAPABILITY_WAIT_MASK | QUEUE_CAPABILITY_STREAM_MASK | QUEUE_CAPABILITY_POLL_MASK;
+
 /// Queue capabilities advertised by a host adapter.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct QueueCapabilities {
-    wait: bool,
-    stream: bool,
-    poll: bool,
-    send_input: bool,
+    mask: u8,
 }
 
 impl QueueCapabilities {
-    /// Builds a capability set for queue interaction modes.
+    /// Builds an empty capability set for queue interaction modes.
     #[must_use]
-    pub const fn new(wait: bool, stream: bool, poll: bool, send_input: bool) -> Self {
+    pub const fn empty() -> Self {
         Self {
-            wait,
-            stream,
-            poll,
-            send_input,
+            mask: QUEUE_CAPABILITY_EMPTY_MASK,
+        }
+    }
+
+    /// Builds a capability set with all interaction modes enabled.
+    #[must_use]
+    pub const fn all() -> Self {
+        Self {
+            mask: QUEUE_CAPABILITY_ALL_MASK,
+        }
+    }
+
+    /// Builds a capability set for wait, stream, and poll interactions.
+    #[must_use]
+    pub const fn wait_stream_poll() -> Self {
+        Self {
+            mask: QUEUE_CAPABILITY_WAIT_STREAM_POLL_MASK,
+        }
+    }
+
+    /// Returns a copy with one capability enabled.
+    #[must_use]
+    pub const fn with(self, capability: QueueCapabilityKind) -> Self {
+        Self {
+            mask: self.mask | capability.mask(),
         }
     }
 
     /// Returns whether wait is supported.
     #[must_use]
     pub const fn wait(self) -> bool {
-        self.wait
+        self.supports(QueueCapabilityKind::Wait)
     }
 
     /// Returns whether stream is supported.
     #[must_use]
     pub const fn stream(self) -> bool {
-        self.stream
+        self.supports(QueueCapabilityKind::Stream)
     }
 
     /// Returns whether poll is supported.
     #[must_use]
     pub const fn poll(self) -> bool {
-        self.poll
+        self.supports(QueueCapabilityKind::Poll)
     }
 
     /// Returns whether send-input is supported.
     #[must_use]
     pub const fn send_input(self) -> bool {
-        self.send_input
+        self.supports(QueueCapabilityKind::SendInput)
+    }
+
+    /// Returns whether a specific capability is supported.
+    #[must_use]
+    pub const fn supports(self, capability: QueueCapabilityKind) -> bool {
+        self.mask & capability.mask() != QUEUE_CAPABILITY_EMPTY_MASK
     }
 }
 
@@ -55,6 +95,17 @@ pub enum QueueCapabilityKind {
     Poll,
     /// Send input to a task.
     SendInput,
+}
+
+impl QueueCapabilityKind {
+    const fn mask(self) -> u8 {
+        match self {
+            Self::Wait => QUEUE_CAPABILITY_WAIT_MASK,
+            Self::Stream => QUEUE_CAPABILITY_STREAM_MASK,
+            Self::Poll => QUEUE_CAPABILITY_POLL_MASK,
+            Self::SendInput => QUEUE_CAPABILITY_SEND_INPUT_MASK,
+        }
+    }
 }
 
 /// Queue interaction mode.

@@ -3,6 +3,7 @@
     use super::*;
 
     const SCHEMA_VERSION: u16 = 1;
+    const ZERO_SCHEMA_VERSION: u16 = 0;
     const PENDING_LIMIT: u32 = 2;
     const ZERO_COUNT: u32 = 0;
     const ONE_COUNT: u32 = 1;
@@ -196,7 +197,7 @@
     fn invalid_schema_and_oversized_projection_fail_closed() {
         assert_eq!(
             AuditProjectionPolicy::validate(&AuditProjectionPolicyDraft {
-                schema_version: ZERO_COUNT as u16,
+                schema_version: ZERO_SCHEMA_VERSION,
                 public_pending_limit: PENDING_LIMIT,
                 policy_hash: POLICY_HASH,
             }),

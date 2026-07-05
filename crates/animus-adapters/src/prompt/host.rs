@@ -1,4 +1,4 @@
-use super::data::*;
+use super::data::{ContextReference, ContextReferenceError, ResolvedContextCandidate};
 
 /// Host-owned resolver for file references.
 pub trait FileContextResolver {

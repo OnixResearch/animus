@@ -11,6 +11,7 @@ pub enum ProvenanceAuthorizationStatus {
 
 impl ProvenanceAuthorizationStatus {
     /// Returns the stable authorization label.
+    #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::Allowed => "allowed",
@@ -195,6 +196,7 @@ pub struct ProvenanceFactQuery {
 }
 
 /// Returns facts matching every supplied safe filter.
+#[must_use]
 pub fn query_provenance_facts(
     facts: &[ProvenanceFact],
     query: &ProvenanceFactQuery,

@@ -1,4 +1,7 @@
-use super::*;
+use super::{
+    AutomationError, SCHEMA_ID_FIELD, STRUCTURED_FIELD, Text, TextField, contains_text,
+    required_text, unique_texts,
+};
 
 /// Borrowed schema contract for structured output validation.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -95,6 +98,10 @@ pub enum StructuredOutputFailure {
 /// Returns [`AutomationError`] when schema or observed field declarations are
 /// malformed or contain duplicates. Schema mismatch results are returned as a
 /// failure report so callers can record the failed run explicitly.
+///
+/// # Panics
+///
+/// Panics if required schema identity validation returns an empty identity.
 pub fn validate_structured_output(
     schema: &StructuredSchemaDraft<'_>,
     output: &StructuredOutputDraft<'_>,

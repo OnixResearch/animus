@@ -4,7 +4,6 @@
 #![allow(
     ambiguous_params,
     assertion_density,
-    excessive_file_length,
     non_trait_imports,
     path_segment_repetition,
     usize_in_public_api

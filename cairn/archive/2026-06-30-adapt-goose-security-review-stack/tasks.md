@@ -1,0 +1,13 @@
+# Tasks
+
+- [x] [serial] Define security review input DTOs for original task labels, bounded recent context, tool call descriptor, action class, active policy labels, and redacted evidence hashes. r[agent_harness_runtime.goose_security_review_stack.review_input]
+- [x] [depends:review_input] Add positive DTO construction tests proving raw prompts, credentials, full paths, and unbounded tool arguments are omitted. r[agent_harness_runtime.goose_security_review_stack.review_input.redacted]
+- [x] [serial] Add deterministic scanner findings for prompt injection, destructive actions, exfiltration, privilege escalation, obfuscated remote execution, and out-of-scope mutation attempts. r[agent_harness_runtime.goose_security_review_stack.pattern_findings]
+- [x] [depends:pattern_findings] Add negative fixture tests for hidden instructions, SSH-key access, unknown upload domains, recursive deletion, privilege escalation, and download-execute payloads. r[agent_harness_runtime.goose_security_review_stack.pattern_findings.detects]
+- [x] [serial] Define optional classifier and adversary reviewer contracts returning allow, warn, block, unavailable, timeout, and malformed outcomes. r[agent_harness_runtime.goose_security_review_stack.advisory_review]
+- [x] [depends:advisory_review] Add negative tests proving reviewer allow recommendations cannot grant missing authority, bypass sandbox policy, or suppress required confirmation. r[agent_harness_runtime.goose_security_review_stack.advisory_review.no_authority]
+- [x] [serial] Add policy-controlled fail behavior for scanner, classifier, and adversary-review outages by action risk class. r[agent_harness_runtime.goose_security_review_stack.fail_behavior]
+- [x] [depends:fail_behavior] Add tests for high-risk fail-closed behavior and low-risk deterministic-fallback behavior. r[agent_harness_runtime.goose_security_review_stack.fail_behavior.closed]
+- [x] [serial] Bind findings into permission decisions, confirmation prompts, sandbox descriptors, and safe security receipts. r[agent_harness_runtime.goose_security_review_stack.policy_binding]
+- [x] [depends:policy_binding] Add negative tests proving blocked findings stop dispatch before provider, tool, or host-effect execution. r[agent_harness_runtime.goose_security_review_stack.policy_binding.blocks]
+- [x] [depends:review_input.redacted,pattern_findings.detects,advisory_review.no_authority,fail_behavior.closed,policy_binding.blocks] Update docs and run focused security-review tests, receipt redaction tests, Cairn validation, roadmap checks, and Cairn gates with reviewable evidence. r[agent_harness_runtime.goose_security_review_stack.verification]

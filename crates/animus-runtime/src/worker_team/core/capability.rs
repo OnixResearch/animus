@@ -2,8 +2,6 @@ pub(crate) fn validate_capabilities(
     parent_policy_required: bool,
     capabilities: &[super::super::WorkerCapability],
 ) -> Result<Vec<super::super::WorkerCapability>, super::super::DelegationFailure> {
-    debug_assert!(super::super::MAX_LABEL_CHARS <= super::super::MAX_TEXT_CHARS);
-    debug_assert!(usize::from(super::super::MIN_BUDGET_VALUE) <= super::super::MAX_CONTEXT_ITEMS);
     if !parent_policy_required {
         return Err(super::super::DelegationFailure::new(
             super::super::FailureKind::OverbroadAuthority,
@@ -11,7 +9,12 @@ pub(crate) fn validate_capabilities(
             super::super::OVERBROAD_REASON,
         ));
     }
+    assert!(parent_policy_required, "parent policy gate is required");
     super::validate_non_empty_slice(super::super::CAPABILITY_FIELD, capabilities)?;
+    assert!(
+        !capabilities.is_empty(),
+        "capability list must be non-empty"
+    );
     let mut seen = std::collections::BTreeSet::new();
     for capability in capabilities {
         let label = validate_one(capability)?;

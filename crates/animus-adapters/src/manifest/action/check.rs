@@ -1,7 +1,19 @@
-use super::consts::*;
-use super::context::*;
-use super::types::*;
-use super::*;
+use super::consts::{
+    COMPATIBILITY_CAPABILITY_FIELD, COMPATIBILITY_PLATFORM_FIELD, COMPATIBILITY_VERSION_FIELD,
+    HOST_CAPABILITY_FIELD, HOST_PLATFORM_FIELD, HOST_VERSION_FIELD, ROLE_ARTIFACT_LABEL_FIELD,
+    ROLE_COMMAND_LABEL_FIELD, ROLE_COMMAND_OR_ARTIFACT_FIELD, ROLE_CONTEXT_FIELD, ROLE_EVENT_FIELD,
+    ROLE_ID_FIELD, ROLE_KIND_FIELD, ROLE_LINK_SCHEME_FIELD, ROLE_TITLE_FIELD, VERSION_SEPARATOR,
+};
+use super::context::{
+    contains_text, diagnostic, host_label, host_labels, parse_role_kind,
+    validate_optional_safe_label, validate_required_safe_label, validate_required_safe_labels,
+};
+use super::types::{
+    PluginCompatibility, PluginCompatibilityDraft, PluginDiagnostic, PluginDiagnosticKind,
+    PluginDiagnosticSeverity, PluginHostCompatibility, PluginHostCompatibilityDraft, PluginRole,
+    PluginRoleDraft, PluginRoleKind,
+};
+use super::{Collection, Text};
 
 const STATIC_COMPATIBILITY_DIAGNOSTIC_CAPACITY: usize = 2;
 
@@ -12,6 +24,7 @@ struct SemverParts {
     patch: u32,
 }
 
+#[derive(Clone, Copy)]
 struct HostVersionPair<'a> {
     required: &'a str,
     actual: &'a str,

@@ -1,4 +1,5 @@
 /// Validates command queueing and returns the acknowledgement response.
+#[must_use]
 pub fn acknowledge_headless_command(
     command: &HeadlessCommand,
     phase: HeadlessRuntimePhase,

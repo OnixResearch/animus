@@ -245,6 +245,10 @@ fn stale_prompt() -> Resolution {
     )
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "decision fixture helper preserves matrix readability"
+)]
 fn parts(
     status: DecisionStatus,
     reason: DecisionReason,
@@ -265,6 +269,6 @@ fn prompt_matches(request: &super::PromptRequest, decision: &super::Decision) ->
     request.action() == decision.action
         && request.resource_label() == decision.resource_label
         && request.session_label() == decision.session_label
-        && request.policy_hash() == decision.policy_hash
-        && request.decision_token() == decision.decision_token
+        && request.policy_hash() == decision.hash
+        && request.decision_token() == decision.token
 }

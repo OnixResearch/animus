@@ -166,6 +166,11 @@ pub fn prompt_required_completion(
 ///
 /// Returns [`super::AutomationError`] when the stream has no completion event or
 /// ends in failure instead of completion.
+///
+/// # Panics
+///
+/// Panics if terminal-event counting exceeds the supplied stream length, which
+/// would indicate corrupted iteration state.
 pub fn select_final_output(
     stream: &[super::AutomationEnvelope],
 ) -> Result<FinalOutput, super::AutomationError> {

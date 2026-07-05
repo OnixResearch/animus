@@ -1,11 +1,13 @@
 const CREDENTIAL_MARKERS: &[&str] = &["api_key", "token=", "credential", "secret=", "sk-"];
 const ABSOLUTE_PATH_MARKERS: &[&str] = &["/home/", "/users/"];
 
+#[derive(Clone, Copy)]
 pub(super) struct ByteLimitInput {
     pub(super) byte_count: u64,
     pub(super) max_bytes: u64,
 }
 
+#[derive(Clone, Copy)]
 struct PathProbe<'a> {
     value: &'a str,
     lower: &'a str,
@@ -100,10 +102,7 @@ pub(super) fn validate_content_hash(raw: &str) -> Result<alloc::string::String, 
 }
 
 pub(super) fn usize_to_u64(value: usize) -> u64 {
-    match u64::try_from(value) {
-        Ok(converted) => converted,
-        Err(_overflow) => u64::MAX,
-    }
+    value as u64
 }
 
 fn unsafe_content_reason(value: &str) -> Option<super::UnsafeContentReason> {

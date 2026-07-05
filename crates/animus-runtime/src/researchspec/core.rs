@@ -18,20 +18,6 @@
     raw_arithmetic_overflow,
     unbounded_collection_growth
 )]
-#![allow(
-    ambiguous_params,
-    assertion_density,
-    bool_naming,
-    borrowed_argument_types,
-    compound_condition,
-    excessive_file_length,
-    function_length,
-    non_trait_imports,
-    numeric_units,
-    path_segment_repetition,
-    raw_arithmetic_overflow,
-    unbounded_collection_growth
-)]
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::{
@@ -112,9 +98,6 @@ pub fn validate_research_study_contract(
         FIELD_PROVENANCE,
         &mut diagnostics,
     );
-    let _direction = contract.metric_direction;
-    let _threshold = contract.threshold_policy;
-    let _promotion_threshold = contract.promotion_threshold;
     to_validation_result(diagnostics)
 }
 
@@ -199,7 +182,6 @@ pub fn validate_research_hypothesis(
         &mut diagnostics,
     );
     require_hypothesis_text(&hypothesis.risk_notes, FIELD_RISK_NOTES, &mut diagnostics);
-    let _decision = hypothesis.decision;
     to_validation_result(diagnostics)
 }
 
@@ -473,17 +455,17 @@ fn collect_group_shape_diagnostics(
         require_collection(&group.run_ids, FIELD_PROMOTION_RUNS, diagnostics);
         require_collection(&group.touched_files, FIELD_PROMOTION_FILE, diagnostics);
         for dependency in &group.depends_on_group_ids {
-            if !group_ids.contains(dependency.as_str()) {
-                diagnostics.push(ResearchSpecDiagnostic::new(
-                    ResearchSpecDiagnosticKind::UnknownReference,
-                    FIELD_PROMOTION_DEPENDENCY,
-                    "promotion group depends on an unknown group",
-                ));
-            } else {
+            if group_ids.contains(dependency.as_str()) {
                 diagnostics.push(ResearchSpecDiagnostic::new(
                     ResearchSpecDiagnosticKind::PromotionGroupDependency,
                     FIELD_PROMOTION_DEPENDENCY,
                     "promotion group requires dependency ordering",
+                ));
+            } else {
+                diagnostics.push(ResearchSpecDiagnostic::new(
+                    ResearchSpecDiagnosticKind::UnknownReference,
+                    FIELD_PROMOTION_DEPENDENCY,
+                    "promotion group depends on an unknown group",
                 ));
             }
         }

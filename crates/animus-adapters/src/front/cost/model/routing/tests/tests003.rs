@@ -54,10 +54,10 @@
         }
     }
 
-    fn receipt<'a>(
-        decision: &'a ModelRoutingDecision,
+    fn receipt(
+        decision: &ModelRoutingDecision,
         fixture: ReceiptLeakFixture,
-    ) -> ModelRoutingReceiptDraft<'a> {
+    ) -> ModelRoutingReceiptDraft<'_> {
         ModelRoutingReceiptDraft {
             decision,
             raw_prompt: fixture.raw_prompt,

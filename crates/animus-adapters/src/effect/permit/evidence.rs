@@ -173,7 +173,7 @@ pub fn validate_text(text: &str) -> Result<(), ReceiptLeak> {
     Ok(())
 }
 
-fn redactions(values: &[&str]) -> Result<super::Collection<super::Text>, super::Error> {
+pub(super) fn redactions(values: &[&str]) -> Result<super::Collection<super::Text>, super::Error> {
     let mut redaction_markers = super::Collection::with_capacity(values.len());
     for marker in values {
         redaction_markers.push(super::required_text_value(super::REDACTION_FIELD, marker)?);
@@ -183,7 +183,7 @@ fn redactions(values: &[&str]) -> Result<super::Collection<super::Text>, super::
     Ok(redaction_markers)
 }
 
-fn validate_redaction_count(count: usize) -> Result<(), super::Error> {
+pub(super) fn validate_redaction_count(count: usize) -> Result<(), super::Error> {
     if count > super::MAX_REDACTIONS {
         return Err(super::Error::TooManyRedactions {
             max_items: super::MAX_REDACTIONS,

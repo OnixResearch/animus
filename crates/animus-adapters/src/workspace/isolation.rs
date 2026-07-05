@@ -179,7 +179,9 @@ struct SnapshotMatchInput<'a> {
     restore_snapshot_id: &'a str,
 }
 
-fn reject_snapshot_mismatch(input: SnapshotMatchInput<'_>) -> Result<(), crate::AdapterContractError> {
+fn reject_snapshot_mismatch(
+    input: SnapshotMatchInput<'_>,
+) -> Result<(), crate::AdapterContractError> {
     if input.snapshot_id == input.restore_snapshot_id {
         return Ok(());
     }

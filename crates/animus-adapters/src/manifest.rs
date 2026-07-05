@@ -1,3 +1,5 @@
+#![allow(non_trait_imports)]
+
 type Text = alloc::string::String;
 type Collection<T> = alloc::vec::Vec<T>;
 
@@ -145,10 +147,6 @@ impl PluginDescriptor {
         &self,
         injected_executor_names: &[&str],
     ) -> Result<Collection<crate::tool::Definition>, crate::tool::ContractError> {
-        assert!(
-            injected_executor_names.len() <= crate::validation::MAX_ADAPTER_FIELD_CHARS,
-            "executor name count must fit the adapter field bound"
-        );
         let mut definitions = Collection::with_capacity(self.declared_tools.len());
         for tool in &self.declared_tools {
             let capability_labels = tool.capability_label_strs();

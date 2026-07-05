@@ -1,5 +1,5 @@
 pub mod adapter;
-#[allow(unknown_lints, excessive_file_length)]
+#[allow(unknown_lints, excessive_file_length, path_segment_repetition)]
 pub mod automation;
 pub mod handoff;
 #[allow(unknown_lints, excessive_file_length)]

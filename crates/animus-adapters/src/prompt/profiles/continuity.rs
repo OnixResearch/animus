@@ -96,6 +96,7 @@ impl ChainPlan {
     }
 }
 
+#[derive(Clone, Copy)]
 struct ActiveProfileInput<'a> {
     source_profile_id: &'a str,
     target_profile_id: &'a str,

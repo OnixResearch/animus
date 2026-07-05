@@ -17,6 +17,6 @@ in
     std.string.join
       "\n"
       [
-        "entry|animus-core::Intent|animus-core|crates/animus-core/src/lib.rs|reusable-contract|none|stable|validated intent DTO",
+        "entry|animus-core::Intent|animus-core|crates/animus-core/src/lib.rs|reusable-contract|none|stable|validated intent DTO|compat|none|||compatibility",
       ],
 } | Fixture

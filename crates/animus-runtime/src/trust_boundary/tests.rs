@@ -18,20 +18,6 @@
     raw_arithmetic_overflow,
     unbounded_collection_growth
 )]
-#![allow(
-    ambiguous_params,
-    assertion_density,
-    bool_naming,
-    borrowed_argument_types,
-    compound_condition,
-    excessive_file_length,
-    function_length,
-    non_trait_imports,
-    numeric_units,
-    path_segment_repetition,
-    raw_arithmetic_overflow,
-    unbounded_collection_growth
-)]
 
 use super::*;
 
@@ -302,6 +288,7 @@ fn violation_receipts_accept_redacted_metadata_and_reject_leaks() {
     );
 }
 
+#[allow(clippy::too_many_arguments)]
 fn action(
     kind: TrustBoundaryActionKind,
     tool_name: Option<&str>,

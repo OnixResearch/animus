@@ -95,6 +95,7 @@ pub fn retry_policy_draft() -> RecipeRetryPolicyDraft<'static> {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct RetryCheckFixture {
     pub effect_kind: &'static str,
     pub deadline_label: &'static str,

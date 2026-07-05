@@ -8,6 +8,7 @@ pub struct RuntimeAdapters<'a, Model, Tool> {
     model: Option<&'a mut Model>,
     tool: Option<&'a mut Tool>,
     middleware: crate::RuntimeMiddlewareStack<'a>,
+    capabilities: crate::RuntimeCapabilityRegistry,
 }
 
 impl<'a, Model, Tool> RuntimeAdapters<'a, Model, Tool> {
@@ -18,16 +19,23 @@ impl<'a, Model, Tool> RuntimeAdapters<'a, Model, Tool> {
             model: Some(model),
             tool: Some(tool),
             middleware: crate::RuntimeMiddlewareStack::empty(),
+            capabilities: crate::RuntimeCapabilityRegistry::model_tool_presence(true, true),
         }
     }
 
     /// Builds a borrowed adapter bundle that can represent absent services.
     #[must_use]
     pub fn new_optional(model: Option<&'a mut Model>, tool: Option<&'a mut Tool>) -> Self {
+        let is_model_present = model.is_some();
+        let is_tool_present = tool.is_some();
         Self {
             model,
             tool,
             middleware: crate::RuntimeMiddlewareStack::empty(),
+            capabilities: crate::RuntimeCapabilityRegistry::model_tool_presence(
+                is_model_present,
+                is_tool_present,
+            ),
         }
     }
 
@@ -37,14 +45,32 @@ impl<'a, Model, Tool> RuntimeAdapters<'a, Model, Tool> {
         self.middleware = middleware;
         self
     }
+
+    /// Replaces the explicit capability registry used for dispatch admission.
+    #[must_use]
+    pub fn with_capability_registry(
+        mut self,
+        capabilities: crate::RuntimeCapabilityRegistry,
+    ) -> Self {
+        self.capabilities = capabilities;
+        self
+    }
+
+    /// Returns the explicit capability registry used for dispatch admission.
+    #[must_use]
+    pub const fn capability_registry(&self) -> &crate::RuntimeCapabilityRegistry {
+        &self.capabilities
+    }
 }
 
 /// Checked Steel profile and script selected for one runtime execution.
+#[cfg(feature = "steel")]
 pub struct SteelPolicyRuntime<'profile, 'script> {
     profile: &'profile animus_steel::SteelPolicyProfile,
     script: animus_steel::SteelPolicyScript<'script>,
 }
 
+#[cfg(feature = "steel")]
 impl<'profile, 'script> SteelPolicyRuntime<'profile, 'script> {
     /// Builds a checked Steel policy runtime selection.
     #[must_use]
@@ -102,6 +128,7 @@ where
 }
 
 /// Runs the agent loop with a Steel program as the default loop fabric.
+#[cfg(feature = "steel")]
 #[must_use]
 pub fn run_with_steel_program<Model, Tool>(
     program: &str,
@@ -124,6 +151,7 @@ where
 }
 
 /// Runs the agent loop with a Steel program after checked policy activation.
+#[cfg(feature = "steel")]
 #[must_use]
 pub fn run_with_steel_policy<Model, Tool>(
     policy: &SteelPolicyRuntime<'_, '_>,
@@ -155,5 +183,5 @@ where
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "steel"))]
 mod tests;

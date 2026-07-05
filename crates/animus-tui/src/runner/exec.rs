@@ -14,6 +14,10 @@ where
 }
 
 /// Executes a tool adapter while emitting UI-neutral lifecycle events.
+///
+/// # Panics
+///
+/// Panics when `run_id` or the request tool name is empty.
 #[must_use]
 pub fn run_hosted_tool<Tool, Sink>(
     run_id: &crate::ToolRunId,
@@ -42,6 +46,10 @@ where
 }
 
 /// Executes a guarded tool only after a correlated host approval command allows it.
+///
+/// # Panics
+///
+/// Panics when the approval prompt or request tool name is empty.
 #[must_use]
 pub fn run_guarded_tool<Tool, Sink, Commands>(
     run: GuardedToolRun<'_, Tool, Sink, Commands>,
@@ -69,7 +77,7 @@ where
     if let Err(outcome) = verify_command(run.approval, &command, run.sink) {
         return outcome;
     }
-    dispatch_guarded_command(run, command)
+    dispatch_guarded_command(run, &command)
 }
 
 fn emit_started<Sink>(
@@ -144,9 +152,12 @@ where
     Err(HostedToolOutcome::Failed { failure })
 }
 
+/// `run` is taken by value because its `&mut` tool/sink fields must be reborrowed as
+/// `&mut`; a shared `&GuardedToolRun` cannot yield those reborrows, so ownership is required.
+#[allow(clippy::needless_pass_by_value)]
 fn dispatch_guarded_command<Tool, Sink, Commands>(
     run: GuardedToolRun<'_, Tool, Sink, Commands>,
-    command: crate::ToolHostCommand,
+    command: &crate::ToolHostCommand,
 ) -> HostedToolOutcome
 where
     Tool: animus_adapters::ToolAdapter,
@@ -156,7 +167,7 @@ where
 {
     assert!(!run.approval.run_id().as_str().is_empty());
     assert!(!run.request.name().is_empty());
-    if emit_observed_command(run.approval, &command, run.sink).is_err() {
+    if emit_observed_command(run.approval, command, run.sink).is_err() {
         return failed(
             crate::ToolHostFailureClass::DroppedConsumer,
             EVENT_CONSUMER_UNAVAILABLE,

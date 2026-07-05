@@ -19,13 +19,13 @@ pub struct CapabilityBinding {
 impl CapabilityBinding {
     /// Returns the capability this binding evaluated.
     #[must_use]
-    pub const fn capability(&self) -> super::types::Capability {
+    pub const fn capability(self) -> super::types::Capability {
         self.capability
     }
 
     /// Returns the binding status.
     #[must_use]
-    pub const fn status(&self) -> BindingStatus {
+    pub const fn status(self) -> BindingStatus {
         self.status
     }
 }

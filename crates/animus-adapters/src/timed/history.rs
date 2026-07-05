@@ -1,4 +1,8 @@
-use super::*;
+use super::{
+    Collection, HASH_FIELD, HashInput, OUTCOME_FIELD, PARAMETER_HASH_FIELD, RECIPE_FIELD,
+    REDACTION_FIELD, ScheduleError, Text, required_text, text_collection, validate_hash,
+    validate_hashes,
+};
 
 /// Untrusted scheduled run record.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -63,8 +67,8 @@ impl ScheduledRunRecord {
         Ok(Self {
             outcome,
             retry_count: draft.retry_count,
-            parameter_count: draft.parameter_hashes.len() as u32,
-            evidence_count: draft.evidence_hashes.len() as u32,
+            parameter_count: count_to_u32(PARAMETER_HASH_FIELD, draft.parameter_hashes.len())?,
+            evidence_count: count_to_u32(HASH_FIELD, draft.evidence_hashes.len())?,
             redactions,
         })
     }
@@ -111,6 +115,15 @@ pub fn validate_scheduled_record_text(text: &str) -> Result<(), ScheduleError> {
         return Err(ScheduleError::RecordLeak);
     }
     Ok(())
+}
+
+fn count_to_u32(
+    field_name: crate::validation::FieldName,
+    value: usize,
+) -> Result<u32, ScheduleError> {
+    u32::try_from(value).map_err(|_overflow| ScheduleError::CountOverflow {
+        field: field_name.as_str(),
+    })
 }
 
 fn contains_record_leak_marker(lowered: &str) -> bool {

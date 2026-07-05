@@ -28,6 +28,7 @@ mod effect;
 mod flow;
 mod front;
 mod hostcontrol;
+mod invocation;
 mod ledger;
 mod manifest;
 mod mcpapp;
@@ -50,6 +51,7 @@ mod status;
 mod timed;
 pub mod tool;
 mod validation;
+mod versioning;
 mod workspace;
 
 pub use aliases::*;
@@ -104,6 +106,11 @@ pub use hostcontrol::{
     LayoutCommandDescriptorDraft, LayoutNode, LayoutPaneDraft, SelectorLifetime, TopologyCommand,
     TopologyCommandDraft, filter_host_events, resolve_host_wait,
 };
+pub use invocation::{
+    ADAPTER_CALL_OUTCOME_CONTRACT_IDENTITY, AdapterCallFailureClass, AdapterCallFailureMetadata,
+    AdapterCallFailureMetadataDraft, AdapterCallOutcome, ComponentOutcomeAdapter,
+    ModelOutcomeAdapter, ToolOutcomeAdapter,
+};
 pub use recover::{
     CheckpointBackendKind, CheckpointDraft, CheckpointError, CheckpointFailureClass,
     CheckpointHash, CheckpointOperation, CheckpointPolicy, CheckpointReceipt,
@@ -113,6 +120,7 @@ pub use recover::{
     RollbackConfirmationStatus, RollbackValidation, RollbackValidationInput,
     evaluate_protected_mutation, validate_checkpoint_receipt_text, validate_rollback,
 };
+pub use versioning::{BoundaryContractIdentity, parse_boundary_contract_identity};
 
 pub use effect::{
     AuthorizationContext, AuthorizationIssue, AuthorizationLeak, AuthorizationReceipt,
@@ -143,13 +151,20 @@ pub use effect::{
     PermissionSessionAllowlistValidation, PermissionTrustScope, PermissionTrustStatus,
     PromptDecisionOutcome, PromptSummaryPolicy, Reason, Receipt, ReceiptDraft, RedactionMarker,
     RuntimePolicyDecision, RuntimePolicyRequest, RuntimePolicyService, SAFE_HASH_HEX_CHARS,
-    SafeHash, SandboxConstraint, SandboxState, ServiceKind, ServiceOutcome, ToolExecutionService,
-    UcanGrant, analyze_exec_policy_shell_wrapper, authorize_capability, default_deny_confirmation,
+    SAFE_RECEIPT_CONTRACT_IDENTITY, SafeHash, SandboxConstraint, SandboxConstraintClass,
+    SandboxCowDisposition, SandboxDescriptor, SandboxDescriptorDraft, SandboxDeterminismPolicy,
+    SandboxDispatchDecision, SandboxDispatchIssue, SandboxDispatchReceipt,
+    SandboxDispatchReceiptDraft, SandboxDispatchStatus, SandboxEnforcementRequirement,
+    SandboxEnvironmentPolicy, SandboxFilesystemMode, SandboxHttpPolicy, SandboxNetworkPolicy,
+    SandboxPlatformCapability, SandboxPlatformSupport, SandboxPlatformSupportDraft, SandboxPolicy,
+    SandboxPolicyDraft, SandboxProcessProfile, SandboxReceiptLeak, SandboxState,
+    SandboxWorkdirMode, ServiceKind, ServiceOutcome, ToolExecutionService, UcanGrant,
+    analyze_exec_policy_shell_wrapper, authorize_capability, default_deny_confirmation,
     detect_permission_repeated_action, evaluate_confirmation_decision,
-    evaluate_confirmation_outcome, evaluate_exec_policy, resolve_permission,
-    resolve_permission_mode_default, validate_authorization_receipt_text,
+    evaluate_confirmation_outcome, evaluate_exec_policy, evaluate_sandbox_dispatch,
+    resolve_permission, resolve_permission_mode_default, validate_authorization_receipt_text,
     validate_confirmation_receipt_text, validate_permission_receipt_text,
-    validate_permission_session_allowlist,
+    validate_permission_session_allowlist, validate_sandbox_receipt_text,
 };
 pub use manifest::{
     LaunchPolicy, LaunchPolicyDraft, NetworkPolicy, PROHIBITED_PLUGIN_MANIFEST_EFFECTS,
@@ -219,17 +234,17 @@ pub use queue::{
     QueueGroupStatus, QueueGroupStatusDraft, QueueInteractionDraft, QueueInteractionKind,
     QueueInteractionRequest, QueueLogBounds, QueueLogRequest, QueueLogRequestDraft,
     QueueLogViewport, QueueLogViewportDraft, QueueOperationKind, QueueServiceRequest,
-    QueueServiceResponse, QueueStatusCounts, QueueTarget, QueueTargetDraft, QueueTargetKind,
-    QueueTaskObservation, QueueTaskObservationDraft, QueueTaskStatus,
+    QueueServiceResponse, QueueStatusCountDraft, QueueStatusCounts, QueueTarget, QueueTargetDraft,
+    QueueTargetKind, QueueTaskObservation, QueueTaskObservationDraft, QueueTaskStatus,
 };
 pub use timed::{
     NextRunInput, NextRunPlan, PROHIBITED_SCHEDULE_EFFECTS, ScheduleCadence,
     ScheduleConcurrencyPolicy, ScheduleControlAction, ScheduleControlDraft, ScheduleControlRequest,
     ScheduleError, ScheduleExecutionMode, ScheduledConcurrencyDecision, ScheduledConcurrencyInput,
     ScheduledRunAdmissionDraft, ScheduledRunAdmissionStatus, ScheduledRunDenial,
-    ScheduledRunRecord, ScheduledRunRecordDraft, ScheduledWorkflow, ScheduledWorkflowDraft,
-    admit_scheduled_run, evaluate_scheduled_concurrency, plan_next_run,
-    validate_scheduled_record_text,
+    ScheduledRunPolicyAdmission, ScheduledRunRecord, ScheduledRunRecordDraft,
+    ScheduledRunRuntimeAdmission, ScheduledWorkflow, ScheduledWorkflowDraft, admit_scheduled_run,
+    evaluate_scheduled_concurrency, plan_next_run, validate_scheduled_record_text,
 };
 pub use validation::{AdapterContractError, MAX_ADAPTER_FIELD_CHARS, MIN_ADAPTER_FIELD_CHARS};
 

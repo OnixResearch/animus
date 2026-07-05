@@ -54,21 +54,25 @@ impl ProcessJobProfileError {
     }
 
     /// Returns the error class.
+    #[must_use]
     pub const fn kind(&self) -> ProcessJobProfileErrorKind {
         self.kind
     }
 
     /// Returns the profile associated with the error.
+    #[must_use]
     pub fn profile(&self) -> &str {
         self.profile.as_str()
     }
 
     /// Returns the field associated with the error.
+    #[must_use]
     pub const fn field(&self) -> &'static str {
         self.field
     }
 
     /// Returns the safe diagnostic reason.
+    #[must_use]
     pub fn reason(&self) -> &str {
         self.reason.as_str()
     }

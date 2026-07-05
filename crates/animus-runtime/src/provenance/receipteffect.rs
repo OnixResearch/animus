@@ -159,6 +159,7 @@ pub enum ProvenanceToolEffectStatus {
 
 impl ProvenanceToolEffectStatus {
     /// Returns the stable status label.
+    #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::Completed => COMPLETED_STATUS,

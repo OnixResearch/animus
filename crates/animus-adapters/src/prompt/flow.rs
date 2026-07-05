@@ -1,6 +1,13 @@
-use super::base::*;
-use super::data::*;
-use super::host::*;
+use super::base::{
+    MIN_LINE_COUNT_USIZE, MIN_LINE_NUMBER, ZERO_COUNT, ZERO_COUNT_USIZE, hash_text, usize_to_u32,
+};
+use super::data::{
+    ContextOversizedPolicy, ContextReference, ContextReferenceBudget, ContextReferenceError,
+    ContextReferenceFragment, ContextReferenceKind, ContextReferencePolicy,
+    ContextReferencePolicyDecision, ContextReferenceStatus, ContextResolutionPlan,
+    ContextResolverKind, ContextTruncationState, ResolvedContextCandidate,
+};
+use super::host::ContextResolverSet;
 /// Plans resolver dispatch without invoking host authority.
 ///
 /// # Errors
@@ -31,21 +38,24 @@ pub fn plan_context_resolution(
 ///
 /// Returns [`ContextReferenceError`] when planning fails or the selected host
 /// resolver denies, is unavailable, or returns an invalid candidate.
+///
+/// # Panics
+///
+/// Panics if callers bypass context-reference constructors and pass empty labels.
 pub fn expand_context_reference(
     reference: &ContextReference,
     policy: ContextReferencePolicy,
     resolvers: &ContextResolverSet<'_>,
 ) -> Result<ResolvedContextCandidate, ContextReferenceError> {
-    let plan = plan_context_resolution(reference, policy, resolvers)?;
     assert!(
-        policy.allows(reference.kind),
-        "policy allows planned resolver"
+        !reference.safe_target_label().is_empty(),
+        "context reference labels must be validated"
     );
-    assert_eq!(
-        resolver_kind_for(reference.kind),
-        plan.resolver_kind,
-        "planned resolver matches reference kind"
+    assert!(
+        !reference.normalized_target().is_empty(),
+        "context reference targets must be validated"
     );
+    let plan = plan_context_resolution(reference, policy, resolvers)?;
     match plan.resolver_kind {
         ContextResolverKind::File => resolvers
             .file
@@ -76,21 +86,25 @@ pub fn expand_context_reference(
 ///
 /// Returns [`ContextReferenceError`] when content counts overflow the public DTO
 /// bounds.
+///
+/// # Panics
+///
+/// Panics if callers bypass budget constructors and pass zero visible bounds.
 pub fn apply_context_budget(
     candidate: ResolvedContextCandidate,
     budget: ContextReferenceBudget,
 ) -> Result<ContextReferenceFragment, ContextReferenceError> {
-    let byte_count = usize_to_u32(candidate.content.len())?;
-    let original_line_count = usize_to_u32(count_lines(candidate.content.as_str()))?;
-    let content_hash = hash_text(candidate.content.as_str());
     assert!(
         budget.max_visible_bytes > ZERO_COUNT,
-        "byte budget must be positive"
+        "visible byte budget must be validated"
     );
     assert!(
         budget.max_visible_lines > ZERO_COUNT,
-        "line budget must be positive"
+        "visible line budget must be validated"
     );
+    let byte_count = usize_to_u32(candidate.content.len())?;
+    let original_line_count = usize_to_u32(count_lines(candidate.content.as_str()))?;
+    let content_hash = hash_text(candidate.content.as_str());
     let is_over_budget =
         byte_count > budget.max_visible_bytes || original_line_count > budget.max_visible_lines;
     if !is_over_budget {

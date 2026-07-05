@@ -31,8 +31,8 @@ pub struct Policy {
     pub(super) trust_scope: TrustScope,
     pub(super) trust_status: TrustStatus,
     pub(super) precedence: u16,
-    pub(super) prompt_summary_policy: PromptSummaryPolicy,
-    pub(super) policy_hash: super::Text,
+    pub(super) prompt_summary: PromptSummaryPolicy,
+    pub(super) hash: super::Text,
 }
 
 impl Policy {
@@ -91,13 +91,13 @@ impl Policy {
     /// Returns the prompt-summary policy.
     #[must_use]
     pub const fn prompt_summary_policy(&self) -> PromptSummaryPolicy {
-        self.prompt_summary_policy
+        self.prompt_summary
     }
 
     /// Returns the BLAKE3 hash of checked policy fields.
     #[must_use]
     pub fn policy_hash(&self) -> &str {
-        self.policy_hash.as_str()
+        self.hash.as_str()
     }
 
     pub(super) fn matches_request(

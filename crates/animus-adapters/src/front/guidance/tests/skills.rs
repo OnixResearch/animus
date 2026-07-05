@@ -44,7 +44,7 @@ fn deferred_skill_loading_denies_unsafe_requests() {
 
     assert_eq!(
         decide_skill_loading(
-            &[explicit_only.clone()],
+            core::slice::from_ref(&explicit_only),
             SkillLoadRequest {
                 name: SKILL_NAME,
                 mode: SkillInvocationMode::Implicit,

@@ -53,25 +53,25 @@ pub struct ModeDefaultResolution {
 impl ModeDefaultResolution {
     /// Returns final status from the mode-default layer.
     #[must_use]
-    pub const fn status(&self) -> super::DecisionStatus {
+    pub const fn status(self) -> super::DecisionStatus {
         self.status
     }
 
     /// Returns mode-default reason.
     #[must_use]
-    pub const fn reason(&self) -> ModeDefaultReason {
+    pub const fn reason(self) -> ModeDefaultReason {
         self.reason
     }
 
     /// Returns advisory local outcome selected by the mode.
     #[must_use]
-    pub const fn local_outcome(&self) -> super::Outcome {
+    pub const fn local_outcome(self) -> super::Outcome {
         self.local_outcome
     }
 
     /// Returns true only when this layer permits dispatch to continue.
     #[must_use]
-    pub const fn dispatch_allowed(&self) -> bool {
+    pub const fn dispatch_allowed(self) -> bool {
         matches!(self.status, super::DecisionStatus::Execute)
     }
 }

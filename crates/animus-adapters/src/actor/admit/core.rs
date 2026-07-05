@@ -17,8 +17,7 @@ pub fn activate(request: super::ActivationRequest<'_>) -> super::Activation {
 }
 
 fn denied_activation(admission_status: super::AdmissionStatus) -> super::Activation {
-    let mut issues = super::super::Collection::with_capacity(1);
-    issues.push(super::ActivationIssue::ProjectAdmissionRequired);
+    let issues = alloc::vec![super::ActivationIssue::ProjectAdmissionRequired];
     super::Activation {
         status: super::ActivationStatus::Denied,
         admission_status,
@@ -51,21 +50,29 @@ fn active_activation(
     let selected_model_role =
         select_model_role(request.manifest, request.policy.model_roles, &mut denied);
     let sets = effective_sets(request, &mut denied);
-    build_active(
-        request.manifest,
+    build_active(ActiveInput {
+        manifest: request.manifest,
         admission_status,
         selected_model_role,
         sets,
-        denied,
-    )
+        denied_escalations: denied,
+    })
 }
 
 struct EffectiveSets {
-    effective_capabilities: super::super::Collection<super::super::Text>,
-    effective_tools: super::super::Collection<super::super::Text>,
-    effective_memory_scopes: super::super::Collection<super::super::Text>,
-    effective_context_reference_scopes: super::super::Collection<super::super::Text>,
-    effective_workflow_abilities: super::super::Collection<super::super::Text>,
+    capabilities: super::super::Collection<super::super::Text>,
+    tools: super::super::Collection<super::super::Text>,
+    memory_scopes: super::super::Collection<super::super::Text>,
+    context_reference_scopes: super::super::Collection<super::super::Text>,
+    workflow_abilities: super::super::Collection<super::super::Text>,
+}
+
+struct ActiveInput<'a> {
+    manifest: &'a super::super::Manifest,
+    admission_status: super::AdmissionStatus,
+    selected_model_role: Option<super::super::Text>,
+    sets: EffectiveSets,
+    denied_escalations: super::super::Collection<super::DeniedEscalation>,
 }
 
 fn effective_sets(
@@ -81,31 +88,31 @@ fn effective_sets(
         "workflow requests are bounded"
     );
     EffectiveSets {
-        effective_capabilities: filter_allowed(
+        capabilities: filter_allowed(
             super::AbilityKind::Capability,
             request.manifest.capability_ceilings(),
             request.policy.capabilities,
             denied,
         ),
-        effective_tools: filter_allowed(
+        tools: filter_allowed(
             super::AbilityKind::Tool,
             request.manifest.toolset_limits(),
             request.policy.tools,
             denied,
         ),
-        effective_memory_scopes: filter_allowed(
+        memory_scopes: filter_allowed(
             super::AbilityKind::Memory,
             request.manifest.memory_scopes(),
             request.policy.memory_scopes,
             denied,
         ),
-        effective_context_reference_scopes: filter_allowed(
+        context_reference_scopes: filter_allowed(
             super::AbilityKind::ContextReference,
             request.manifest.context_reference_scopes(),
             request.policy.context_reference_scopes,
             denied,
         ),
-        effective_workflow_abilities: filter_allowed(
+        workflow_abilities: filter_allowed(
             super::AbilityKind::Workflow,
             request.manifest.workflow_abilities(),
             request.policy.workflow_abilities,
@@ -114,29 +121,23 @@ fn effective_sets(
     }
 }
 
-fn build_active(
-    manifest: &super::super::Manifest,
-    admission_status: super::AdmissionStatus,
-    selected_model_role: Option<super::super::Text>,
-    sets: EffectiveSets,
-    denied_escalations: super::super::Collection<super::DeniedEscalation>,
-) -> super::Activation {
+fn build_active(input: ActiveInput<'_>) -> super::Activation {
     let mut issues = super::super::Collection::with_capacity(1);
-    if !denied_escalations.is_empty() {
+    if !input.denied_escalations.is_empty() {
         issues.push(super::ActivationIssue::CapabilityEscalationDenied);
     }
     super::Activation {
         status: super::ActivationStatus::Active,
-        admission_status,
+        admission_status: input.admission_status,
         issues,
-        prompt_fragments: manifest.prompt_fragments.clone(),
-        selected_model_role,
-        effective_capabilities: sets.effective_capabilities,
-        effective_tools: sets.effective_tools,
-        effective_memory_scopes: sets.effective_memory_scopes,
-        effective_context_reference_scopes: sets.effective_context_reference_scopes,
-        effective_workflow_abilities: sets.effective_workflow_abilities,
-        denied_escalations,
+        prompt_fragments: input.manifest.prompt_fragments.clone(),
+        selected_model_role: input.selected_model_role,
+        effective_capabilities: input.sets.capabilities,
+        effective_tools: input.sets.tools,
+        effective_memory_scopes: input.sets.memory_scopes,
+        effective_context_reference_scopes: input.sets.context_reference_scopes,
+        effective_workflow_abilities: input.sets.workflow_abilities,
+        denied_escalations: input.denied_escalations,
     }
 }
 

@@ -29,6 +29,11 @@ pub enum Error {
         /// Actual precedence.
         actual: u16,
     },
+    /// Pattern syntax was malformed.
+    InvalidPattern {
+        /// Field containing the malformed pattern.
+        field: &'static str,
+    },
     /// Redaction collection exceeded receipt bounds.
     TooManyRedactions {
         /// Maximum supported redaction markers.
@@ -61,6 +66,9 @@ impl core::fmt::Display for Error {
                     formatter,
                     "permission precedence must be between {min} and {max}; got {actual}"
                 )
+            }
+            Self::InvalidPattern { field } => {
+                write!(formatter, "{field} has malformed permission pattern syntax")
             }
             Self::TooManyRedactions {
                 max_items,

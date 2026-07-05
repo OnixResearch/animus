@@ -115,8 +115,8 @@ pub struct Decision {
     pub(super) action: super::super::GuardedAction,
     pub(super) resource_label: super::Text,
     pub(super) session_label: super::Text,
-    pub(super) policy_hash: super::Text,
-    pub(super) decision_token: super::Text,
+    pub(super) hash: super::Text,
+    pub(super) token: super::Text,
     pub(super) outcome: DecisionOutcome,
 }
 
@@ -134,8 +134,8 @@ impl Decision {
                 draft.resource_label,
             )?,
             session_label: super::required_text_value(super::SESSION_FIELD, draft.session_label)?,
-            policy_hash: super::required_text_value(super::PROMPT_POLICY_FIELD, draft.policy_hash)?,
-            decision_token: super::required_text_value(super::TOKEN_FIELD, draft.decision_token)?,
+            hash: super::required_text_value(super::PROMPT_POLICY_FIELD, draft.policy_hash)?,
+            token: super::required_text_value(super::TOKEN_FIELD, draft.decision_token)?,
             outcome: draft.outcome,
         })
     }

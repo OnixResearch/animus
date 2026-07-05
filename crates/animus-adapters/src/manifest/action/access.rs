@@ -1,7 +1,18 @@
-use super::consts::*;
-use super::context::*;
-use super::types::*;
-use super::*;
+use super::Text;
+use super::consts::{
+    CONTEXT_AGENT_FIELD, CONTEXT_PANE_FIELD, CONTEXT_PLUGIN_CONFIG_FIELD,
+    CONTEXT_PLUGIN_ROOT_FIELD, CONTEXT_PLUGIN_STATE_FIELD, CONTEXT_REQUEST_FIELD,
+    CONTEXT_SESSION_FIELD, CONTEXT_SOURCE_METADATA_FIELD, CONTEXT_TAB_FIELD,
+    CONTEXT_WORKSPACE_FIELD, CONTEXT_WORKTREE_FIELD, ROLE_KIND_ACTION, ROLE_KIND_EVENT_HOOK,
+    ROLE_KIND_HOST_PANE_ENTRYPOINT, ROLE_KIND_LINK_HANDLER,
+};
+use super::context::validate_invocation_label;
+use super::types::{
+    PluginCompatibility, PluginDiagnostic, PluginDiagnosticKind, PluginDiagnosticSeverity,
+    PluginInvocationContext, PluginInvocationContextDraft, PluginInvocationContextLeak,
+    PluginRegistryOperationKind, PluginRegistryPlan, PluginRegistryPlanStatus, PluginRole,
+    PluginRoleKind,
+};
 
 impl PluginCompatibility {
     /// Returns the minimum host version label.

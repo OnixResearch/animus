@@ -18,20 +18,6 @@
     raw_arithmetic_overflow,
     unbounded_collection_growth
 )]
-#![allow(
-    ambiguous_params,
-    assertion_density,
-    bool_naming,
-    borrowed_argument_types,
-    compound_condition,
-    excessive_file_length,
-    function_length,
-    non_trait_imports,
-    numeric_units,
-    path_segment_repetition,
-    raw_arithmetic_overflow,
-    unbounded_collection_growth
-)]
 use super::{
     BLAKE3_ALGORITHM, EVAL_FEEDBACK_HASH_DOMAIN, FIELD_CANDIDATE, FIELD_OUTPUT_FORMAT,
     FIELD_PLAN_SCOPE, FIELD_RECEIPT_LEAK, FIELD_RECEIPT_REDATION, FIELD_RESOURCE_LABELS,

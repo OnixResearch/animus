@@ -1,17 +1,20 @@
 pub(crate) mod helpers;
 
+#[derive(Clone, Copy)]
 pub(crate) struct IdentityTextInput<'a> {
     pub(crate) field: &'static str,
     pub(crate) value: &'a str,
     pub(crate) profile_name: &'a str,
 }
 
+#[derive(Clone, Copy)]
 pub(crate) struct HashInput<'a> {
     pub(crate) field: &'static str,
     pub(crate) value: &'a str,
     pub(crate) profile_name: &'a str,
 }
 
+#[derive(Clone, Copy)]
 struct PathInput<'a> {
     field: &'static str,
     path: &'a str,

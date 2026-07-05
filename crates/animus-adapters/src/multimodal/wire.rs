@@ -107,8 +107,8 @@ pub fn serialize_provider_native_fixture(
     service: Option<&dyn super::ImagePayloadService>,
 ) -> Result<ProviderNativeRequest, super::Error> {
     let has_images = assembly.has_images();
-    assert!(super::check::usize_to_u64(assembly.parts().len()) <= u64::from(u32::MAX));
-    assert!(assembly.image_count() <= super::check::usize_to_u64(assembly.parts().len()));
+    debug_assert!(u32::try_from(super::check::usize_to_u64(assembly.parts().len())).is_ok());
+    debug_assert!(assembly.image_count() <= super::check::usize_to_u64(assembly.parts().len()));
     reject_lossy_or_missing_image_service(has_images, policy, service)?;
     let mut parts = alloc::vec::Vec::with_capacity(assembly.parts().len());
     for part in assembly.parts() {

@@ -2,6 +2,13 @@
 
 #![allow(unknown_lints, excessive_file_length)]
 
+pub use crate::admission::{
+    MODEL_PROVIDER_NEUTRAL_CONTRACT_IDENTITY, ModelDispatchCancellationPosture,
+    ModelDispatchFallbackPolicy, ModelDispatchPlan, ModelDispatchPlanIssue,
+    ModelDispatchPlanRequest, ModelDispatchPlanStatus, ModelDispatchPolicyDraft,
+    ModelDispatchReceiptPolicy, ModelDispatchStreamPolicy, ModelDispatchTimeoutPosture,
+    plan_model_dispatch,
+};
 pub use crate::background::{
     ProcessJobBackend, ProcessJobEnvironmentVariable, ProcessJobMetadataField,
     ProcessJobNotificationPolicy, ProcessJobProfile, ProcessJobProfileError,
@@ -20,6 +27,16 @@ pub use crate::batch::{
     render_plan_order_records,
 };
 pub use crate::boundary::{evaluate_sandbox_escalation, sandbox_escalation_event};
+pub use crate::capmap::{
+    RuntimeCapabilityFamily, RuntimeCapabilityFamilyMapError, RuntimeCapabilityFamilyRecord,
+    runtime_capability_family_map, validate_runtime_capability_family_map,
+};
+pub use crate::caps::{
+    DEFAULT_MODEL_CAPABILITY_LABEL, DEFAULT_TOOL_CAPABILITY_LABEL, RuntimeCapabilityDescriptor,
+    RuntimeCapabilityDescriptorDraft, RuntimeCapabilityError, RuntimeCapabilityErrorKind,
+    RuntimeCapabilityOutcome, RuntimeCapabilityRegistry, RuntimeCapabilityResolution,
+    RuntimeCapabilityServiceKind,
+};
 pub use crate::composition_conformance::{
     CompositionCaseKind, CompositionDiagnostic, CompositionDiagnosticKind,
     CompositionEvidenceRecord, CompositionRailReport, CompositionScenario, CompositionSurface,
@@ -150,12 +167,17 @@ pub use crate::provenance::{
     transform_line_ranges, validate_provenance_graph, validate_vcs_neutral_field_names,
 };
 pub use crate::provider_hardening::{
-    ProviderApiStyle, ProviderApiStylePolicy, ProviderDiagnostic, ProviderDiagnosticKind,
-    ProviderEndpointSensitivity, ProviderExtraBodyDescriptor, ProviderHeaderDescriptor,
-    ProviderHeaderResolution, ProviderHeaderValueSource, ProviderModelClass, ProviderModelMetadata,
-    ProviderSecretSourceReference, ProviderSelectionReceipt, ProviderSelectionReceiptInput,
-    ProviderValidationResult, blake3_provider_hardening_fingerprint, filter_agent_model,
-    provider_selection_receipt, resolve_extra_body_descriptor, resolve_provider_api_style,
+    ModelCapabilityDecisionStatus, ModelCapabilityDowngrade, ModelCapabilityDowngradePolicy,
+    ModelCapabilityIssue, ModelCapabilityIssueKind, ModelCapabilityNegotiationDecision,
+    ModelCapabilityNegotiationInput, ProviderApiStyle, ProviderApiStylePolicy, ProviderDiagnostic,
+    ProviderDiagnosticKind, ProviderEndpointSensitivity, ProviderExtraBodyDescriptor,
+    ProviderHeaderDescriptor, ProviderHeaderResolution, ProviderHeaderValueSource,
+    ProviderModelCapabilityMatrix, ProviderModelClass, ProviderModelContentPartClass,
+    ProviderModelMetadata, ProviderPrivacyPosture, ProviderSecretSourceReference,
+    ProviderSelectionReceipt, ProviderSelectionReceiptInput, ProviderStreamChannel,
+    ProviderStructuredOutputMode, ProviderValidationResult, blake3_provider_hardening_fingerprint,
+    filter_agent_model, negotiate_model_capability, provider_selection_receipt,
+    resolve_extra_body_descriptor, resolve_provider_api_style, validate_model_capability_matrix,
     validate_provider_header,
 };
 pub use crate::quality_records::{
@@ -194,18 +216,19 @@ pub use crate::scaffold::{
     apply_scaffold_admission, blake3_scaffold_fingerprint, select_scaffold_profile,
     validate_scaffold_influence_receipt, validate_scaffold_profile,
 };
-pub use crate::shell::{
-    RuntimeAdapters, SteelPolicyRuntime, run_agent_loop, run_with_steel_policy,
-    run_with_steel_program,
-};
+pub use crate::shell::{RuntimeAdapters, run_agent_loop};
+#[cfg(feature = "steel")]
+pub use crate::shell::{SteelPolicyRuntime, run_with_steel_policy, run_with_steel_program};
 pub use crate::telemetry::{
     AdapterComponent, LoopDecisionKind, RuntimeEvent, RuntimeEventKind, RuntimeTerminalKind,
     project_model_stream_events,
 };
+#[cfg(feature = "steel")]
+pub use crate::transition::complete_with_steel_policy_denial;
 pub use crate::transition::{
     AdapterOutcome, AdapterRequest, AdapterStep, DecisionStep, TurnPlan, TurnState,
     apply_adapter_outcome, apply_decision, complete_with_fabric_error, complete_with_guard_block,
-    complete_with_guard_failure, complete_with_steel_policy_denial, plan_next_turn,
+    complete_with_guard_failure, plan_next_turn,
 };
 pub use crate::trust_boundary::{
     TrustBoundaryAction, TrustBoundaryActionKind, TrustBoundaryDescriptor, TrustBoundaryDiagnostic,
@@ -216,6 +239,9 @@ pub use crate::trust_boundary::{
     TrustBoundaryViolationReceipt, bind_trust_boundary_judge, blake3_trust_boundary_fingerprint,
     monitor_trust_boundary_action, validate_trust_boundary_descriptor,
     validate_trust_boundary_receipt,
+};
+pub use crate::turns::{
+    RuntimeLoopContractError, RuntimeLoopDecision, RuntimeLoopDecisionDraft, RuntimeLoopTurn,
 };
 pub use crate::workcmd::{
     WorkflowCommandArgumentType, WorkflowCommandArgumentValue, WorkflowCommandArgumentValueDraft,

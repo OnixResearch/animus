@@ -6,6 +6,8 @@ const EMPTY_PAYLOAD_COUNT: u32 = 0;
 
 /// Character length of a lowercase BLAKE3 receipt hash in hex form.
 pub const SAFE_HASH_HEX_CHARS: usize = 64;
+/// Stable contract identity for safe receipt DTOs.
+pub const SAFE_RECEIPT_CONTRACT_IDENTITY: &str = "animus.safe-receipt.v1";
 
 const _: () = assert!(SAFE_HASH_HEX_CHARS > 0);
 
@@ -182,6 +184,12 @@ impl Receipt {
     #[must_use]
     pub const fn redaction(&self) -> super::RedactionMarker {
         self.redaction
+    }
+
+    /// Returns the stable safe receipt contract identity.
+    #[must_use]
+    pub const fn contract_identity() -> &'static str {
+        SAFE_RECEIPT_CONTRACT_IDENTITY
     }
 }
 

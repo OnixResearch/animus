@@ -1,4 +1,9 @@
-use super::*;
+use super::{
+    ID_FIELD, MIN_TURN_COUNT, OUTCOME_CANCELLATION, OUTCOME_DENIED_TOOL, OUTCOME_FAILURE,
+    OUTCOME_KIND_FIELD, OUTCOME_MALFORMED_SUMMARY, OUTCOME_PARTIAL_PARALLEL_SUCCESS,
+    OUTCOME_SUCCESS, OUTCOME_TIMEOUT, OUTCOME_WRITE_CONFLICT, SubagentError, Text, optional_text,
+    parse_value, required_text,
+};
 
 const EVENT_KIND_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("subagent_event_kind");
@@ -114,6 +119,10 @@ impl SubagentAggregateReport {
 /// # Errors
 ///
 /// Returns [`SubagentError`] when the outcome list is empty or fields are malformed.
+///
+/// # Panics
+///
+/// Panics if the non-empty outcome validation above is weakened.
 pub fn aggregate_subagent_outcomes(
     drafts: &[SubagentOutcomeDraft<'_>],
 ) -> Result<SubagentAggregateReport, SubagentError> {
@@ -123,7 +132,7 @@ pub fn aggregate_subagent_outcomes(
         });
     }
     assert!(!drafts.is_empty(), "outcome list was checked above");
-    assert!(drafts.first().is_some(), "outcome slice has a first item");
+    assert!(!drafts.is_empty(), "outcome slice has a first item");
     let mut success_count = 0_u32;
     let mut failure_count = 0_u32;
     let mut has_write_conflict = false;

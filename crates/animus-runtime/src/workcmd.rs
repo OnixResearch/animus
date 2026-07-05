@@ -1534,7 +1534,7 @@ struct BoundedText<'a> {
     max_chars: usize,
 }
 
-fn validate_safe_label<'a>(input: FieldText<'a>) -> Result<&'a str, WorkflowCommandError> {
+fn validate_safe_label(input: FieldText<'_>) -> Result<&str, WorkflowCommandError> {
     if input.value.is_empty() {
         return Err(unsafe_text_error(input));
     }
@@ -1550,21 +1550,21 @@ fn validate_safe_label<'a>(input: FieldText<'a>) -> Result<&'a str, WorkflowComm
     Ok(input.value)
 }
 
-fn validate_safe_summary<'a>(input: FieldText<'a>) -> Result<&'a str, WorkflowCommandError> {
+fn validate_safe_summary(input: FieldText<'_>) -> Result<&str, WorkflowCommandError> {
     validate_bounded_text(BoundedText {
         text: input,
         max_chars: MAX_SAFE_SUMMARY_CHARS,
     })
 }
 
-fn validate_argument_text<'a>(input: FieldText<'a>) -> Result<&'a str, WorkflowCommandError> {
+fn validate_argument_text(input: FieldText<'_>) -> Result<&str, WorkflowCommandError> {
     validate_bounded_text(BoundedText {
         text: input,
         max_chars: MAX_ARGUMENT_TEXT_CHARS,
     })
 }
 
-fn validate_bounded_text<'a>(input: BoundedText<'a>) -> Result<&'a str, WorkflowCommandError> {
+fn validate_bounded_text(input: BoundedText<'_>) -> Result<&str, WorkflowCommandError> {
     if input.text.value.is_empty() {
         return Err(unsafe_text_error(input.text));
     }
@@ -1577,7 +1577,7 @@ fn validate_bounded_text<'a>(input: BoundedText<'a>) -> Result<&'a str, Workflow
     Ok(input.text.value)
 }
 
-fn validate_blake3_hex<'a>(input: FieldText<'a>) -> Result<&'a str, WorkflowCommandError> {
+fn validate_blake3_hex(input: FieldText<'_>) -> Result<&str, WorkflowCommandError> {
     if input.value.len() != BLAKE3_HEX_CHARS {
         return Err(WorkflowCommandError::new(
             WorkflowCommandErrorKind::InvalidProvenance,

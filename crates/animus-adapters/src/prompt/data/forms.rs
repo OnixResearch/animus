@@ -1,4 +1,7 @@
-use crate::prompt::base::*;
+use crate::prompt::base::{
+    KIND_DIFF_BIT, KIND_DIRECTORY_BIT, KIND_FILE_BIT, KIND_IMAGE_BIT, KIND_URL_BIT,
+    MALFORMED_RANGE_REASON, MIN_LINE_NUMBER,
+};
 use alloc::string::ToString;
 
 /// Kind of prompt context reference requested by a turn.

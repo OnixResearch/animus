@@ -20,6 +20,7 @@ impl ProvenanceActor {
     }
 
     /// Returns the Toolpath-compatible `kind:label` actor label.
+    #[must_use]
     pub fn toolpath_label(&self) -> Text {
         format!("{}:{}", self.kind, self.label)
     }
@@ -40,6 +41,7 @@ pub enum ProvenanceReplayRole {
 
 impl ProvenanceReplayRole {
     /// Returns the stable role label.
+    #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::User => "user",
@@ -160,6 +162,7 @@ pub enum ProvenanceLedgerEntry {
 
 impl ProvenanceLedgerEntry {
     /// Returns this entry identity.
+    #[must_use]
     pub fn id(&self) -> &str {
         match self {
             Self::Message(entry) => entry.id.as_str(),
@@ -171,6 +174,7 @@ impl ProvenanceLedgerEntry {
     }
 
     /// Returns this entry parent identities.
+    #[must_use]
     pub fn parents(&self) -> &[Text] {
         match self {
             Self::Message(entry) => entry.parents.as_slice(),

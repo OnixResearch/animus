@@ -1,12 +1,4 @@
 pub(super) fn validate(draft: &super::Draft<'_>) -> Result<super::Manifest, super::super::Error> {
-    assert!(
-        super::super::MAX_ITEMS > 0,
-        "manifest item bound is positive"
-    );
-    assert!(
-        super::super::MAX_PROMPT_CHARS > 0,
-        "prompt budget is positive"
-    );
     let fields = RequiredFields::from_draft(draft)?;
     let source_scope = source_scope_from_label(fields.source_text.as_str()).ok_or_else(|| {
         super::super::Error::UnsupportedValue {
@@ -104,7 +96,7 @@ impl RequiredFields {
             workflow_abilities: self.workflow_abilities,
             source_scope,
             trust_status,
-            manifest_identity: self.manifest_identity,
+            identity: self.manifest_identity,
         }
     }
 }

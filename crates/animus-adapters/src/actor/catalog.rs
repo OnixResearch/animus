@@ -43,7 +43,7 @@ pub struct Manifest {
     pub(super) workflow_abilities: super::Collection<super::Text>,
     pub(super) source_scope: SourceScope,
     pub(super) trust_status: TrustStatus,
-    pub(super) manifest_identity: super::Text,
+    pub(super) identity: super::Text,
 }
 
 impl Manifest {
@@ -127,7 +127,7 @@ impl Manifest {
     /// Returns the safe manifest identity.
     #[must_use]
     pub fn manifest_identity(&self) -> &str {
-        self.manifest_identity.as_str()
+        self.identity.as_str()
     }
 
     /// Returns the authority boundary for parsed manifests.

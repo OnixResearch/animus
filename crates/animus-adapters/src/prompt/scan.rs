@@ -1,5 +1,14 @@
-use super::base::*;
-use super::data::*;
+use super::base::{
+    CURRENT_DIR_PREFIX, DIFF_PREFIX, EMPTY_HASH_INPUT, FTP_PREFIX, HOME_DIR_PREFIX, HTTP_PREFIX,
+    HTTPS_PREFIX, IMAGE_PREFIX, LOCAL_RANGE_SEPARATOR, MALFORMED_RANGE_REASON, PARENT_DIR_SEGMENT,
+    PATH_ESCAPE_REASON, PATH_SEPARATOR, RANGE_SPAN_SEPARATOR, REFERENCE_SIGIL,
+    UNSUPPORTED_KIND_REASON, URL_CREDENTIAL_REASON, URL_LABEL_PREFIX, WINDOWS_PATH_SEPARATOR,
+    hash_text,
+};
+use super::data::{
+    ContextLineRange, ContextReference, ContextReferenceError, ContextReferenceKind,
+    ContextRenderMode, ContextSourceTrust,
+};
 use alloc::string::ToString;
 
 /// Parses a raw prompt context reference into a typed DTO.

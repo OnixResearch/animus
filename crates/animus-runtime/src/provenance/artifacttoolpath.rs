@@ -15,6 +15,7 @@ pub enum ProvenanceArtifactKind {
 
 impl ProvenanceArtifactKind {
     /// Returns the stable artifact-kind label.
+    #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::Model => "model",
@@ -41,6 +42,7 @@ pub enum ProvenanceRedactionClass {
 
 impl ProvenanceRedactionClass {
     /// Returns the stable redaction label.
+    #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::Public => PUBLIC_REDACTION_MARKER,
@@ -51,6 +53,7 @@ impl ProvenanceRedactionClass {
     }
 
     /// Returns true when payload bodies may be displayed by default.
+    #[must_use]
     pub const fn allows_payload_display(self) -> bool {
         matches!(self, Self::Public)
     }
@@ -115,6 +118,7 @@ impl ProvenanceArtifact {
     }
 
     /// Returns the payload when the redaction class allows display.
+    #[must_use]
     pub fn review_payload(&self) -> Option<&str> {
         if self.redaction.allows_payload_display() {
             Some(self.payload.as_str())
@@ -124,6 +128,7 @@ impl ProvenanceArtifact {
     }
 
     /// Returns the redaction marker for receipt or review output.
+    #[must_use]
     pub const fn redaction_marker(&self) -> &'static str {
         self.redaction.as_str()
     }

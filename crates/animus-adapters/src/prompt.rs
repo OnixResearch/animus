@@ -1,5 +1,7 @@
 //! Typed prompt context-reference contracts and pure validation helpers.
 
+#![allow(non_trait_imports)]
+
 mod base;
 mod data;
 mod flow;

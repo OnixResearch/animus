@@ -116,13 +116,13 @@ pub fn evaluate_resume_manifest(
     let entries = validate_resume_entries(manifest.completed_jobs)?;
     let mut decisions = Collection::with_capacity(plan.jobs().len());
     for job in plan.jobs() {
-        let reason = header_stale_reason(
+        let reason = header_stale_reason(ResumeHeaderInput {
             plan,
-            manifest_run_id.as_str(),
-            manifest_plan_hash.as_str(),
-            manifest_format,
-            manifest_redaction,
-        )
+            run_id: manifest_run_id.as_str(),
+            plan_hash: manifest_plan_hash.as_str(),
+            output_format: manifest_format,
+            redaction_policy: manifest_redaction,
+        })
         .or_else(|| entry_stale_reason(plan, job, entries.as_slice()));
         let action = if reason.is_some() {
             BatchResumeAction::Run

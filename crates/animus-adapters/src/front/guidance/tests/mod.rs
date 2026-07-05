@@ -59,6 +59,10 @@ pub(super) fn source(
     )
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "fixture mirrors guidance source fields"
+)]
 pub(super) fn source_with(
     name: &'static str,
     scope: PromptResourceScope,

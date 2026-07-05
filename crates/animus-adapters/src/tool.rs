@@ -68,6 +68,12 @@ const OUTPUT_REFERENCE_FIELD: crate::validation::FieldName =
 const MAX_TOOL_METADATA_ITEMS: usize = 32;
 const MIN_VISIBLE_OUTPUT_CHARS: u32 = 1;
 const MAX_VISIBLE_OUTPUT_CHARS: u32 = 8_192;
+// r[impl agent_harness_runtime.boundary_versions.contract_identities]
+/// Stable contract identity for public tool request DTOs.
+pub const TOOL_REQUEST_CONTRACT_IDENTITY: &str = "animus.tool-request.v1";
+/// Stable contract identity for public tool response DTOs.
+pub const TOOL_RESPONSE_CONTRACT_IDENTITY: &str = "animus.tool-response.v1";
+
 const HASH_SCHEMA: &str = "animus.pi-tool-contract.v1";
 const HASH_SEPARATOR: &str = "|";
 const ABSOLUTE_PATH_PREFIX: &str = "/";
@@ -173,8 +179,5 @@ fn hash_parts(parts: &[&str]) -> Text {
 }
 
 fn usize_to_u64(value: usize) -> u64 {
-    match u64::try_from(value) {
-        Ok(converted) => converted,
-        Err(_overflow) => u64::MAX,
-    }
+    value as u64
 }

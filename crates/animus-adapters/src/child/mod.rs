@@ -1,5 +1,7 @@
 //! Recipe-backed subagent delegation DTOs and pure validation helpers.
 
+#![allow(non_trait_imports)]
+
 const ID_FIELD: crate::validation::FieldName = crate::validation::FieldName::new("subagent_id");
 const ROLE_FIELD: crate::validation::FieldName = crate::validation::FieldName::new("subagent_role");
 const TASK_FIELD: crate::validation::FieldName = crate::validation::FieldName::new("subagent_task");
@@ -191,17 +193,20 @@ fn text_collection(
     Ok(normalized)
 }
 
-fn contains_all(
-    capability: &str,
-    parent_policy: &[Text],
-    recipe_or_profile: &[Text],
-    workspace_scope: &[Text],
-    host_admission: &[Text],
-) -> bool {
-    contains_text(parent_policy, capability)
-        && contains_text(recipe_or_profile, capability)
-        && contains_text(workspace_scope, capability)
-        && contains_text(host_admission, capability)
+#[derive(Clone, Copy)]
+struct CapabilitySetCheck<'a> {
+    capability: &'a str,
+    parent_policy: &'a [Text],
+    recipe_or_profile: &'a [Text],
+    workspace_scope: &'a [Text],
+    host_admission: &'a [Text],
+}
+
+fn contains_all(input: CapabilitySetCheck<'_>) -> bool {
+    contains_text(input.parent_policy, input.capability)
+        && contains_text(input.recipe_or_profile, input.capability)
+        && contains_text(input.workspace_scope, input.capability)
+        && contains_text(input.host_admission, input.capability)
 }
 
 fn contains_text(values: &[Text], needle: &str) -> bool {

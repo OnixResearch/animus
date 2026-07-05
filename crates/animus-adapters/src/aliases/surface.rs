@@ -28,6 +28,11 @@ pub type RetrievalResourcePolicy = crate::resource::retrieval::contract::Policy;
 /// Truncation status for retrieved content metadata.
 pub type RetrievalTruncation = crate::resource::retrieval::facts::Truncation;
 /// Applies retrieval policy to a resource and optional budget descriptor.
+///
+/// # Errors
+///
+/// Returns [`RetrievalBudgetError`] when the capability, budget, or policy
+/// combination is not admissible.
 pub fn admit_retrieval_resource(
     capability: RetrievalCapability,
     budget: Option<&RetrievalBudget>,
@@ -184,11 +189,78 @@ pub type WorkspaceConflictPolicy = crate::workspace::rules::ConflictPolicy;
 pub type WorkspaceFileInclusionPolicy = crate::workspace::rules::FileInclusionPolicy;
 /// Requested workspace operation under the public facade naming scheme.
 pub type WorkspaceOperation = crate::workspace::rules::Operation;
+/// Restore metadata under the public facade naming scheme.
+pub type WorkspaceRestoreMetadata = crate::workspace::isolation::RestoreMetadata;
+/// Borrowed restore metadata input under the public facade naming scheme.
+pub type WorkspaceRestoreMetadataDraft<'a> = crate::workspace::isolation::RestoreMetadataDraft<'a>;
+/// Validated isolated task workspace under the public facade naming scheme.
+pub type IsolatedTaskWorkspace = crate::workspace::isolation::IsolatedTaskWorkspace;
+/// Borrowed isolated task workspace input under the public facade naming scheme.
+pub type IsolatedTaskWorkspaceDraft<'a> =
+    crate::workspace::isolation::IsolatedTaskWorkspaceDraft<'a>;
+/// Automation run kind under the public facade naming scheme.
+pub type WorkspaceAutomationKind = crate::workspace::automation::AutomationKind;
+/// Automation sandbox profile under the public facade naming scheme.
+pub type WorkspaceAutomationSandboxProfile = crate::workspace::automation::AutomationSandboxProfile;
+/// Validated automation run contract under the public facade naming scheme.
+pub type WorkspaceAutomationRunContract = crate::workspace::automation::AutomationRunContract;
+/// Borrowed automation run contract input under the public facade naming scheme.
+pub type WorkspaceAutomationRunContractDraft<'a> =
+    crate::workspace::automation::AutomationRunContractDraft<'a>;
+/// Safe automation event kind under the public facade naming scheme.
+pub type WorkspaceAutomationEventKind = crate::workspace::automation::AutomationEventKind;
+/// Safe automation event under the public facade naming scheme.
+pub type WorkspaceAutomationEvent = crate::workspace::automation::AutomationEvent;
+/// Borrowed automation event input under the public facade naming scheme.
+pub type WorkspaceAutomationEventDraft<'a> = crate::workspace::automation::AutomationEventDraft<'a>;
+/// Handoff direction under the public facade naming scheme.
+pub type WorkspaceHandoffDirection = crate::workspace::handoff::HandoffDirection;
+/// Handoff conflict status under the public facade naming scheme.
+pub type WorkspaceHandoffConflictStatus = crate::workspace::handoff::HandoffConflictStatus;
+/// Snapshot handoff record under the public facade naming scheme.
+pub type WorkspaceSnapshotHandoffRecord = crate::workspace::handoff::SnapshotHandoffRecord;
+/// Borrowed snapshot handoff input under the public facade naming scheme.
+pub type WorkspaceSnapshotHandoffRecordDraft<'a> =
+    crate::workspace::handoff::SnapshotHandoffRecordDraft<'a>;
+/// Ignored-file redaction class under the public facade naming scheme.
+pub type WorkspaceIgnoredFileRedactionClass =
+    crate::workspace::inclusion::IgnoredFileRedactionClass;
+/// Ignored-file redaction approval under the public facade naming scheme.
+pub type WorkspaceIgnoredFileRedactionApproval =
+    crate::workspace::inclusion::IgnoredFileRedactionApproval;
+/// Ignored-file allowlist entry under the public facade naming scheme.
+pub type WorkspaceIgnoredFileAllowlistEntry =
+    crate::workspace::inclusion::IgnoredFileAllowlistEntry;
+/// Borrowed ignored-file allowlist input under the public facade naming scheme.
+pub type WorkspaceIgnoredFileAllowlistEntryDraft<'a> =
+    crate::workspace::inclusion::IgnoredFileAllowlistEntryDraft<'a>;
+/// Ignored-file materialization request under the public facade naming scheme.
+pub type WorkspaceIgnoredFileMaterializationRequest<'a> =
+    crate::workspace::inclusion::IgnoredFileMaterializationRequest<'a>;
+/// Ignored-file materialization decision under the public facade naming scheme.
+pub type WorkspaceIgnoredFileMaterializationDecision =
+    crate::workspace::inclusion::IgnoredFileMaterializationDecision;
+/// Ignored-file materialization status under the public facade naming scheme.
+pub type WorkspaceIgnoredFileMaterializationStatus =
+    crate::workspace::inclusion::IgnoredFileMaterializationStatus;
+/// Ignored-file materialization denial reason under the public facade naming scheme.
+pub type WorkspaceIgnoredFileDenialReason = crate::workspace::inclusion::IgnoredFileDenialReason;
 
 /// Builds a pure workspace plan and fails closed before host execution on invalid input.
 #[must_use]
 pub fn evaluate_workspace_plan(request: WorkspacePlanRequest<'_>) -> WorkspacePlan {
     crate::workspace::planning::evaluate(request)
+}
+
+/// Plans ignored-file materialization without copying data.
+///
+/// # Errors
+///
+/// Returns [`crate::AdapterContractError`] when the request file label is empty or malformed.
+pub fn plan_workspace_ignored_file_materialization(
+    request: WorkspaceIgnoredFileMaterializationRequest<'_>,
+) -> Result<WorkspaceIgnoredFileMaterializationDecision, crate::AdapterContractError> {
+    crate::workspace::inclusion::plan_ignored_file_materialization(request)
 }
 
 /// Validates candidate workspace receipt evidence text for obvious sensitive material.

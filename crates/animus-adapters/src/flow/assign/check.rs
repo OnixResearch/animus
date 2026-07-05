@@ -1,4 +1,4 @@
-use super::*;
+use super::{RecipeParameterInput, RecipeParameterInputKind, Text};
 
 pub(super) fn validate_input_for_parameter(
     parameter: &super::super::field::RecipeParameter,

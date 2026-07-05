@@ -7209,3 +7209,844 @@ r[agent_harness_runtime.composability.conformance.verification.closeout]
 - WHEN closeout validation runs
 - THEN evidence names matrix, positive conformance, negative conformance, safe evidence, workspace, Nix if added, and Cairn gate checks
 - AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Typed capability descriptors
+
+r[agent_harness_runtime.composability.capability_descriptors] Animus runtime decisions and service-backed helpers MUST represent required host authority as typed capability descriptors rather than implicit model, tool, queue, event, policy, confirmation, cancellation, or provenance assumptions.
+
+#### Scenario: Capability descriptors validate before resolution
+
+r[agent_harness_runtime.composability.capability_descriptors.validation]
+- GIVEN a runtime plan declares required host capabilities
+- WHEN descriptor validation runs
+- THEN valid descriptors are accepted with stable labels and service kinds
+- AND duplicate labels, empty labels, unsupported service kinds, or unsafe scope text fail before service resolution.
+
+### Requirement: Host-supplied capability registry
+
+r[agent_harness_runtime.composability.capability_registry] Animus MAY use a host-supplied capability bundle or registry to resolve explicit service references, but reusable runtime code MUST NOT construct providers, tools, queues, stores, event sinks, plugin runtimes, or other ambient backends.
+
+#### Scenario: Multiple services compose through explicit injection
+
+r[agent_harness_runtime.composability.capability_registry.composition]
+- GIVEN a host supplies model, tool, event sink, policy, queue, cancellation, confirmation, and provenance capabilities
+- WHEN runtime resolves a plan requiring a subset of those capabilities
+- THEN only explicitly supplied services are eligible for dispatch
+- AND duplicate registrations or missing required capabilities return typed diagnostics without ambient fallback.
+
+### Requirement: Model and tool adapter compatibility
+
+r[agent_harness_runtime.composability.adapter_compatibility] Existing simple model/tool adapter constructors MUST remain available or be replaced by explicit migration helpers that are thin wrappers over the capability bundle.
+
+#### Scenario: Compatibility path preserves behavior
+
+r[agent_harness_runtime.composability.adapter_compatibility.equivalent]
+- GIVEN a runtime loop uses the existing model/tool constructor path and another loop uses the explicit capability-bundle path
+- WHEN both loops receive equivalent fabric decisions and adapter responses
+- THEN they produce equivalent typed reports, events, failures, and receipts
+- AND neither path gains additional ambient authority.
+
+### Requirement: Capability calls fail closed
+
+r[agent_harness_runtime.composability.capability_fail_closed] Capability resolution and calls MUST return typed absent, denied, unavailable, malformed, cancelled, timed-out, and completed outcomes, and non-completed outcomes MUST prevent success receipts and later side effects.
+
+#### Scenario: Missing capability cannot fall back to ambient discovery
+
+r[agent_harness_runtime.composability.capability_fail_closed.no_fallback]
+- GIVEN a runtime action requires a capability that is absent, denied, unavailable, malformed, cancelled, or timed out
+- WHEN dispatch attempts to resolve or call that capability
+- THEN runtime returns the matching fail-closed outcome
+- AND it does not read environment variables, scan files, load plugins, spawn processes, contact providers, or claim completed effects as a fallback.
+
+### Requirement: Capability registry verification
+
+r[agent_harness_runtime.composability.capability_registry.verification] The capability registry change MUST include focused positive and negative tests for descriptor validation, single-service and multi-service composition, compatibility constructors, fail-closed outcomes, no ambient fallback, facade inventory, workspace checks, and Cairn gates before archive.
+
+#### Scenario: Closeout evidence covers capability composition
+
+r[agent_harness_runtime.composability.capability_registry.verification.closeout]
+- GIVEN maintainers intend to archive the capability registry change
+- WHEN closeout validation runs
+- THEN evidence names descriptor, registry, compatibility, fail-closed, no-fallback, inventory, workspace, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Fabric-neutral loop contracts
+
+r[agent_harness_runtime.composability.fabric_neutral_contracts] Animus runtime loop contracts MUST use runtime-owned neutral turn and decision DTOs rather than Steel-specific types for reusable fabric input and output.
+
+#### Scenario: Fabric decisions validate without Steel
+
+r[agent_harness_runtime.composability.fabric_neutral_contracts.validation]
+- GIVEN a runtime loop decision requests model dispatch, tool dispatch, final response, or safe failure completion
+- WHEN neutral DTO validation runs
+- THEN valid decisions are accepted without constructing Steel values
+- AND malformed empty fields, unsupported decision kinds, or oversized safe text fail before adapter dispatch.
+
+### Requirement: Loop fabric trait is implementation-neutral
+
+r[agent_harness_runtime.composability.loop_fabric_trait] The `LoopFabric` trait MUST accept and return neutral runtime DTOs so embedders can provide non-Steel fabrics without depending on Steel crates or values.
+
+#### Scenario: Non-Steel fabric drives a runtime loop
+
+r[agent_harness_runtime.composability.loop_fabric_trait.non_steel]
+- GIVEN a fake non-Steel fabric and injected model and tool adapters
+- WHEN the runtime shell executes a loop
+- THEN model dispatch, tool dispatch, final response, malformed decision, and missing-service paths use the same typed transition and failure semantics as the default fabric path
+- AND no Steel script, Steel policy, or Steel value is required.
+
+### Requirement: Steel integration is an adapter
+
+r[agent_harness_runtime.composability.steel_adapter] Animus MAY provide Steel as a canonical loop fabric adapter, but Steel-specific decisions MUST be converted into neutral runtime DTOs and revalidated before model, tool, or final-response handling.
+
+#### Scenario: Steel output cannot bypass runtime validation
+
+r[agent_harness_runtime.composability.steel_adapter.validation]
+- GIVEN a Steel script returns a dispatch or final-response decision
+- WHEN the Steel adapter binds that output to the runtime loop contract
+- THEN valid output is converted to neutral DTOs
+- AND malformed Steel decisions, denied policy activation, or invalid adapter output produce typed fail-closed reports without dispatching unchecked effects.
+
+### Requirement: Steel dependency is optional for neutral runtime composition
+
+r[agent_harness_runtime.composability.steel_optional] The neutral runtime loop surface MUST compile and be documented without requiring Steel; Steel convenience runners MUST be behind explicit feature or integration boundaries.
+
+#### Scenario: Steel-disabled runtime remains usable
+
+r[agent_harness_runtime.composability.steel_optional.compile]
+- GIVEN an embedder disables Steel integration and depends on the neutral runtime surface
+- WHEN compile and facade inventory checks run
+- THEN neutral loop DTOs, transition helpers, adapter dispatch, and fake-fabric tests remain available
+- AND Steel runner APIs are absent or explicitly feature-gated rather than pulled in transitively.
+
+### Requirement: Fabric decoupling verification
+
+r[agent_harness_runtime.composability.fabric_decoupling.verification] The fabric decoupling change MUST include focused positive and negative tests for neutral DTO validation, non-Steel fabric execution, Steel adapter conversion, feature-gated compile surfaces, facade inventory, and Cairn gates before archive.
+
+#### Scenario: Closeout evidence covers fabric composition
+
+r[agent_harness_runtime.composability.fabric_decoupling.verification.closeout]
+- GIVEN maintainers intend to archive the fabric decoupling change
+- WHEN closeout validation runs
+- THEN evidence names neutral-runtime, fake-fabric, Steel-adapter, feature-gate, facade-inventory, workspace, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Composition inventory metadata
+
+r[agent_harness_runtime.composability.inventory_metadata] The runtime facade inventory MUST record feature gate, required authority, dependency links, and expected composition links for runtime-facing public exports or export groups.
+
+#### Scenario: Inventory records carry composition metadata
+
+r[agent_harness_runtime.composability.inventory_metadata.schema]
+- GIVEN a runtime-facing public export or export group is listed in the inventory
+- WHEN inventory schema validation runs
+- THEN the record includes explicit or valid default composition metadata
+- AND malformed or missing required metadata fails validation.
+
+### Requirement: Inventory metadata validation
+
+r[agent_harness_runtime.composability.inventory_validation] Inventory validation MUST enforce controlled authority values, known feature labels, known dependency targets, and known composition-link targets.
+
+#### Scenario: Invalid inventory metadata is rejected
+
+r[agent_harness_runtime.composability.inventory_validation.fixtures]
+- GIVEN an inventory fixture has an unknown authority value, missing feature label, unknown dependency link, unknown composition link, or malformed metadata field
+- WHEN inventory validation runs
+- THEN validation fails with a typed diagnostic
+- AND the invalid record is not accepted as facade evidence.
+
+### Requirement: Reusable surfaces cannot depend upward on host authority
+
+r[agent_harness_runtime.composability.inventory_dependency_direction] Inventory validation MUST reject reusable-contract exports that depend on shell adapters, terminal UI, process execution, persistence, network, provider discovery, credentials, or other ambient host authority surfaces.
+
+#### Scenario: Hidden shell dependency fails inventory validation
+
+r[agent_harness_runtime.composability.inventory_dependency_direction.no_upward_leak]
+- GIVEN a reusable-contract inventory record declares or implies dependency on shell, terminal, process, persistence, network, provider, credential, or ambient host authority
+- WHEN dependency-direction validation runs
+- THEN the inventory check fails with a dependency-direction diagnostic
+- AND maintainers must reclassify the export or move the dependency behind host injection.
+
+### Requirement: Safe inventory evidence
+
+r[agent_harness_runtime.composability.inventory_evidence] Runtime facade inventory checks MUST emit bounded safe evidence containing class counts, feature counts, authority counts, composition counts, and BLAKE3 inventory hashes.
+
+#### Scenario: Inventory evidence omits sensitive data
+
+r[agent_harness_runtime.composability.inventory_evidence.safe]
+- GIVEN inventory validation emits evidence for review or closeout
+- WHEN evidence leak checks run
+- THEN raw prompts, provider payloads, credentials, full paths, and unbounded output are omitted or rejected
+- AND evidence remains suitable for Cairn archive records.
+
+### Requirement: Composition inventory verification
+
+r[agent_harness_runtime.composability.inventory.verification] The inventory metadata change MUST include focused positive and negative tests for schema validation, metadata validation, dependency direction, safe evidence, workspace checks, and Cairn gates before archive.
+
+#### Scenario: Closeout evidence covers inventory metadata behavior
+
+r[agent_harness_runtime.composability.inventory.verification.closeout]
+- GIVEN maintainers intend to archive the inventory metadata change
+- WHEN closeout validation runs
+- THEN evidence names schema, metadata, dependency-direction, safe-evidence, workspace, inventory rail, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Runtime capability-family map
+
+r[agent_harness_runtime.composability.capability_family_map] Animus MUST maintain a capability-family map for runtime public exports and modules so embedders can distinguish loop, headless, provenance, batch, worker-team, policy, quality, research, scaffold, compaction, dataset-export, shared, and compatibility surfaces.
+
+#### Scenario: Each export has a family classification
+
+r[agent_harness_runtime.composability.capability_family_map.inventory]
+- GIVEN a runtime-facing public export is listed in the facade inventory
+- WHEN capability-family validation runs
+- THEN the export belongs to exactly one primary family or an explicit shared-family class
+- AND unclassified exports fail validation before archive.
+
+### Requirement: Capability feature gates
+
+r[agent_harness_runtime.composability.capability_feature_gates] Runtime capability families SHOULD be gated by named Cargo features where doing so reduces dependency footprint, public surface area, or accidental authority coupling, while preserving an explicit compatibility bundle.
+
+#### Scenario: Minimal and selected-family builds compile
+
+r[agent_harness_runtime.composability.capability_feature_gates.compile]
+- GIVEN an embedder builds minimal runtime, a selected capability family, the compatibility bundle, or all families
+- WHEN compile checks run
+- THEN enabled family exports and tests are available
+- AND disabled family exports are absent rather than partially usable.
+
+### Requirement: Feature selection documentation
+
+r[agent_harness_runtime.composability.capability_feature_docs] Animus documentation MUST explain how embedders choose minimal, selected-family, compatibility, and all-family runtime feature sets, including authority and dependency implications.
+
+#### Scenario: Disabled families do not leak into minimal docs or builds
+
+r[agent_harness_runtime.composability.capability_feature_docs.no_leak]
+- GIVEN a minimal-runtime build and its documented import path
+- WHEN docs examples, compile checks, and facade inventory validation run
+- THEN disabled headless, provenance, batch, worker-team, TUI, provider, process, and persistence families are not required
+- AND any feature-required API is labeled with its required feature.
+
+### Requirement: Capability feature verification
+
+r[agent_harness_runtime.composability.capability_features.verification] The capability feature change MUST include focused positive and negative tests for family mapping, feature-gated compile profiles, disabled-family leakage, facade inventory, workspace checks, and Cairn gates before archive.
+
+#### Scenario: Closeout evidence covers feature composition
+
+r[agent_harness_runtime.composability.capability_features.verification.closeout]
+- GIVEN maintainers intend to archive the capability feature change
+- WHEN closeout validation runs
+- THEN evidence names family-map, minimal compile, selected-family compile, compatibility compile, disabled-family leak, inventory, workspace, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Domain prelude modules
+
+r[agent_harness_runtime.composability.domain_preludes] Animus SHOULD provide curated domain prelude modules that expose small, documented composition surfaces for runtime loop execution, tool contracts, headless protocol, provenance, worker-team delegation, policy/middleware, and status selection.
+
+#### Scenario: Prelude imports stay focused
+
+r[agent_harness_runtime.composability.domain_preludes.compile]
+- GIVEN an embedder imports one domain prelude
+- WHEN compile or import-surface tests construct representative DTOs and call pure helpers
+- THEN the prelude exposes the expected domain contracts
+- AND unrelated shell, terminal, provider, process, filesystem, or persistence types are not required.
+
+### Requirement: Compatibility facade remains stable
+
+r[agent_harness_runtime.composability.compatibility_facade] Existing flat root and crate-level compatibility exports MUST remain available or receive explicit migration documentation when domain preludes are introduced.
+
+#### Scenario: Existing imports are not silently removed
+
+r[agent_harness_runtime.composability.compatibility_facade.stable]
+- GIVEN existing consumers import DTOs or helpers from the broad compatibility facade
+- WHEN domain preludes are added
+- THEN compatibility imports continue to compile or emit explicit deprecation/migration guidance
+- AND no public behavior changes solely because a prelude exists.
+
+### Requirement: Prelude inventory classification
+
+r[agent_harness_runtime.composability.prelude_inventory] Each domain prelude MUST be recorded in the runtime facade inventory with owning crate, authority class, side-effect class, and any feature requirements.
+
+#### Scenario: Reusable prelude rejects authority leaks
+
+r[agent_harness_runtime.composability.prelude_inventory.no_leak]
+- GIVEN a reusable-contract prelude is inventoried
+- WHEN facade inventory validation runs
+- THEN shell, provider, filesystem, process, persistence, network, credential, and terminal imports are rejected
+- AND host-injection or shell-adapter preludes are explicitly labeled rather than hidden inside reusable domains.
+
+### Requirement: Domain prelude verification
+
+r[agent_harness_runtime.composability.domain_preludes.verification] The prelude change MUST include focused positive and negative tests for import surfaces, compatibility exports, facade inventory classification, authority-leak fixtures, workspace checks, and Cairn gates before archive.
+
+#### Scenario: Closeout evidence covers prelude composition
+
+r[agent_harness_runtime.composability.domain_preludes.verification.closeout]
+- GIVEN maintainers intend to archive the domain prelude change
+- WHEN closeout validation runs
+- THEN evidence names prelude compile, compatibility facade, inventory, leak-fixture, workspace, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Contracts index
+
+r[agent_harness_runtime.adapter_conformance.contracts_index] Animus MUST maintain a contracts index for public adapter families that names owner modules, stability or version posture, authority boundary, safe receipt behavior, serialization bridge status, and focused validation checks.
+
+#### Scenario: Contract family has discoverable ownership
+
+r[agent_harness_runtime.adapter_conformance.contracts_index.validation]
+- GIVEN a public adapter family is maintained by Animus
+- WHEN maintainers inspect the contracts index
+- THEN the family has an owner module, authority-boundary note, receipt behavior summary, and focused validation rail
+- AND the index does not require concrete host providers, filesystem access, network access, process execution, credentials, or plugin loading to evaluate.
+
+### Requirement: Adapter conformance matrix
+
+r[agent_harness_runtime.adapter_conformance.matrix] Public adapter families MUST declare conformance expectations for happy path, missing service, denied capability, unavailable service, timeout, cancellation, malformed output, oversized output, unsafe reference, schema mismatch, duplicate field, unknown field, and leak rejection cases, or provide explicit safe non-applicability reasons.
+
+#### Scenario: Family coverage includes positive and negative cases
+
+r[agent_harness_runtime.adapter_conformance.matrix.coverage]
+- GIVEN a maintained adapter family appears in the conformance matrix
+- WHEN focused conformance checks run
+- THEN the family has positive coverage and relevant negative coverage for fail-closed behavior
+- AND missing negative coverage without a safe non-applicability reason fails the rail.
+
+### Requirement: Focused adapter surfaces
+
+r[agent_harness_runtime.adapter_conformance.focused_preludes] Animus SHOULD provide focused adapter preludes or documented module-level export sets for model, tool, host/status, workspace, security/policy, and receipt surfaces while preserving the flat compatibility facade until a planned migration changes it.
+
+#### Scenario: Embedder can use the smallest adapter surface
+
+r[agent_harness_runtime.adapter_conformance.focused_preludes.validation]
+- GIVEN an embedder needs only one adapter family
+- WHEN they use the focused prelude or documented export set for that family
+- THEN representative DTOs can be constructed without importing unrelated flat-facade types
+- AND no concrete provider, filesystem, process, network, credential, UI, or plugin dependency is introduced.
+
+### Requirement: Adapter conformance verification
+
+r[agent_harness_runtime.adapter_conformance.verification] The adapter conformance rail and contracts index change MUST include focused positive and negative tests or inventory checks for contracts indexing, conformance coverage, focused adapter surfaces, facade inventory, workspace checks, and Cairn gates before archive.
+
+#### Scenario: Closeout evidence covers adapter conformance
+
+r[agent_harness_runtime.adapter_conformance.verification.closeout]
+- GIVEN maintainers intend to archive adapter conformance indexing
+- WHEN closeout validation runs
+- THEN evidence names contracts-index, conformance matrix, positive/negative coverage, focused surfaces, inventory, workspace, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Dataspace Preserves schema coverage
+
+r[agent_harness_runtime.preserves_dataspace.schema] Animus MUST provide optional Preserves schema identities and typed record coverage for dataspace scopes, assertions, subscriptions, and orchestration events before those DTOs are advertised as portable external dataspace wire contracts.
+
+#### Scenario: Dataspace records have versioned schema identities
+
+r[agent_harness_runtime.preserves_dataspace.schema.versioned]
+- GIVEN a dataspace scope, assertion, subscription, cancellation event, expiry event, or ownership-transfer event crosses a Preserves boundary
+- WHEN it is encoded as a versioned Preserves record
+- THEN the record carries a schema family, supported version, and typed dataspace payload kind
+- AND the schema identity is available without enabling a live Syndicate transport.
+
+### Requirement: Typed dataspace decoding
+
+r[agent_harness_runtime.preserves_dataspace.typed_decoding] Preserves dataspace decoding MUST produce validated `animus-adapters` dataspace DTOs before any runtime, host, policy, provenance, or future live dataspace behavior observes the payload.
+
+#### Scenario: Raw Preserves syntax stays at the codec boundary
+
+r[agent_harness_runtime.preserves_dataspace.typed_decoding.no_ast_logic]
+- GIVEN a behavior decision depends on dataspace scope, assertion status, subscription shape, cancellation, expiry, or ownership transfer
+- WHEN Preserves decoding succeeds
+- THEN the decision receives typed validated dataspace DTOs
+- AND reusable core, runtime, adapter, policy, or host orchestration logic does not inspect raw Preserves syntax trees.
+
+### Requirement: Safe dataspace payload set
+
+r[agent_harness_runtime.preserves_dataspace.safe_payloads] Dataspace Preserves records MUST contain only bounded safe coordination material such as stable IDs, normalized scope labels, status classes, assertion kinds, redaction markers, BLAKE3 hashes, counts, lease/expiry metadata, and ownership-transfer labels.
+
+#### Scenario: Sensitive material is rejected before broadcast
+
+r[agent_harness_runtime.preserves_dataspace.safe_payloads.rejects_raw]
+- GIVEN a Preserves dataspace record attempts to carry prompt text, provider payloads, credentials, full private paths, file bodies, raw tool input/output, model output, or unbounded logs
+- WHEN dataspace Preserves validation runs
+- THEN decoding fails with a typed safe-payload diagnostic
+- AND no dataspace assertion, subscription result, orchestration event, success receipt, or compatibility metadata echoes the raw material.
+
+### Requirement: Dataspace Preserves round trips
+
+r[agent_harness_runtime.preserves_dataspace.round_trip] Dataspace Preserves work MUST include positive text and binary round-trip fixtures for valid scope, assertion, subscription, cancellation, expiry, and ownership-transfer records.
+
+#### Scenario: Valid dataspace fixture round trips
+
+r[agent_harness_runtime.preserves_dataspace.round_trip.valid]
+- GIVEN a valid dataspace DTO fixture with safe scope and redaction metadata
+- WHEN it is encoded and decoded through supported Preserves text and binary forms
+- THEN the decoded typed DTO is equivalent to the source value
+- AND ordering, scope, status class, redaction markers, and safe hashes are preserved.
+
+### Requirement: Dataspace Preserves malformed rejection
+
+r[agent_harness_runtime.preserves_dataspace.malformed] Dataspace Preserves work MUST include negative fixtures for unsupported versions, wrong schema families, missing required fields, unsafe compatibility metadata, cross-scope subscriptions, raw sensitive material, and unbounded payloads.
+
+#### Scenario: Malformed dataspace payload fails safely
+
+r[agent_harness_runtime.preserves_dataspace.malformed.rejects]
+- GIVEN a malformed, wrong-version, wrong-family, cross-scope, unsafe, or unbounded dataspace Preserves payload
+- WHEN boundary decoding runs
+- THEN decoding fails with a typed validation or compatibility error
+- AND no partial assertion publish, subscription match, orchestration event, or live transport side effect occurs.
+
+### Requirement: Dataspace Preserves core isolation
+
+r[agent_harness_runtime.preserves_dataspace.core_isolation] Dataspace Preserves support MUST NOT add Preserves dependencies to `animus-core`, `animus-adapters`, default `animus-runtime`, or default `animus-std` dependency graphs.
+
+#### Scenario: Optional bridge does not leak dependencies
+
+r[agent_harness_runtime.preserves_dataspace.core_isolation.no_leak]
+- GIVEN dependency isolation checks inspect reusable default crates
+- WHEN dataspace Preserves support is present in the workspace
+- THEN Preserves serialization dependencies remain isolated to the optional Preserves bridge or explicit opt-in facade features
+- AND implementation-free dataspace adapter contracts remain usable without Preserves.
+
+### Requirement: Dataspace Preserves documentation and closeout
+
+r[agent_harness_runtime.preserves_dataspace.closeout] Dataspace Preserves work MUST update schema notes and facade inventory, run positive and negative fixtures, run dependency-isolation checks, run workspace checks, and record Cairn gate evidence before archive.
+
+#### Scenario: Dataspace Preserves evidence is reviewable
+
+r[agent_harness_runtime.preserves_dataspace.closeout.evidence]
+- GIVEN dataspace Preserves work is ready to archive
+- WHEN reviewers inspect closeout evidence
+- THEN evidence names schema coverage, typed decoding, safe-payload rejection, round-trip fixtures, malformed fixtures, dependency isolation, workspace checks, and Cairn gates
+- AND any skipped live-transport validation is marked as out of scope rather than a release claim.
+
+### Requirement: Optional Syndicate host adapter
+
+r[agent_harness_runtime.syndicate_host_adapter.optional] Animus MUST keep any Syndicate-compatible live dataspace integration behind an optional host-owned adapter or non-default feature, and reusable core/runtime/adapter crates MUST NOT construct live Syndicate backends by default.
+
+#### Scenario: Runtime publishes through injected host service
+
+r[agent_harness_runtime.syndicate_host_adapter.optional.injected]
+- GIVEN a host enables Syndicate-compatible dataspace coordination
+- WHEN runtime or host shell code wants to publish or observe dataspace state
+- THEN it communicates through an injected `animus_adapters::dataspace::AdapterService` implementation
+- AND default `animus-core`, `animus-runtime`, and `animus-adapters` builds do not require Syndicate crates, daemon clients, network transports, credentials, or live daemon availability.
+
+### Requirement: Redacted coordination projection
+
+r[agent_harness_runtime.syndicate_host_adapter.projection] The optional host adapter MUST publish only bounded redacted assertions derived from approved runtime, headless, tool lifecycle, background-work, session/provenance, and agent/subagent observations.
+
+#### Scenario: Runtime observation becomes safe assertion
+
+r[agent_harness_runtime.syndicate_host_adapter.projection.redacted]
+- GIVEN an observation contains prompt text, provider payloads, credentials, full private paths, file bodies, tool input/output, model output, or unbounded logs
+- WHEN projection builds a dataspace assertion draft
+- THEN the assertion contains only stable IDs, normalized scope labels, status classes, assertion kinds, counts, BLAKE3 hashes, and explicit redaction markers
+- AND raw sensitive material is omitted or rejected before publication.
+
+### Requirement: Scoped subscription and orchestration handling
+
+r[agent_harness_runtime.syndicate_host_adapter.orchestration] The optional host adapter MUST validate safe subscription patterns and host orchestration events for cancellation, expiry, publish acknowledgement, and ownership transfer before forwarding them to a live or fake dataspace backend.
+
+#### Scenario: Cancellation is scoped to one owner
+
+r[agent_harness_runtime.syndicate_host_adapter.orchestration.scoped_cancellation]
+- GIVEN a cancellation event targets one tenant, workspace, branch, session, facet, actor, or assertion owner
+- WHEN the host adapter handles the event
+- THEN only matching scoped assertions are cancelled, expired, or acknowledged
+- AND unrelated tenants, workspaces, branches, sessions, facets, actors, and owners remain unchanged.
+
+### Requirement: Safe unavailable-backend behavior
+
+r[agent_harness_runtime.syndicate_host_adapter.failure] The optional host adapter MUST fail safely when live transport configuration is absent, a daemon is unavailable, credentials are missing, subscriptions are unsupported, leases are stale, or ownership-transfer identities do not match.
+
+#### Scenario: Missing live backend does not affect default runtime
+
+r[agent_harness_runtime.syndicate_host_adapter.failure.unavailable_backend]
+- GIVEN live Syndicate transport is not configured or the configured backend is unavailable
+- WHEN default runtime tests, fake-backend tests, or host startup without the optional feature run
+- THEN no live connection is attempted by default
+- AND any explicit live-adapter failure is reported as a typed safe diagnostic without raw credentials, transport payloads, or private paths.
+
+### Requirement: Syndicate dependency isolation
+
+r[agent_harness_runtime.syndicate_host_adapter.dependency_isolation] Animus MUST check that Syndicate crates, daemon clients, live transport code, and host credential plumbing remain outside default reusable core/runtime/adapter dependency graphs.
+
+#### Scenario: Live transport dependency leaks into default graph
+
+r[agent_harness_runtime.syndicate_host_adapter.dependency_isolation.rejects_leak]
+- GIVEN a Syndicate crate, daemon client, network transport, or host credential dependency is added to a default reusable core/runtime/adapter crate
+- WHEN dependency-isolation checks run
+- THEN the check fails with an actionable diagnostic
+- AND maintainers are directed to the optional host dataspace adapter boundary.
+
+### Requirement: Syndicate host adapter closeout evidence
+
+r[agent_harness_runtime.syndicate_host_adapter.closeout] Syndicate host adapter work MUST document host configuration, fake-backend release evidence, optional live smoke-test gating, dependency isolation, focused tests, workspace checks, and Cairn gates before archive.
+
+#### Scenario: Host adapter evidence is reviewable
+
+r[agent_harness_runtime.syndicate_host_adapter.closeout.evidence]
+- GIVEN optional Syndicate host adapter work is ready to archive
+- WHEN reviewers inspect closeout evidence
+- THEN evidence names redacted projection tests, safe subscription/orchestration tests, unavailable-backend tests, dependency-isolation checks, fake-backend tests, optional live smoke-test status, workspace checks, and Cairn gates
+- AND any skipped live transport rail includes a concrete blocker, explicit opt-in requirement, and next-best fake-backend validation.
+
+### Requirement: Pure model dispatch plan
+
+r[agent_harness_runtime.model_dispatch.plan] Model/provider dispatch MUST have a pure planning DTO that records selected capability identity, request contract identity, prompt or content budget, stream policy, receipt policy, cancellation or timeout posture, and fallback policy before adapter execution.
+
+#### Scenario: Model dispatch plan validates before provider effects
+
+r[agent_harness_runtime.model_dispatch.plan.validation]
+- GIVEN runtime prepares a model/provider call from validated request metadata and host policy inputs
+- WHEN model dispatch planning runs
+- THEN valid dispatch plans are admitted with safe identity and budget evidence
+- AND missing providers, denied capability, budget overflow, unsupported stream policy, malformed request shape, missing receipt policy, cancellation, timeout, and fallback-denied cases fail before provider effects.
+
+### Requirement: Runtime gates model adapter calls on admitted plans
+
+r[agent_harness_runtime.model_dispatch.runtime_gate] Runtime MUST call model adapters only after an admitted model dispatch plan and MUST map denied plans to typed fail-closed outcomes.
+
+#### Scenario: Denied model plan prevents adapter call
+
+r[agent_harness_runtime.model_dispatch.runtime_gate.fail_closed]
+- GIVEN a model dispatch plan is denied because capability, budget, stream, receipt, cancellation, timeout, or fallback policy fails
+- WHEN runtime processes the model decision
+- THEN the model adapter is not called
+- AND runtime returns a typed fail-closed outcome without completed receipts, provider discovery, credential reads, filesystem scans, process spawning, plugin loading, or network fallback.
+
+### Requirement: Model dispatch compatibility defaults
+
+r[agent_harness_runtime.model_dispatch.compatibility] Existing simple model adapter behavior MUST remain available through compatibility defaults for request identity, provider-neutral capability, prompt budget, stream policy, receipt policy, and fallback denial.
+
+#### Scenario: Existing model adapter path matches planned dispatch
+
+r[agent_harness_runtime.model_dispatch.compatibility.equivalent]
+- GIVEN one runtime loop uses the existing simple model adapter path and another loop uses explicit model dispatch planning with compatibility defaults
+- WHEN both receive equivalent fabric decisions and deterministic model responses
+- THEN both produce equivalent successful reports and events
+- AND neither path gains additional provider, filesystem, process, network, credential, or plugin authority.
+
+### Requirement: Model dispatch planning verification
+
+r[agent_harness_runtime.model_dispatch.verification] Model/provider dispatch planning MUST include focused positive and negative tests for planning validation, runtime gating, compatibility defaults, no-fallback behavior, provider-contract docs, facade inventory, workspace checks, and Cairn gates before archive.
+
+#### Scenario: Closeout evidence covers model dispatch planning
+
+r[agent_harness_runtime.model_dispatch.verification.closeout]
+- GIVEN maintainers intend to archive model/provider dispatch planning
+- WHEN closeout validation runs
+- THEN evidence names planning validation, runtime gating, compatibility defaults, fail-closed, no-fallback, provider-contract docs, inventory, workspace, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Typed adapter call envelope
+
+r[agent_harness_runtime.adapter_outcomes.typed_envelope] Animus adapter calls MUST be able to return a typed envelope that distinguishes completed responses from absent, denied, unavailable, malformed, cancelled, timed-out, and execution-failure outcomes without relying on prose parsing.
+
+#### Scenario: Adapter outcome classes validate before runtime mapping
+
+r[agent_harness_runtime.adapter_outcomes.typed_envelope.validation]
+- GIVEN a model or tool adapter returns a typed outcome envelope
+- WHEN envelope validation runs
+- THEN completed responses and supported fail-closed outcome classes are accepted with bounded safe metadata
+- AND unsafe message text, unsafe receipt metadata, raw credentials, raw paths, raw provider payloads, and unbounded bodies are rejected before runtime mapping.
+
+### Requirement: Legacy adapter compatibility
+
+r[agent_harness_runtime.adapter_outcomes.compatibility] Existing `ComponentAdapter::call` implementations MUST remain compatible or have explicit migration helpers, and typed adapter outcomes MUST be additive rather than required for current embedders.
+
+#### Scenario: Legacy and typed adapters preserve equivalent success behavior
+
+r[agent_harness_runtime.adapter_outcomes.compatibility.equivalent]
+- GIVEN one runtime loop uses a legacy adapter and another loop uses a typed-outcome adapter for equivalent successful requests
+- WHEN both adapters return equivalent validated responses
+- THEN runtime reports equivalent completed behavior
+- AND neither path gains ambient provider, filesystem, process, network, credential, or plugin authority.
+
+### Requirement: Runtime preserves adapter outcome classes
+
+r[agent_harness_runtime.adapter_outcomes.runtime_mapping] Runtime dispatch MUST preserve typed adapter outcome classes in reports and receipts when supplied, and MUST map legacy display errors only to conservative execution-failure diagnostics.
+
+#### Scenario: Fail-closed outcomes do not become string-only success claims
+
+r[agent_harness_runtime.adapter_outcomes.runtime_mapping.fail_closed]
+- GIVEN a typed adapter reports denied, unavailable, malformed, cancelled, timed-out, or execution-failure outcome
+- WHEN runtime normalizes the dispatch result
+- THEN the report carries the matching fail-closed class or safe outcome kind
+- AND no success receipt, provenance fact, fallback provider call, shell command, environment read, filesystem scan, or network request is produced.
+
+### Requirement: Adapter outcome verification
+
+r[agent_harness_runtime.adapter_outcomes.verification] The typed adapter outcome change MUST include focused positive and negative tests for envelope validation, compatibility adapters, runtime mapping, leak rejection, no ambient fallback, facade inventory, workspace checks, and Cairn gates before archive.
+
+#### Scenario: Closeout evidence covers adapter outcome hardening
+
+r[agent_harness_runtime.adapter_outcomes.verification.closeout]
+- GIVEN maintainers intend to archive typed adapter outcome hardening
+- WHEN closeout validation runs
+- THEN evidence names envelope validation, compatibility, runtime mapping, fail-closed, leak-rejection, no-fallback, inventory, workspace, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Required capability identity
+
+r[agent_harness_runtime.scoped_capabilities.required_identity] Model and tool dispatch MUST declare the specific required capability identity, including stable capability label, service kind, and optional safe scope, before runtime admits an adapter call.
+
+#### Scenario: Capability identity validates before dispatch
+
+r[agent_harness_runtime.scoped_capabilities.required_identity.validation]
+- GIVEN runtime prepares a model or tool dispatch request
+- WHEN required capability identity validation runs
+- THEN default and explicit scoped capability labels are accepted with supported service kinds and safe scope labels
+- AND empty labels, unsupported service kinds, unsafe scope text, and duplicate labels fail before adapter dispatch.
+
+### Requirement: Exact registry resolution
+
+r[agent_harness_runtime.scoped_capabilities.exact_resolution] Runtime dispatch MUST resolve the declared capability label and service kind exactly, and MUST NOT treat the presence of any service with the same broad kind as sufficient authority.
+
+#### Scenario: Unrelated service cannot satisfy scoped request
+
+r[agent_harness_runtime.scoped_capabilities.exact_resolution.fail_closed]
+- GIVEN a host registers a model or tool service that does not match the required capability label, service kind, or safe scope
+- WHEN runtime attempts dispatch
+- THEN dispatch fails closed with a typed missing or mismatched capability diagnostic
+- AND the unrelated service is not called, no fallback service is discovered, and no completed receipt is produced.
+
+### Requirement: Compatibility default capabilities
+
+r[agent_harness_runtime.scoped_capabilities.compatibility_defaults] Existing model/tool runtime constructors MUST remain available as thin wrappers that bind adapters to documented default capability labels and no unsafe scope.
+
+#### Scenario: Default constructor behavior remains equivalent
+
+r[agent_harness_runtime.scoped_capabilities.compatibility_defaults.equivalent]
+- GIVEN a runtime loop uses the existing model/tool constructor path and another loop uses explicit default capability descriptors
+- WHEN both loops receive equivalent fabric decisions and adapter responses
+- THEN they produce equivalent reports and events
+- AND both paths perform exact capability resolution without ambient provider, filesystem, process, network, credential, or plugin fallback.
+
+### Requirement: Scoped capability verification
+
+r[agent_harness_runtime.scoped_capabilities.verification] The scoped capability resolution change MUST include focused positive and negative tests for identity validation, exact resolution, compatibility defaults, unrelated-service denial, no ambient fallback, facade inventory, workspace checks, and Cairn gates before archive.
+
+#### Scenario: Closeout evidence covers scoped capability resolution
+
+r[agent_harness_runtime.scoped_capabilities.verification.closeout]
+- GIVEN maintainers intend to archive scoped capability resolution
+- WHEN closeout validation runs
+- THEN evidence names identity validation, exact resolution, compatibility defaults, fail-closed, no-fallback, inventory, workspace, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Stable boundary contract identities
+
+r[agent_harness_runtime.boundary_versions.contract_identities] Public model, tool, model-stream, capability, runtime-event, and safe-receipt boundary DTOs MUST expose stable contract identity strings that can be used in docs, receipts, fixtures, and optional serialization bridges.
+
+#### Scenario: Boundary identity is available without concrete adapters
+
+r[agent_harness_runtime.boundary_versions.contract_identities.validation]
+- GIVEN an embedder depends on reusable Animus boundary crates
+- WHEN they construct or inspect public model, tool, stream, capability, runtime-event, or receipt DTOs
+- THEN each maintained DTO exposes a non-empty stable contract identity
+- AND obtaining that identity does not require concrete providers, filesystem access, network access, process execution, credentials, or plugin loading.
+
+### Requirement: Explicit text normalization policy
+
+r[agent_harness_runtime.boundary_versions.normalized_text] Adapter-boundary DTO constructors MUST store normalized text for safe labels, names, identifiers, schema identities, capability labels, and receipt metadata, while deliberately raw bodies MUST use explicit bounded raw/body policy.
+
+#### Scenario: Safe labels normalize while raw bodies remain deliberate
+
+r[agent_harness_runtime.boundary_versions.normalized_text.validation]
+- GIVEN boundary constructor input contains leading or trailing whitespace, NUL characters, overlong text, or raw body content
+- WHEN DTO validation runs
+- THEN safe labels and identifiers are trimmed and stored in normalized form
+- AND NUL characters, overlong text, and unsafe raw text leakage are rejected unless a bounded raw/body policy explicitly admits the body.
+
+### Requirement: Supported version admission
+
+r[agent_harness_runtime.boundary_versions.version_admission] DTO consumers that parse contract identity values MUST admit supported versions explicitly and MUST fail closed on missing or unsupported versions unless a reviewed compatibility mapping exists.
+
+#### Scenario: Unsupported version fails before dispatch
+
+r[agent_harness_runtime.boundary_versions.version_admission.fail_closed]
+- GIVEN a host, serializer, replay, or adapter bridge receives a DTO with a missing or unsupported contract identity
+- WHEN version admission runs
+- THEN parsing fails with a typed version diagnostic
+- AND no adapter dispatch, success receipt, or serialization compatibility claim is produced from the unsupported shape.
+
+### Requirement: Boundary versioning verification
+
+r[agent_harness_runtime.boundary_versions.verification] Boundary versioning and normalization MUST include focused positive and negative tests for identity availability, normalization, raw-body policy, unsupported version rejection, Preserves fixtures where applicable, facade inventory, workspace checks, and Cairn gates before archive.
+
+#### Scenario: Closeout evidence covers boundary versioning
+
+r[agent_harness_runtime.boundary_versions.verification.closeout]
+- GIVEN maintainers intend to archive boundary versioning and normalization
+- WHEN closeout validation runs
+- THEN evidence names contract identities, normalization, raw-body policy, version admission, Preserves fixtures where applicable, inventory, workspace, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Canonical model message request
+
+r[agent_harness_runtime.model_compat.message_request] Animus MUST define a versioned provider-neutral model message request contract that carries ordered model messages, stable role labels, typed content parts, output controls, tool declarations, response-format intent, reasoning or thinking request metadata, contract identity, and safe provenance metadata without embedding raw provider payloads.
+
+#### Scenario: Canonical request validation admits structured conversations
+
+r[agent_harness_runtime.model_compat.message_request.validation]
+- GIVEN a host or runtime shell prepares a model request with ordered system, developer, user, assistant, or tool messages and validated text or descriptor-backed content parts
+- WHEN canonical model request validation runs
+- THEN valid requests are admitted with stable contract identity and bounded metadata
+- AND malformed roles, empty messages, unsupported content parts, oversized metadata, raw provider payloads, credentials, and missing required fields fail before provider dispatch.
+
+### Requirement: Canonical model response envelope
+
+r[agent_harness_runtime.model_compat.response_envelope] Animus MUST define a versioned provider-neutral model response envelope that can represent assistant-visible text, structured payloads, tool-call requests, refusal or safety blocks, usage metadata, finish reasons, and malformed-output diagnostics without exposing raw provider payloads.
+
+#### Scenario: Response semantics survive provider normalization
+
+r[agent_harness_runtime.model_compat.response_envelope.validation]
+- GIVEN a provider or fixture adapter returns assistant text, a structured payload, a tool-call request, a refusal, usage metadata, or a terminal finish reason
+- WHEN response normalization validates the canonical envelope
+- THEN supported response semantics are preserved as typed data
+- AND missing finish reasons, malformed usage counts, impossible response combinations, raw provider payloads, credentials, and unbounded hidden reasoning fail closed.
+
+### Requirement: Legacy model DTO bridge
+
+r[agent_harness_runtime.model_compat.legacy_bridge] Existing simple prompt/message model adapter behavior MUST remain available through pure compatibility projections between legacy DTOs and canonical model request/response contracts, and those projections MUST NOT add provider, filesystem, network, credential, process, or plugin authority.
+
+#### Scenario: Legacy prompt path is equivalent under compatibility defaults
+
+r[agent_harness_runtime.model_compat.legacy_bridge.equivalent]
+- GIVEN one runtime path dispatches a legacy prompt/message DTO and another dispatches the equivalent canonical single-user-message request with compatibility defaults
+- WHEN both receive deterministic assistant-text responses
+- THEN both produce equivalent successful reports and events
+- AND canonical responses carrying structured output, tool calls, refusal status, or other non-text semantics fail rather than being silently collapsed into legacy message text.
+
+### Requirement: Canonical model contract verification
+
+r[agent_harness_runtime.model_compat.verification] Canonical model contract work MUST include focused positive and negative tests for request validation, response validation, legacy bridge equivalence, lossy projection rejection, safe metadata redaction, boundary schema notes, runtime facade inventory, workspace checks, and Cairn gates before archive.
+
+#### Scenario: Closeout evidence covers canonical model contracts
+
+r[agent_harness_runtime.model_compat.verification.closeout]
+- GIVEN maintainers intend to archive canonical model message contract work
+- WHEN closeout validation runs
+- THEN evidence names request validation, response validation, legacy bridge equivalence, lossy projection rejection, safe metadata redaction, docs, schema notes, facade inventory, workspace checks, and Cairn gates
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Provider/model capability matrix
+
+r[agent_harness_runtime.model_capability_matrix.registry] Provider/model metadata MUST expose a typed capability matrix for canonical model request compatibility, including supported message roles, content part classes, tool-call behavior, structured-output modes, stream channels, reasoning controls, context and output budgets, privacy or locality posture, and capability schema identity.
+
+#### Scenario: Registry metadata declares compatibility features
+
+r[agent_harness_runtime.model_capability_matrix.nickel_config]
+- GIVEN Animus-owned provider registry configuration describes one or more selectable models
+- WHEN Nickel export and Rust-side capability validation run
+- THEN every selectable model has bounded typed compatibility metadata for the canonical request features it claims
+- AND missing, unknown, contradictory, or malformed required capability fields fail before runtime can select that model.
+
+### Requirement: Pure capability negotiation
+
+r[agent_harness_runtime.model_capability_matrix.negotiation] Animus MUST negotiate canonical model request requirements against the selected model capability matrix through a pure deterministic function that returns admitted, downgraded, or denied compatibility decisions with safe evidence.
+
+#### Scenario: Supported or optional features resolve deterministically
+
+r[agent_harness_runtime.model_capability_matrix.negotiation.positive]
+- GIVEN a canonical model request declares required and optional feature requirements
+- AND the selected model capability matrix supports every required feature and supports or policy-downgrades optional features
+- WHEN capability negotiation runs
+- THEN the result is admitted or explicitly downgraded with safe feature labels, policy labels, and bounded budget evidence
+- AND no provider call, credential read, network probe, filesystem scan, or router fallback occurs during negotiation.
+
+### Requirement: Required unsupported features fail closed
+
+r[agent_harness_runtime.model_capability_matrix.fail_closed] Capability negotiation MUST deny dispatch when a canonical request requires a role, content part, image, tool call, structured-output mode, stream channel, reasoning level, token budget, privacy class, or provider family behavior that the selected model does not support or whose support is unknown.
+
+#### Scenario: Unsupported required feature blocks dispatch
+
+r[agent_harness_runtime.model_capability_matrix.fail_closed.unsupported]
+- GIVEN a canonical model request requires a compatibility feature that the selected model metadata lacks, rejects, or marks unknown
+- WHEN capability negotiation evaluates the request
+- THEN dispatch is denied with a typed unsupported-feature diagnostic
+- AND runtime does not silently drop the feature, switch providers, widen authority, claim success receipts, or call a provider adapter.
+
+### Requirement: Capability matrix verification
+
+r[agent_harness_runtime.model_capability_matrix.verification] Model capability matrix work MUST include focused positive and negative tests for Nickel config validation, Rust metadata validation, pure negotiation, optional downgrade evidence, unsupported required features, budget overflow, denied fallback, safe receipts, docs, facade inventory, workspace checks, and Cairn gates before archive.
+
+#### Scenario: Closeout evidence covers capability negotiation
+
+r[agent_harness_runtime.model_capability_matrix.verification.closeout]
+- GIVEN maintainers intend to archive capability matrix negotiation
+- WHEN closeout validation runs
+- THEN evidence names Nickel config validation, Rust metadata validation, pure negotiation, optional downgrade evidence, unsupported required features, budget overflow, denied fallback, safe receipts, docs, facade inventory, workspace checks, and Cairn gates
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Provider projection conformance harness
+
+r[agent_harness_runtime.provider_projection_conformance.harness] Animus MUST define a provider projection conformance harness that validates canonical model request to provider-family request projection and provider-family response to canonical response normalization for every provider family or API style that an adapter claims to support.
+
+#### Scenario: Provider projection preserves canonical request semantics
+
+r[agent_harness_runtime.provider_projection_conformance.literal_fixtures]
+- GIVEN a canonical model request contains ordered roles, content parts, tool declarations, structured-output intent, reasoning controls, stream options, and safe metadata supported by a claimed provider family
+- WHEN provider projection conformance runs against literal expected provider-native fixtures
+- THEN required canonical semantics are preserved in the provider-family request representation
+- AND expected fixture data is reviewed literal data rather than output generated by the same builder under test.
+
+### Requirement: Lossy provider projection fails closed
+
+r[agent_harness_runtime.provider_projection_conformance.lossy_projection] Provider projection MUST fail closed when a claimed provider family cannot preserve required canonical request roles, content parts, image descriptors, tool declarations, structured-output intent, reasoning controls, stream options, metadata, or safe provenance.
+
+#### Scenario: Dropped canonical field rejects projection
+
+r[agent_harness_runtime.provider_projection_conformance.lossy_projection.rejects_drop]
+- GIVEN a canonical model request requires a field or feature that a provider-family projection would omit, flatten, or misrepresent
+- WHEN projection validation runs
+- THEN the projection returns a typed lossy-conversion diagnostic
+- AND runtime does not send a provider request, silently downgrade the feature, switch providers, or claim a successful dispatch receipt.
+
+### Requirement: Provider response normalization conformance
+
+r[agent_harness_runtime.provider_projection_conformance.response_normalization] Provider-native response fixtures MUST normalize into the canonical model response envelope with typed assistant text, structured payloads, tool-call requests, refusal or safety blocks, usage metadata, finish reasons, and malformed-output diagnostics.
+
+#### Scenario: Provider output maps to canonical response envelope
+
+r[agent_harness_runtime.provider_projection_conformance.response_fail_closed]
+- GIVEN a provider-native response fixture contains assistant text, structured output, tool calls, refusal status, usage, finish reason, malformed payloads, hidden reasoning, credentials, or raw provider payload sentinels
+- WHEN response normalization conformance runs
+- THEN supported semantics are preserved as canonical response envelope data
+- AND missing finish reason, malformed usage, impossible response combinations, hidden reasoning leakage, credentials, and raw provider payloads fail closed.
+
+### Requirement: Streaming parser-entrypoint conformance
+
+r[agent_harness_runtime.provider_projection_conformance.streaming_entrypoint] Provider families that claim streaming support MUST include conformance fixtures that feed raw provider stream bytes or chunks through the production parser entrypoint and compare canonical model stream frames.
+
+#### Scenario: Raw provider stream becomes canonical frames
+
+r[agent_harness_runtime.provider_projection_conformance.streaming_entrypoint.fixture]
+- GIVEN a claimed streaming provider fixture contains fragmented content, tool-call deltas, usage records, finish, cancellation, failure, malformed records, truncated chunks, or out-of-order terminal events
+- WHEN the production parser entrypoint consumes the fixture input
+- THEN valid streams produce canonical ordered frames
+- AND malformed, truncated, missing-terminal, or out-of-order streams fail with typed diagnostics before final response completion.
+
+### Requirement: Provider projection conformance index
+
+r[agent_harness_runtime.provider_projection_conformance.index] Animus MUST maintain a provider projection conformance index that records covered, unsupported, and not-applicable feature/provider cases with explicit reasons for each claimed provider family.
+
+#### Scenario: Missing conformance reason is rejected
+
+r[agent_harness_runtime.provider_projection_conformance.index.coverage]
+- GIVEN a provider family claims support for a canonical request feature, response semantic, or streaming mode
+- WHEN conformance index validation runs
+- THEN the case is marked covered by fixture evidence or unsupported with a typed reason
+- AND not-applicable entries without reasons are rejected.
+
+### Requirement: Provider projection conformance verification
+
+r[agent_harness_runtime.provider_projection_conformance.verification] Provider projection conformance work MUST include focused positive and negative tests for literal request fixtures, lossy projection rejection, response normalization, malformed response failures, streaming parser-entrypoint fixtures, conformance index validation, safe redaction, docs, facade inventory, workspace checks, and Cairn gates before archive.
+
+#### Scenario: Closeout evidence covers provider projection conformance
+
+r[agent_harness_runtime.provider_projection_conformance.verification.closeout]
+- GIVEN maintainers intend to archive provider projection conformance work
+- WHEN closeout validation runs
+- THEN evidence names literal request fixtures, lossy projection rejection, response normalization, malformed response failures, streaming parser-entrypoint fixtures, conformance index validation, safe redaction, docs, facade inventory, workspace checks, and Cairn gates
+- AND any skipped rail includes a concrete blocker and next-best validation.

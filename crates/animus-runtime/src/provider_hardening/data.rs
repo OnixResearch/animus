@@ -16,20 +16,7 @@
     numeric_units,
     path_segment_repetition,
     raw_arithmetic_overflow,
-    unbounded_collection_growth
-)]
-#![allow(
-    ambiguous_params,
-    assertion_density,
-    bool_naming,
-    borrowed_argument_types,
-    compound_condition,
-    excessive_file_length,
-    function_length,
-    non_trait_imports,
-    numeric_units,
-    path_segment_repetition,
-    raw_arithmetic_overflow,
+    clippy::struct_excessive_bools,
     unbounded_collection_growth
 )]
 /// OpenAI-family API style.
@@ -141,6 +128,176 @@ pub struct ProviderModelMetadata {
     pub reasoning: bool,
 }
 
+/// Canonical content-part class supported by a model.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ProviderModelContentPartClass {
+    /// Text content parts.
+    Text,
+    /// Descriptor-backed image content parts.
+    Image,
+}
+
+/// Structured-output mode supported by a model.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ProviderStructuredOutputMode {
+    /// JSON object mode.
+    JsonObject,
+    /// JSON schema mode.
+    JsonSchema,
+}
+
+/// Streaming channel supported by a model adapter.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ProviderStreamChannel {
+    /// Assistant-visible content frames.
+    Content,
+    /// Tool-call delta frames.
+    ToolCall,
+    /// Usage metadata frames.
+    Usage,
+}
+
+/// Provider/model privacy posture.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ProviderPrivacyPosture {
+    /// Local-only model execution.
+    LocalOnly,
+    /// Private or enterprise gateway.
+    PrivateGateway,
+    /// Remote third-party provider.
+    RemoteProvider,
+}
+
+/// Typed compatibility matrix for a selectable provider model.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ProviderModelCapabilityMatrix {
+    /// Capability schema identity.
+    pub schema_identity: String,
+    /// Provider ID.
+    pub provider_id: String,
+    /// Model ID.
+    pub model_id: String,
+    /// Supported canonical message roles.
+    pub roles: Vec<animus_adapters::CanonicalModelRole>,
+    /// Supported canonical content-part classes.
+    pub content_parts: Vec<ProviderModelContentPartClass>,
+    /// Whether tool calls are supported.
+    pub tool_calls: bool,
+    /// Structured-output modes supported by this model.
+    pub structured_outputs: Vec<ProviderStructuredOutputMode>,
+    /// Stream channels supported by this model.
+    pub stream_channels: Vec<ProviderStreamChannel>,
+    /// Reasoning controls supported by this model.
+    pub reasoning_controls: Vec<animus_adapters::CanonicalModelReasoningEffort>,
+    /// Context budget in model-visible units.
+    pub context_budget: u32,
+    /// Output token budget.
+    pub output_budget: u32,
+    /// Privacy posture for compatibility decisions.
+    pub privacy: ProviderPrivacyPosture,
+}
+
+/// Host policy for optional compatibility downgrades.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ModelCapabilityDowngradePolicy {
+    /// Permit omitting optional image content.
+    pub allow_image_omission: bool,
+    /// Permit omitting optional structured-output intent.
+    pub allow_structured_output_omission: bool,
+    /// Permit omitting optional streaming.
+    pub allow_streaming_omission: bool,
+    /// Permit omitting optional reasoning controls.
+    pub allow_reasoning_omission: bool,
+}
+
+/// Borrowed capability negotiation input.
+#[derive(Clone, Copy)]
+pub struct ModelCapabilityNegotiationInput<'a> {
+    /// Canonical request requirements.
+    pub request: &'a animus_adapters::CanonicalModelRequest,
+    /// Selected model capability matrix.
+    pub capabilities: &'a ProviderModelCapabilityMatrix,
+    /// Host downgrade policy.
+    pub downgrade_policy: ModelCapabilityDowngradePolicy,
+    /// Required privacy posture.
+    pub required_privacy: ProviderPrivacyPosture,
+    /// Whether another provider fallback was requested.
+    pub provider_fallback_requested: bool,
+}
+
+/// Capability negotiation decision status.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ModelCapabilityDecisionStatus {
+    /// All required features are admitted.
+    Admitted,
+    /// Required features are admitted and optional features were explicitly downgraded.
+    Downgraded,
+    /// Dispatch is denied before provider adapter execution.
+    Denied,
+}
+
+/// Capability negotiation issue class.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ModelCapabilityIssueKind {
+    /// Capability metadata was missing, malformed, or stale.
+    UnknownCapabilityMetadata,
+    /// A required canonical role is unsupported.
+    UnsupportedRole,
+    /// A required content part is unsupported.
+    UnsupportedContentPart,
+    /// Tool calls are required but unsupported.
+    UnsupportedToolCalls,
+    /// Structured output is required but unsupported.
+    UnsupportedStructuredOutput,
+    /// Streaming is required but unsupported.
+    UnsupportedStreaming,
+    /// Reasoning controls are required but unsupported.
+    UnsupportedReasoning,
+    /// Context or output budget is exceeded.
+    BudgetOverflow,
+    /// Required privacy posture is not satisfied.
+    UnsupportedPrivacy,
+    /// Provider fallback was requested and denied.
+    ProviderFallbackDenied,
+}
+
+/// Capability negotiation issue.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ModelCapabilityIssue {
+    /// Issue class.
+    pub kind: ModelCapabilityIssueKind,
+    /// Safe feature label.
+    pub feature: String,
+    /// Safe detail label.
+    pub detail: String,
+}
+
+/// Optional feature downgrade evidence.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ModelCapabilityDowngrade {
+    /// Safe feature label.
+    pub feature: String,
+    /// Safe policy label.
+    pub policy: String,
+}
+
+/// Capability negotiation decision with safe evidence.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ModelCapabilityNegotiationDecision {
+    /// Decision status.
+    pub status: ModelCapabilityDecisionStatus,
+    /// Provider ID.
+    pub provider_id: String,
+    /// Model ID.
+    pub model_id: String,
+    /// Safe admission/downgrade evidence labels.
+    pub evidence: Vec<String>,
+    /// Optional downgrade evidence.
+    pub downgrades: Vec<ModelCapabilityDowngrade>,
+    /// Denial issues.
+    pub issues: Vec<ModelCapabilityIssue>,
+}
+
 /// Endpoint sensitivity.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ProviderEndpointSensitivity {
@@ -203,6 +360,8 @@ pub enum ProviderDiagnosticKind {
     ExtraBodyOutOfScope,
     /// Unsupported model class.
     UnsupportedModelClass,
+    /// Invalid capability metadata.
+    InvalidCapabilityMetadata,
 }
 
 /// Provider diagnostic.

@@ -38,8 +38,19 @@ impl ProtectedMutationDecision {
 }
 
 /// Evaluates checkpoint policy before dispatching a mutating action.
+///
+/// # Panics
+///
+/// Panics if checkpoint enum variants change without updating the policy matrix.
 #[must_use]
 pub fn evaluate_protected_mutation(input: ProtectedMutationInput) -> ProtectedMutationDecision {
+    assert!(
+        matches!(
+            input.protection,
+            super::MutationProtection::Protected | super::MutationProtection::Unprotected
+        ),
+        "mutation protection policy matrix is exhaustive"
+    );
     assert!(
         matches!(
             input.policy,
@@ -47,14 +58,7 @@ pub fn evaluate_protected_mutation(input: ProtectedMutationInput) -> ProtectedMu
                 | super::CheckpointPolicy::BestEffort
                 | super::CheckpointPolicy::Strict
         ),
-        "checkpoint policy must be an explicit enum variant"
-    );
-    assert!(
-        matches!(
-            input.protection,
-            super::MutationProtection::Protected | super::MutationProtection::Unprotected
-        ),
-        "mutation protection must be an explicit enum variant"
+        "checkpoint policy matrix is exhaustive"
     );
     if matches!(input.protection, super::MutationProtection::Unprotected)
         || matches!(input.policy, super::CheckpointPolicy::Disabled)
@@ -119,6 +123,11 @@ impl RollbackValidation {
 }
 
 /// Validates rollback confirmation and freshness before backend mutation.
+///
+/// # Panics
+///
+/// Panics if callers bypass the validated checkpoint and hash constructors before
+/// invoking the pure rollback validator.
 #[must_use]
 pub fn validate_rollback(input: RollbackValidationInput<'_>) -> RollbackValidation {
     assert!(

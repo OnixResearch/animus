@@ -1,4 +1,4 @@
-use super::*;
+use super::{Collection, InteropError, TOOL_FIELD, Text, contains_text, text_collection};
 
 /// Tool pass-through intersection input.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -43,6 +43,10 @@ impl ToolPassThroughResolution {
 /// # Errors
 ///
 /// Returns [`InteropError`] when tool labels are malformed or duplicated.
+///
+/// # Panics
+///
+/// Panics if required requested-tool validation is weakened before intersection.
 pub fn resolve_tool_pass_through(
     input: ToolPassThroughInput<'_>,
 ) -> Result<ToolPassThroughResolution, InteropError> {

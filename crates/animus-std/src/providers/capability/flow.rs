@@ -202,6 +202,19 @@ pub enum UnsupportedStreamPolicy {
     ContentOnlyDowngrade,
 }
 
+/// Bundle of the four per-feature resolved stream modes used to build [`ResolvedStreamingModes`].
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) struct StreamModeSet {
+    /// Resolved content stream mode.
+    pub(super) content: StreamRequestMode,
+    /// Resolved thought stream mode.
+    pub(super) thought: StreamRequestMode,
+    /// Resolved tool-call delta stream mode.
+    pub(super) tool_call_delta: StreamRequestMode,
+    /// Resolved usage stream mode.
+    pub(super) usage: StreamRequestMode,
+}
+
 /// Effective stream modes after capability negotiation.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ResolvedStreamingModes {
@@ -213,18 +226,12 @@ pub struct ResolvedStreamingModes {
 }
 
 impl ResolvedStreamingModes {
-    pub(super) const fn new(
-        content: StreamRequestMode,
-        thought: StreamRequestMode,
-        tool_call_delta: StreamRequestMode,
-        usage: StreamRequestMode,
-        downgraded: bool,
-    ) -> Self {
+    pub(super) const fn new(modes: StreamModeSet, downgraded: bool) -> Self {
         Self {
-            content,
-            thought,
-            tool_call_delta,
-            usage,
+            content: modes.content,
+            thought: modes.thought,
+            tool_call_delta: modes.tool_call_delta,
+            usage: modes.usage,
             downgraded,
         }
     }

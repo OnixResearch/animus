@@ -1,0 +1,9 @@
+# Tasks
+
+- [x] [serial] Add stable contract identity constants for public model, tool, model-stream, capability, runtime-event, and safe-receipt boundary DTOs. r[agent_harness_runtime.boundary_versions.contract_identities]
+- [x] [depends:agent_harness_runtime.boundary_versions.contract_identities] Add positive tests proving each public boundary identity is non-empty, stable, documented, and available without concrete host adapters. r[agent_harness_runtime.boundary_versions.contract_identities.validation]
+- [x] [serial] Audit adapter-boundary constructors so safe labels and identifiers store normalized text while intentionally raw bodies use explicit bounded raw/body policy. r[agent_harness_runtime.boundary_versions.normalized_text]
+- [x] [depends:agent_harness_runtime.boundary_versions.normalized_text] Add positive and negative tests for whitespace normalization, NUL rejection, overlong fields, raw-body retention, and unsafe raw text leakage. r[agent_harness_runtime.boundary_versions.normalized_text.validation]
+- [x] [serial] Add supported-version validation and compatibility mapping rules for DTO consumers that parse contract identities. r[agent_harness_runtime.boundary_versions.version_admission]
+- [x] [depends:agent_harness_runtime.boundary_versions.version_admission] Add negative tests proving unsupported or missing contract identities fail closed before adapter dispatch or serialization claims. r[agent_harness_runtime.boundary_versions.version_admission.fail_closed]
+- [x] [depends:agent_harness_runtime.boundary_versions.contract_identities.validation,agent_harness_runtime.boundary_versions.normalized_text.validation,agent_harness_runtime.boundary_versions.version_admission.fail_closed] Update schema notes, docs, Preserves fixtures where applicable, facade inventory, and closeout evidence with versioning, normalization, workspace, and Cairn gate checks. r[agent_harness_runtime.boundary_versions.verification]

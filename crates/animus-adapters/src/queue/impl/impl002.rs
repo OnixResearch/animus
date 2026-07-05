@@ -187,6 +187,21 @@ impl QueueTaskObservation {
     }
 }
 
+/// Borrowed counts of tasks in stable queue states for one group.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct QueueStatusCountDraft {
+    /// Pending task count.
+    pub pending: u32,
+    /// Running task count.
+    pub running: u32,
+    /// Paused task count.
+    pub paused: u32,
+    /// Stashed task count.
+    pub stashed: u32,
+    /// Completed task count.
+    pub completed: u32,
+}
+
 /// Counts of tasks in stable queue states for one group.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct QueueStatusCounts {
@@ -200,19 +215,13 @@ pub struct QueueStatusCounts {
 impl QueueStatusCounts {
     /// Builds stable status counts for one group.
     #[must_use]
-    pub const fn new(
-        pending: u32,
-        running: u32,
-        paused: u32,
-        stashed: u32,
-        completed: u32,
-    ) -> Self {
+    pub const fn new(draft: QueueStatusCountDraft) -> Self {
         Self {
-            pending,
-            running,
-            paused,
-            stashed,
-            completed,
+            pending: draft.pending,
+            running: draft.running,
+            paused: draft.paused,
+            stashed: draft.stashed,
+            completed: draft.completed,
         }
     }
 

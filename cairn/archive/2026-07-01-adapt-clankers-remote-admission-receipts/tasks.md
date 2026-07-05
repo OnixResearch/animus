@@ -1,0 +1,13 @@
+# Tasks
+
+- [x] [serial] Define typed remote/headless admission request DTOs with audience, actor, entrypoint, session/workspace scope, action, resource, ability, credential evidence, caveats, policy hash, and expiry/window metadata. r[agent_harness_runtime.clankers_remote_admission.requests]
+- [x] [depends:requests] Add prompt-submission admission tests proving raw prompt bodies are not embedded in admission receipts. r[agent_harness_runtime.clankers_remote_admission.requests.prompt]
+- [x] [serial] Gate session create, attach/resume, prompt submission, tool execution, memory mutation, artifact delivery, and workflow commands on admission before side effects. r[agent_harness_runtime.clankers_remote_admission.before_effects]
+- [x] [depends:before_effects] Add missing-credential tests proving no session, prompt, tool, memory, delivery, or workflow side effect occurs. r[agent_harness_runtime.clankers_remote_admission.before_effects.missing_credential]
+- [x] [serial] Validate credential audience, expiry, revocation/verifier status, resource/ability scope, and local caveats without allowing local expansion beyond verified grants. r[agent_harness_runtime.clankers_remote_admission.authority]
+- [x] [depends:authority] Add wrong-audience, expired, revoked, missing-grant, and caveat-denial tests. r[agent_harness_runtime.clankers_remote_admission.authority.wrong_audience]
+- [x] [serial] Enforce host-owned boundaries for transports, OAuth stores, credential persistence, revocation databases, and verifier backends. r[agent_harness_runtime.clankers_remote_admission.host_owned]
+- [x] [depends:host_owned] Add no-store/no-network tests proving admission core only consumes supplied typed evidence and policy inputs. r[agent_harness_runtime.clankers_remote_admission.host_owned.no_store]
+- [x] [serial] Define safe admission receipts with verdict, reason, entrypoint, resource/ability, audience/actor/credential hashes, caveat summary, policy hash, expiry/verifier status, and BLAKE3 receipt hash. r[agent_harness_runtime.clankers_remote_admission.receipts]
+- [x] [depends:receipts] Add leak fixtures for raw tokens, private keys, prompt bodies, provider JSON, transport headers, Matrix room IDs, full paths, and credentials. r[agent_harness_runtime.clankers_remote_admission.receipts.rejects_leaks]
+- [x] [depends:requests.prompt,before_effects.missing_credential,authority.wrong_audience,host_owned.no_store,receipts.rejects_leaks] Update docs and run focused admission tests, workspace checks, Cairn validation, and Cairn gates with reviewable evidence. r[agent_harness_runtime.clankers_remote_admission.verification]

@@ -41,6 +41,13 @@ pub enum Failure {
         /// Human-readable validation reason.
         reason: &'static str,
     },
+    /// Dataspace payload tried to preserve unsafe or unbounded material.
+    UnsafeDataspacePayload {
+        /// Safe field class label.
+        field: &'static str,
+        /// Human-readable validation reason.
+        reason: &'static str,
+    },
     /// Too many compatibility metadata fields were supplied.
     TooManyCompatibilityFields {
         /// Maximum number of safe metadata fields.
@@ -61,6 +68,13 @@ pub enum Failure {
         /// Expected boundary kind.
         expected: &'static str,
         /// Actual boundary kind.
+        actual: &'static str,
+    },
+    /// Caller requested a different dataspace payload kind.
+    WrongDataspaceKind {
+        /// Expected dataspace payload kind.
+        expected: &'static str,
+        /// Actual dataspace payload kind.
         actual: &'static str,
     },
 }
@@ -128,6 +142,12 @@ impl std::fmt::Display for Failure {
                     "unsafe Preserves compatibility field {field}: {reason}"
                 )
             }
+            Self::UnsafeDataspacePayload { field, reason } => {
+                write!(
+                    formatter,
+                    "unsafe Preserves dataspace field {field}: {reason}"
+                )
+            }
             Self::TooManyCompatibilityFields { limit } => write!(
                 formatter,
                 "too many Preserves compatibility metadata fields; maximum is {limit}"
@@ -138,6 +158,12 @@ impl std::fmt::Display for Failure {
                 write!(
                     formatter,
                     "expected boundary message kind {expected}; got {actual}"
+                )
+            }
+            Self::WrongDataspaceKind { expected, actual } => {
+                write!(
+                    formatter,
+                    "expected dataspace payload kind {expected}; got {actual}"
                 )
             }
         }

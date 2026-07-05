@@ -122,6 +122,7 @@ impl BoundedOutput {
     }
 }
 
+#[derive(Clone, Copy)]
 struct Extent {
     char_count: usize,
     visible_char_budget: usize,

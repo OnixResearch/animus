@@ -29,10 +29,14 @@
 )]
 #![forbid(unsafe_code)]
 
+mod admission;
 mod background;
 #[allow(excessive_file_length)]
 mod batch;
 mod boundary;
+mod capmap;
+mod caps;
+#[path = "composition/conformance.rs"]
 mod composition_conformance;
 mod context_layering;
 mod contract;
@@ -50,6 +54,7 @@ mod hooks;
 #[path = "kanban.rs"]
 mod orchestration;
 mod pi_compaction;
+mod prelude;
 mod provenance;
 mod provider_hardening;
 mod quality_records;
@@ -60,8 +65,10 @@ mod status;
 mod telemetry;
 mod transition;
 mod trust_boundary;
+mod turns;
 mod workcmd;
 mod worker_team;
 mod zerostack_midturn;
 
 pub use exports::*;
+pub use prelude::*;

@@ -1,9 +1,11 @@
+#[derive(Clone, Copy)]
 struct PatternMatchInput<'a> {
     kind: PatternMatchKind,
     pattern: &'a str,
     resource_label: &'a str,
 }
 
+#[derive(Clone, Copy)]
 struct PatternText<'a> {
     pattern: &'a str,
     resource_label: &'a str,

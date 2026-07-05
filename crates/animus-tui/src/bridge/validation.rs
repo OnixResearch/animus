@@ -9,6 +9,7 @@ fn deduplicate_choices(choices: &[ToolCommandChoice]) -> Vec<ToolCommandChoice> 
     deduplicated
 }
 
+#[derive(Clone, Copy)]
 struct RequiredText<'value> {
     field: &'static str,
     value: &'value str,
@@ -17,7 +18,7 @@ struct RequiredText<'value> {
 fn validate_required_text(input: RequiredText<'_>) -> Result<String, ToolHostError> {
     let RequiredText { field, value } = input;
     assert!(!field.is_empty());
-    assert!(MAX_HOST_TEXT_CHARS > 0);
+    const { assert!(MAX_HOST_TEXT_CHARS > 0) };
     if value.trim().is_empty() {
         return Err(ToolHostError::InvalidText {
             field,

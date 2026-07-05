@@ -14,7 +14,7 @@ pub struct Receipt {
     redaction: ReceiptRedaction,
     directive_mode: Option<super::types::Mode>,
     directive_chain_target: Option<super::types::Mode>,
-    directive_issue_count: u32,
+    directive_issue_count: u64,
     chain_decision: Option<super::continuity::ChainDecision>,
     omitted_reason: Option<super::compose::OmittedReason>,
 }
@@ -35,7 +35,7 @@ impl Receipt {
             redaction: ReceiptRedaction::BodyHashed,
             directive_mode: parsed_directives.mode(),
             directive_chain_target: parsed_directives.chain_target(),
-            directive_issue_count: super::support::count_to_u32(
+            directive_issue_count: super::support::count_to_u64(
                 parsed_directives.diagnostics().len(),
             ),
             chain_decision: chain_plan.map(super::continuity::ChainPlan::decision),
@@ -81,7 +81,7 @@ impl Receipt {
 
     /// Returns the number of directive diagnostics without raw directive bodies.
     #[must_use]
-    pub const fn directive_issue_count(&self) -> u32 {
+    pub const fn directive_issue_count(&self) -> u64 {
         self.directive_issue_count
     }
 

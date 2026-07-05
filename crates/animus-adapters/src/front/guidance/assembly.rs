@@ -1,11 +1,3 @@
-#![allow(unknown_lints)]
-#![allow(
-    assertion_density,
-    non_trait_imports,
-    path_segment_repetition,
-    raw_arithmetic_overflow
-)]
-
 use alloc::vec::Vec;
 
 use super::{

@@ -111,6 +111,8 @@ pub enum RuntimeEventKind {
     Stopped,
     /// Max-turn exhaustion event.
     MaxTurnsExceeded,
+    /// Typed adapter outcome classification event.
+    AdapterOutcomeClassified,
     /// Adapter error event.
     AdapterError,
     /// Fabric error event.
@@ -156,6 +158,7 @@ impl RuntimeEventKind {
             Self::FinalResponse => "final_response",
             Self::Stopped => "stopped",
             Self::MaxTurnsExceeded => "max_turns_exceeded",
+            Self::AdapterOutcomeClassified => "adapter_outcome_classified",
             Self::AdapterError => "adapter_error",
             Self::FabricError => "fabric_error",
             Self::HookBlocked => "hook_blocked",

@@ -22,7 +22,7 @@ pub struct Rule {
     decision: super::Decision,
     rationale: super::super::Text,
     command_prefix: super::super::Collection<super::super::Text>,
-    rule_hash: super::super::Text,
+    hash: super::super::Text,
 }
 
 impl Rule {
@@ -33,14 +33,6 @@ impl Rule {
     /// Returns [`super::super::Error`] when the rule is malformed or an example
     /// does not prove the intended prefix boundary.
     pub fn validate(draft: &RuleDraft<'_>) -> Result<Self, super::super::Error> {
-        assert!(
-            super::super::MAX_RULE_EXAMPLES > 0,
-            "rule example bound must be positive"
-        );
-        assert!(
-            super::super::MAX_COMMAND_WORDS > 0,
-            "command word bound must be positive"
-        );
         let id = super::super::required_text(super::super::RULE_ID_FIELD, draft.id)?;
         let decision = parse_decision(super::super::required_text(
             super::super::DECISION_FIELD,
@@ -64,7 +56,7 @@ impl Rule {
             decision,
             rationale,
             command_prefix,
-            rule_hash,
+            hash: rule_hash,
         };
         rule.validate_positive_examples(draft.positive_examples)?;
         rule.validate_negative_examples(draft.negative_examples)?;
@@ -98,7 +90,7 @@ impl Rule {
     /// Returns the BLAKE3 hash of validated rule fields.
     #[must_use]
     pub fn rule_hash(&self) -> &str {
-        self.rule_hash.as_str()
+        self.hash.as_str()
     }
 
     pub(in crate::effect::exec_policy) fn matches_intent(

@@ -25,6 +25,7 @@ pub(super) const EXPECTED_TWO_ITEMS: usize = 2;
 pub(super) const EXPECTED_FOUR_ITEMS: usize = 4;
 pub(super) const DESCRIPTION_OVERFLOW_CHARS: usize = 1;
 
+#[derive(Clone, Copy)]
 pub(super) struct DescriptorFixture {
     pub(super) kind: Kind,
     pub(super) name: &'static str,

@@ -42,6 +42,7 @@ fn capabilities() -> ModelCapabilities {
             ThinkingLevel::Low,
             ThinkingLevel::Medium,
         ],
+        streaming: ModelStreamingCapabilities::none(),
         cost: Some(TokenCost::new(INPUT_COST_MICRO_USD, OUTPUT_COST_MICRO_USD)),
     })
     .expect("capabilities should validate")
@@ -140,6 +141,7 @@ fn rejects_non_positive_budgets() {
         output_budget: INVALID_ZERO_OUTPUT_BUDGET,
         reasoning: ReasoningSupport::None,
         thinking_levels: vec![ThinkingLevel::None],
+        streaming: ModelStreamingCapabilities::none(),
         cost: None,
     })
     .expect_err("zero output budget should fail");

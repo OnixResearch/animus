@@ -31,8 +31,6 @@ fn validate_item(
     policy: &super::super::ContextAdmissionPolicy,
     item: &super::super::WorkerContextItem,
 ) -> Result<(), super::super::DelegationFailure> {
-    debug_assert!(super::super::MAX_LABEL_CHARS <= super::super::MAX_TEXT_CHARS);
-    debug_assert!(super::super::MAX_CONTEXT_ITEMS > 0);
     if !policy.admits(item.kind) {
         return Err(super::super::DelegationFailure::new(
             super::super::FailureKind::ContextLeak,
@@ -40,8 +38,10 @@ fn validate_item(
             "context kind is not admitted for worker packets",
         ));
     }
-    super::validate_label(super::super::CONTEXT_ITEM_FIELD, item.label.as_str())?;
-    super::validate_text(super::super::CONTEXT_ITEM_FIELD, item.body.as_str())?;
+    let label = super::validate_label(super::super::CONTEXT_ITEM_FIELD, item.label.as_str())?;
+    let body = super::validate_text(super::super::CONTEXT_ITEM_FIELD, item.body.as_str())?;
+    assert!(!label.is_empty(), "context label must be validated");
+    assert!(!body.is_empty(), "context body must be validated");
     if matches!(item.redaction, super::super::WorkerContextRedaction::Raw)
         && !item.kind.is_default_safe()
     {

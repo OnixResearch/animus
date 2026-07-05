@@ -12,6 +12,7 @@
 #![forbid(unsafe_code)]
 
 mod codec;
+mod dataspace;
 mod error;
 mod message;
 mod schema;
@@ -20,6 +21,11 @@ pub use codec::{
     from_bytes, from_record_bytes, from_record_text, from_text, from_versioned_bytes,
     from_versioned_text, to_bytes, to_record_bytes, to_record_text, to_text, to_versioned_bytes,
     to_versioned_text,
+};
+pub use dataspace::{
+    DataspaceMessage, DataspacePayloadKind, DataspaceRecord, DataspaceScopePayload,
+    from_dataspace_record_bytes, from_dataspace_record_text, to_dataspace_record_bytes,
+    to_dataspace_record_text,
 };
 pub use message::{RuntimeFailureEnvelope, RuntimeReportStatus};
 pub use schema::{

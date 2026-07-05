@@ -1,4 +1,10 @@
-use super::*;
+use super::{
+    Collection, InteropError, MCP_ABILITY_POLICY_FIELD, MCP_CAPABILITY_FIELD,
+    MCP_MAPPING_DESCRIPTION, MCP_MAPPING_GUIDELINES, MCP_MAPPING_PROMPT_SNIPPET,
+    MCP_RESOURCE_POLICY_FIELD, MCP_RESULT_BOUNDS_FIELD, MCP_SERVER_LABEL_FIELD, MCP_SOURCE_FIELD,
+    MCP_TOOL_NAME_FIELD, SCHEMA_FIELD, Text, borrowed_texts, required_optional_text,
+    text_collection,
+};
 
 /// Borrowed MCP-to-Animus tool mapping before validation.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

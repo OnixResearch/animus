@@ -14,6 +14,8 @@
 
 mod adapters;
 mod config;
+#[cfg(feature = "syndicate-host")]
+mod dataspace;
 mod execution;
 mod providers;
 
@@ -25,12 +27,20 @@ pub use adapters::{
 /// Backwards-compatible name for deterministic fixture bundles.
 pub type FixtureAdapters = Fixtures;
 pub use config::{INTENT_ENV_KEY, load_runtime};
+#[cfg(feature = "syndicate-host")]
+pub use dataspace::{
+    SyndicateAdapterError, SyndicateHostDataspaceAdapter, SyndicateObservationDraft,
+    SyndicateObservationKind, SyndicateTransport, admit_scoped_orchestration,
+    build_safe_subscription, project_observation,
+};
 pub use execution::{RunError, RunReport, SummaryModelAdapter, run, run_with_model};
 pub use providers::{
     ApiKind, CredentialHandle, CredentialRequirement, CredentialSource, EndpointIdentity,
     InputModality, MissingCredentialDiagnostic, ModelCapabilities, ModelCapabilitiesDraft,
-    ModelEntry, ModelId, ModelSelection, ProviderEntry, ProviderId, ProviderRegistry,
-    ReasoningSupport, RegistryError, SelectedModel, ThinkingLevel, ThinkingPolicy, TokenCost,
+    ModelEntry, ModelId, ModelSelection, ModelStreamingCapabilities, ModelStreamingRequest,
+    ProviderEntry, ProviderId, ProviderRegistry, ReasoningSupport, RegistryError,
+    ResolvedStreamingModes, SelectedModel, StreamFeature, StreamRequestMode, StreamSupport,
+    ThinkingLevel, ThinkingPolicy, TokenCost, UnsupportedStreamPolicy,
     resolve_credential_from_env_pairs,
 };
 

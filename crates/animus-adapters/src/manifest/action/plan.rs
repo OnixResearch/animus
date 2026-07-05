@@ -1,7 +1,18 @@
-use super::check::*;
-use super::context::*;
-use super::types::*;
-use super::*;
+use super::check::{compatibility_diagnostics, validate_host_compatibility};
+use super::context::{diagnostic, is_known_event, target_failure_kind};
+use super::types::{
+    PluginDiagnostic, PluginDiagnosticKind, PluginDiagnosticSeverity, PluginHostCompatibility,
+    PluginRegistryOperationDraft, PluginRegistryOperationKind, PluginRegistryPlan,
+    PluginRegistryPlanStatus, PluginRole, PluginRoleKind,
+};
+use super::{Collection, Text};
+
+struct DiagnosticsInput<'a> {
+    operation: PluginRegistryOperationKind,
+    entrypoint_id: Option<&'a str>,
+    status: PluginRegistryPlanStatus,
+    diagnostics: Collection<PluginDiagnostic>,
+}
 
 impl super::super::PluginDescriptor {
     /// Plans a host-owned registry operation without mutating state or dispatching executors.
@@ -10,15 +21,12 @@ impl super::super::PluginDescriptor {
         &self,
         draft: &PluginRegistryOperationDraft<'_>,
     ) -> PluginRegistryPlan {
-        let host = match validate_host_compatibility(&draft.host) {
-            Ok(host) => host,
-            Err(()) => {
-                return self.blocked_plan(
-                    draft.operation,
-                    draft.entrypoint_id,
-                    PluginDiagnosticKind::MalformedContext,
-                );
-            }
+        let Ok(host) = validate_host_compatibility(&draft.host) else {
+            return self.blocked_plan(
+                draft.operation,
+                draft.entrypoint_id,
+                PluginDiagnosticKind::MalformedContext,
+            );
         };
 
         match draft.operation {
@@ -59,12 +67,12 @@ impl super::super::PluginDescriptor {
         if diagnostics.is_empty() {
             self.planned_operation(operation)
         } else {
-            self.plan_with_diagnostics(
+            self.plan_with_diagnostics(DiagnosticsInput {
                 operation,
-                None,
-                PluginRegistryPlanStatus::Warning,
+                entrypoint_id: None,
+                status: PluginRegistryPlanStatus::Warning,
                 diagnostics,
-            )
+            })
         }
     }
 
@@ -103,12 +111,12 @@ impl super::super::PluginDescriptor {
         };
         let compatibility_diagnostics = compatibility_diagnostics(role.compatibility(), host);
         if !compatibility_diagnostics.is_empty() {
-            return self.plan_with_diagnostics(
-                draft.operation,
-                Some(role.id()),
-                PluginRegistryPlanStatus::Blocked,
-                compatibility_diagnostics,
-            );
+            return self.plan_with_diagnostics(DiagnosticsInput {
+                operation: draft.operation,
+                entrypoint_id: Some(role.id()),
+                status: PluginRegistryPlanStatus::Blocked,
+                diagnostics: compatibility_diagnostics,
+            });
         }
         self.plan_for_role(draft.operation, role)
     }
@@ -151,12 +159,12 @@ impl super::super::PluginDescriptor {
     }
 
     fn planned_operation(&self, operation: PluginRegistryOperationKind) -> PluginRegistryPlan {
-        self.plan_with_diagnostics(
+        self.plan_with_diagnostics(DiagnosticsInput {
             operation,
-            None,
-            PluginRegistryPlanStatus::Planned,
-            Collection::new(),
-        )
+            entrypoint_id: None,
+            status: PluginRegistryPlanStatus::Planned,
+            diagnostics: Collection::new(),
+        })
     }
 
     fn plan_for_role(
@@ -182,27 +190,21 @@ impl super::super::PluginDescriptor {
         kind: PluginDiagnosticKind,
     ) -> PluginRegistryPlan {
         let diagnostics = Collection::from([diagnostic(kind, PluginDiagnosticSeverity::Failure)]);
-        self.plan_with_diagnostics(
+        self.plan_with_diagnostics(DiagnosticsInput {
             operation,
             entrypoint_id,
-            PluginRegistryPlanStatus::Blocked,
+            status: PluginRegistryPlanStatus::Blocked,
             diagnostics,
-        )
+        })
     }
 
-    fn plan_with_diagnostics(
-        &self,
-        operation: PluginRegistryOperationKind,
-        entrypoint_id: Option<&str>,
-        status: PluginRegistryPlanStatus,
-        diagnostics: Collection<PluginDiagnostic>,
-    ) -> PluginRegistryPlan {
+    fn plan_with_diagnostics(&self, input: DiagnosticsInput<'_>) -> PluginRegistryPlan {
         PluginRegistryPlan {
-            operation,
+            operation: input.operation,
             manifest_identity: Text::from(self.identity()),
-            entrypoint_id: entrypoint_id.map(Text::from),
-            status,
-            diagnostics,
+            entrypoint_id: input.entrypoint_id.map(Text::from),
+            status: input.status,
+            diagnostics: input.diagnostics,
             command_label: None,
             artifact_label: None,
         }

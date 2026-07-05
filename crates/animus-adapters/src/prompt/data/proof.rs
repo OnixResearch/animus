@@ -1,8 +1,14 @@
-use super::carrier::*;
-use super::failure::*;
-use super::forms::*;
-use super::rules::*;
-use crate::prompt::base::*;
+use super::carrier::ContextReferenceFragment;
+use super::failure::ContextReferenceError;
+use super::forms::ContextReferenceKind;
+use super::rules::{
+    ContextReferencePolicyDecision, ContextReferenceStatus, ContextResolverKind,
+    ContextTruncationState,
+};
+use crate::prompt::base::{
+    BYTE_COUNT_LABEL, CONTEXT_BOUNDS_FIELD, LINE_COUNT_LABEL, VISIBLE_BYTE_COUNT_LABEL,
+    VISIBLE_LINE_COUNT_LABEL, ZERO_COUNT,
+};
 
 /// Original and model-visible context-reference count metadata.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

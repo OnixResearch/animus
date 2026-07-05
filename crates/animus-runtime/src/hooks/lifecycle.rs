@@ -3,7 +3,6 @@
     ambiguous_params,
     assertion_density,
     borrowed_argument_types,
-    excessive_file_length,
     no_panic,
     numeric_units,
     path_segment_repetition,
@@ -31,7 +30,7 @@ const LEAK_MARKERS: &[&str] = &[
 // r[impl agent_harness_runtime.openai_codex_hook_trust_lifecycle.event_registry]
 // r[impl agent_harness_runtime.claude_code_hooks.scope]
 // r[impl agent_harness_runtime.claude_code_hooks.points]
-/// Stable lifecycle hook point adapted from Claude Code and OpenAI Codex hook surfaces.
+/// Stable lifecycle hook point adapted from `Claude Code` and `OpenAI Codex` hook surfaces.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum LifecycleHookEventKind {
     /// Session-start lifecycle event.
@@ -138,8 +137,7 @@ impl LifecycleHookEventKind {
 
     const fn supports_capability(self, capability: LifecycleHookCapability) -> bool {
         match capability {
-            LifecycleHookCapability::Observe => true,
-            LifecycleHookCapability::Annotate => true,
+            LifecycleHookCapability::Observe | LifecycleHookCapability::Annotate => true,
             LifecycleHookCapability::Deny => matches!(
                 self,
                 Self::ModelRequest
@@ -326,13 +324,13 @@ impl LifecycleHookDefinition {
                 "",
             ));
         }
-        let definition_hash = hash_definition(
+        let definition_hash = hash_definition(DefinitionHashInput {
             hook_id,
             event_kind,
-            draft.source,
-            &capabilities,
-            draft.definition_body,
-        );
+            source: draft.source,
+            capabilities: &capabilities,
+            definition_body: draft.definition_body,
+        });
         Ok(Self {
             hook_id: String::from(hook_id),
             event_kind,
@@ -538,6 +536,28 @@ pub struct LifecycleHookInputDraft<'a> {
     pub status: Option<&'a str>,
 }
 
+/// Already-redacted lifecycle input fields decoded from a safe report.
+pub struct LifecycleHookInputReportDraft<'a> {
+    /// Stable lifecycle event identifier.
+    pub event_id: &'a str,
+    /// Stable event-kind label.
+    pub event_kind: &'a str,
+    /// Safe resource class, such as `tool`, `prompt`, or `session`.
+    pub resource_class: &'a str,
+    /// Safe redacted label for the affected resource.
+    pub safe_label: &'a str,
+    /// Safe bounded event summary.
+    pub summary: &'a str,
+    /// Previously recorded sensitive body byte count.
+    pub body_size_bytes: usize,
+    /// BLAKE3 sensitive body hash or the no-body marker hash.
+    pub body_hash: &'a str,
+    /// Redaction class for the decoded input report.
+    pub redaction: LifecycleHookRedaction,
+    /// Optional safe status class for the event.
+    pub status: Option<&'a str>,
+}
+
 /// Redacted lifecycle hook event input sent to shell-owned hook executors.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct LifecycleHookInput {
@@ -580,6 +600,42 @@ impl LifecycleHookInput {
             body_size_bytes,
             body_hash,
             redaction,
+            status,
+        })
+    }
+
+    /// Rebuilds a lifecycle hook input from already-redacted report fields.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LifecycleHookError`] when any safe metadata is malformed or the
+    /// redaction/hash pair is inconsistent.
+    pub fn from_redacted_report(
+        draft: &LifecycleHookInputReportDraft<'_>,
+    ) -> Result<Self, LifecycleHookError> {
+        let event_id = validate_safe_label("event_id", draft.event_id)?;
+        let event_kind = LifecycleHookEventKind::parse(draft.event_kind)?;
+        let resource_class = validate_safe_label("resource_class", draft.resource_class)?;
+        let safe_label = validate_safe_label("safe_label", draft.safe_label)?;
+        let summary = validate_safe_summary("summary", draft.summary)?;
+        let body_hash = validate_redacted_body_summary(
+            draft.body_size_bytes,
+            draft.body_hash,
+            draft.redaction,
+        )?;
+        let status = draft
+            .status
+            .map(|value| validate_safe_label("status", value).map(String::from))
+            .transpose()?;
+        Ok(Self {
+            event_id: String::from(event_id),
+            event_kind,
+            resource_class: String::from(resource_class),
+            safe_label: String::from(safe_label),
+            summary: String::from(summary),
+            body_size_bytes: draft.body_size_bytes,
+            body_hash: String::from(body_hash),
+            redaction: draft.redaction,
             status,
         })
     }
@@ -912,24 +968,49 @@ pub struct LifecycleHookOutcome {
     input: LifecycleHookInput,
 }
 
+/// Borrowed lifecycle hook outcome fields for safe report construction.
+#[derive(Clone, Copy)]
+pub struct LifecycleHookOutcomeDraft<'a> {
+    /// Reviewed lifecycle hook definition.
+    pub definition: &'a LifecycleHookDefinition,
+    /// Redacted lifecycle hook input.
+    pub input: &'a LifecycleHookInput,
+    /// Trust status evaluated for the hook definition hash.
+    pub trust_status: LifecycleHookTrustStatus,
+    /// Recorded outcome class for this hook and event.
+    pub outcome_class: LifecycleHookOutcomeClass,
+    /// Optional failure class attached to the outcome.
+    pub failure_class: Option<LifecycleHookFailureClass>,
+}
+
+/// Already-redacted lifecycle hook outcome fields decoded from a safe report.
+pub struct LifecycleHookOutcomeReportDraft<'a> {
+    /// Stable hook identifier used in reports and trust records.
+    pub hook_id: &'a str,
+    /// BLAKE3 hash of the reviewed hook definition.
+    pub definition_hash: &'a str,
+    /// Trust status evaluated for the hook definition hash.
+    pub trust_status: LifecycleHookTrustStatus,
+    /// Recorded outcome class for this hook and event.
+    pub outcome_class: LifecycleHookOutcomeClass,
+    /// Optional failure class attached to the outcome.
+    pub failure_class: Option<LifecycleHookFailureClass>,
+    /// Redacted input summary associated with this outcome.
+    pub input: &'a LifecycleHookInput,
+}
+
 impl LifecycleHookOutcome {
     /// Builds a safe outcome report for one lifecycle hook and event.
     #[must_use]
-    pub fn new(
-        definition: &LifecycleHookDefinition,
-        input: &LifecycleHookInput,
-        trust_status: LifecycleHookTrustStatus,
-        outcome_class: LifecycleHookOutcomeClass,
-        failure_class: Option<LifecycleHookFailureClass>,
-    ) -> Self {
+    pub fn new(draft: LifecycleHookOutcomeDraft<'_>) -> Self {
         Self {
-            hook_id: String::from(definition.hook_id()),
-            definition_hash: String::from(definition.definition_hash()),
-            event_kind: input.event_kind(),
-            trust_status,
-            outcome_class,
-            failure_class,
-            input: input.clone(),
+            hook_id: String::from(draft.definition.hook_id()),
+            definition_hash: String::from(draft.definition.definition_hash()),
+            event_kind: draft.input.event_kind(),
+            trust_status: draft.trust_status,
+            outcome_class: draft.outcome_class,
+            failure_class: draft.failure_class,
+            input: draft.input.clone(),
         }
     }
 
@@ -940,13 +1021,35 @@ impl LifecycleHookOutcome {
         input: &LifecycleHookInput,
         trust_status: LifecycleHookTrustStatus,
     ) -> Self {
-        Self::new(
+        Self::new(LifecycleHookOutcomeDraft {
             definition,
             input,
             trust_status,
-            LifecycleHookOutcomeClass::Failed,
-            Some(LifecycleHookFailureClass::RequiredHookUnavailable),
-        )
+            outcome_class: LifecycleHookOutcomeClass::Failed,
+            failure_class: Some(LifecycleHookFailureClass::RequiredHookUnavailable),
+        })
+    }
+
+    /// Rebuilds a lifecycle hook outcome from already-redacted report fields.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LifecycleHookError`] when the hook identifier or definition hash
+    /// is malformed.
+    pub fn from_redacted_report(
+        draft: &LifecycleHookOutcomeReportDraft<'_>,
+    ) -> Result<Self, LifecycleHookError> {
+        let hook_id = validate_safe_label("hook_id", draft.hook_id)?;
+        let definition_hash = validate_blake3_hex("definition_hash", draft.definition_hash)?;
+        Ok(Self {
+            hook_id: String::from(hook_id),
+            definition_hash: String::from(definition_hash),
+            event_kind: draft.input.event_kind(),
+            trust_status: draft.trust_status,
+            outcome_class: draft.outcome_class,
+            failure_class: draft.failure_class,
+            input: draft.input.clone(),
+        })
     }
 
     /// Returns the hook identifier.
@@ -1103,20 +1206,24 @@ pub fn route_lifecycle_hook_requests(
                 event_kind: input.event_kind(),
                 input: input.clone(),
             }),
-            LifecycleHookTrustStatus::Denied { .. } => outcomes.push(LifecycleHookOutcome::new(
-                definition,
-                input,
-                trust_status,
-                LifecycleHookOutcomeClass::Denied,
-                Some(LifecycleHookFailureClass::HookDeniedByTrust),
-            )),
-            LifecycleHookTrustStatus::Untrusted => outcomes.push(LifecycleHookOutcome::new(
-                definition,
-                input,
-                trust_status,
-                LifecycleHookOutcomeClass::Untrusted,
-                None,
-            )),
+            LifecycleHookTrustStatus::Denied { .. } => {
+                outcomes.push(LifecycleHookOutcome::new(LifecycleHookOutcomeDraft {
+                    definition,
+                    input,
+                    trust_status,
+                    outcome_class: LifecycleHookOutcomeClass::Denied,
+                    failure_class: Some(LifecycleHookFailureClass::HookDeniedByTrust),
+                }));
+            }
+            LifecycleHookTrustStatus::Untrusted => {
+                outcomes.push(LifecycleHookOutcome::new(LifecycleHookOutcomeDraft {
+                    definition,
+                    input,
+                    trust_status,
+                    outcome_class: LifecycleHookOutcomeClass::Untrusted,
+                    failure_class: None,
+                }));
+            }
         }
     }
     LifecycleHookRoutePlan { requests, outcomes }
@@ -1378,12 +1485,34 @@ fn leak_marker(value: &str) -> Option<&'static str> {
         .find(|marker| lower.contains(marker))
 }
 
+fn validate_redacted_body_summary(
+    body_size_bytes: usize,
+    body_hash: &str,
+    redaction: LifecycleHookRedaction,
+) -> Result<&str, LifecycleHookError> {
+    match redaction {
+        LifecycleHookRedaction::NoSensitiveBody => {
+            let expected_hash = no_sensitive_body_hash();
+            if body_size_bytes == usize::default() && body_hash == expected_hash {
+                Ok(body_hash)
+            } else {
+                Err(LifecycleHookError::new(
+                    LifecycleHookErrorKind::InvalidHash,
+                    "body_hash",
+                    body_hash,
+                ))
+            }
+        }
+        LifecycleHookRedaction::BodyRedacted => validate_blake3_hex("body_hash", body_hash),
+    }
+}
+
 fn summarize_sensitive_body(body: Option<&str>) -> (usize, String, LifecycleHookRedaction) {
     body.map_or_else(
         || {
             (
                 usize::default(),
-                blake3_hex(EMPTY_SENSITIVE_BODY_HASH.as_bytes()),
+                no_sensitive_body_hash(),
                 LifecycleHookRedaction::NoSensitiveBody,
             )
         },
@@ -1397,21 +1526,28 @@ fn summarize_sensitive_body(body: Option<&str>) -> (usize, String, LifecycleHook
     )
 }
 
-fn hash_definition(
-    hook_id: &str,
+fn no_sensitive_body_hash() -> String {
+    blake3_hex(EMPTY_SENSITIVE_BODY_HASH.as_bytes())
+}
+
+#[derive(Clone, Copy)]
+struct DefinitionHashInput<'a> {
+    hook_id: &'a str,
     event_kind: LifecycleHookEventKind,
     source: LifecycleHookDefinitionSource,
-    capabilities: &[LifecycleHookCapability],
-    definition_body: &str,
-) -> String {
+    capabilities: &'a [LifecycleHookCapability],
+    definition_body: &'a str,
+}
+
+fn hash_definition(input: DefinitionHashInput<'_>) -> String {
     let mut normalized = String::from(HOOK_DEFINITION_SCHEMA);
-    push_hash_part(&mut normalized, hook_id);
-    push_hash_part(&mut normalized, event_kind.as_str());
-    push_hash_part(&mut normalized, source.as_str());
-    for capability in capabilities {
+    push_hash_part(&mut normalized, input.hook_id);
+    push_hash_part(&mut normalized, input.event_kind.as_str());
+    push_hash_part(&mut normalized, input.source.as_str());
+    for capability in input.capabilities {
         push_hash_part(&mut normalized, capability.as_str());
     }
-    push_hash_part(&mut normalized, definition_body);
+    push_hash_part(&mut normalized, input.definition_body);
     blake3_hex(normalized.as_bytes())
 }
 
@@ -1983,13 +2119,13 @@ mod tests {
             PROMPT_LABEL,
             Some(RAW_PROMPT_BODY),
         );
-        let report = LifecycleHookOutcome::new(
-            &definition,
-            &input,
+        let report = LifecycleHookOutcome::new(LifecycleHookOutcomeDraft {
+            definition: &definition,
+            input: &input,
             trust_status,
-            LifecycleHookOutcomeClass::Applied,
-            None,
-        );
+            outcome_class: LifecycleHookOutcomeClass::Applied,
+            failure_class: None,
+        });
         let debug = format!("{report:?}");
 
         assert_eq!(report.hook_id(), PROMPT_HOOK_ID);

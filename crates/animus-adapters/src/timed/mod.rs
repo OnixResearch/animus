@@ -1,5 +1,7 @@
 //! Data-only scheduled recipe workflow DTOs and validation helpers.
 
+#![allow(non_trait_imports)]
+
 const ID_FIELD: crate::validation::FieldName = crate::validation::FieldName::new("schedule_id");
 const RECIPE_FIELD: crate::validation::FieldName = crate::validation::FieldName::new("recipe_id");
 const HASH_FIELD: crate::validation::FieldName = crate::validation::FieldName::new("schedule_hash");
@@ -35,7 +37,6 @@ const CONTROL_RUN_NOW: &str = "run_now";
 const CONTROL_CANCEL: &str = "cancel";
 const BLAKE3_HEX_CHARS: usize = 64;
 const ASCII_HEX_RADIX: u32 = 16;
-const MIN_RETRY_LIMIT: u32 = 0;
 const MIN_RETENTION_COUNT: u32 = 1;
 const MIN_INTERVAL_TICKS: u64 = 1;
 
@@ -75,6 +76,11 @@ pub enum ScheduleError {
         field: &'static str,
         /// Duplicated value.
         value: Text,
+    },
+    /// A collection count overflowed the public DTO bound.
+    CountOverflow {
+        /// Boundary field name.
+        field: &'static str,
     },
     /// A BLAKE3 hash was malformed.
     InvalidHash {
@@ -119,7 +125,7 @@ pub use command::{ScheduleControlAction, ScheduleControlDraft, ScheduleControlRe
 pub use descriptor::{ScheduledWorkflow, ScheduledWorkflowDraft};
 pub use gate::{
     ScheduledRunAdmissionDraft, ScheduledRunAdmissionStatus, ScheduledRunDenial,
-    admit_scheduled_run,
+    ScheduledRunPolicyAdmission, ScheduledRunRuntimeAdmission, admit_scheduled_run,
 };
 pub use history::{ScheduledRunRecord, ScheduledRunRecordDraft, validate_scheduled_record_text};
 pub use kind::{ScheduleCadence, ScheduleConcurrencyPolicy, ScheduleExecutionMode};
@@ -180,8 +186,8 @@ fn validate_hashes(
         "hash field names are stable"
     );
     assert!(
-        values.len() <= values.iter().count(),
-        "hash slice length is bounded"
+        field_name.as_str().len() <= crate::validation::MAX_ADAPTER_FIELD_CHARS,
+        "hash field names are bounded"
     );
     if required && values.is_empty() {
         return Err(ScheduleError::EmptyCollection {

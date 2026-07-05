@@ -28,6 +28,7 @@ pub struct ImageReceiptDraft<'a> {
 /// Safe image receipt metadata.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ImageReceipt {
+    modality: &'static str,
     status: super::ImageOutcomeStatus,
     safe_label: alloc::string::String,
     media_type: super::ImageMediaType,
@@ -80,6 +81,7 @@ impl ImageReceipt {
             metadata_fragments: metadata_fragments.as_slice(),
         });
         Ok(Self {
+            modality: super::IMAGE_MODALITY,
             status: draft.status,
             safe_label,
             media_type,
@@ -97,7 +99,7 @@ impl ImageReceipt {
     /// Returns the modality label recorded by all image receipts.
     #[must_use]
     pub const fn modality(&self) -> &'static str {
-        super::IMAGE_MODALITY
+        self.modality
     }
 
     /// Returns the image outcome status.

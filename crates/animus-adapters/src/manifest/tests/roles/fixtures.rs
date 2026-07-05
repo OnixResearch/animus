@@ -133,6 +133,10 @@ pub(super) const ENABLED_BUT_DENIED: RegistryPolicyState = RegistryPolicyState {
     policy_allows: false,
 };
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "fixture mirrors registry request fields"
+)]
 pub(super) fn registry_request<'a>(
     operation: PluginRegistryOperationKind,
     entrypoint_id: Option<&'a str>,

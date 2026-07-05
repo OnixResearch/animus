@@ -7,12 +7,14 @@ pub use lifecycle::{
     LifecycleHookCapability, LifecycleHookDefinition, LifecycleHookDefinitionDraft,
     LifecycleHookDefinitionSource, LifecycleHookEffect, LifecycleHookEffectDraft,
     LifecycleHookError, LifecycleHookErrorKind, LifecycleHookEventKind, LifecycleHookFailureClass,
-    LifecycleHookInput, LifecycleHookInputDraft, LifecycleHookOutcome, LifecycleHookOutcomeClass,
-    LifecycleHookOutput, LifecycleHookOutputDraft, LifecycleHookPolicyStatus,
-    LifecycleHookRedaction, LifecycleHookRequest, LifecycleHookRoutePlan,
-    LifecycleHookTrustDecision, LifecycleHookTrustRecord, LifecycleHookTrustRecordDraft,
-    LifecycleHookTrustScope, LifecycleHookTrustStatus, bind_lifecycle_hook_output_to_policy,
-    evaluate_lifecycle_hook_trust, route_lifecycle_hook_requests,
+    LifecycleHookInput, LifecycleHookInputDraft, LifecycleHookInputReportDraft,
+    LifecycleHookOutcome, LifecycleHookOutcomeClass, LifecycleHookOutcomeDraft,
+    LifecycleHookOutcomeReportDraft, LifecycleHookOutput, LifecycleHookOutputDraft,
+    LifecycleHookPolicyStatus, LifecycleHookRedaction, LifecycleHookRequest,
+    LifecycleHookRoutePlan, LifecycleHookTrustDecision, LifecycleHookTrustRecord,
+    LifecycleHookTrustRecordDraft, LifecycleHookTrustScope, LifecycleHookTrustStatus,
+    bind_lifecycle_hook_output_to_policy, evaluate_lifecycle_hook_trust,
+    route_lifecycle_hook_requests,
 };
 
 const DEFAULT_MIDDLEWARE_LABEL: &str = "runtime_middleware";

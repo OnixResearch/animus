@@ -54,6 +54,10 @@ pub struct RequestDraft<'a> {
 /// supplied snapshot, references unknown or ambiguous tags, contains invalid or
 /// overlapping spans, uses unsupported newline policy, or exceeds replacement
 /// bounds.
+///
+/// # Panics
+///
+/// Panics if the shared hash validator stops returning BLAKE3-sized hashes.
 pub fn validate_plan(
     snapshot: &super::Snapshot,
     request: &RequestDraft<'_>,
@@ -82,7 +86,7 @@ pub fn validate_plan(
         snapshot_hash: expected_hash,
         newline_policy,
         spans,
-        plan_hash,
+        hash: plan_hash,
     })
 }
 
@@ -143,14 +147,7 @@ fn validate_span(
     snapshot: &super::Snapshot,
     draft: &SpanDraft<'_>,
 ) -> Result<super::Validated, super::Error> {
-    assert!(
-        super::MAX_REPLACEMENT_CHARS > 0,
-        "replacement bound is positive"
-    );
-    assert!(
-        snapshot.line_count() >= snapshot.tagged_lines().len() as u32,
-        "line count covers tags"
-    );
+    debug_assert!(line_count_covers_tags(snapshot), "line count covers tags");
     let start_tag = super::required_label(super::LINE_TAG_FIELD, draft.start_tag)?;
     let end_tag = super::required_label(super::LINE_TAG_FIELD, draft.end_tag)?;
     let start_line = snapshot.line_for_tag(start_tag.as_str())?.line_number();
@@ -175,6 +172,13 @@ fn validate_span(
         replacement_chars,
         replacement_hash,
     })
+}
+
+fn line_count_covers_tags(snapshot: &super::Snapshot) -> bool {
+    let Ok(tagged_line_count) = u32::try_from(snapshot.tagged_lines().len()) else {
+        return false;
+    };
+    snapshot.line_count() >= tagged_line_count
 }
 
 fn validate_span_lines(span: SpanLines) -> Result<(), super::Error> {

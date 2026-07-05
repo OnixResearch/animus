@@ -7,6 +7,11 @@ let ApiKind = [| 'openai_responses, 'anthropic_messages, 'local_http, 'mock |] i
 let Modality = [| 'text, 'image |] in
 let ReasoningSupport = [| 'none, 'optional, 'required |] in
 let ThinkingLevel = [| 'none, 'low, 'medium, 'high |] in
+let Role = [| 'system, 'developer, 'user, 'assistant, 'tool |] in
+let ContentPartClass = [| 'text, 'image |] in
+let StructuredOutputMode = [| 'json_object, 'json_schema |] in
+let StreamChannel = [| 'content, 'tool_call, 'usage |] in
+let PrivacyPosture = [| 'local_only, 'private_gateway, 'remote_provider |] in
 let CredentialSource = [| 'none, 'environment, 'file, 'oauth |] in
 let CostMetadata = {
   input_micro_usd_per_million | PositiveNumber,
@@ -26,6 +31,14 @@ let ModelConfig = {
   output_budget | PositiveNumber,
   reasoning | ReasoningSupport,
   thinking_levels | Array ThinkingLevel,
+  capability_schema | NonEmptyString,
+  roles | Array Role,
+  content_parts | Array ContentPartClass,
+  tool_calls | Bool,
+  structured_outputs | Array StructuredOutputMode,
+  stream_channels | Array StreamChannel,
+  reasoning_controls | Array ThinkingLevel,
+  privacy | PrivacyPosture,
   cost | CostMetadata,
 } in
 let ProviderConfig = {
@@ -51,6 +64,11 @@ let no_credential_label = "none" in
 let default_context_budget = 4096 in
 let default_output_budget = 1024 in
 let minimum_cost = 1 in
+let capability_schema_id = "animus.model-capability-matrix.v1" in
+let user_role = 'user in
+let assistant_role = 'assistant in
+let text_part = 'text in
+let local_privacy = 'local_only in
 {
   provider_registry_contract = ProviderRegistry,
   provider_registry | ProviderRegistry = {
@@ -73,6 +91,14 @@ let minimum_cost = 1 in
             output_budget = default_output_budget,
             reasoning = no_reasoning,
             thinking_levels = [no_thinking],
+            capability_schema = capability_schema_id,
+            roles = [user_role, assistant_role],
+            content_parts = [text_part],
+            tool_calls = false,
+            structured_outputs = [],
+            stream_channels = [],
+            reasoning_controls = [no_thinking],
+            privacy = local_privacy,
             cost = {
               input_micro_usd_per_million = minimum_cost,
               output_micro_usd_per_million = minimum_cost,

@@ -13,6 +13,11 @@ struct ResolutionContext<'a> {
 ///
 /// No filesystem, process, queue, storage, pueue, systemd, shell, clock, or
 /// network authority is used by this function.
+///
+/// # Errors
+///
+/// Returns [`super::ProcessJobProfileError`] when the profile cannot be selected
+/// or violates the supplied policy.
 pub fn resolve_process_job_profile(
     request: super::ProcessJobProfileResolveRequest<'_>,
 ) -> Result<super::ResolvedProcessJobProfile, super::ProcessJobProfileError> {
@@ -30,6 +35,10 @@ pub fn resolve_process_job_profile(
 
 impl super::ProcessJobProfileManifest {
     /// Resolves a named profile using inline source evidence.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`super::ProcessJobProfileError`] when the profile is missing or invalid.
     pub fn resolve(
         &self,
         profile_name: &str,
@@ -213,11 +222,11 @@ fn select_profile_source<'a>(
                 .push(source);
         }
     }
-    select_highest_precedence(matches, profile_name)
+    select_highest_precedence(&matches, profile_name)
 }
 
 fn select_highest_precedence<'a>(
-    matches: std::collections::BTreeMap<u8, Vec<&'a super::ProcessJobProfileSource>>,
+    matches: &std::collections::BTreeMap<u8, Vec<&'a super::ProcessJobProfileSource>>,
     profile_name: &str,
 ) -> Result<&'a super::ProcessJobProfileSource, super::ProcessJobProfileError> {
     debug_assert!(!profile_name.is_empty());

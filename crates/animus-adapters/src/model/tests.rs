@@ -25,6 +25,14 @@ fn adapter_contract_accepts_valid_request_response() {
 
     assert_eq!(request.prompt(), VALID_PROMPT);
     assert_eq!(response.message(), VALID_PROMPT);
+    assert_eq!(
+        Request::contract_identity(),
+        MODEL_REQUEST_CONTRACT_IDENTITY
+    );
+    assert_eq!(
+        Response::contract_identity(),
+        MODEL_RESPONSE_CONTRACT_IDENTITY
+    );
 }
 
 #[test]

@@ -1,0 +1,15 @@
+# Tasks
+
+- [x] [serial] Define typed compaction policy inputs for context budget, response reserve, kept-recent budget, summary format, summarizer selection, and redaction behavior. r[agent_harness_runtime.pi_compaction.policy]
+- [x] [depends:policy] Add compaction-trigger tests for enabled, disabled, under-budget, over-budget, and missing-estimate cases. r[agent_harness_runtime.pi_compaction.policy.trigger]
+- [x] [serial] Implement pure compaction preparation over in-memory ledger branches with valid cut-point selection. r[agent_harness_runtime.pi_compaction.cut_points]
+- [x] [depends:cut_points] Add negative cut-point tests proving tool results are not orphaned from tool calls. r[agent_harness_runtime.pi_compaction.cut_points.reject_tool_result]
+- [x] [depends:cut_points] Add split-turn preparation and summary-entry metadata for oversized turns. r[agent_harness_runtime.pi_compaction.split_turn]
+- [x] [depends:split_turn] Add split-turn tests covering huge tool-heavy turns and kept suffix ordering. r[agent_harness_runtime.pi_compaction.split_turn.prefix]
+- [x] [serial] Add branch handoff summary preparation for old leaf, target leaf, common ancestor, and abandoned span selection. r[agent_harness_runtime.pi_compaction.branch_summary]
+- [x] [depends:branch_summary] Add branch navigation summary tests for shared ancestor, no-summary request, and bounded abandoned-branch content. r[agent_harness_runtime.pi_compaction.branch_summary.navigation]
+- [x] [serial] Define injected summarizer service contracts and runtime missing/denied/cancelled/malformed-output failures. r[agent_harness_runtime.pi_compaction.injected_summarizer]
+- [x] [depends:injected_summarizer] Add negative tests proving missing summarizer service halts required compaction without provider/model/tool fallback. r[agent_harness_runtime.pi_compaction.injected_summarizer.missing]
+- [x] [serial] Define safe summary metadata with bounded text, counts, redacted resource IDs, and BLAKE3 hashes. r[agent_harness_runtime.pi_compaction.safe_metadata]
+- [x] [depends:safe_metadata] Add negative tests rejecting raw tool bodies, provider payloads, credentials, and unredacted host paths in summary metadata. r[agent_harness_runtime.pi_compaction.safe_metadata.reject_raw]
+- [x] [depends:policy.trigger,cut_points.reject_tool_result,split_turn.prefix,branch_summary.navigation,injected_summarizer.missing,safe_metadata.reject_raw] Update docs and run focused compaction tests, workspace checks, Cairn validation, and Cairn gates with reviewable evidence. r[agent_harness_runtime.pi_compaction.policy]

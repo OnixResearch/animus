@@ -14,7 +14,7 @@ const PRIVATE_PATH_COMPATIBILITY_FIELD_REASON: &str =
     "compatibility metadata must not preserve full private paths";
 const PROVIDER_JSON_COMPATIBILITY_FIELD_REASON: &str =
     "compatibility metadata must not preserve provider payload JSON";
-const SCHEMA_CATALOG_LEN: usize = 7;
+const SCHEMA_CATALOG_LEN: usize = 8;
 const RAW_PROMPT_FIELD: &str = "raw_prompt";
 const PROMPT_FIELD: &str = "prompt";
 const CREDENTIAL_FIELD: &str = "credential";
@@ -93,6 +93,8 @@ pub enum SchemaFamily {
     PolicyVisibleDto,
     /// Dataset/export rows retained as review fixtures until those exporters stabilize.
     DatasetExportRow,
+    /// Dataspace scope, assertion, subscription, and orchestration DTO records.
+    DataspaceDto,
 }
 
 impl SchemaFamily {
@@ -107,6 +109,7 @@ impl SchemaFamily {
             Self::SessionProvenanceRecord => "session_provenance_record",
             Self::PolicyVisibleDto => "policy_visible_dto",
             Self::DatasetExportRow => "dataset_export_row",
+            Self::DataspaceDto => "dataspace_dto",
         }
     }
 
@@ -119,6 +122,7 @@ impl SchemaFamily {
                 CoverageTier::CompatibilityImportExportAdapter
             }
             Self::DatasetExportRow => CoverageTier::ReviewOnlyFixture,
+            Self::DataspaceDto => CoverageTier::StableExternalWireContract,
         }
     }
 }
@@ -162,7 +166,8 @@ impl SchemaIdentity {
         self.family.coverage_tier()
     }
 
-    fn validate_supported(self) -> Result<(), crate::CodecError> {
+    /// Validates that this schema identity uses the supported version.
+    pub(crate) fn validate_supported(self) -> Result<(), crate::CodecError> {
         if self.version == INITIAL_SCHEMA_VERSION {
             return Ok(());
         }
@@ -213,6 +218,7 @@ const SCHEMA_CATALOG: [SchemaDescriptor; SCHEMA_CATALOG_LEN] = [
     SchemaDescriptor::new(SchemaFamily::SessionProvenanceRecord),
     SchemaDescriptor::new(SchemaFamily::PolicyVisibleDto),
     SchemaDescriptor::new(SchemaFamily::DatasetExportRow),
+    SchemaDescriptor::new(SchemaFamily::DataspaceDto),
 ];
 
 /// Returns the declared Preserves schema catalog.

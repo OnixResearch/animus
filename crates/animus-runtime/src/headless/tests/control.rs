@@ -1,6 +1,3 @@
-#![allow(unknown_lints)]
-#![allow(module_file_count)]
-
 use super::super::*;
 use super::support::*;
 
