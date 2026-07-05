@@ -1,5 +1,5 @@
-#![allow(clippy::wildcard_imports)]
 #![allow(non_trait_imports)]
+#[allow(clippy::wildcard_imports)]
 use super::*;
 
 /// Canonical terminal finish reason.
