@@ -1,5 +1,14 @@
 #![allow(non_trait_imports)]
-use super::{CanonicalModelResponseItemDraft, CanonicalUsageDraft, CanonicalSafeMetadataDraft, CanonicalModelResponseItem, CanonicalUsage, CanonicalFinishReason, CanonicalSafeMetadata, CanonicalModelContractError, CANONICAL_MODEL_RESPONSE_CONTRACT_IDENTITY, require_collection, RESPONSE_TEXT_FIELD, MAX_RESPONSE_ITEMS, validate_collection_len, MALFORMED_DIAGNOSTIC_FIELD, MAX_RESPONSE_DIAGNOSTICS, FINISH_REASON_FIELD, validate_response_combination, validate_metadata, FINISH_STOP, lossy_legacy_response, safe_text, CONTRACT_IDENTITY_FIELD, CanonicalModelMessageDraft, CanonicalModelMessage, CanonicalContentPartDraft, CanonicalContentPart, CanonicalToolDeclarationDraft, CanonicalToolDeclaration};
+use super::{
+    CANONICAL_MODEL_RESPONSE_CONTRACT_IDENTITY, CONTRACT_IDENTITY_FIELD, CanonicalContentPart,
+    CanonicalContentPartDraft, CanonicalFinishReason, CanonicalModelContractError,
+    CanonicalModelMessage, CanonicalModelMessageDraft, CanonicalModelResponseItem,
+    CanonicalModelResponseItemDraft, CanonicalSafeMetadata, CanonicalSafeMetadataDraft,
+    CanonicalToolDeclaration, CanonicalToolDeclarationDraft, CanonicalUsage, CanonicalUsageDraft,
+    FINISH_REASON_FIELD, FINISH_STOP, MALFORMED_DIAGNOSTIC_FIELD, MAX_RESPONSE_DIAGNOSTICS,
+    MAX_RESPONSE_ITEMS, RESPONSE_TEXT_FIELD, lossy_legacy_response, require_collection, safe_text,
+    validate_collection_len, validate_metadata, validate_response_combination,
+};
 
 /// Borrowed canonical response envelope before validation.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

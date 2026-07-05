@@ -1,5 +1,11 @@
 #![allow(non_trait_imports)]
-use super::{CanonicalModelContractError, safe_text, CONTENT_TEXT_FIELD, IMAGE_DESCRIPTOR_FIELD, IMAGE_MEDIA_TYPE_FIELD, IMAGE_HASH_FIELD, CONTENT_PART_KIND_FIELD, RAW_PROVIDER_PAYLOAD_FIELD, CanonicalUnsafeTextReason, CanonicalModelRole, require_collection, MAX_CONTENT_PARTS_PER_MESSAGE, validate_content_parts, validate_tool_call_id, TOOL_NAME_FIELD, TOOL_DESCRIPTION_FIELD, TOOL_SCHEMA_FIELD};
+use super::{
+    CONTENT_PART_KIND_FIELD, CONTENT_TEXT_FIELD, CanonicalModelContractError, CanonicalModelRole,
+    CanonicalUnsafeTextReason, IMAGE_DESCRIPTOR_FIELD, IMAGE_HASH_FIELD, IMAGE_MEDIA_TYPE_FIELD,
+    MAX_CONTENT_PARTS_PER_MESSAGE, RAW_PROVIDER_PAYLOAD_FIELD, TOOL_DESCRIPTION_FIELD,
+    TOOL_NAME_FIELD, TOOL_SCHEMA_FIELD, require_collection, safe_text, validate_content_parts,
+    validate_tool_call_id,
+};
 
 /// Borrowed canonical content part before validation.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

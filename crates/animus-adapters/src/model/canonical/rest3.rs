@@ -1,5 +1,16 @@
 #![allow(non_trait_imports)]
-use super::{CanonicalModelRequest, CanonicalModelRequestDraft, CanonicalModelContractError, validate_contract_identity, CANONICAL_MODEL_REQUEST_CONTRACT_IDENTITY, require_collection, ROLE_FIELD, MAX_MODEL_MESSAGES, validate_collection_len, TOOL_NAME_FIELD, MAX_MODEL_TOOLS, validate_messages, validate_tools, CanonicalOutputControls, CanonicalResponseFormatIntent, CanonicalReasoningRequest, validate_metadata, CanonicalContentPartDraft, CanonicalModelMessageDraft, ROLE_USER, CanonicalOutputControlsDraft, CanonicalResponseFormatIntentDraft, CanonicalReasoningRequestDraft, CanonicalReasoningEffort, lossy_legacy_request, CanonicalModelRole, CanonicalModelMessage, CanonicalToolDeclaration, CanonicalSafeMetadata, RESPONSE_TEXT_FIELD, INVALID_ZERO_USAGE, INVALID_CACHED_USAGE};
+use super::{
+    CANONICAL_MODEL_REQUEST_CONTRACT_IDENTITY, CanonicalContentPartDraft,
+    CanonicalModelContractError, CanonicalModelMessage, CanonicalModelMessageDraft,
+    CanonicalModelRequest, CanonicalModelRequestDraft, CanonicalModelRole, CanonicalOutputControls,
+    CanonicalOutputControlsDraft, CanonicalReasoningEffort, CanonicalReasoningRequest,
+    CanonicalReasoningRequestDraft, CanonicalResponseFormatIntent,
+    CanonicalResponseFormatIntentDraft, CanonicalSafeMetadata, CanonicalToolDeclaration,
+    INVALID_CACHED_USAGE, INVALID_ZERO_USAGE, MAX_MODEL_MESSAGES, MAX_MODEL_TOOLS,
+    RESPONSE_TEXT_FIELD, ROLE_FIELD, ROLE_USER, TOOL_NAME_FIELD, lossy_legacy_request,
+    require_collection, validate_collection_len, validate_contract_identity, validate_messages,
+    validate_metadata, validate_tools,
+};
 
 impl CanonicalModelRequest {
     /// Validates a borrowed canonical request draft.
