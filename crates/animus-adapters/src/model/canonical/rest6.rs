@@ -1,4 +1,4 @@
-#![allow(non_trait_imports)]
+#![allow(unknown_lints, non_trait_imports, usize_in_public_api)]
 use super::{
     CanonicalModelContractError, CanonicalModelResponseItem, CanonicalModelRole,
     CanonicalReasoningEffort, CanonicalSafeMetadata, CanonicalSafeMetadataDraft,
