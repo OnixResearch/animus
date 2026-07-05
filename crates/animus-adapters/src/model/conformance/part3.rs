@@ -1,5 +1,4 @@
-#![allow(unknown_lints, non_trait_imports)]
-#![allow(clippy::wildcard_imports)]
+#![allow(unknown_lints, non_trait_imports, clippy::wildcard_imports)]
 use super::*;
 
 pub fn canonical_projection_request() -> CanonicalModelRequest {
