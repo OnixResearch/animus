@@ -273,4 +273,3 @@ fn canonical_response_accepts_text_structured_tool_and_refusal_cases() {
 }
 pub mod rest;
 pub use rest::*;
-pub(crate) use rest::{request_with_messages, response_with_items};

@@ -1,4 +1,5 @@
-#![allow(clippy::wildcard_imports, non_trait_imports)]
+#![allow(unknown_lints, non_trait_imports)]
+#![allow(clippy::wildcard_imports)]
 use super::*;
 
 #[test]
@@ -152,7 +153,7 @@ fn legacy_projection_fails_closed_for_lossy_canonical_responses() {
     );
 }
 
-pub(crate) fn request_with_messages(
+pub fn request_with_messages(
     messages: &[CanonicalModelMessageDraft<'_>],
 ) -> Result<CanonicalModelRequest, CanonicalModelContractError> {
     CanonicalModelRequest::from_draft(CanonicalModelRequestDraft {
@@ -166,7 +167,7 @@ pub(crate) fn request_with_messages(
     })
 }
 
-pub(crate) fn response_with_items(
+pub fn response_with_items(
     items: &[CanonicalModelResponseItemDraft<'_>],
     finish_reason: Option<&str>,
 ) -> Result<CanonicalModelResponseEnvelope, CanonicalModelContractError> {
