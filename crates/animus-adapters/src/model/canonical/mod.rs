@@ -5,12 +5,11 @@
     excessive_file_length,
     assertion_density,
     ambiguous_params,
-    compound_condition
+    compound_condition,
+    non_trait_imports
 )]
-
 #[cfg(test)]
 mod tests;
-
 const CONTRACT_IDENTITY_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("model_contract_identity");
 const ROLE_FIELD: crate::validation::FieldName = crate::validation::FieldName::new("model_role");
@@ -60,7 +59,6 @@ const RAW_PROVIDER_PAYLOAD_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("model_raw_provider_payload");
 const HIDDEN_REASONING_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("model_hidden_reasoning");
-
 const MAX_MODEL_MESSAGES: usize = 128;
 const MAX_CONTENT_PARTS_PER_MESSAGE: usize = 64;
 const MAX_MODEL_TOOLS: usize = 32;
@@ -71,7 +69,6 @@ const MAX_RESPONSE_DIAGNOSTICS: usize = 16;
 const MIN_TOKEN_BUDGET: u32 = 1;
 const MAX_TOKEN_BUDGET: u32 = 1_000_000;
 const MAX_TEMPERATURE_MILLIS: u16 = 2_000;
-
 const ROLE_SYSTEM: &str = "system";
 const ROLE_DEVELOPER: &str = "developer";
 const ROLE_USER: &str = "user";
@@ -103,13 +100,11 @@ const INVALID_REFUSAL_COMBINATION: &str =
 const INVALID_MALFORMED_COMBINATION: &str = "malformed output cannot combine with success output";
 const LOSSY_LEGACY_REQUEST: &str = "canonical request cannot collapse into one legacy prompt";
 const LOSSY_LEGACY_RESPONSE: &str = "canonical response carries non-text semantics";
-
 // r[impl agent_harness_runtime.model_compat.message_request]
 /// Stable contract identity for canonical provider-neutral model request DTOs.
 pub const CANONICAL_MODEL_REQUEST_CONTRACT_IDENTITY: &str = "animus.model-message-request.v1";
 /// Stable contract identity for canonical provider-neutral model response envelopes.
 pub const CANONICAL_MODEL_RESPONSE_CONTRACT_IDENTITY: &str = "animus.model-response-envelope.v1";
-
 /// Unsafe material class rejected from canonical model contracts.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum CanonicalUnsafeTextReason {
@@ -120,7 +115,6 @@ pub enum CanonicalUnsafeTextReason {
     /// Hidden reasoning or thinking text would become assistant-visible.
     HiddenReasoning,
 }
-
 /// Validation error for canonical model request, response, and compatibility bridge contracts.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum CanonicalModelContractError {
@@ -208,13 +202,11 @@ pub enum CanonicalModelContractError {
         reason: &'static str,
     },
 }
-
 impl From<crate::AdapterContractError> for CanonicalModelContractError {
     fn from(source: crate::AdapterContractError) -> Self {
         Self::AdapterContract { source }
     }
 }
-
 /// Borrowed safe provenance metadata entry before canonical validation.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct CanonicalSafeMetadataDraft<'a> {
@@ -223,7 +215,6 @@ pub struct CanonicalSafeMetadataDraft<'a> {
     /// Safe metadata value.
     pub value: &'a str,
 }
-
 /// Safe provenance metadata entry carried by canonical contracts.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CanonicalSafeMetadata {
@@ -294,7 +285,6 @@ impl CanonicalModelRole {
     }
 }
 pub mod text;
-#[allow(clippy::useless_attribute, non_trait_imports)]
 pub(crate) use text::safe_text;
 pub mod rest1;
 pub mod rest2;
