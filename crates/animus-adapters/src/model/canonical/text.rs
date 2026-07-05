@@ -7,7 +7,10 @@ pub(crate) fn safe_text(
 ) -> Result<alloc::string::String, super::CanonicalModelContractError> {
     let normalized = crate::validation::normalized_adapter_field(field, raw)?;
     if contains_leak_marker(normalized.as_str(), super::LEAK_MARKER_RAW_PROVIDER_PAYLOAD)
-        || contains_leak_marker(normalized.as_str(), super::LEAK_MARKER_PROVIDER_PAYLOAD_PREFIX)
+        || contains_leak_marker(
+            normalized.as_str(),
+            super::LEAK_MARKER_PROVIDER_PAYLOAD_PREFIX,
+        )
     {
         return Err(super::CanonicalModelContractError::UnsafeText {
             field: field.as_str(),
