@@ -22,3 +22,4 @@ include!("view/status.rs");
 include!("view/panel.rs");
 include!("view/model.rs");
 include!("view/text.rs");
+include!("view/conversation.rs");

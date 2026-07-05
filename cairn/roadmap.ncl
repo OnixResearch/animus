@@ -92,12 +92,42 @@ let change_entries = [
     "agent_harness_runtime.clankers_provider_parity.message_conversion",
     "agent_harness_runtime.model_streaming.parser_entrypoint",
   ] ["add-canonical-model-message-contracts", "negotiate-model-capability-matrix"],
+  change "add-tui-conversation-render-model" product_role "ui-headless" [
+    "agent_harness_runtime.ratatui_tool_host.boundary",
+    "agent_harness_runtime.cairn_policy.closeout",
+    "agent_harness_runtime.clankers_injected_services.closeout",
+  ] ["add-tui-streaming-markdown-view", "add-tui-prompt-input-and-keymap", "add-tui-tool-call-and-approval-panels", "add-tui-session-context-status-rail", "add-tui-agent-control-and-queue-dashboard", "add-tui-app-shell-and-event-loop"],
+  change "add-tui-streaming-markdown-view" product_role "ui-headless" [
+    "add-tui-conversation-render-model",
+  ] ["add-tui-conversation-render-model"],
+  change "add-tui-prompt-input-and-keymap" product_role "ui-headless" [
+    "add-tui-conversation-render-model",
+  ] ["add-tui-conversation-render-model"],
+  change "add-tui-tool-call-and-approval-panels" product_role "ui-headless" [
+    "add-tui-conversation-render-model",
+    "agent_harness_runtime.ratatui_tool_host.bridge",
+  ] ["add-tui-conversation-render-model"],
+  change "add-tui-session-context-status-rail" product_role "ui-headless" [
+    "add-tui-conversation-render-model",
+  ] ["add-tui-conversation-render-model"],
+  change "add-tui-agent-control-and-queue-dashboard" product_role "ui-headless" [
+    "add-tui-conversation-render-model",
+  ] ["add-tui-conversation-render-model"],
+  change "add-tui-app-shell-and-event-loop" product_role "ui-headless" [
+    "add-tui-conversation-render-model",
+    "add-tui-streaming-markdown-view",
+    "add-tui-prompt-input-and-keymap",
+    "add-tui-tool-call-and-approval-panels",
+    "add-tui-session-context-status-rail",
+    "add-tui-agent-control-and-queue-dashboard",
+  ] ["add-tui-conversation-render-model"],
 ]
 in
 
 let overlap_entries = [
   overlap "canonical-request-provider-projection" "add-canonical-model-message-contracts" ["add-provider-projection-conformance-fixtures"],
   overlap "capability-negotiation-provider-claims" "negotiate-model-capability-matrix" ["add-provider-projection-conformance-fixtures"],
+  overlap "tui-render-model" "add-tui-conversation-render-model" ["add-tui-streaming-markdown-view", "add-tui-prompt-input-and-keymap", "add-tui-tool-call-and-approval-panels", "add-tui-session-context-status-rail", "add-tui-agent-control-and-queue-dashboard", "add-tui-app-shell-and-event-loop"],
 ]
 in
 

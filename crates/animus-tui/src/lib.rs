@@ -35,5 +35,7 @@ pub use runner::{
     run_hosted_tool, run_simple_tool,
 };
 pub use view::{
-    ToolApprovalPanel, ToolPanel, ToolRenderModel, ToolSessionStatus, render_text_snapshot,
+    ConversationRenderModel, EntryMetadata, TranscriptEntry, TranscriptEntryKind,
+    ToolApprovalPanel, ToolPanel, ToolRenderModel, ToolSessionStatus,
+    render_conversation_snapshot, render_text_snapshot,
 };
