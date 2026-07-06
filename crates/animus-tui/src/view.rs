@@ -24,8 +24,22 @@ include!("view/conversationtypes.rs");
 include!("view/conversationmod.rs");
 include!("view/conversationrendr.rs");
 include!("view/streaming.rs");
+
+#[cfg(test)]
+mod streaming_tests {
+    use super::*;
+    include!("view/streamingtest.rs");
+}
+
 include!("view/input.rs");
 include!("view/toolpanels.rs");
+
+#[cfg(test)]
+mod tool_panel_tests {
+    use super::*;
+    include!("view/toolpaneltest.rs");
+}
+
 include!("view/status.rs");
 include!("view/control.rs");
 include!("view/shell.rs");

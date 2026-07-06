@@ -185,9 +185,14 @@ impl StatusRailState {
 // ---------------------------------------------------------------------------
 
 /// Renders a deterministic text snapshot of the status rail.
+///
+/// # Panics
+///
+/// Panics when `rail.session_label()` is empty.
 #[must_use]
 pub fn render_status_rail_snapshot(rail: &StatusRailState) -> String {
-    let mut lines: Vec<String> = Vec::new();
+    assert!(!rail.session_label().is_empty());
+    let mut lines = Vec::with_capacity(16);
     lines.push(format!("session: {}", rail.session_label()));
     lines.push(format!("model: {}", rail.model_label()));
     lines.push(format!("context: {} ({:.1}%)", rail.context_label(), rail.context_ratio() * 100.0));
