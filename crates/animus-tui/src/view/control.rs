@@ -419,7 +419,7 @@ pub fn render_agent_dashboard_snapshot(dashboard: &AgentDashboardState) -> Strin
 }
 
 #[cfg(test)]
-#[allow(unknown_lints, non_trait_imports)]
+#[allow(unknown_lints, non_trait_imports, path_segment_repetition, ambiguous_params)]
 mod agent_control_tests {
     use super::*;
     use animus_adapters::{
@@ -540,7 +540,6 @@ mod agent_control_tests {
         let mut dashboard = AgentDashboardState::idle();
         dashboard.set_status(AgentStatus::Idle);
         assert!(dashboard.can_start());
-        // Denied control mirrors idle state - start is available
         dashboard.set_status(AgentStatus::Busy);
         assert!(!dashboard.can_start());
     }
@@ -557,7 +556,6 @@ mod agent_control_tests {
             .collect();
         dashboard.set_queue_items(many);
         assert_eq!(dashboard.queue_items().len(), 1000);
-        // No panic, snapshot renders bounded
         let snapshot = render_agent_dashboard_snapshot(&dashboard);
         assert!(snapshot.contains("queue: item 0 [queued]"));
     }
@@ -566,6 +564,7 @@ mod agent_control_tests {
     // Topology tests
     // -----------------------------------------------------------------------
 
+    #[allow(unknown_lints, ambiguous_params)]
     fn make_selector(host: &str, resource: &str, revision: u64) -> HostSelector {
         HostSelector::validate(HostSelectorDraft {
             host_id: host,
@@ -623,7 +622,6 @@ mod agent_control_tests {
         dashboard.apply_topology_snapshot(new_snapshot);
         assert_eq!(dashboard.topology_revision(), 10);
 
-        // Stale snapshot should be ignored.
         let stale_snapshot = make_snapshot("host-1", 8, &[]);
         dashboard.apply_topology_snapshot(stale_snapshot);
         assert_eq!(dashboard.topology_revision(), 10);
@@ -659,10 +657,6 @@ mod agent_control_tests {
         assert!(!dashboard.can_stop());
     }
 
-    // -----------------------------------------------------------------------
-    // Negative topology tests
-    // -----------------------------------------------------------------------
-
     #[test]
     fn stale_selector_rejected_by_freshness_check() {
         let mut dashboard = AgentDashboardState::idle();
@@ -670,14 +664,12 @@ mod agent_control_tests {
         let snapshot = make_snapshot("host-1", 10, &[live_selector]);
         dashboard.apply_topology_snapshot(snapshot);
 
-        // Selector at a lower revision is stale.
         let stale = make_selector("host-1", "pane-a", 5);
         assert_eq!(
             dashboard.check_selector_freshness(&stale),
             Err("topology-mismatch")
         );
 
-        // Fresh selector passes.
         let fresh = make_selector("host-1", "pane-a", 10);
         assert!(dashboard.check_selector_freshness(&fresh).is_ok());
     }
@@ -692,7 +684,6 @@ mod agent_control_tests {
         let snapshot = make_snapshot("host-1", 10, &[fresh]);
         dashboard.apply_topology_snapshot(snapshot);
 
-        // Should have been re-resolved to revision 10.
         assert!(dashboard.tracked_selectors().iter().all(|s| s.revision() == 10));
     }
 
@@ -706,7 +697,6 @@ mod agent_control_tests {
         let snapshot = make_snapshot("host-1", 10, &[live]);
         dashboard.apply_topology_snapshot(snapshot);
 
-        // Removed selector stays tracked but with old revision so check fails.
         assert_eq!(dashboard.tracked_selectors().len(), 1);
         assert_eq!(dashboard.tracked_selectors()[0].revision(), 5);
         assert_eq!(

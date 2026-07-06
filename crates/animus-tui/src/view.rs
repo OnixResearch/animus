@@ -1,3 +1,6 @@
+// Pane/split layout: host-only pane-tree model consuming host-control-protocol
+// layout DTOs. Layout types stay in the TUI crate; mismatches fail closed
+// with a typed diagnostic.
 const RUNTIME_TOOL_RUN_ID: &str = "runtime-tool";
 const UNKNOWN_TOOL_NAME: &str = "unknown-tool";
 const NO_ACTIVE_TOOL: &str = "tool: none";
@@ -51,7 +54,6 @@ mod status_rail_tests {
 
 include!("view/control.rs");
 include!("view/layout.rs");
-include!("view/layouttest.rs");
 include!("view/shell.rs");
 
 #[cfg(test)]
