@@ -157,7 +157,6 @@ fn resolve_node(
 ) -> Result<LayoutTree, LayoutDiagnostic> {
     let node_id = node.node_id();
 
-    // Check for duplicate node ids.
     if seen_ids.contains(&String::from(node_id)) {
         return Err(LayoutDiagnostic::DuplicateNodeId(String::from(node_id)));
     }
@@ -171,7 +170,6 @@ fn resolve_node(
             zoomed,
             ..
         } => {
-            // Verify the pane exists in the host topology.
             let pane_in_topology = topology.selectors().iter().any(
                 |selector: &animus_adapters::HostSelector| {
                     selector.resource_id() == node_id.as_str()
@@ -217,52 +215,72 @@ fn resolve_node(
 #[must_use]
 pub fn render_layout_tree_snapshot(tree: &LayoutTree) -> String {
     let mut lines: Vec<String> = Vec::new();
-    render_tree(tree, &mut lines, 0);
+    debug_assert!(tree.node_id().len() > 0, "empty node id");
+    render_tree_iterative(tree, &mut lines);
     lines.join("\n")
 }
 
-fn render_tree(tree: &LayoutTree, lines: &mut Vec<String>, depth: usize) {
-    let indent = "  ".repeat(depth);
-    match tree {
-        LayoutTree::Pane(pane) => {
-            let focus_mark = if pane.focused() { " [focused]" } else { "" };
-            let zoom_mark = if pane.zoomed() { " [zoomed]" } else { "" };
-            lines.push(format!(
-                "{indent}pane: {}{}{}",
-                pane.node_id(),
-                focus_mark,
-                zoom_mark,
-            ));
-        }
-        LayoutTree::Split {
-            node_id,
-            axis,
-            children,
-        } => {
-            let axis_label = match axis {
-                animus_adapters::LayoutAxis::Horizontal => "horizontal",
-                animus_adapters::LayoutAxis::Vertical => "vertical",
-            };
-            lines.push(format!("{indent}split: {node_id} [{axis_label}]"));
-            for child in children {
-                render_tree(child, lines, depth + 1);
+/// Iterative renderer that avoids recursion.
+fn render_tree_iterative<'a>(tree: &'a LayoutTree, lines: &mut Vec<String>) {
+    struct StackEntry<'a> {
+        item: &'a LayoutTree,
+        depth: usize,
+    }
+
+    let mut stack: Vec<StackEntry<'_>> = Vec::new();
+    stack.push(StackEntry {
+        item: tree,
+        depth: 0,
+    });
+
+    while let Some(entry) = stack.pop() {
+        let indent = "  ".repeat(entry.depth);
+        match entry.item {
+            LayoutTree::Pane(pane) => {
+                let focus_mark = if pane.focused() { " [focused]" } else { "" };
+                let zoom_mark = if pane.zoomed() { " [zoomed]" } else { "" };
+                lines.push(format!(
+                    "{indent}pane: {}{}{}",
+                    pane.node_id(),
+                    focus_mark,
+                    zoom_mark,
+                ));
+            }
+            LayoutTree::Split {
+                node_id,
+                axis,
+                children,
+            } => {
+                let axis_label = match axis {
+                    animus_adapters::LayoutAxis::Horizontal => "horizontal",
+                    animus_adapters::LayoutAxis::Vertical => "vertical",
+                };
+                lines.push(format!("{indent}split: {node_id} [{axis_label}]"));
+                for child in children.iter().rev() {
+                    stack.push(StackEntry {
+                        item: child,
+                        depth: entry.depth.wrapping_add(1),
+                    });
+                }
             }
         }
     }
 }
 
 #[cfg(test)]
+#[allow(non_trait_imports)]
 mod layout_tests {
     use super::*;
     use animus_adapters::{
-        HostControlError, HostSelectorDraft, HostTopologySnapshotDraft,
-        LayoutApplyRequest, LayoutNode, LayoutPaneDraft,
+        HostControlError, HostSelector, HostSelectorDraft,
+        HostTopologySnapshot, HostTopologySnapshotDraft,
+        LayoutApplyRequest, LayoutAxis, LayoutNode, LayoutPaneDraft,
     };
 
-    fn make_selector(host_id: &str, resource_id: &str, revision: u64) -> animus_adapters::HostSelector {
-        animus_adapters::HostSelector::validate(HostSelectorDraft {
-            host_id,
-            resource_id,
+    fn make_selector(host: &str, resource: &str, revision: u64) -> HostSelector {
+        HostSelector::validate(HostSelectorDraft {
+            host_id: host,
+            resource_id: resource,
             kind: "pane",
             lifetime: "live",
             revision,
@@ -270,8 +288,8 @@ mod layout_tests {
         .expect("test selector should be valid")
     }
 
-    fn make_topology(selectors: &[animus_adapters::HostSelector]) -> animus_adapters::HostTopologySnapshot {
-        animus_adapters::HostTopologySnapshot::validate(HostTopologySnapshotDraft {
+    fn make_topology(selectors: &[HostSelector]) -> HostTopologySnapshot {
+        HostTopologySnapshot::validate(HostTopologySnapshotDraft {
             host_id: "host-main",
             revision: 1,
             selectors,
@@ -336,7 +354,7 @@ mod layout_tests {
             .expect("layout should resolve");
         assert_eq!(tree.node_id(), "root");
         if let LayoutTree::Split { axis, children, .. } = &tree {
-            assert_eq!(*axis, animus_adapters::LayoutAxis::Horizontal);
+            assert_eq!(*axis, LayoutAxis::Horizontal);
             assert_eq!(children.len(), 2);
         } else {
             panic!("expected split tree");
@@ -390,7 +408,6 @@ mod layout_tests {
 
     #[test]
     fn empty_split_fails_closed() {
-        // LayoutNode::split rejects empty children before resolve_layout runs.
         let err = LayoutNode::split("empty-root", "horizontal", vec![])
             .expect_err("empty split should be rejected by LayoutNode");
         assert_eq!(err, HostControlError::InvalidLayout);
