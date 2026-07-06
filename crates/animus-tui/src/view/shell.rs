@@ -9,8 +9,7 @@
 const APP_READY_LABEL: &str = "app ready";
 /// Label for terminal setup failure.
 const TERMINAL_SETUP_FAILED: &str = "terminal setup failed";
-/// Label for event consumer closed.
-const EVENT_CONSUMER_CLOSED: &str = "event consumer closed";
+
 
 // ---------------------------------------------------------------------------
 // App shell state
@@ -351,7 +350,7 @@ mod shell_tests {
         // Simulate a shutdown after terminal failure
         let mut state = AppShellState::new();
         state.set_terminal_state(TerminalState::Failed);
-        state.record_error(EVENT_CONSUMER_CLOSED);
+        state.record_error("event consumer closed");
         state.request_shutdown();
         assert!(state.is_shutdown_requested());
         // No panic

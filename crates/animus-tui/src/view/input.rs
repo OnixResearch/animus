@@ -496,9 +496,9 @@ mod input_tests {
     fn history_navigation_restores_previous_inputs() {
         let mut state = PromptInputState::new();
         state.type_char('a');
-        state.submit();
+        let _ = state.submit();
         state.type_char('b');
-        state.submit();
+        let _ = state.submit();
         state.type_char('c');
         // Before submitting c, browse history
         state.history_up();
@@ -677,7 +677,7 @@ mod input_tests {
             for c in content.chars() {
                 state.type_char(c);
             }
-            state.submit();
+            let _ = state.submit();
         }
         assert!(state.history().len() <= MAX_HISTORY_SIZE);
     }

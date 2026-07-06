@@ -5,16 +5,10 @@
 // DTOs, and tool-gateway-delivery receipts. No new reusable-crate contracts
 // are added.
 
-/// Default label for unknown tools.
-const UNKNOWN_TOOL_LABEL: &str = "unknown-tool";
-/// Prefix for diff view snapshot/source lines.
-const DIFF_SNAPSHOT_LABEL: &str = "[snapshot: ";
-/// Suffix for diff view snapshot lines.
-const DIFF_SNAPSHOT_SUFFIX: &str = "]";
-/// Prefix for edit span lines.
-const EDIT_SPAN_LABEL: &str = "  span: ";
 /// Label for the approval prompt block.
 const APPROVAL_PROMPT_LABEL: &str = "-- approval needed --";
+/// Maximum snapshot lines to prevent unbounded growth.
+const MAX_SNAPSHOT_LINES: usize = 512;
 
 // ---------------------------------------------------------------------------
 // Tool call card
@@ -314,16 +308,31 @@ pub fn render_tool_panel_snapshot(panel: &ToolPanelState) -> String {
         }
     }
 
-    if lines.is_empty() {
-        lines.push(String::from("(no active tools)"));
+    // Bounded snapshot: cap at MAX_SNAPSHOT_LINES to prevent unbounded growth
+    let mut bounded_lines: Vec<String> = Vec::with_capacity(
+        std::cmp::min(lines.len(), MAX_SNAPSHOT_LINES).saturating_add(1),
+    );
+    for line in lines.iter().take(MAX_SNAPSHOT_LINES) {
+        bounded_lines.push(line.clone());
+    }
+    if lines.len() > MAX_SNAPSHOT_LINES {
+        bounded_lines.push(format!(
+            "[... {} more lines truncated]",
+            lines.len().saturating_sub(MAX_SNAPSHOT_LINES)
+        ));
     }
 
-    lines.join("\n")
+    if bounded_lines.is_empty() {
+        bounded_lines.push(String::from("(no active tools)"));
+    }
+
+    bounded_lines.join("\n")
 }
 
 #[cfg(test)]
 mod tool_panel_tests {
     use super::*;
+    use animus_adapters::ToolRequest;
 
     // -----------------------------------------------------------------------
     // Tool call card tests
@@ -331,7 +340,7 @@ mod tool_panel_tests {
 
     #[test]
     fn card_from_request_has_tool_name_and_input() {
-        let request = animus_adapters::ToolRequest::new("search", "query: hello")
+        let request = ToolRequest::new("search", "query: hello")
             .expect("request should validate");
         let card = ToolCallCard::from_request(&request);
         assert_eq!(card.tool_name(), "search");
@@ -341,7 +350,7 @@ mod tool_panel_tests {
 
     #[test]
     fn card_output_updates() {
-        let request = animus_adapters::ToolRequest::new("read", "path: Cargo.toml")
+        let request = ToolRequest::new("read", "path: Cargo.toml")
             .expect("request should validate");
         let mut card = ToolCallCard::from_request(&request);
         card.set_output("[package]\nname = \"animus\"");
@@ -350,7 +359,7 @@ mod tool_panel_tests {
 
     #[test]
     fn card_progress_updates() {
-        let request = animus_adapters::ToolRequest::new("build", ".")
+        let request = ToolRequest::new("build", ".")
             .expect("request should validate");
         let mut card = ToolCallCard::from_request(&request);
         card.set_progress(5, Some(10));
@@ -359,7 +368,7 @@ mod tool_panel_tests {
 
     #[test]
     fn card_toggle_collapsed() {
-        let request = animus_adapters::ToolRequest::new("test", "all")
+        let request = ToolRequest::new("test", "all")
             .expect("request should validate");
         let mut card = ToolCallCard::from_request(&request);
         assert!(!card.is_collapsed());
@@ -372,7 +381,7 @@ mod tool_panel_tests {
     #[test]
     fn long_input_is_truncated() {
         let long_input = "a".repeat(500);
-        let request = animus_adapters::ToolRequest::new("tool", &long_input)
+        let request = ToolRequest::new("tool", &long_input)
             .expect("request should validate");
         let card = ToolCallCard::from_request(&request);
         assert!(card.input_summary().len() <= 120);
@@ -418,7 +427,7 @@ mod tool_panel_tests {
     #[test]
     fn add_card_to_panel() {
         let mut panel = ToolPanelState::new();
-        let request = animus_adapters::ToolRequest::new("build", ".")
+        let request = ToolRequest::new("build", ".")
             .expect("request should validate");
         panel.add_card(ToolCallCard::from_request(&request));
         assert_eq!(panel.active_cards().len(), 1);
@@ -427,10 +436,10 @@ mod tool_panel_tests {
     #[test]
     fn replacing_card_updates_in_place() {
         let mut panel = ToolPanelState::new();
-        let req1 = animus_adapters::ToolRequest::new("tool", "first")
+        let req1 = ToolRequest::new("tool", "first")
             .expect("request should validate");
         panel.add_card(ToolCallCard::from_request(&req1));
-        let req2 = animus_adapters::ToolRequest::new("tool", "second")
+        let req2 = ToolRequest::new("tool", "second")
             .expect("request should validate");
         panel.add_card(ToolCallCard::from_request(&req2));
         assert_eq!(panel.active_cards().len(), 1);
@@ -449,7 +458,7 @@ mod tool_panel_tests {
     #[test]
     fn clear_resets_panel() {
         let mut panel = ToolPanelState::new();
-        let request = animus_adapters::ToolRequest::new("tool", "test")
+        let request = ToolRequest::new("tool", "test")
             .expect("request should validate");
         panel.add_card(ToolCallCard::from_request(&request));
         panel.set_approval("Proceed?", &[String::from("yes")]);
@@ -472,7 +481,7 @@ mod tool_panel_tests {
     #[test]
     fn panel_snapshot_shows_tools_and_approval() {
         let mut panel = ToolPanelState::new();
-        let request = animus_adapters::ToolRequest::new("search", "query: hello")
+        let request = ToolRequest::new("search", "query: hello")
             .expect("request should validate");
         panel.add_card(ToolCallCard::from_request(&request));
         panel.set_approval("Allow?", &[String::from("approve"), String::from("deny")]);
@@ -499,9 +508,9 @@ mod tool_panel_tests {
     fn mismatched_correlation_does_not_panic() {
         let mut panel = ToolPanelState::new();
         // Adding a card with different name doesn't replace unrelated cards
-        let req1 = animus_adapters::ToolRequest::new("tool_a", "first")
+        let req1 = ToolRequest::new("tool_a", "first")
             .expect("request should validate");
-        let req2 = animus_adapters::ToolRequest::new("tool_b", "second")
+        let req2 = ToolRequest::new("tool_b", "second")
             .expect("request should validate");
         panel.add_card(ToolCallCard::from_request(&req1));
         panel.add_card(ToolCallCard::from_request(&req2));
@@ -511,7 +520,7 @@ mod tool_panel_tests {
     #[test]
     fn oversized_output_does_not_panic() {
         let mut panel = ToolPanelState::new();
-        let request = animus_adapters::ToolRequest::new("tool", "input")
+        let request = ToolRequest::new("tool", "input")
             .expect("request should validate");
         let mut card = ToolCallCard::from_request(&request);
         let huge_output = "x".repeat(100_000);
