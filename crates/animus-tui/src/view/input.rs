@@ -675,10 +675,11 @@ mod input_tests {
         assert!(detector.detect("").is_none());
     }
 
+    const EXTRA_ENTRIES: usize = 10;
     #[test]
     fn unbounded_history_growth_is_prevented() {
         let mut state = PromptInputState::new();
-        let limit = MAX_HISTORY_SIZE.saturating_add(10);
+        let limit = MAX_HISTORY_SIZE.saturating_add(EXTRA_ENTRIES);
         for i in 0..limit {
             let content = format!("input {i}");
             for c in content.chars() {
