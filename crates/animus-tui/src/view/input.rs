@@ -677,8 +677,9 @@ mod input_tests {
 
         #[test]
     fn unbounded_history_growth_is_prevented() {
+        const OVERFLOW_TEST_ENTRIES: usize = 10;
         let mut state = PromptInputState::new();
-        let limit = MAX_HISTORY_SIZE.saturating_add(10_usize);
+        let limit = MAX_HISTORY_SIZE.saturating_add(OVERFLOW_TEST_ENTRIES);
         for i in 0..limit {
             let content = format!("input {i}");
             for c in content.chars() {
