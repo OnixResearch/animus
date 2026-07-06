@@ -35,10 +35,14 @@ pub use runner::{
     run_hosted_tool, run_simple_tool,
 };
 pub use view::{
-    CompletionCandidate, CompletionMenu, ConversationRenderModel, EntryMetadata, ImageDisplay,
-    PromptInputState, ScrollbackMetadata, SlashCommand, SlashCommandDetector, TranscriptEntry,
+    CompletionCandidate, CompletionMenu, ConversationRenderModel, DiffLine, DiffView, EntryMetadata,
+    ImageDisplay, PromptInputState, ScrollbackMetadata, SlashCommand, SlashCommandDetector,
+    AgentDashboardState, AgentStatus, ControlCommand, QueueItem, QueueItemStatus, StatusRailState,
+    ToolCallCard, ToolCardProgress, ToolPanelState, TranscriptEntry,
     TranscriptEntryKind, ToolApprovalPanel, ToolPanel, ToolRenderModel, ToolSessionStatus,
-    render_conversation_snapshot, render_streaming_snapshot, render_text_snapshot,
+    render_agent_dashboard_snapshot, render_conversation_snapshot, render_status_rail_snapshot,
+    render_streaming_snapshot,
+    render_text_snapshot, render_tool_panel_snapshot,
 };
 
 #[cfg(feature = "rats-widgets")]

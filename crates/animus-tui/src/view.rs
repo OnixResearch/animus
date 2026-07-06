@@ -25,6 +25,9 @@ include!("view/conversationmod.rs");
 include!("view/conversationrendr.rs");
 include!("view/streaming.rs");
 include!("view/input.rs");
+include!("view/toolpanels.rs");
+include!("view/status.rs");
+include!("view/control.rs");
 
 #[cfg(feature = "rats-widgets")]
 include!("view/keymap.rs");
