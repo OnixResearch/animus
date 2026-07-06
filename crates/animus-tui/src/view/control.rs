@@ -4,6 +4,11 @@
 // All state is projected from accepted DTOs; controls issue typed commands
 // to the runtime/host without holding ambient authority.
 
+use animus_adapters::{
+    HostEvent, HostEventKind, HostSelector, HostSemanticStatus,
+    HostTopologySnapshot,
+};
+
 /// Label for the idle status state.
 const IDLE_STATUS_LABEL: &str = "idle";
 /// Label for the busy/heavy-load status.
@@ -14,10 +19,12 @@ const STREAMING_STATUS_LABEL: &str = "streaming";
 const WAITING_STATUS_LABEL: &str = "waiting";
 /// Label for error status.
 const ERROR_STATUS_LABEL: &str = "error";
-
-// ---------------------------------------------------------------------------
-// Agent control state
-// ---------------------------------------------------------------------------
+/// Label for topology revision display.
+const TOPOLOGY_REVISION_LABEL: &str = "topology: rev";
+/// Label for pending-topology status.
+const TOPOLOGY_PENDING_LABEL: &str = "topology: pending";
+/// Label for stale-selector diagnostic.
+const STALE_SELECTOR_MSG: &str = "topology-mismatch";
 
 /// Semantic agent status following status-authority precedence.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -78,6 +85,12 @@ pub struct AgentDashboardState {
     peers: Vec<String>,
     /// Active processes.
     processes: Vec<String>,
+    /// Current topology snapshot for control resolution.
+    topology: Option<HostTopologySnapshot>,
+    /// Current topology revision to detect stale selectors.
+    topology_revision: u64,
+    /// Tracked selectors that should be re-resolved on topology changes.
+    tracked_selectors: Vec<HostSelector>,
 }
 
 impl AgentDashboardState {
@@ -91,6 +104,9 @@ impl AgentDashboardState {
             queue_items: Vec::new(),
             peers: Vec::new(),
             processes: Vec::new(),
+            topology: None,
+            topology_revision: 0,
+            tracked_selectors: Vec::new(),
         }
     }
 
@@ -163,6 +179,115 @@ impl AgentDashboardState {
     pub fn processes(&self) -> &[String] {
         self.processes.as_slice()
     }
+
+    // -------- Topology-aware control resolution --------
+
+    /// Returns the current topology revision.
+    #[must_use]
+    pub const fn topology_revision(&self) -> u64 {
+        self.topology_revision
+    }
+
+    /// Returns the current topology snapshot, if any.
+    #[must_use]
+    pub const fn topology(&self) -> Option<&HostTopologySnapshot> {
+        self.topology.as_ref()
+    }
+
+    /// Returns tracked selectors bound to the current topology.
+    #[must_use]
+    pub fn tracked_selectors(&self) -> &[HostSelector] {
+        self.tracked_selectors.as_slice()
+    }
+
+    /// Applies a topology snapshot, re-resolving stale selectors.
+    ///
+    /// Selectors bound to an older revision are replaced with fresh selectors
+    /// from the new snapshot when the resource identity still exists.
+    /// If a tracked selector's resource has been removed, it remains tracked
+    /// but `check_selector_freshness` reports a mismatch on the next control.
+    pub fn apply_topology_snapshot(&mut self, snapshot: HostTopologySnapshot) {
+        let new_revision = snapshot.revision();
+        if new_revision <= self.topology_revision && self.topology.is_some() {
+            return;
+        }
+        let mut resolved: Vec<HostSelector> = Vec::with_capacity(self.tracked_selectors.len());
+        for selector in self.tracked_selectors.drain(..) {
+            if selector.revision() < new_revision {
+                if let Some(fresh) = find_selector_in_snapshot(&snapshot, &selector) {
+                    resolved.push(fresh);
+                } else {
+                    resolved.push(selector);
+                }
+            } else {
+                resolved.push(selector);
+            }
+        }
+        self.tracked_selectors = resolved;
+        self.topology = Some(snapshot);
+        self.topology_revision = new_revision;
+    }
+
+    /// Handles a host-control-protocol event, updating dashboard state.
+    ///
+    /// `AgentStatus` events update the semantic status and control availability.
+    /// Other event kinds are acknowledged but don't change dashboard state.
+    pub fn handle_host_event(&mut self, event: &HostEvent) {
+        match event.kind() {
+            HostEventKind::AgentStatus => {
+                if let Some(status) = event.status() {
+                    self.status = match status {
+                        HostSemanticStatus::Running => AgentStatus::Busy,
+                        HostSemanticStatus::Waiting => AgentStatus::Waiting,
+                        HostSemanticStatus::Idle | HostSemanticStatus::Done => AgentStatus::Idle,
+                        HostSemanticStatus::Failed => AgentStatus::Error,
+                    };
+                    match self.status {
+                        AgentStatus::Idle | AgentStatus::Error => {
+                            self.can_start = true;
+                            self.can_stop = false;
+                        }
+                        AgentStatus::Busy | AgentStatus::Streaming | AgentStatus::Waiting => {
+                            self.can_start = false;
+                            self.can_stop = true;
+                        }
+                    }
+                }
+            }
+            HostEventKind::PaneLifecycle
+            | HostEventKind::OutputMatch
+            | HostEventKind::Cancelled
+            | HostEventKind::Timeout
+            | HostEventKind::HostError => {
+                // Acknowledged but handled by the runtime, not the dashboard.
+            }
+        }
+    }
+
+    /// Returns an error when a selector is stale (bound to an older revision).
+    ///
+    /// # Errors
+    ///
+    /// Returns `"topology-mismatch"` when the selector revision is stale.
+    pub fn check_selector_freshness(&self, selector: &HostSelector) -> Result<(), &'static str> {
+        if let Some(ref snapshot) = self.topology {
+            if selector.revision() < snapshot.revision() {
+                return Err(STALE_SELECTOR_MSG);
+            }
+        }
+        Ok(())
+    }
+
+    /// Re-resolves a stale selector against the current topology snapshot.
+    #[must_use]
+    pub fn resolve_selector(&self, selector: &HostSelector) -> Option<HostSelector> {
+        self.topology.as_ref().and_then(|snapshot| {
+            if selector.revision() >= snapshot.revision() {
+                return Some(selector.clone());
+            }
+            find_selector_in_snapshot(snapshot, selector)
+        })
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -210,6 +335,26 @@ impl QueueItemStatus {
 }
 
 // ---------------------------------------------------------------------------
+// Free functions
+// ---------------------------------------------------------------------------
+
+/// Finds a matching selector in a topology snapshot by host + resource identity.
+fn find_selector_in_snapshot(
+    snapshot: &HostTopologySnapshot,
+    original: &HostSelector,
+) -> Option<HostSelector> {
+    snapshot.selectors().iter().find_map(|candidate| {
+        if candidate.host_id() == original.host_id()
+            && candidate.resource_id() == original.resource_id()
+        {
+            Some(candidate.clone())
+        } else {
+            None
+        }
+    })
+}
+
+// ---------------------------------------------------------------------------
 // Agent control snapshot rendering
 // ---------------------------------------------------------------------------
 
@@ -223,6 +368,24 @@ pub fn render_agent_dashboard_snapshot(dashboard: &AgentDashboardState) -> Strin
     }
     if dashboard.can_stop() {
         lines.push(String::from("control: stop"));
+    }
+
+    // Topology
+    if let Some(snapshot) = dashboard.topology() {
+        lines.push(format!(
+            "{} {}",
+            TOPOLOGY_REVISION_LABEL,
+            snapshot.revision()
+        ));
+        for selector in dashboard.tracked_selectors() {
+            lines.push(format!(
+                "selector: {}/{}",
+                selector.host_id(),
+                selector.resource_id(),
+            ));
+        }
+    } else {
+        lines.push(String::from(TOPOLOGY_PENDING_LABEL));
     }
 
     // Queue
@@ -256,6 +419,9 @@ pub fn render_agent_dashboard_snapshot(dashboard: &AgentDashboardState) -> Strin
 #[cfg(test)]
 mod agent_control_tests {
     use super::*;
+    use animus_adapters::{
+        HostSelectorDraft, HostTopologySnapshotDraft,
+    };
 
     // -----------------------------------------------------------------------
     // Agent status tests
@@ -391,5 +557,178 @@ mod agent_control_tests {
         // No panic, snapshot renders bounded
         let snapshot = render_agent_dashboard_snapshot(&dashboard);
         assert!(snapshot.contains("queue: item 0 [queued]"));
+    }
+
+    // -----------------------------------------------------------------------
+    // Topology tests
+    // -----------------------------------------------------------------------
+
+    fn make_selector(host_id: &str, resource_id: &str, revision: u64) -> HostSelector {
+        HostSelector::validate(HostSelectorDraft {
+            host_id,
+            resource_id,
+            kind: "agent",
+            lifetime: "live",
+            revision,
+        })
+        .expect("test selector should be valid")
+    }
+
+    fn make_snapshot(
+        host_id: &str,
+        revision: u64,
+        selectors: &[HostSelector],
+    ) -> HostTopologySnapshot {
+        HostTopologySnapshot::validate(HostTopologySnapshotDraft {
+            host_id,
+            revision,
+            selectors,
+            labels: &[],
+            supported_operations: &[],
+        })
+        .expect("test snapshot should be valid")
+    }
+
+    #[test]
+    fn idle_dashboard_has_no_topology() {
+        let dashboard = AgentDashboardState::idle();
+        assert!(dashboard.topology().is_none());
+        assert_eq!(dashboard.topology_revision(), 0);
+        assert!(dashboard.tracked_selectors().is_empty());
+    }
+
+    #[test]
+    fn topology_snapshot_updates_revision() {
+        let mut dashboard = AgentDashboardState::idle();
+        let selector = make_selector("host-1", "pane-a", 1);
+        let snapshot = make_snapshot("host-1", 7, &[selector]);
+        dashboard.apply_topology_snapshot(snapshot);
+        assert_eq!(dashboard.topology_revision(), 7);
+        assert!(dashboard.topology().is_some());
+    }
+
+    #[test]
+    fn stale_topology_is_not_applied() {
+        let mut dashboard = AgentDashboardState::idle();
+        let old_selector = make_selector("host-1", "pane-a", 1);
+        let old_snapshot = make_snapshot("host-1", 5, &[old_selector]);
+        dashboard.apply_topology_snapshot(old_snapshot);
+        assert_eq!(dashboard.topology_revision(), 5);
+
+        let new_selector = make_selector("host-1", "pane-a", 6);
+        let new_snapshot = make_snapshot("host-1", 10, &[new_selector]);
+        dashboard.apply_topology_snapshot(new_snapshot);
+        assert_eq!(dashboard.topology_revision(), 10);
+
+        // Stale snapshot should be ignored.
+        let stale_snapshot = make_snapshot("host-1", 8, &[]);
+        dashboard.apply_topology_snapshot(stale_snapshot);
+        assert_eq!(dashboard.topology_revision(), 10);
+    }
+
+    #[test]
+    fn host_event_agent_status_updates_dashboard() {
+        let mut dashboard = AgentDashboardState::idle();
+        let selector = make_selector("host-1", "agent-ctl", 1);
+        let event = HostEvent::agent_status("corr-1", selector, HostSemanticStatus::Running)
+            .expect("valid event");
+        dashboard.handle_host_event(&event);
+        assert_eq!(dashboard.status(), AgentStatus::Busy);
+        assert!(!dashboard.can_start());
+        assert!(dashboard.can_stop());
+    }
+
+    #[test]
+    fn host_event_running_to_idle_restores_start() {
+        let mut dashboard = AgentDashboardState::idle();
+        let selector = make_selector("host-1", "agent-ctl", 1);
+
+        let run = HostEvent::agent_status("corr-1", selector.clone(), HostSemanticStatus::Running)
+            .expect("valid event");
+        dashboard.handle_host_event(&run);
+        assert_eq!(dashboard.status(), AgentStatus::Busy);
+
+        let done = HostEvent::agent_status("corr-1", selector, HostSemanticStatus::Done)
+            .expect("valid event");
+        dashboard.handle_host_event(&done);
+        assert_eq!(dashboard.status(), AgentStatus::Idle);
+        assert!(dashboard.can_start());
+        assert!(!dashboard.can_stop());
+    }
+
+    // -----------------------------------------------------------------------
+    // Negative topology tests
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn stale_selector_rejected_by_freshness_check() {
+        let mut dashboard = AgentDashboardState::idle();
+        let live_selector = make_selector("host-1", "pane-a", 10);
+        let snapshot = make_snapshot("host-1", 10, &[live_selector]);
+        dashboard.apply_topology_snapshot(snapshot);
+
+        // Selector at a lower revision is stale.
+        let stale = make_selector("host-1", "pane-a", 5);
+        assert_eq!(
+            dashboard.check_selector_freshness(&stale),
+            Err("topology-mismatch")
+        );
+
+        // Fresh selector passes.
+        let fresh = make_selector("host-1", "pane-a", 10);
+        assert!(dashboard.check_selector_freshness(&fresh).is_ok());
+    }
+
+    #[test]
+    fn stale_selector_is_re_resolved_when_resource_still_exists() {
+        let mut dashboard = AgentDashboardState::idle();
+        let original = make_selector("host-1", "pane-a", 5);
+        dashboard.tracked_selectors.push(original);
+
+        let fresh = make_selector("host-1", "pane-a", 10);
+        let snapshot = make_snapshot("host-1", 10, &[fresh]);
+        dashboard.apply_topology_snapshot(snapshot);
+
+        // Should have been re-resolved to revision 10.
+        assert!(dashboard.tracked_selectors().iter().all(|s| s.revision() == 10));
+    }
+
+    #[test]
+    fn stale_selector_missing_from_topology_stays_tracked() {
+        let mut dashboard = AgentDashboardState::idle();
+        let removed = make_selector("host-1", "removed-pane", 5);
+        dashboard.tracked_selectors.push(removed);
+
+        let live = make_selector("host-1", "still-here", 10);
+        let snapshot = make_snapshot("host-1", 10, &[live]);
+        dashboard.apply_topology_snapshot(snapshot);
+
+        // Removed selector stays tracked but with old revision so check fails.
+        assert_eq!(dashboard.tracked_selectors().len(), 1);
+        assert_eq!(dashboard.tracked_selectors()[0].revision(), 5);
+        assert_eq!(
+            dashboard.check_selector_freshness(&dashboard.tracked_selectors()[0]),
+            Err("topology-mismatch")
+        );
+    }
+
+    #[test]
+    fn topology_snapshot_shows_in_render() {
+        let mut dashboard = AgentDashboardState::idle();
+        let selector = make_selector("host-main", "agent-ctl", 3);
+        dashboard.tracked_selectors.push(selector);
+        let snapshot = make_snapshot("host-main", 3, &[]);
+        dashboard.apply_topology_snapshot(snapshot);
+
+        let rendered = render_agent_dashboard_snapshot(&dashboard);
+        assert!(rendered.contains("topology: rev 3"));
+        assert!(rendered.contains("selector: host-main/agent-ctl"));
+    }
+
+    #[test]
+    fn pending_topology_shows_in_render() {
+        let dashboard = AgentDashboardState::idle();
+        let rendered = render_agent_dashboard_snapshot(&dashboard);
+        assert!(rendered.contains("topology: pending"));
     }
 }

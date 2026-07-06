@@ -210,6 +210,12 @@ impl HostTopologySnapshot {
         self.revision
     }
 
+    /// Returns the topology selectors.
+    #[must_use]
+    pub fn selectors(&self) -> &[HostSelector] {
+        self.selectors.as_slice()
+    }
+
     fn supports(&self, operation: HostOperation) -> bool {
         self.supported_operations.contains(&operation)
     }

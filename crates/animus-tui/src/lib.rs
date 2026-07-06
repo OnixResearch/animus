@@ -41,6 +41,8 @@ pub use view::{
     QueueItemStatus, ShellEvent, ShellEventOutcome, StatusRailState, TerminalState,
     ToolCallCard, ToolCardProgress, ToolPanelState, TranscriptEntry,
     TranscriptEntryKind, ToolApprovalPanel, ToolPanel, ToolRenderModel, ToolSessionStatus,
+    LayoutDiagnostic, LayoutTree, PaneView,
+    resolve_layout, render_layout_tree_snapshot,
     render_agent_dashboard_snapshot, render_app_shell_snapshot, render_conversation_snapshot,
     render_status_rail_snapshot,
     render_streaming_snapshot,

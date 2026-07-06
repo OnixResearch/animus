@@ -1,0 +1,459 @@
+// Pane/split layout: host-only pane-tree model consuming host-control-protocol
+// layout DTOs. Layout types stay in the TUI crate; mismatches fail closed
+// with a typed diagnostic.
+
+/// Typed layout diagnostic for mismatch/failure cases.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum LayoutDiagnostic {
+    /// A pane node id is absent from the current host topology.
+    PaneAbsentFromTopology(String),
+    /// A split axis label is not supported.
+    UnsupportedAxis(String),
+    /// The layout tree references a node that duplicates an existing node id.
+    DuplicateNodeId(String),
+    /// The layout apply request has no child panes in a split.
+    EmptySplit,
+}
+
+impl LayoutDiagnostic {
+    /// Returns a stable diagnostic label for testing and rendering.
+    #[must_use]
+    pub const fn as_str(&self) -> &'static str {
+        match self {
+            Self::PaneAbsentFromTopology(_) => "pane-absent-from-topology",
+            Self::UnsupportedAxis(_) => "unsupported-axis",
+            Self::DuplicateNodeId(_) => "duplicate-node-id",
+            Self::EmptySplit => "empty-split",
+        }
+    }
+}
+
+/// Host-only renderable pane view derived from a layout node.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PaneView {
+    /// Pane node identity matched from the host-control protocol.
+    node_id: String,
+    /// Optional pane label.
+    label: Option<String>,
+    /// Whether this pane has host focus.
+    focused: bool,
+    /// Whether this pane is zoomed.
+    zoomed: bool,
+}
+
+impl PaneView {
+    /// Builds a pane view from layout and topology metadata.
+    #[must_use]
+    pub fn new(
+        node_id: &str,
+        label: Option<String>,
+        focused: bool,
+        zoomed: bool,
+    ) -> Self {
+        Self {
+            node_id: String::from(node_id),
+            label,
+            focused,
+            zoomed,
+        }
+    }
+
+    /// Returns the pane node identity.
+    #[must_use]
+    pub fn node_id(&self) -> &str {
+        self.node_id.as_str()
+    }
+
+    /// Returns the optional pane label.
+    #[must_use]
+    pub fn label(&self) -> Option<&str> {
+        self.label.as_deref()
+    }
+
+    /// Returns whether this pane has host focus.
+    #[must_use]
+    pub const fn focused(&self) -> bool {
+        self.focused
+    }
+
+    /// Returns whether this pane is zoomed.
+    #[must_use]
+    pub const fn zoomed(&self) -> bool {
+        self.zoomed
+    }
+}
+
+/// Host-only renderable layout tree.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum LayoutTree {
+    /// A pane leaf.
+    Pane(PaneView),
+    /// A split with child layout trees along an axis.
+    Split {
+        /// Split node identity.
+        node_id: String,
+        /// Split axis.
+        axis: animus_adapters::LayoutAxis,
+        /// Child layout trees.
+        children: Vec<LayoutTree>,
+    },
+}
+
+impl LayoutTree {
+    /// Returns the node identity for this layout tree node.
+    #[must_use]
+    pub fn node_id(&self) -> &str {
+        match self {
+            Self::Pane(pane) => pane.node_id(),
+            Self::Split { node_id, .. } => node_id.as_str(),
+        }
+    }
+
+    /// Returns the focused pane node id when one exists in the tree.
+    #[must_use]
+    pub fn focused_pane_id(&self) -> Option<&str> {
+        match self {
+            Self::Pane(pane) => {
+                if pane.focused() {
+                    Some(pane.node_id())
+                } else {
+                    None
+                }
+            }
+            Self::Split { children, .. } => {
+                for child in children {
+                    if let Some(id) = child.focused_pane_id() {
+                        return Some(id);
+                    }
+                }
+                None
+            }
+        }
+    }
+}
+
+/// Resolves a layout apply request against a host topology snapshot,
+/// producing a renderable layout tree or a typed diagnostic.
+///
+/// # Errors
+///
+/// Returns [`LayoutDiagnostic`] when:
+/// - A pane node id is absent from the host topology.
+/// - A split axis is unsupported.
+/// - Duplicate node ids exist in the layout tree.
+/// - A split has no child nodes.
+pub fn resolve_layout(
+    request: &animus_adapters::LayoutApplyRequest,
+    topology: &animus_adapters::HostTopologySnapshot,
+) -> Result<LayoutTree, LayoutDiagnostic> {
+    let mut seen_ids: Vec<String> = Vec::new();
+    resolve_node(request.root(), topology, &mut seen_ids)
+}
+
+fn resolve_node(
+    node: &animus_adapters::LayoutNode,
+    topology: &animus_adapters::HostTopologySnapshot,
+    seen_ids: &mut Vec<String>,
+) -> Result<LayoutTree, LayoutDiagnostic> {
+    let node_id = node.node_id();
+
+    // Check for duplicate node ids.
+    if seen_ids.contains(&String::from(node_id)) {
+        return Err(LayoutDiagnostic::DuplicateNodeId(String::from(node_id)));
+    }
+    seen_ids.push(String::from(node_id));
+
+    match node {
+        animus_adapters::LayoutNode::Pane {
+            node_id,
+            label,
+            focused,
+            zoomed,
+            ..
+        } => {
+            // Verify the pane exists in the host topology.
+            let pane_in_topology = topology.selectors().iter().any(
+                |selector: &animus_adapters::HostSelector| {
+                    selector.resource_id() == node_id.as_str()
+                },
+            );
+            if !pane_in_topology {
+                return Err(LayoutDiagnostic::PaneAbsentFromTopology(
+                    node_id.clone(),
+                ));
+            }
+
+            Ok(LayoutTree::Pane(PaneView::new(
+                node_id,
+                label.clone(),
+                *focused,
+                *zoomed,
+            )))
+        }
+        animus_adapters::LayoutNode::Split {
+            node_id: _,
+            axis,
+            children,
+        } => {
+            if children.is_empty() {
+                return Err(LayoutDiagnostic::EmptySplit);
+            }
+
+            let resolved_children: Vec<LayoutTree> = children
+                .iter()
+                .map(|child| resolve_node(child, topology, seen_ids))
+                .collect::<Result<Vec<_>, _>>()?;
+
+            Ok(LayoutTree::Split {
+                node_id: String::from(node.node_id()),
+                axis: *axis,
+                children: resolved_children,
+            })
+        }
+    }
+}
+
+/// Renders a deterministic text representation of a layout tree.
+#[must_use]
+pub fn render_layout_tree_snapshot(tree: &LayoutTree) -> String {
+    let mut lines: Vec<String> = Vec::new();
+    render_tree(tree, &mut lines, 0);
+    lines.join("\n")
+}
+
+fn render_tree(tree: &LayoutTree, lines: &mut Vec<String>, depth: usize) {
+    let indent = "  ".repeat(depth);
+    match tree {
+        LayoutTree::Pane(pane) => {
+            let focus_mark = if pane.focused() { " [focused]" } else { "" };
+            let zoom_mark = if pane.zoomed() { " [zoomed]" } else { "" };
+            lines.push(format!(
+                "{indent}pane: {}{}{}",
+                pane.node_id(),
+                focus_mark,
+                zoom_mark,
+            ));
+        }
+        LayoutTree::Split {
+            node_id,
+            axis,
+            children,
+        } => {
+            let axis_label = match axis {
+                animus_adapters::LayoutAxis::Horizontal => "horizontal",
+                animus_adapters::LayoutAxis::Vertical => "vertical",
+            };
+            lines.push(format!("{indent}split: {node_id} [{axis_label}]"));
+            for child in children {
+                render_tree(child, lines, depth + 1);
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod layout_tests {
+    use super::*;
+    use animus_adapters::{
+        HostControlError, HostSelectorDraft, HostTopologySnapshotDraft,
+        LayoutApplyRequest, LayoutNode, LayoutPaneDraft,
+    };
+
+    fn make_selector(host_id: &str, resource_id: &str, revision: u64) -> animus_adapters::HostSelector {
+        animus_adapters::HostSelector::validate(HostSelectorDraft {
+            host_id,
+            resource_id,
+            kind: "pane",
+            lifetime: "live",
+            revision,
+        })
+        .expect("test selector should be valid")
+    }
+
+    fn make_topology(selectors: &[animus_adapters::HostSelector]) -> animus_adapters::HostTopologySnapshot {
+        animus_adapters::HostTopologySnapshot::validate(HostTopologySnapshotDraft {
+            host_id: "host-main",
+            revision: 1,
+            selectors,
+            labels: &["main"],
+            supported_operations: &["focus", "rename", "close", "export_layout"],
+        })
+        .expect("test topology should be valid")
+    }
+
+    fn make_pane(node_id: &str) -> LayoutNode {
+        LayoutNode::pane_with(LayoutPaneDraft {
+            node_id,
+            label: None,
+            cwd_summary: None,
+            command: None,
+            focused: false,
+            zoomed: false,
+        })
+        .expect("test pane should be valid")
+    }
+
+    fn make_focused_pane(node_id: &str) -> LayoutNode {
+        LayoutNode::pane_with(LayoutPaneDraft {
+            node_id,
+            label: Some("focused"),
+            cwd_summary: None,
+            command: None,
+            focused: true,
+            zoomed: false,
+        })
+        .expect("test pane should be valid")
+    }
+
+    // -----------------------------------------------------------------------
+    // Positive layout tests
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn single_pane_resolves() {
+        let sel = make_selector("host-main", "pane-1", 1);
+        let topology = make_topology(&[sel]);
+        let pane = make_pane("pane-1");
+        let request = LayoutApplyRequest::new(pane, false)
+            .expect("valid request");
+        let tree = resolve_layout(&request, &topology)
+            .expect("layout should resolve");
+        assert_eq!(tree.node_id(), "pane-1");
+    }
+
+    #[test]
+    fn split_layout_resolves() {
+        let sel_a = make_selector("host-main", "pane-a", 1);
+        let sel_b = make_selector("host-main", "pane-b", 1);
+        let topology = make_topology(&[sel_a, sel_b]);
+        let pane_a = make_pane("pane-a");
+        let pane_b = make_pane("pane-b");
+        let split = LayoutNode::split("root", "horizontal", vec![pane_a, pane_b])
+            .expect("valid split");
+        let request = LayoutApplyRequest::new(split, false)
+            .expect("valid request");
+        let tree = resolve_layout(&request, &topology)
+            .expect("layout should resolve");
+        assert_eq!(tree.node_id(), "root");
+        if let LayoutTree::Split { axis, children, .. } = &tree {
+            assert_eq!(*axis, animus_adapters::LayoutAxis::Horizontal);
+            assert_eq!(children.len(), 2);
+        } else {
+            panic!("expected split tree");
+        }
+    }
+
+    #[test]
+    fn focused_pane_is_detected_in_tree() {
+        let sel = make_selector("host-main", "pane-main", 1);
+        let topology = make_topology(&[sel]);
+        let pane = make_focused_pane("pane-main");
+        let request = LayoutApplyRequest::new(pane, false)
+            .expect("valid request");
+        let tree = resolve_layout(&request, &topology)
+            .expect("layout should resolve");
+        assert_eq!(tree.focused_pane_id(), Some("pane-main"));
+    }
+
+    #[test]
+    fn no_focus_in_tree_returns_none() {
+        let sel = make_selector("host-main", "pane-plain", 1);
+        let topology = make_topology(&[sel]);
+        let pane = make_pane("pane-plain");
+        let request = LayoutApplyRequest::new(pane, false)
+            .expect("valid request");
+        let tree = resolve_layout(&request, &topology)
+            .expect("layout should resolve");
+        assert_eq!(tree.focused_pane_id(), None);
+    }
+
+    // -----------------------------------------------------------------------
+    // Negative layout tests
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn pane_absent_from_topology_fails_closed() {
+        let topology = make_topology(&[]);
+        let pane = make_pane("unknown-pane");
+        let request = LayoutApplyRequest::new(pane, false)
+            .expect("valid request");
+        let err = resolve_layout(&request, &topology)
+            .expect_err("absent pane should fail");
+        assert_eq!(
+            err,
+            LayoutDiagnostic::PaneAbsentFromTopology(
+                String::from("unknown-pane")
+            )
+        );
+        assert_eq!(err.as_str(), "pane-absent-from-topology");
+    }
+
+    #[test]
+    fn empty_split_fails_closed() {
+        // LayoutNode::split rejects empty children before resolve_layout runs.
+        let err = LayoutNode::split("empty-root", "horizontal", vec![])
+            .expect_err("empty split should be rejected by LayoutNode");
+        assert_eq!(err, HostControlError::InvalidLayout);
+    }
+
+    #[test]
+    fn duplicate_node_id_fails_closed() {
+        let sel = make_selector("host-main", "pane-dupe", 1);
+        let topology = make_topology(&[sel]);
+        let pane = make_pane("pane-dupe");
+        let split = LayoutNode::split("root", "vertical", vec![pane.clone(), pane])
+            .expect("LayoutNode allows duplicate node ids; resolve_layout rejects them");
+        let request = LayoutApplyRequest::new(split, false)
+            .expect("valid request");
+        let err = resolve_layout(&request, &topology)
+            .expect_err("duplicate node id should fail at resolve_layout");
+        assert_eq!(
+            err,
+            LayoutDiagnostic::DuplicateNodeId(
+                String::from("pane-dupe")
+            )
+        );
+        assert_eq!(err.as_str(), "duplicate-node-id");
+    }
+
+    #[test]
+    fn preserve_live_processes_request_fails_closed() {
+        let pane = make_pane("pane-1");
+        let err = LayoutApplyRequest::new(pane, true)
+            .expect_err("preserve_live_processes should be rejected");
+        assert_eq!(err, HostControlError::InvalidLayout);
+    }
+
+    #[test]
+    fn layout_snapshot_single_pane() {
+        let sel = make_selector("host-main", "pane-x", 1);
+        let topology = make_topology(&[sel]);
+        let pane = make_focused_pane("pane-x");
+        let request = LayoutApplyRequest::new(pane, false)
+            .expect("valid request");
+        let tree = resolve_layout(&request, &topology)
+            .expect("layout should resolve");
+        let snapshot = render_layout_tree_snapshot(&tree);
+        assert!(snapshot.contains("pane: pane-x"));
+        assert!(snapshot.contains("[focused]"));
+    }
+
+    #[test]
+    fn layout_snapshot_split_tree() {
+        let sel_a = make_selector("host-main", "left", 1);
+        let sel_b = make_selector("host-main", "right", 1);
+        let topology = make_topology(&[sel_a, sel_b]);
+        let left = make_focused_pane("left");
+        let right = make_pane("right");
+        let split = LayoutNode::split("root", "vertical", vec![left, right])
+            .expect("valid split");
+        let request = LayoutApplyRequest::new(split, false)
+            .expect("valid request");
+        let tree = resolve_layout(&request, &topology)
+            .expect("layout should resolve");
+        let snapshot = render_layout_tree_snapshot(&tree);
+        assert!(snapshot.contains("split: root [vertical]"));
+        assert!(snapshot.contains("  pane: left [focused]"));
+        assert!(snapshot.contains("  pane: right"));
+    }
+}

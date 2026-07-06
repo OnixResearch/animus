@@ -50,6 +50,7 @@ mod status_rail_tests {
 }
 
 include!("view/control.rs");
+include!("view/layout.rs");
 include!("view/shell.rs");
 
 #[cfg(test)]
