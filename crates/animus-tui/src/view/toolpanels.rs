@@ -7,8 +7,7 @@
 
 /// Label for the approval prompt block.
 const APPROVAL_PROMPT_LABEL: &str = "-- approval needed --";
-/// Maximum snapshot lines to prevent unbounded growth.
-const MAX_SNAPSHOT_LINES: usize = 512;
+
 
 // ---------------------------------------------------------------------------
 // Tool call card
@@ -273,65 +272,65 @@ impl Default for ToolPanelState {
 /// No terminal backend required.
 #[must_use]
 pub fn render_tool_panel_snapshot(panel: &ToolPanelState) -> String {
-    let mut lines: Vec<String> = Vec::new();
+    const MAX_RENDER_LINES: usize = 512;
+    let mut lines: Vec<String> = Vec::with_capacity(128);
+    let mut line_count: usize = 0;
 
     // Tool cards
     for card in panel.active_cards() {
         let collapsed = if card.is_collapsed() { " [collapsed]" } else { "" };
-        lines.push(format!("tool: {}{collapsed}", card.tool_name()));
-        lines.push(format!("  input: {}", card.input_summary()));
+        if line_count >= MAX_RENDER_LINES { break; }
+        lines.push(format!("tool: {}{collapsed}", card.tool_name())); line_count += 1;
+        if line_count >= MAX_RENDER_LINES { break; }
+        lines.push(format!("  input: {}", card.input_summary())); line_count += 1;
         if let Some(progress) = card.progress() {
-            match progress.total {
-                Some(total) => lines.push(format!("  progress: {}/{}", progress.completed, total)),
-                None => lines.push(format!("  progress: {}/?", progress.completed)),
+            if line_count >= MAX_RENDER_LINES { break; }
+            if let Some(total) = progress.total {
+                lines.push(format!("  progress: {}/{}", progress.completed, total)); line_count += 1;
+            } else {
+                lines.push(format!("  progress: {}/?", progress.completed)); line_count += 1;
             }
         }
         if let Some(output) = card.output() {
-            lines.push(format!("  output: {output}"));
+            if line_count >= MAX_RENDER_LINES { break; }
+            lines.push(format!("  output: {output}")); line_count += 1;
         }
     }
 
     // Diff views
     for diff in panel.diff_views() {
         let collapsed = if diff.is_collapsed() { " [collapsed]" } else { "" };
-        lines.push(format!("diff: {}{collapsed}", diff.source_label()));
+        if line_count >= MAX_RENDER_LINES { break; }
+        lines.push(format!("diff: {}{collapsed}", diff.source_label())); line_count += 1;
         for line in diff.lines() {
+            if line_count >= MAX_RENDER_LINES { break; }
             match line {
-                DiffLine::Context(text) => lines.push(format!("  {text}")),
-                DiffLine::Added(text) => lines.push(format!("+ {text}")),
-                DiffLine::Removed(text) => lines.push(format!("- {text}")),
+                DiffLine::Context(text) => { lines.push(format!("  {text}")); line_count += 1; }
+                DiffLine::Added(text) => { lines.push(format!("+ {text}")); line_count += 1; }
+                DiffLine::Removed(text) => { lines.push(format!("- {text}")); line_count += 1; }
             }
         }
     }
 
     // Approval
     if let Some(prompt) = panel.approval_prompt() {
-        lines.push(String::from(APPROVAL_PROMPT_LABEL));
-        lines.push(format!("  prompt: {prompt}"));
+        if line_count < MAX_RENDER_LINES {
+            lines.push(String::from(APPROVAL_PROMPT_LABEL)); line_count += 1;
+        }
+        if line_count < MAX_RENDER_LINES {
+            lines.push(format!("  prompt: {prompt}")); line_count += 1;
+        }
         for choice in panel.approval_choices() {
-            lines.push(format!("  choice: {choice}"));
+            if line_count >= MAX_RENDER_LINES { break; }
+            lines.push(format!("  choice: {choice}")); line_count += 1;
         }
     }
 
-    // Bounded snapshot: cap at MAX_SNAPSHOT_LINES to prevent unbounded growth
-    let mut bounded_lines: Vec<String> = Vec::with_capacity(
-        std::cmp::min(lines.len(), MAX_SNAPSHOT_LINES).saturating_add(1),
-    );
-    for line in lines.iter().take(MAX_SNAPSHOT_LINES) {
-        bounded_lines.push(line.clone());
-    }
-    if lines.len() > MAX_SNAPSHOT_LINES {
-        bounded_lines.push(format!(
-            "[... {} more lines truncated]",
-            lines.len().saturating_sub(MAX_SNAPSHOT_LINES)
-        ));
+    if lines.is_empty() {
+        lines.push(String::from("(no active tools)"));
     }
 
-    if bounded_lines.is_empty() {
-        bounded_lines.push(String::from("(no active tools)"));
-    }
-
-    bounded_lines.join("\n")
+    lines.join("\n")
 }
 
 #[cfg(test)]

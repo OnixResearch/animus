@@ -175,10 +175,7 @@ impl ScrollbackMetadata {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        ConversationRenderModel, ImageDisplay, ScrollbackMetadata, MAX_IMAGE_DESCRIPTION_CHARS,
-        VALID_CONTENT_HASH, render_conversation_snapshot, render_streaming_snapshot,
-    };
+    use super::*;
 
     // -----------------------------------------------------------------------
     // Image display tests
