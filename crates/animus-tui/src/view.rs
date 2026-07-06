@@ -18,8 +18,14 @@ const TOOL_DENIED_REASON: &str = "tool denied";
 const TOOL_ADAPTER_FAILED_REASON: &str = "tool adapter failed";
 const CANCELLED_REASON: &str = "cancelled";
 
-include!("view/status.rs");
-include!("view/panel.rs");
 include!("view/model.rs");
 include!("view/text.rs");
-include!("view/conversation.rs");
+include!("view/conversationtypes.rs");
+include!("view/conversationmod.rs");
+include!("view/conversationrendr.rs");
+
+#[cfg(test)]
+mod conversation_tests {
+    use super::*;
+    include!("view/conversationtest.rs");
+}
