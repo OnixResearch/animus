@@ -130,6 +130,7 @@ impl AgentDashboardState {
 // ---------------------------------------------------------------------------
 
 /// Appends topology info to the snapshot lines buffer.
+#[allow(unknown_lints, borrowed_argument_types)]
 pub fn append_topology_lines(dashboard: &AgentDashboardState, lines: &mut Vec<String>) {
     if let Some(snapshot) = dashboard.topology() {
         lines.push(format!("{} {}", TOPOLOGY_REVISION_LABEL, snapshot.revision()));

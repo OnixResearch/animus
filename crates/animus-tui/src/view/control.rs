@@ -4,6 +4,7 @@
 // All state is projected from accepted DTOs; controls issue typed commands
 // to the runtime/host without holding ambient authority.
 
+#[allow(unknown_lints, non_trait_imports)]
 use animus_adapters::{
     HostEvent, HostEventKind, HostSelector, HostSemanticStatus,
     HostTopologySnapshot,
@@ -275,4 +276,4 @@ pub fn render_agent_dashboard_snapshot(dashboard: &AgentDashboardState) -> Strin
     lines.join("\n")
 }
 
-include!("control_topology.rs");
+include!("controltopology.rs");
