@@ -2,7 +2,7 @@
 // layout DTOs. Layout types stay in the TUI crate; mismatches fail closed
 // with a typed diagnostic.
 
-#[allow(unknown_lints)]
+#[allow(unknown_lints, non_trait_imports)]
 use animus_adapters::LayoutAxis;
 
 /// Typed layout diagnostic for mismatch/failure cases.
@@ -33,6 +33,7 @@ impl LayoutDiagnostic {
 
 /// Host-only renderable pane view derived from a layout node.
 #[derive(Clone, Debug, Eq, PartialEq)]
+#[allow(unknown_lints, path_segment_repetition)]
 pub struct PaneView {
     /// Pane node identity matched from the host-control protocol.
     node_id: String,
