@@ -6,12 +6,9 @@ mod agent_control_tests {
         HostSelectorDraft, HostTopologySnapshotDraft,
     };
 
-    // All tests moved from // viewtests.rs (control section) to keep that file
     // under the Octet excessive_file_length threshold.
 
-    // -----------------------------------------------------------------------
     // Agent status tests
-    // -----------------------------------------------------------------------
 
     #[test]
     fn idle_status_has_correct_labels() {
@@ -22,9 +19,7 @@ mod agent_control_tests {
         assert_eq!(AgentStatus::Error.as_str(), "error");
     }
 
-    // -----------------------------------------------------------------------
     // Agent dashboard tests
-    // -----------------------------------------------------------------------
 
     #[test]
     fn idle_dashboard_allows_start() {
@@ -77,9 +72,7 @@ mod agent_control_tests {
         assert_eq!(dashboard.processes().len(), 1);
     }
 
-    // -----------------------------------------------------------------------
     // Snapshot tests
-    // -----------------------------------------------------------------------
 
     #[test]
     fn idle_dashboard_snapshot() {
@@ -107,9 +100,7 @@ mod agent_control_tests {
         assert!(snapshot.contains("queue: build [running]"));
     }
 
-    // -----------------------------------------------------------------------
     // Negative tests
-    // -----------------------------------------------------------------------
 
     #[test]
     fn missing_worker_service_does_not_panic() {
@@ -143,9 +134,7 @@ mod agent_control_tests {
         assert!(snapshot.contains("queue: item 0 [queued]"));
     }
 
-    // -----------------------------------------------------------------------
     // Topology tests
-    // -----------------------------------------------------------------------
 
     #[allow(unknown_lints, ambiguous_params)]
     fn make_selector(host: &str, resource: &str, revision: u64) -> HostSelector {
