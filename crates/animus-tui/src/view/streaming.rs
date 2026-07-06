@@ -6,9 +6,7 @@
 
 /// Maximum display width for image descriptions.
 const MAX_IMAGE_DESCRIPTION_CHARS: u64 = 256;
-/// Valid 64-char BLAKE3 hex content hash for test fixtures.
-#[cfg(test)]
-const VALID_CONTENT_HASH: &str = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
 
 // ---------------------------------------------------------------------------
 // Image display

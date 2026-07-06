@@ -56,6 +56,9 @@ include!("view/shell.rs");
 include!("view/keymap.rs");
 
 #[cfg(test)]
+include!("view/testhelp.rs");
+
+#[cfg(test)]
 mod conversation_tests {
     use super::*;
     include!("view/conversationtest.rs");

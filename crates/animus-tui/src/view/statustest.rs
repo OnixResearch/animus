@@ -1,9 +1,7 @@
 // Status rail tests — separated to reduce file length.
 // Included from view.rs inside `mod status_rail_tests { use super::*; include!(...); }`
 
-fn idle_rail() -> StatusRailState {
-    StatusRailState::idle()
-}
+// idle_rail helper is in testhelp.rs
 
 #[test]
 fn idle_rail_has_sensible_defaults() {
