@@ -35,7 +35,14 @@ pub use runner::{
     run_hosted_tool, run_simple_tool,
 };
 pub use view::{
-    ConversationRenderModel, EntryMetadata, TranscriptEntry, TranscriptEntryKind,
-    ToolApprovalPanel, ToolPanel, ToolRenderModel, ToolSessionStatus,
-    render_conversation_snapshot, render_text_snapshot,
+    CompletionCandidate, CompletionMenu, ConversationRenderModel, EntryMetadata, ImageDisplay,
+    PromptInputState, ScrollbackMetadata, SlashCommand, SlashCommandDetector, TranscriptEntry,
+    TranscriptEntryKind, ToolApprovalPanel, ToolPanel, ToolRenderModel, ToolSessionStatus,
+    render_conversation_snapshot, render_streaming_snapshot, render_text_snapshot,
+};
+
+#[cfg(feature = "rats-widgets")]
+pub use view::{
+    InputAction, Keybinding,
+    resolve_default_keybinding, resolve_keybinding,
 };

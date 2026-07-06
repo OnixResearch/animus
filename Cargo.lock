@@ -115,6 +115,7 @@ dependencies = [
  "animus-adapters",
  "animus-runtime",
  "animus-std",
+ "crossterm",
  "rat-widgets",
 ]
 

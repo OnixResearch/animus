@@ -23,6 +23,11 @@ include!("view/text.rs");
 include!("view/conversationtypes.rs");
 include!("view/conversationmod.rs");
 include!("view/conversationrendr.rs");
+include!("view/streaming.rs");
+include!("view/input.rs");
+
+#[cfg(feature = "rats-widgets")]
+include!("view/keymap.rs");
 
 #[cfg(test)]
 mod conversation_tests {

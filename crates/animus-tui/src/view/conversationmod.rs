@@ -84,7 +84,9 @@ impl ConversationRenderModel {
                     metadata: size_metadata(request.prompt()),
                 });
             }
-            animus_runtime::RuntimeEvent::ModelStreamStarted { .. } => {}
+            animus_runtime::RuntimeEvent::ModelStreamStarted { .. } => {
+                self.flush_pending_delta();
+            }
             animus_runtime::RuntimeEvent::ModelStreamFrame { frame } => {
                 self.apply_stream_frame(frame);
             }
@@ -207,6 +209,22 @@ impl ConversationRenderModel {
     #[must_use]
     pub const fn window_size(&self) -> u64 {
         self.window_size
+    }
+
+    /// Returns the pending text buffer content, if any.
+    #[must_use]
+    pub fn pending_text(&self) -> Option<String> {
+        self.pending_text
+            .as_ref()
+            .map(|pending| pending.buffer.clone())
+    }
+
+    /// Returns the pending thinking buffer content, if any.
+    #[must_use]
+    pub fn pending_thinking(&self) -> Option<String> {
+        self.pending_thinking
+            .as_ref()
+            .map(|pending| pending.buffer.clone())
     }
 
     /// Returns the total number of entries ever recorded (including evicted).

@@ -71,6 +71,7 @@ let tier_entries = [
   tier "export-surfaces" "Dataset, evidence, and external lifecycle export surfaces" ["ui-headless"],
   tier "optional-references" "Bounded optional reference adapters and non-default dependency gates" ["roadmap-sequencing"],
   tier "evaluation" "Evaluation-only studies and adoption matrices" ["roadmap-sequencing"],
+  tier "router-crate" "Router crate barrier, pure decision cores, and receipt assembly" ["injected-services"],
 ]
 in
 
@@ -121,6 +122,51 @@ let change_entries = [
     "add-tui-session-context-status-rail",
     "add-tui-agent-control-and-queue-dashboard",
   ] ["add-tui-conversation-render-model"],
+  change "introduce-router-crate-barrier" foundation_role "router-crate" [
+    "agent_harness_runtime.vllm_semantic_router_recipes.selection",
+  ] ["define-router-execution-plan", "project-router-request-signals", "negotiate-router-capability-eligibility", "add-router-policy-contracts", "preserve-router-boundary-dtos"],
+  change "define-router-execution-plan" core_role "router-crate" [
+    "introduce-router-crate-barrier",
+    "agent_harness_runtime.vllm_semantic_router_recipes.bounds",
+  ] ["aggregate-router-route-results", "gate-router-budget-and-fallback", "wire-router-into-runtime-loop"],
+  change "project-router-request-signals" core_role "router-crate" [
+    "introduce-router-crate-barrier",
+    "agent_harness_runtime.vllm_semantic_router_recipes.signals",
+  ] ["add-supra-router-signal-adapter", "wire-router-into-runtime-loop"],
+  change "aggregate-router-route-results" core_role "router-crate" [
+    "define-router-execution-plan",
+    "agent_harness_runtime.vllm_semantic_router_recipes.output_contract",
+  ] ["emit-router-safe-receipts", "wire-router-into-runtime-loop", "evaluate-router-recipe-coverage"],
+  change "emit-router-safe-receipts" core_role "router-crate" [
+    "aggregate-router-route-results",
+    "agent_harness_runtime.vllm_semantic_router_recipes.receipts",
+  ] ["wire-router-into-runtime-loop", "evaluate-router-recipe-coverage"],
+  change "wire-router-into-runtime-loop" core_role "runtime-loop" [
+    "define-router-execution-plan",
+    "agent_harness_runtime.model_dispatch.runtime_gate",
+  ] ["aggregate-router-route-results", "emit-router-safe-receipts", "evaluate-router-recipe-coverage"],
+  change "negotiate-router-capability-eligibility" core_role "policy-guidance" [
+    "introduce-router-crate-barrier",
+    "agent_harness_runtime.model_capability_matrix.negotiation",
+  ] ["wire-router-into-runtime-loop"],
+  change "gate-router-budget-and-fallback" core_role "policy-guidance" [
+    "define-router-execution-plan",
+    "agent_harness_runtime.vllm_semantic_router_recipes.bounds",
+  ] ["wire-router-into-runtime-loop"],
+  change "add-supra-router-signal-adapter" host_role "concrete-adapters" [
+    "project-router-request-signals",
+  ] [],
+  change "add-router-policy-contracts" core_role "policy-guidance" [
+    "introduce-router-crate-barrier",
+  ] [],
+  change "preserve-router-boundary-dtos" optional_role "optional-references" [
+    "introduce-router-crate-barrier",
+  ] [],
+  change "evaluate-router-recipe-coverage" evaluation_role "evaluation" [
+    "wire-router-into-runtime-loop",
+    "aggregate-router-route-results",
+    "emit-router-safe-receipts",
+  ] [],
 ]
 in
 
@@ -128,6 +174,9 @@ let overlap_entries = [
   overlap "canonical-request-provider-projection" "add-canonical-model-message-contracts" ["add-provider-projection-conformance-fixtures"],
   overlap "capability-negotiation-provider-claims" "negotiate-model-capability-matrix" ["add-provider-projection-conformance-fixtures"],
   overlap "tui-render-model" "add-tui-conversation-render-model" ["add-tui-streaming-markdown-view", "add-tui-prompt-input-and-keymap", "add-tui-tool-call-and-approval-panels", "add-tui-session-context-status-rail", "add-tui-agent-control-and-queue-dashboard", "add-tui-app-shell-and-event-loop"],
+  overlap "router-execution-plan-materialization" "define-router-execution-plan" ["wire-router-into-runtime-loop", "gate-router-budget-and-fallback"],
+  overlap "router-signal-projection" "project-router-request-signals" ["add-supra-router-signal-adapter"],
+  overlap "router-receipt-assembly" "emit-router-safe-receipts" ["wire-router-into-runtime-loop", "evaluate-router-recipe-coverage"],
 ]
 in
 
