@@ -8,17 +8,22 @@ pub const MAX_ADAPTER_FIELD_CHARS: usize = 8_192;
 
 const _: () = assert!(MAX_ADAPTER_FIELD_CHARS >= MIN_ADAPTER_FIELD_CHARS);
 
+/// A validated adapter field name constant used for error diagnostics.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) struct FieldName {
+pub struct FieldName {
     value: &'static str,
 }
 
 impl FieldName {
-    pub(crate) const fn new(value: &'static str) -> Self {
+    /// Creates a new field name constant.
+    #[must_use]
+    pub const fn new(value: &'static str) -> Self {
         Self { value }
     }
 
-    pub(crate) const fn as_str(self) -> &'static str {
+    /// Returns the static field name string.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
         self.value
     }
 }
@@ -184,7 +189,14 @@ pub(crate) fn validate_required_adapter_field(
     validate_optional_adapter_field(field_name, field_text)
 }
 
-pub(crate) fn normalized_adapter_field(
+/// Normalizes an adapter field value by trimming whitespace and rejecting
+/// empty, too-long, or NUL-containing inputs.
+///
+/// # Errors
+///
+/// Returns [`AdapterContractError`] when the field is empty, exceeds
+/// [`MAX_ADAPTER_FIELD_CHARS`], or contains a NUL character.
+pub fn normalized_adapter_field(
     field_name: FieldName,
     field_text: &str,
 ) -> Result<alloc::string::String, AdapterContractError> {

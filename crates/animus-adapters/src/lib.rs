@@ -50,7 +50,9 @@ mod skill;
 mod status;
 mod timed;
 pub mod tool;
-mod validation;
+/// Adapter field validation helpers shared by `animus-adapters` and
+/// downstream crates such as `animus-router`.
+pub mod validation;
 mod versioning;
 mod workspace;
 
@@ -246,7 +248,10 @@ pub use timed::{
     ScheduledRunRuntimeAdmission, ScheduledWorkflow, ScheduledWorkflowDraft, admit_scheduled_run,
     evaluate_scheduled_concurrency, plan_next_run, validate_scheduled_record_text,
 };
-pub use validation::{AdapterContractError, MAX_ADAPTER_FIELD_CHARS, MIN_ADAPTER_FIELD_CHARS};
+pub use validation::{
+    AdapterContractError, FieldName, MAX_ADAPTER_FIELD_CHARS, MIN_ADAPTER_FIELD_CHARS,
+    normalized_adapter_field,
+};
 
 #[cfg(test)]
 extern crate std;

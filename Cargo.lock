@@ -45,6 +45,7 @@ dependencies = [
  "animus-adapters",
  "animus-core",
  "animus-preserves",
+ "animus-router",
  "animus-runtime",
  "animus-std",
  "animus-steel",
@@ -74,6 +75,14 @@ dependencies = [
  "animus-runtime",
  "preserves",
  "serde",
+]
+
+[[package]]
+name = "animus-router"
+version = "0.1.0"
+dependencies = [
+ "animus-adapters",
+ "blake3",
 ]
 
 [[package]]

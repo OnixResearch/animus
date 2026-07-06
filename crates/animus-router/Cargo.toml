@@ -1,0 +1,15 @@
+[package]
+name = "animus-router"
+description = "no_std model-router decision core for animus."
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+animus-adapters = { path = "../animus-adapters", version = "0.1.0" }
+blake3 = { version = "1.8.5", default-features = false }
