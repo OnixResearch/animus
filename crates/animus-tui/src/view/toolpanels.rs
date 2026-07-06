@@ -337,9 +337,6 @@ pub fn render_tool_panel_snapshot(panel: &ToolPanelState) -> String {
 #[cfg(test)]
 mod tool_panel_tests {
     use super::*;
-    // Import the module path; Octet prefers module-level imports over
-    // direct non-trait imports to avoid path_segment_repetition.
-    use animus_adapters as aa;
 
     // -----------------------------------------------------------------------
     // Tool call card tests
@@ -347,7 +344,7 @@ mod tool_panel_tests {
 
     #[test]
     fn card_from_request_has_tool_name_and_input() {
-        let request = aa::ToolRequest::new("search", "query: hello")
+        let request = animus_adapters::ToolRequest::new("search", "query: hello")
             .expect("request should validate");
         let card = ToolCallCard::from_request(&request);
         assert_eq!(card.tool_name(), "search");
@@ -357,7 +354,7 @@ mod tool_panel_tests {
 
     #[test]
     fn card_output_updates() {
-        let request = aa::ToolRequest::new("read", "path: Cargo.toml")
+        let request = animus_adapters::ToolRequest::new("read", "path: Cargo.toml")
             .expect("request should validate");
         let mut card = ToolCallCard::from_request(&request);
         card.set_output("[package]\nname = \"animus\"");
@@ -366,7 +363,7 @@ mod tool_panel_tests {
 
     #[test]
     fn card_progress_updates() {
-        let request = aa::ToolRequest::new("build", ".")
+        let request = animus_adapters::ToolRequest::new("build", ".")
             .expect("request should validate");
         let mut card = ToolCallCard::from_request(&request);
         card.set_progress(5, Some(10));
@@ -375,7 +372,7 @@ mod tool_panel_tests {
 
     #[test]
     fn card_toggle_collapsed() {
-        let request = aa::ToolRequest::new("test", "all")
+        let request = animus_adapters::ToolRequest::new("test", "all")
             .expect("request should validate");
         let mut card = ToolCallCard::from_request(&request);
         assert!(!card.is_collapsed());
@@ -388,7 +385,7 @@ mod tool_panel_tests {
     #[test]
     fn long_input_is_truncated() {
         let long_input = "a".repeat(500);
-        let request = aa::ToolRequest::new("tool", &long_input)
+        let request = animus_adapters::ToolRequest::new("tool", &long_input)
             .expect("request should validate");
         let card = ToolCallCard::from_request(&request);
         assert!(card.input_summary().len() <= 120);
@@ -434,7 +431,7 @@ mod tool_panel_tests {
     #[test]
     fn add_card_to_panel() {
         let mut panel = ToolPanelState::new();
-        let request = aa::ToolRequest::new("build", ".")
+        let request = animus_adapters::ToolRequest::new("build", ".")
             .expect("request should validate");
         panel.add_card(ToolCallCard::from_request(&request));
         assert_eq!(panel.active_cards().len(), 1);
@@ -443,10 +440,10 @@ mod tool_panel_tests {
     #[test]
     fn replacing_card_updates_in_place() {
         let mut panel = ToolPanelState::new();
-        let req1 = aa::ToolRequest::new("tool", "first")
+        let req1 = animus_adapters::ToolRequest::new("tool", "first")
             .expect("request should validate");
         panel.add_card(ToolCallCard::from_request(&req1));
-        let req2 = aa::ToolRequest::new("tool", "second")
+        let req2 = animus_adapters::ToolRequest::new("tool", "second")
             .expect("request should validate");
         panel.add_card(ToolCallCard::from_request(&req2));
         assert_eq!(panel.active_cards().len(), 1);
@@ -465,7 +462,7 @@ mod tool_panel_tests {
     #[test]
     fn clear_resets_panel() {
         let mut panel = ToolPanelState::new();
-        let request = aa::ToolRequest::new("tool", "test")
+        let request = animus_adapters::ToolRequest::new("tool", "test")
             .expect("request should validate");
         panel.add_card(ToolCallCard::from_request(&request));
         panel.set_approval("Proceed?", &[String::from("yes")]);
@@ -488,7 +485,7 @@ mod tool_panel_tests {
     #[test]
     fn panel_snapshot_shows_tools_and_approval() {
         let mut panel = ToolPanelState::new();
-        let request = aa::ToolRequest::new("search", "query: hello")
+        let request = animus_adapters::ToolRequest::new("search", "query: hello")
             .expect("request should validate");
         panel.add_card(ToolCallCard::from_request(&request));
         panel.set_approval("Allow?", &[String::from("approve"), String::from("deny")]);
@@ -515,9 +512,9 @@ mod tool_panel_tests {
     fn mismatched_correlation_does_not_panic() {
         let mut panel = ToolPanelState::new();
         // Adding a card with different name doesn't replace unrelated cards
-        let req1 = aa::ToolRequest::new("tool_a", "first")
+        let req1 = animus_adapters::ToolRequest::new("tool_a", "first")
             .expect("request should validate");
-        let req2 = aa::ToolRequest::new("tool_b", "second")
+        let req2 = animus_adapters::ToolRequest::new("tool_b", "second")
             .expect("request should validate");
         panel.add_card(ToolCallCard::from_request(&req1));
         panel.add_card(ToolCallCard::from_request(&req2));
@@ -527,7 +524,7 @@ mod tool_panel_tests {
     #[test]
     fn oversized_output_does_not_panic() {
         let mut panel = ToolPanelState::new();
-        let request = aa::ToolRequest::new("tool", "input")
+        let request = animus_adapters::ToolRequest::new("tool", "input")
             .expect("request should validate");
         let mut card = ToolCallCard::from_request(&request);
         let huge_output = "x".repeat(100_000);
