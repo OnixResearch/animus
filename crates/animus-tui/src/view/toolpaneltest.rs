@@ -1,9 +1,8 @@
 // Tool panel tests — separated to reduce file length.
 // Included from view.rs inside `mod tool_panel_tests { use super::*; include!(...); }`
 
-/// Helper: build a valid tool request.
-fn tool_req(tool_name: &str, tool_input: &str) -> animus_adapters::ToolRequest {
-    animus_adapters::ToolRequest::new(tool_name, tool_input)
+fn tool_req(tname: &str, input_text: &str) -> animus_adapters::ToolRequest {
+    animus_adapters::ToolRequest::new(tname, input_text)
         .expect("request should validate")
 }
 

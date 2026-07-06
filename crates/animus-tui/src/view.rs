@@ -32,6 +32,7 @@ mod streaming_tests {
 }
 
 include!("view/input.rs");
+include!("view/toolcards.rs");
 include!("view/toolpanels.rs");
 
 #[cfg(test)]

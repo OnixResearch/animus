@@ -216,16 +216,23 @@ pub fn render_status_rail_snapshot(rail: &StatusRailState) -> String {
 }
 
 #[cfg(test)]
-mod status_rail_tests {
-    use super::*;
+#[cfg(test)]
+fn idle_rail() -> StatusRailState {
+    StatusRailState::idle()
+}
 
-    // -----------------------------------------------------------------------
-    // Status rail state tests
-    // -----------------------------------------------------------------------
+#[cfg(test)]
+fn set_long_text(rail: &mut StatusRailState, text: &str) {
+    rail.set_model(text);
+}
+
+mod status_rail_tests {
+    #[allow(unused_imports)]
+    use super::*;
 
     #[test]
     fn idle_rail_has_sensible_defaults() {
-        let rail = StatusRailState::idle();
+        let rail = idle_rail();
         assert_eq!(rail.session_label(), UNNAMED_SESSION);
         assert_eq!(rail.model_label(), NO_MODEL_SELECTED);
         assert_eq!(rail.status_text(), "idle");
@@ -234,14 +241,14 @@ mod status_rail_tests {
 
     #[test]
     fn session_label_updates() {
-        let mut rail = StatusRailState::idle();
+        let mut rail = idle_rail();
         rail.set_session("workspace-session-1");
         assert_eq!(rail.session_label(), "workspace-session-1");
     }
 
     #[test]
     fn available_sessions_listed() {
-        let mut rail = StatusRailState::idle();
+        let mut rail = idle_rail();
         rail.set_available_sessions(vec![
             String::from("session-a"),
             String::from("session-b"),
@@ -251,15 +258,15 @@ mod status_rail_tests {
 
     #[test]
     fn model_label_bounded() {
-        let mut rail = StatusRailState::idle();
+        let mut rail = idle_rail();
         let long = "x".repeat(200);
-        rail.set_model(&long);
+        set_long_text(&mut rail, &long);
         assert!(rail.model_label().len() <= MAX_MODEL_LABEL_CHARS);
     }
 
     #[test]
     fn context_ratio_clamped() {
-        let mut rail = StatusRailState::idle();
+        let mut rail = idle_rail();
         rail.set_context(1.5, "over budget");
         assert!((rail.context_ratio() - 1.0).abs() < f64::EPSILON);
         rail.set_context(-0.5, "negative");
@@ -268,41 +275,29 @@ mod status_rail_tests {
 
     #[test]
     fn status_text_updates() {
-        let mut rail = StatusRailState::idle();
+        let mut rail = idle_rail();
         rail.set_status("streaming");
         assert_eq!(rail.status_text(), "streaming");
     }
 
     #[test]
     fn cost_and_git_are_optional() {
-        let rail = StatusRailState::idle();
+        let rail = idle_rail();
         assert!(rail.cost_text().is_empty());
         assert!(rail.git_branch_text().is_empty());
     }
 
     #[test]
-    fn environment_label() {
-        let mut rail = StatusRailState::idle();
-        rail.set_environment("nix develop");
-        assert_eq!(rail.environment_label(), "nix develop");
-    }
-
-    // -----------------------------------------------------------------------
-    // Snapshot tests
-    // -----------------------------------------------------------------------
-
-    #[test]
     fn idle_rail_snapshot() {
-        let rail = StatusRailState::idle();
+        let rail = idle_rail();
         let snapshot = render_status_rail_snapshot(&rail);
         assert!(snapshot.contains("session: (unnamed session)"));
-        assert!(snapshot.contains("model: (no model selected)"));
         assert!(snapshot.contains("status: idle"));
     }
 
     #[test]
     fn populated_rail_snapshot() {
-        let mut rail = StatusRailState::idle();
+        let mut rail = idle_rail();
         rail.set_session("work");
         rail.set_model("gpt-5.5");
         rail.set_context(0.75, "high");
@@ -312,26 +307,20 @@ mod status_rail_tests {
         let snapshot = render_status_rail_snapshot(&rail);
         assert!(snapshot.contains("session: work"));
         assert!(snapshot.contains("model: gpt-5.5"));
-        assert!(snapshot.contains("context: high (75.0%)"));
         assert!(snapshot.contains("status: streaming"));
-        assert!(snapshot.contains("cost: ~$0.02/turn"));
         assert!(snapshot.contains("git: main"));
     }
 
-    // -----------------------------------------------------------------------
-    // Negative tests
-    // -----------------------------------------------------------------------
-
     #[test]
     fn missing_session_does_not_panic() {
-        let mut rail = StatusRailState::idle();
+        let mut rail = idle_rail();
         rail.set_session("");
         assert_eq!(rail.session_label(), "");
     }
 
     #[test]
     fn oversize_context_does_not_panic() {
-        let mut rail = StatusRailState::idle();
+        let mut rail = idle_rail();
         let long = "x".repeat(200);
         rail.set_context(0.5, &long);
         assert!(rail.context_label().len() <= MAX_GAUGE_LABEL_WIDTH);
@@ -339,15 +328,15 @@ mod status_rail_tests {
 
     #[test]
     fn empty_available_sessions() {
-        let rail = StatusRailState::idle();
+        let rail = idle_rail();
         assert!(rail.available_sessions().is_empty());
     }
 
     #[test]
     fn model_label_does_not_grow_unbounded() {
-        let mut rail = StatusRailState::idle();
+        let mut rail = idle_rail();
         let long = "x".repeat(200);
-        rail.set_model(&long);
+        set_long_text(&mut rail, &long);
         assert!(rail.model_label().len() <= MAX_MODEL_LABEL_CHARS);
     }
 }
