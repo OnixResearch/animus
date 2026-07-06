@@ -224,7 +224,7 @@ mod status_rail_tests {
         assert_eq!(rail.session_label(), UNNAMED_SESSION);
         assert_eq!(rail.model_label(), NO_MODEL_SELECTED);
         assert_eq!(rail.status_text(), "idle");
-        assert_eq!(rail.context_ratio(), 0.0);
+        assert!((rail.context_ratio() - 0.0).abs() < f64::EPSILON);
     }
 
     #[test]

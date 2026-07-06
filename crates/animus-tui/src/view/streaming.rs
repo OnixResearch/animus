@@ -41,7 +41,7 @@ impl ImageDisplay {
         let desc = description
             .unwrap_or(fallback_description)
             .chars()
-            .take(MAX_IMAGE_DESCRIPTION_CHARS as usize)
+            .take(usize::try_from(MAX_IMAGE_DESCRIPTION_CHARS).unwrap_or(256))
             .collect();
         let media = handle.media_type().as_str();
         Self {
@@ -176,7 +176,9 @@ impl ScrollbackMetadata {
         if self.window_size == 0 {
             0.0
         } else {
-            self.visible_count as f64 / self.window_size as f64
+            #[allow(clippy::cast_precision_loss)]
+            let ratio = self.visible_count as f64 / self.window_size as f64;
+            ratio
         }
     }
 }
@@ -205,7 +207,7 @@ mod tests {
         let display = ImageDisplay::from_handle(&handle, Some(&long_desc), "fallback");
         assert_eq!(
             display.description().len(),
-            MAX_IMAGE_DESCRIPTION_CHARS as usize
+            usize::try_from(MAX_IMAGE_DESCRIPTION_CHARS).unwrap_or(256)
         );
         assert!(display.description().len() < long_desc.len()); // truncated
     }

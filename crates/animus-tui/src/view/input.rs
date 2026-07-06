@@ -106,7 +106,7 @@ impl PromptInputState {
         }
         self.save_undo();
         let cursor = self.cursor.min(self.content.len());
-        let prev = self.content[..cursor].char_indices().rev().next();
+        let prev = self.content[..cursor].char_indices().next_back();
         if let Some((pos, _ch)) = prev {
             self.content.drain(pos..cursor);
             self.cursor = pos;
@@ -135,7 +135,7 @@ impl PromptInputState {
             return;
         }
         let cursor = self.cursor.min(self.content.len());
-        let prev = self.content[..cursor].char_indices().rev().next();
+        let prev = self.content[..cursor].char_indices().next_back();
         if let Some((pos, _ch)) = prev {
             self.cursor = pos;
         }
@@ -194,11 +194,13 @@ impl PromptInputState {
         if self.history.is_empty() {
             return;
         }
-        let next_index = self.history_index + 1;
-        if next_index < self.history.len() as isize {
+        let next_index = self.history_index.saturating_add(1);
+        #[allow(clippy::cast_sign_loss)]
+        let idx = next_index as usize;
+        if let Some(entry) = self.history.get(idx).cloned() {
             self.save_undo();
             self.history_index = next_index;
-            self.content = self.history[next_index as usize].clone();
+            self.content = entry;
             self.cursor = self.content.len();
         }
     }
@@ -216,8 +218,12 @@ impl PromptInputState {
             self.history_index = -1;
         } else {
             self.history_index = prev_index;
-            self.content = self.history[prev_index as usize].clone();
-            self.cursor = self.content.len();
+            #[allow(clippy::cast_sign_loss)]
+            let idx = prev_index as usize;
+            if let Some(entry) = self.history.get(idx).cloned() {
+                self.content = entry;
+                self.cursor = self.content.len();
+            }
         }
     }
 
