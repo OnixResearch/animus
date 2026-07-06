@@ -15,6 +15,20 @@ fn content_delta(call_id: &str, order: u64, body: &str) -> animus_adapters::Mode
     .expect("frame should validate")
 }
 
+/// Helper: build a model stream call ID.
+fn finish_kind() -> animus_adapters::ModelStreamFrameKind {
+    animus_adapters::ModelStreamFrameKind::Finish
+}
+
+fn call_id(raw: &str) -> animus_adapters::ModelStreamCallId {
+    animus_adapters::ModelStreamCallId::new(raw).expect("call id should validate")
+}
+
+/// Helper: build a model response.
+fn msg_response(content: &str) -> animus_adapters::ModelResponse {
+    animus_adapters::ModelResponse::new(content).expect("response should validate")
+}
+
 /// Helper: build a valid image handle.
 fn test_image_handle(media_type: &str) -> animus_adapters::ModelImagePayloadHandle {
     animus_adapters::ModelImagePayloadHandle::from_draft(
@@ -82,7 +96,7 @@ fn empty_streaming_snapshot_shows_empty_transcript() {
 #[test]
 fn streaming_snapshot_shows_pending_text_when_buffering() {
     let model = ConversationRenderModel::new();
-    let call_id = animus_adapters::ModelStreamCallId::new("call-pending").unwrap();
+    let call_id = call_id("call-pending");
     let frame = content_delta(call_id.as_str(), 1, "accumulating content...");
     let mut model_with_frame = model.clone();
     assert_eq!(model_with_frame, model);
@@ -100,7 +114,7 @@ fn streaming_snapshot_shows_eviction_metadata() {
     for i in 0..5 {
         let content = format!("Message {i}");
         model.apply_runtime_event(&animus_runtime::RuntimeEvent::ModelResponded {
-            response: animus_adapters::ModelResponse::new(&content).unwrap(),
+            response: msg_response(&content),
         });
     }
     let snapshot = render_streaming_snapshot(&model);
@@ -110,7 +124,7 @@ fn streaming_snapshot_shows_eviction_metadata() {
 
 #[test]
 fn streaming_snapshot_after_stream_shows_accumulated_content() {
-    let call_id = animus_adapters::ModelStreamCallId::new("call-acc").unwrap();
+    let call_id = call_id("call-acc");
     let mut model = ConversationRenderModel::new();
 
     model.apply_runtime_event(&animus_runtime::RuntimeEvent::ModelStreamStarted {
@@ -131,7 +145,7 @@ fn streaming_snapshot_after_stream_shows_accumulated_content() {
 
     model.apply_runtime_event(&animus_runtime::RuntimeEvent::ModelStreamEnded {
         call_id,
-        status: animus_adapters::ModelStreamFrameKind::Finish,
+        status: finish_kind(),
     });
 
     let after_snapshot = render_streaming_snapshot(&model);
@@ -158,8 +172,8 @@ fn orphan_content_delta_does_not_panic() {
 fn out_of_order_finish_does_not_corrupt_transcript() {
     let mut model = ConversationRenderModel::new();
     model.apply_runtime_event(&animus_runtime::RuntimeEvent::ModelStreamEnded {
-        call_id: animus_adapters::ModelStreamCallId::new("empty-finish").unwrap(),
-        status: animus_adapters::ModelStreamFrameKind::Finish,
+        call_id: call_id("empty-finish"),
+        status: finish_kind(),
     });
     let snapshot = render_conversation_snapshot(&model);
     assert!(snapshot.contains("(empty transcript)"));
@@ -185,7 +199,7 @@ fn scrollback_metadata_tracks_eviction() {
     for i in 0..5 {
         let content = format!("Message {i}");
         model.apply_runtime_event(&animus_runtime::RuntimeEvent::ModelResponded {
-            response: animus_adapters::ModelResponse::new(&content).unwrap(),
+            response: msg_response(&content),
         });
     }
     let meta = ScrollbackMetadata::from_model(&model);
@@ -199,7 +213,7 @@ fn scrollback_metadata_tracks_eviction() {
 fn scrollback_metadata_fill_ratio_partial() {
     let mut model = ConversationRenderModel::with_window_size(5);
     model.apply_runtime_event(&animus_runtime::RuntimeEvent::ModelResponded {
-        response: animus_adapters::ModelResponse::new("single").unwrap(),
+        response: msg_response("single"),
     });
     let meta = ScrollbackMetadata::from_model(&model);
     assert_eq!(meta.visible_count, 1);

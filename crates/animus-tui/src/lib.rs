@@ -35,7 +35,7 @@ pub use runner::{
     run_hosted_tool, run_simple_tool,
 };
 pub use view::{
-    CompletionCandidate, CompletionMenu, ConversationRenderModel, DiffLine, DiffView, EntryMetadata,
+    CompletionCandidate, CompletionMenu, ConversationRenderModel, EditLine, DiffView, EntryMetadata,
     ImageDisplay, PromptInputState, ScrollbackMetadata, SlashCommand, SlashCommandDetector,
     AgentDashboardState, AgentStatus, AppShellConfig, AppShellState, ControlCommand, QueueItem,
     QueueItemStatus, ShellEvent, ShellEventOutcome, StatusRailState, TerminalState,

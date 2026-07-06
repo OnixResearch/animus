@@ -89,7 +89,7 @@ impl ToolCallCard {
 // ---------------------------------------------------------------------------
 /// A single line in a file-edit diff view.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum DiffLine {
+pub enum EditLine {
     /// Context line (unchanged).
     Context(String),
     /// Added line.
@@ -105,14 +105,14 @@ pub struct DiffView {
     /// Editor or tool label.
     source_label: String,
     /// Bounded diff lines.
-    lines: Vec<DiffLine>,
+    lines: Vec<EditLine>,
     /// Whether the diff is collapsed.
     collapsed: bool,
 }
 impl DiffView {
     /// Builds a diff view from a source label and diff lines.
     #[must_use]
-    pub fn new(source_label: &str, lines: Vec<DiffLine>) -> Self {
+    pub fn new(source_label: &str, lines: Vec<EditLine>) -> Self {
         Self {
             source_label: String::from(source_label),
             lines,
@@ -126,7 +126,7 @@ impl DiffView {
     }
     /// Returns the diff lines.
     #[must_use]
-    pub fn lines(&self) -> &[DiffLine] {
+    pub fn lines(&self) -> &[EditLine] {
         self.lines.as_slice()
     }
     /// Toggles collapsed state.
@@ -241,7 +241,9 @@ impl Default for ToolPanelState {
 #[must_use]
 pub fn render_tool_panel_snapshot(panel: &ToolPanelState) -> String {
     const MAX_RENDER_LINES: usize = 512;
-    assert!(!panel.has_pending_approval() || !panel.approval_choices().is_empty());
+    if panel.has_pending_approval() {
+        assert!(!panel.approval_choices().is_empty());
+    }
     let mut lines: Vec<String> = Vec::with_capacity(128);
     let mut line_count: usize = 0;
     // Tool cards
@@ -272,9 +274,9 @@ pub fn render_tool_panel_snapshot(panel: &ToolPanelState) -> String {
         for line in diff.lines() {
             if line_count >= MAX_RENDER_LINES { break; }
             match line {
-                DiffLine::Context(text) => { lines.push(format!("  {text}")); line_count += 1; }
-                DiffLine::Added(text) => { lines.push(format!("+ {text}")); line_count += 1; }
-                DiffLine::Removed(text) => { lines.push(format!("- {text}")); line_count += 1; }
+                EditLine::Context(text) => { lines.push(format!("  {text}")); line_count += 1; }
+                EditLine::Added(text) => { lines.push(format!("+ {text}")); line_count += 1; }
+                EditLine::Removed(text) => { lines.push(format!("- {text}")); line_count += 1; }
             }
         }
     }

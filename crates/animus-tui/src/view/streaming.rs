@@ -88,6 +88,7 @@ const EVICTED_LABEL: &str = ", evicted: ";
 #[must_use]
 pub fn render_streaming_snapshot(model: &super::ConversationRenderModel) -> String {
     assert!(model.window_size() > 0);
+    assert!(model.total_entry_count() >= model.transcript().len() as u64);
     let conversation_part = super::render_conversation_snapshot(model);
     let mut overlay_lines: Vec<String> = Vec::new();
 

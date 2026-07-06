@@ -2,8 +2,8 @@
 // Included from view.rs inside `mod tool_panel_tests { use super::*; include!(...); }`
 
 /// Helper: build a valid tool request.
-fn tool_req(name: &str, input: &str) -> animus_adapters::ToolRequest {
-    animus_adapters::ToolRequest::new(name, input)
+fn tool_req(tool_name: &str, tool_input: &str) -> animus_adapters::ToolRequest {
+    animus_adapters::ToolRequest::new(tool_name, tool_input)
         .expect("request should validate")
 }
 
@@ -59,9 +59,9 @@ fn diff_view_renders_lines() {
     let diff = DiffView::new(
         "editor",
         vec![
-            DiffLine::Context(String::from("line 1")),
-            DiffLine::Added(String::from("new line")),
-            DiffLine::Removed(String::from("old line")),
+            EditLine::Context(String::from("line 1")),
+            EditLine::Added(String::from("new line")),
+            EditLine::Removed(String::from("old line")),
         ],
     );
     assert_eq!(diff.source_label(), "editor");
