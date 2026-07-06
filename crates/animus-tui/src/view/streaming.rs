@@ -93,22 +93,17 @@ const EVICTED_LABEL: &str = ", evicted: ";
 /// of the streaming state without Ratatui dependencies.
 #[must_use]
 pub fn render_streaming_snapshot(model: &super::ConversationRenderModel) -> String {
-    // Start with the conversation snapshot (visible entries)
     let conversation_part = super::render_conversation_snapshot(model);
 
-    // Build pending/scrollback overlay lines
     let mut overlay_lines: Vec<String> = Vec::new();
 
-    // Pending content block status
     if let Some(pending) = model.pending_text() {
         let content = if pending.len() > 80 {
             format!("{}...", &pending[..80])
         } else {
             pending.clone()
         };
-        overlay_lines.push(format!(
-            "{PENDING_TEXT_LABEL}{content}{PENDING_SUFFIX}"
-        ));
+        overlay_lines.push(format!("{PENDING_TEXT_LABEL}{content}{PENDING_SUFFIX}"));
     }
 
     if let Some(pending) = model.pending_thinking() {
@@ -117,12 +112,9 @@ pub fn render_streaming_snapshot(model: &super::ConversationRenderModel) -> Stri
         } else {
             pending.clone()
         };
-        overlay_lines.push(format!(
-            "{PENDING_THINKING_LABEL}{content}{PENDING_SUFFIX}"
-        ));
+        overlay_lines.push(format!("{PENDING_THINKING_LABEL}{content}{PENDING_SUFFIX}"));
     }
 
-    // Scrollback metadata
     overlay_lines.push(format!(
         "{TOTAL_ENTRIES_LABEL}{}{EVICTED_LABEL}{}]",
         model.total_entry_count(),
@@ -141,8 +133,6 @@ pub fn render_streaming_snapshot(model: &super::ConversationRenderModel) -> Stri
 // ---------------------------------------------------------------------------
 
 /// Bounded scrollback metadata for the visible window.
-///
-/// Carries safe counts and optional hashes for evicted entries.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ScrollbackMetadata {
     /// Number of entries currently visible in the window.
@@ -185,8 +175,15 @@ impl ScrollbackMetadata {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::view::ConversationRenderModel;
+    use super::{
+        ConversationRenderModel, ImageDisplay, ScrollbackMetadata, MAX_IMAGE_DESCRIPTION_CHARS,
+        VALID_CONTENT_HASH, render_conversation_snapshot, render_streaming_snapshot,
+    };
+    use animus_adapters::{
+        ModelImagePayloadHandle, ModelImagePayloadHandleDraft, ModelImagePayloadHandleKind,
+        ModelStreamCallId, ModelStreamFrame, ModelStreamFrameDraft, ModelStreamFrameKind,
+        ModelStreamVisibility, ModelResponse,
+    };
 
     // -----------------------------------------------------------------------
     // Image display tests
@@ -195,33 +192,29 @@ mod tests {
     #[test]
     fn image_display_from_handle_bounds_description() {
         let long_desc = "a".repeat(512);
-        let handle = animus_adapters::ModelImagePayloadHandle::from_draft(
-            animus_adapters::ModelImagePayloadHandleDraft {
-                kind: animus_adapters::ModelImagePayloadHandleKind::ProviderFileId,
-                safe_handle: "safe_abc",
-                content_hash: VALID_CONTENT_HASH,
-                media_type: "image/png",
-            },
-        )
+        let handle = ModelImagePayloadHandle::from_draft(ModelImagePayloadHandleDraft {
+            kind: ModelImagePayloadHandleKind::ProviderFileId,
+            safe_handle: "safe_abc",
+            content_hash: VALID_CONTENT_HASH,
+            media_type: "image/png",
+        })
         .expect("handle should validate");
         let display = ImageDisplay::from_handle(&handle, Some(&long_desc), "fallback");
         assert_eq!(
             display.description().len(),
             usize::try_from(MAX_IMAGE_DESCRIPTION_CHARS).unwrap_or(256)
         );
-        assert!(display.description().len() < long_desc.len()); // truncated
+        assert!(display.description().len() < long_desc.len());
     }
 
     #[test]
     fn image_display_without_description_uses_fallback() {
-        let handle = animus_adapters::ModelImagePayloadHandle::from_draft(
-            animus_adapters::ModelImagePayloadHandleDraft {
-                kind: animus_adapters::ModelImagePayloadHandleKind::ProviderFileId,
-                safe_handle: "safe_abc",
-                content_hash: VALID_CONTENT_HASH,
-                media_type: "image/png",
-            },
-        )
+        let handle = ModelImagePayloadHandle::from_draft(ModelImagePayloadHandleDraft {
+            kind: ModelImagePayloadHandleKind::ProviderFileId,
+            safe_handle: "safe_abc",
+            content_hash: VALID_CONTENT_HASH,
+            media_type: "image/png",
+        })
         .expect("handle should validate");
         let display = ImageDisplay::from_handle(&handle, None, "default image");
         assert_eq!(display.description(), "default image");
@@ -230,30 +223,25 @@ mod tests {
 
     #[test]
     fn image_display_rejects_raw_provider_bytes() {
-        let handle = animus_adapters::ModelImagePayloadHandle::from_draft(
-            animus_adapters::ModelImagePayloadHandleDraft {
-                kind: animus_adapters::ModelImagePayloadHandleKind::ProviderFileId,
-                safe_handle: "safe_abc",
-                content_hash: VALID_CONTENT_HASH,
-                media_type: "image/png",
-            },
-        )
+        let handle = ModelImagePayloadHandle::from_draft(ModelImagePayloadHandleDraft {
+            kind: ModelImagePayloadHandleKind::ProviderFileId,
+            safe_handle: "safe_abc",
+            content_hash: VALID_CONTENT_HASH,
+            media_type: "image/png",
+        })
         .expect("handle should validate");
         let display = ImageDisplay::from_handle(&handle, None, "image");
-        // The display should not contain the raw provider handle value
         assert!(!display.description().contains("safe_abc"), "safe handle leaked");
     }
 
     #[test]
     fn image_display_stable_media_type_from_enum() {
-        let handle = animus_adapters::ModelImagePayloadHandle::from_draft(
-            animus_adapters::ModelImagePayloadHandleDraft {
-                kind: animus_adapters::ModelImagePayloadHandleKind::ProviderFileId,
-                safe_handle: "safe_abc",
-                content_hash: VALID_CONTENT_HASH,
-                media_type: "image/jpeg",
-            },
-        )
+        let handle = ModelImagePayloadHandle::from_draft(ModelImagePayloadHandleDraft {
+            kind: ModelImagePayloadHandleKind::ProviderFileId,
+            safe_handle: "safe_abc",
+            content_hash: VALID_CONTENT_HASH,
+            media_type: "image/jpeg",
+        })
         .expect("handle should validate");
         let display = ImageDisplay::from_handle(&handle, None, "image");
         assert_eq!(display.media_type(), "image/jpeg");
@@ -275,28 +263,23 @@ mod tests {
     #[test]
     fn streaming_snapshot_shows_pending_text_when_buffering() {
         let model = ConversationRenderModel::new();
-        let call_id = animus_adapters::ModelStreamCallId::new("call-pending").unwrap();
-        let frame = animus_adapters::ModelStreamFrame::from_draft(
-            animus_adapters::ModelStreamFrameDraft {
-                call_id: call_id.as_str(),
-                order: 1,
-                kind: animus_adapters::ModelStreamFrameKind::ContentDelta,
-                body: Some("accumulating content..."),
-                tool_call_id: None,
-                usage: None,
-                visibility: animus_adapters::ModelStreamVisibility::AssistantVisible,
-            },
-        )
+        let call_id = ModelStreamCallId::new("call-pending").unwrap();
+        let frame = ModelStreamFrame::from_draft(ModelStreamFrameDraft {
+            call_id: call_id.as_str(),
+            order: 1,
+            kind: ModelStreamFrameKind::ContentDelta,
+            body: Some("accumulating content..."),
+            tool_call_id: None,
+            usage: None,
+            visibility: ModelStreamVisibility::AssistantVisible,
+        })
         .expect("frame should validate");
         let mut model_with_frame = model.clone();
         model_with_frame.apply_runtime_event(&animus_runtime::RuntimeEvent::ModelStreamFrame {
             frame,
         });
         let snapshot = render_streaming_snapshot(&model_with_frame);
-        assert!(
-            snapshot.contains("[pending text:"),
-            "pending text should appear"
-        );
+        assert!(snapshot.contains("[pending text:"), "pending text should appear");
     }
 
     #[test]
@@ -305,52 +288,43 @@ mod tests {
         for i in 0..5 {
             let content = format!("Message {i}");
             model.apply_runtime_event(&animus_runtime::RuntimeEvent::ModelResponded {
-                response: animus_adapters::ModelResponse::new(&content).unwrap(),
+                response: ModelResponse::new(&content).unwrap(),
             });
         }
         let snapshot = render_streaming_snapshot(&model);
         assert!(snapshot.contains("total entries: 5, evicted: 3"));
-        assert_eq!(model.transcript().len(), 2); // window of 2
+        assert_eq!(model.transcript().len(), 2);
     }
 
     #[test]
     fn streaming_snapshot_after_stream_shows_accumulated_content() {
-        let call_id = animus_adapters::ModelStreamCallId::new("call-acc").unwrap();
+        let call_id = ModelStreamCallId::new("call-acc").unwrap();
         let mut model = ConversationRenderModel::new();
 
-        // Start stream
         model.apply_runtime_event(&animus_runtime::RuntimeEvent::ModelStreamStarted {
             call_id: call_id.clone(),
         });
 
-        // Content deltas (bodies are .trim()ed by normalized_adapter_field)
         for (i, part) in ["Hello ", "world, ", "this is ", "streaming!"].iter().enumerate() {
-            let frame = animus_adapters::ModelStreamFrame::from_draft(
-                animus_adapters::ModelStreamFrameDraft {
-                    call_id: call_id.as_str(),
-                    order: (i + 1) as u64,
-                    kind: animus_adapters::ModelStreamFrameKind::ContentDelta,
-                    body: Some(part),
-                    tool_call_id: None,
-                    usage: None,
-                    visibility: animus_adapters::ModelStreamVisibility::AssistantVisible,
-                },
-            )
+            let frame = ModelStreamFrame::from_draft(ModelStreamFrameDraft {
+                call_id: call_id.as_str(),
+                order: i.saturating_add(1) as u64,
+                kind: ModelStreamFrameKind::ContentDelta,
+                body: Some(part),
+                tool_call_id: None,
+                usage: None,
+                visibility: ModelStreamVisibility::AssistantVisible,
+            })
             .expect("frame should validate");
             model.apply_runtime_event(&animus_runtime::RuntimeEvent::ModelStreamFrame { frame });
         }
 
-        // Before flush: pending text is visible
         let before_snapshot = render_streaming_snapshot(&model);
-        assert!(
-            before_snapshot.contains("[pending text:"),
-            "pending text before flush: {before_snapshot}"
-        );
+        assert!(before_snapshot.contains("[pending text:"), "pending text before flush");
 
-        // End stream — flushes pending
         model.apply_runtime_event(&animus_runtime::RuntimeEvent::ModelStreamEnded {
             call_id,
-            status: animus_adapters::ModelStreamFrameKind::Finish,
+            status: ModelStreamFrameKind::Finish,
         });
 
         let after_snapshot = render_streaming_snapshot(&model);
@@ -367,37 +341,29 @@ mod tests {
     #[test]
     fn orphan_content_delta_does_not_panic() {
         let mut model = ConversationRenderModel::new();
-        let frame = animus_adapters::ModelStreamFrame::from_draft(
-            animus_adapters::ModelStreamFrameDraft {
-                call_id: "orphan-call",
-                order: 1,
-                kind: animus_adapters::ModelStreamFrameKind::ContentDelta,
-                body: Some("orphaned delta"),
-                tool_call_id: None,
-                usage: None,
-                visibility: animus_adapters::ModelStreamVisibility::AssistantVisible,
-            },
-        )
+        let frame = ModelStreamFrame::from_draft(ModelStreamFrameDraft {
+            call_id: "orphan-call",
+            order: 1,
+            kind: ModelStreamFrameKind::ContentDelta,
+            body: Some("orphaned delta"),
+            tool_call_id: None,
+            usage: None,
+            visibility: ModelStreamVisibility::AssistantVisible,
+        })
         .expect("frame should validate");
         model.apply_runtime_event(&animus_runtime::RuntimeEvent::ModelStreamFrame { frame });
-        // No panic = success; orphan delta just stays pending
         let snapshot = render_streaming_snapshot(&model);
-        assert!(
-            snapshot.contains("(empty transcript)") || snapshot.contains("total entries: 0"),
-            "orphan delta should not corrupt: {snapshot}"
-        );
+        assert!(snapshot.contains("total entries: 0") || snapshot.contains("(empty transcript)"));
     }
 
     #[test]
     fn out_of_order_finish_does_not_corrupt_transcript() {
         let mut model = ConversationRenderModel::new();
-        // Finish frame with no preceding content
         model.apply_runtime_event(&animus_runtime::RuntimeEvent::ModelStreamEnded {
-            call_id: animus_adapters::ModelStreamCallId::new("empty-finish").unwrap(),
-            status: animus_adapters::ModelStreamFrameKind::Finish,
+            call_id: ModelStreamCallId::new("empty-finish").unwrap(),
+            status: ModelStreamFrameKind::Finish,
         });
-        // No panic = success, transcript should be empty
-        let snapshot = super::render_conversation_snapshot(&model);
+        let snapshot = render_conversation_snapshot(&model);
         assert!(snapshot.contains("(empty transcript)"));
     }
 
@@ -421,21 +387,21 @@ mod tests {
         for i in 0..5 {
             let content = format!("Message {i}");
             model.apply_runtime_event(&animus_runtime::RuntimeEvent::ModelResponded {
-                response: animus_adapters::ModelResponse::new(&content).unwrap(),
+                response: ModelResponse::new(&content).unwrap(),
             });
         }
         let meta = ScrollbackMetadata::from_model(&model);
         assert_eq!(meta.visible_count, 2);
         assert_eq!(meta.evicted_count, 3);
         assert!(meta.has_evicted());
-        assert!((meta.fill_ratio() - 1.0).abs() < f64::EPSILON); // window is full
+        assert!((meta.fill_ratio() - 1.0).abs() < f64::EPSILON);
     }
 
     #[test]
     fn scrollback_metadata_fill_ratio_partial() {
         let mut model = ConversationRenderModel::with_window_size(5);
         model.apply_runtime_event(&animus_runtime::RuntimeEvent::ModelResponded {
-            response: animus_adapters::ModelResponse::new("single").unwrap(),
+            response: ModelResponse::new("single").unwrap(),
         });
         let meta = ScrollbackMetadata::from_model(&model);
         assert_eq!(meta.visible_count, 1);
