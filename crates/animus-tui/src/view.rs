@@ -52,6 +52,12 @@ mod status_rail_tests {
 include!("view/control.rs");
 include!("view/shell.rs");
 
+#[cfg(test)]
+mod shell_tests {
+    use super::*;
+    include!("view/shelltest.rs");
+}
+
 #[cfg(feature = "rats-widgets")]
 include!("view/keymap.rs");
 
