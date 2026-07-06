@@ -81,8 +81,13 @@ const EVICTED_LABEL: &str = ", evicted: ";
 /// Renders a deterministic text snapshot of the conversation model's streaming
 /// state, including pending accumulated content and scrollback metadata.
 /// No terminal backend is required.
+///
+/// # Panics
+///
+/// Panics when `model.window_size()` is zero.
 #[must_use]
 pub fn render_streaming_snapshot(model: &super::ConversationRenderModel) -> String {
+    assert!(model.window_size() > 0);
     let conversation_part = super::render_conversation_snapshot(model);
     let mut overlay_lines: Vec<String> = Vec::new();
 

@@ -270,9 +270,14 @@ impl Default for ToolPanelState {
 /// Renders a deterministic text snapshot of the tool panel state.
 ///
 /// No terminal backend required.
+///
+/// # Panics
+///
+/// Panics when `panel` has a pending approval with zero choices.
 #[must_use]
 pub fn render_tool_panel_snapshot(panel: &ToolPanelState) -> String {
     const MAX_RENDER_LINES: usize = 512;
+    assert!(!panel.has_pending_approval() || !panel.approval_choices().is_empty());
     let mut lines: Vec<String> = Vec::with_capacity(128);
     let mut line_count: usize = 0;
 
