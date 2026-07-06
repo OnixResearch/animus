@@ -2,6 +2,8 @@
 // layout DTOs. Layout types stay in the TUI crate; mismatches fail closed
 // with a typed diagnostic.
 
+use animus_adapters::LayoutAxis;
+
 /// Typed layout diagnostic for mismatch/failure cases.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum LayoutDiagnostic {
@@ -36,9 +38,9 @@ pub struct PaneView {
     /// Optional pane label.
     label: Option<String>,
     /// Whether this pane has host focus.
-    focused: bool,
+    is_focused: bool,
     /// Whether this pane is zoomed.
-    zoomed: bool,
+    is_zoomed: bool,
 }
 
 impl PaneView {
@@ -47,14 +49,14 @@ impl PaneView {
     pub fn new(
         node_id: &str,
         label: Option<String>,
-        focused: bool,
-        zoomed: bool,
+        is_focused: bool,
+        is_zoomed: bool,
     ) -> Self {
         Self {
             node_id: String::from(node_id),
             label,
-            focused,
-            zoomed,
+            is_focused,
+            is_zoomed,
         }
     }
 
@@ -72,14 +74,14 @@ impl PaneView {
 
     /// Returns whether this pane has host focus.
     #[must_use]
-    pub const fn focused(&self) -> bool {
-        self.focused
+    pub const fn is_focused(&self) -> bool {
+        self.is_focused
     }
 
     /// Returns whether this pane is zoomed.
     #[must_use]
-    pub const fn zoomed(&self) -> bool {
-        self.zoomed
+    pub const fn is_zoomed(&self) -> bool {
+        self.is_zoomed
     }
 }
 
@@ -93,7 +95,7 @@ pub enum LayoutTree {
         /// Split node identity.
         node_id: String,
         /// Split axis.
-        axis: animus_adapters::LayoutAxis,
+        axis: LayoutAxis,
         /// Child layout trees.
         children: Vec<LayoutTree>,
     },
@@ -114,7 +116,7 @@ impl LayoutTree {
     pub fn focused_pane_id(&self) -> Option<&str> {
         match self {
             Self::Pane(pane) => {
-                if pane.focused() {
+                if pane.is_focused() {
                     Some(pane.node_id())
                 } else {
                     None
@@ -156,7 +158,6 @@ fn resolve_node(
     seen_ids: &mut Vec<String>,
 ) -> Result<LayoutTree, LayoutDiagnostic> {
     let node_id = node.node_id();
-
     if seen_ids.contains(&String::from(node_id)) {
         return Err(LayoutDiagnostic::DuplicateNodeId(String::from(node_id)));
     }
@@ -166,8 +167,8 @@ fn resolve_node(
         animus_adapters::LayoutNode::Pane {
             node_id,
             label,
-            focused,
-            zoomed,
+            focused: is_focused,
+            zoomed: is_zoomed,
             ..
         } => {
             let pane_in_topology = topology.selectors().iter().any(
@@ -184,8 +185,8 @@ fn resolve_node(
             Ok(LayoutTree::Pane(PaneView::new(
                 node_id,
                 label.clone(),
-                *focused,
-                *zoomed,
+                *is_focused,
+                *is_zoomed,
             )))
         }
         animus_adapters::LayoutNode::Split {
@@ -215,19 +216,23 @@ fn resolve_node(
 #[must_use]
 pub fn render_layout_tree_snapshot(tree: &LayoutTree) -> String {
     let mut lines: Vec<String> = Vec::new();
-    debug_assert!(tree.node_id().len() > 0, "empty node id");
+    let node_id = tree.node_id();
+    debug_assert!(!node_id.is_empty(), "empty node id");
     render_tree_iterative(tree, &mut lines);
     lines.join("\n")
 }
 
 /// Iterative renderer that avoids recursion.
 fn render_tree_iterative<'a>(tree: &'a LayoutTree, lines: &mut Vec<String>) {
+    debug_assert!(tree.node_id().len() > 0, "empty tree");
+
     struct StackEntry<'a> {
         item: &'a LayoutTree,
         depth: usize,
     }
 
-    let mut stack: Vec<StackEntry<'_>> = Vec::new();
+    // Pre-allocate with a reasonable initial capacity.
+    let mut stack: Vec<StackEntry<'_>> = Vec::with_capacity(16);
     stack.push(StackEntry {
         item: tree,
         depth: 0,
@@ -237,8 +242,8 @@ fn render_tree_iterative<'a>(tree: &'a LayoutTree, lines: &mut Vec<String>) {
         let indent = "  ".repeat(entry.depth);
         match entry.item {
             LayoutTree::Pane(pane) => {
-                let focus_mark = if pane.focused() { " [focused]" } else { "" };
-                let zoom_mark = if pane.zoomed() { " [zoomed]" } else { "" };
+                let focus_mark = if pane.is_focused() { " [focused]" } else { "" };
+                let zoom_mark = if pane.is_zoomed() { " [zoomed]" } else { "" };
                 lines.push(format!(
                     "{indent}pane: {}{}{}",
                     pane.node_id(),
@@ -252,8 +257,8 @@ fn render_tree_iterative<'a>(tree: &'a LayoutTree, lines: &mut Vec<String>) {
                 children,
             } => {
                 let axis_label = match axis {
-                    animus_adapters::LayoutAxis::Horizontal => "horizontal",
-                    animus_adapters::LayoutAxis::Vertical => "vertical",
+                    LayoutAxis::Horizontal => "horizontal",
+                    LayoutAxis::Vertical => "vertical",
                 };
                 lines.push(format!("{indent}split: {node_id} [{axis_label}]"));
                 for child in children.iter().rev() {
@@ -268,19 +273,19 @@ fn render_tree_iterative<'a>(tree: &'a LayoutTree, lines: &mut Vec<String>) {
 }
 
 #[cfg(test)]
-#[allow(non_trait_imports)]
+#[allow(unknown_lints, non_trait_imports)]
 mod layout_tests {
     use super::*;
     use animus_adapters::{
         HostControlError, HostSelector, HostSelectorDraft,
         HostTopologySnapshot, HostTopologySnapshotDraft,
-        LayoutApplyRequest, LayoutAxis, LayoutNode, LayoutPaneDraft,
+        LayoutApplyRequest, LayoutNode, LayoutPaneDraft,
     };
 
-    fn make_selector(host: &str, resource: &str, revision: u64) -> HostSelector {
+    fn make_selector(host_label: &str, resource_label: &str, revision: u64) -> HostSelector {
         HostSelector::validate(HostSelectorDraft {
-            host_id: host,
-            resource_id: resource,
+            host_id: host_label,
+            resource_id: resource_label,
             kind: "pane",
             lifetime: "live",
             revision,
@@ -356,6 +361,8 @@ mod layout_tests {
         if let LayoutTree::Split { axis, children, .. } = &tree {
             assert_eq!(*axis, LayoutAxis::Horizontal);
             assert_eq!(children.len(), 2);
+            assert_eq!(children[0].node_id(), "pane-a");
+            assert_eq!(children[1].node_id(), "pane-b");
         } else {
             panic!("expected split tree");
         }
@@ -409,7 +416,7 @@ mod layout_tests {
     #[test]
     fn empty_split_fails_closed() {
         let err = LayoutNode::split("empty-root", "horizontal", vec![])
-            .expect_err("empty split should be rejected by LayoutNode");
+            .expect_err("empty split should be rejected");
         assert_eq!(err, HostControlError::InvalidLayout);
     }
 
@@ -419,11 +426,11 @@ mod layout_tests {
         let topology = make_topology(&[sel]);
         let pane = make_pane("pane-dupe");
         let split = LayoutNode::split("root", "vertical", vec![pane.clone(), pane])
-            .expect("LayoutNode allows duplicate node ids; resolve_layout rejects them");
+            .expect("LayoutNode allows duplicates; resolve_layout rejects them");
         let request = LayoutApplyRequest::new(split, false)
             .expect("valid request");
         let err = resolve_layout(&request, &topology)
-            .expect_err("duplicate node id should fail at resolve_layout");
+            .expect_err("duplicate id should fail at resolve_layout");
         assert_eq!(
             err,
             LayoutDiagnostic::DuplicateNodeId(
@@ -437,7 +444,7 @@ mod layout_tests {
     fn preserve_live_processes_request_fails_closed() {
         let pane = make_pane("pane-1");
         let err = LayoutApplyRequest::new(pane, true)
-            .expect_err("preserve_live_processes should be rejected");
+            .expect_err("preserve_live_processes rejected");
         assert_eq!(err, HostControlError::InvalidLayout);
     }
 

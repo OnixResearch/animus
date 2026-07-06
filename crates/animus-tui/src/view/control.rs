@@ -4,6 +4,7 @@
 // All state is projected from accepted DTOs; controls issue typed commands
 // to the runtime/host without holding ambient authority.
 
+#[allow(unknown_lints, non_trait_imports)]
 use animus_adapters::{
     HostEvent, HostEventKind, HostSelector, HostSemanticStatus,
     HostTopologySnapshot,
@@ -361,7 +362,8 @@ fn find_selector_in_snapshot(
 /// Renders a deterministic text snapshot of the agent dashboard.
 #[must_use]
 pub fn render_agent_dashboard_snapshot(dashboard: &AgentDashboardState) -> String {
-    let mut lines: Vec<String> = Vec::new();
+    let mut lines: Vec<String> = Vec::with_capacity(32);
+    debug_assert!(dashboard.status().as_str().len() > 0, "empty status");
     lines.push(format!("status: {}", dashboard.status().as_str()));
     if dashboard.can_start() {
         lines.push(String::from("control: start"));
@@ -417,6 +419,7 @@ pub fn render_agent_dashboard_snapshot(dashboard: &AgentDashboardState) -> Strin
 }
 
 #[cfg(test)]
+#[allow(unknown_lints, non_trait_imports)]
 mod agent_control_tests {
     use super::*;
     use animus_adapters::{
@@ -563,10 +566,10 @@ mod agent_control_tests {
     // Topology tests
     // -----------------------------------------------------------------------
 
-    fn make_selector(host_id: &str, resource_id: &str, revision: u64) -> HostSelector {
+    fn make_selector(host: &str, resource: &str, revision: u64) -> HostSelector {
         HostSelector::validate(HostSelectorDraft {
-            host_id,
-            resource_id,
+            host_id: host,
+            resource_id: resource,
             kind: "agent",
             lifetime: "live",
             revision,
