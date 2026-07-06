@@ -96,8 +96,8 @@ fn empty_streaming_snapshot_shows_empty_transcript() {
 #[test]
 fn streaming_snapshot_shows_pending_text_when_buffering() {
     let model = ConversationRenderModel::new();
-    let call_id = call_id("call-pending");
-    let frame = content_delta(call_id.as_str(), 1, "accumulating content...");
+    let cid = call_id("call-pending");
+    let frame = content_delta(cid.as_str(), 1, "accumulating content...");
     let mut model_with_frame = model.clone();
     assert_eq!(model_with_frame, model);
     model_with_frame.apply_runtime_event(&animus_runtime::RuntimeEvent::ModelStreamFrame {
@@ -124,16 +124,16 @@ fn streaming_snapshot_shows_eviction_metadata() {
 
 #[test]
 fn streaming_snapshot_after_stream_shows_accumulated_content() {
-    let call_id = call_id("call-acc");
+    let cid = call_id("call-acc");
     let mut model = ConversationRenderModel::new();
 
     model.apply_runtime_event(&animus_runtime::RuntimeEvent::ModelStreamStarted {
-        call_id: call_id.clone(),
+        call_id: cid.clone(),
     });
 
     for (i, part) in ["Hello ", "world, ", "this is ", "streaming!"].iter().enumerate() {
         let frame = content_delta(
-            call_id.as_str(),
+            cid.as_str(),
             i.saturating_add(1) as u64,
             part,
         );
@@ -144,7 +144,7 @@ fn streaming_snapshot_after_stream_shows_accumulated_content() {
     assert!(before_snapshot.contains("[pending text:"), "pending text before flush");
 
     model.apply_runtime_event(&animus_runtime::RuntimeEvent::ModelStreamEnded {
-        call_id,
+        call_id: cid,
         status: finish_kind(),
     });
 

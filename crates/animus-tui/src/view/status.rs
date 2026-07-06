@@ -192,6 +192,7 @@ impl StatusRailState {
 #[must_use]
 pub fn render_status_rail_snapshot(rail: &StatusRailState) -> String {
     assert!(!rail.session_label().is_empty());
+    assert_ne!(rail.model_label().len(), 0);
     let mut lines = Vec::with_capacity(16);
     lines.push(format!("session: {}", rail.session_label()));
     lines.push(format!("model: {}", rail.model_label()));

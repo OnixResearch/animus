@@ -1,8 +1,8 @@
 // Tool panel tests — separated to reduce file length.
 // Included from view.rs inside `mod tool_panel_tests { use super::*; include!(...); }`
 
-fn tool_req(tname: &str, input_text: &str) -> animus_adapters::ToolRequest {
-    animus_adapters::ToolRequest::new(tname, input_text)
+fn tool_req(tname: &str, tinput: &str) -> animus_adapters::ToolRequest {
+    animus_adapters::ToolRequest::new(tname, tinput)
         .expect("request should validate")
 }
 
@@ -58,9 +58,9 @@ fn diff_view_renders_lines() {
     let diff = DiffView::new(
         "editor",
         vec![
-            EditLine::Context(String::from("line 1")),
-            EditLine::Added(String::from("new line")),
-            EditLine::Removed(String::from("old line")),
+            FileLine::Context(String::from("line 1")),
+            FileLine::Added(String::from("new line")),
+            FileLine::Removed(String::from("old line")),
         ],
     );
     assert_eq!(diff.source_label(), "editor");

@@ -1,5 +1,5 @@
 // Tool panel state and snapshot renderer.
-// Tool cards, EditLine, DiffView moved to toolcards.rs.
+// Tool cards, FileLine, DiffView moved to toolcards.rs.
 
 const APPROVAL_PROMPT_LABEL: &str = "-- approval needed --";
 
@@ -140,9 +140,9 @@ pub fn render_tool_panel_snapshot(panel: &ToolPanelState) -> String {
         for line in diff.lines() {
             if line_count >= MAX_RENDER_LINES { break; }
             match line {
-                EditLine::Context(text) => { lines.push(format!("  {text}")); line_count += 1; }
-                EditLine::Added(text) => { lines.push(format!("+ {text}")); line_count += 1; }
-                EditLine::Removed(text) => { lines.push(format!("- {text}")); line_count += 1; }
+                FileLine::Context(text) => { lines.push(format!("  {text}")); line_count += 1; }
+                FileLine::Added(text) => { lines.push(format!("+ {text}")); line_count += 1; }
+                FileLine::Removed(text) => { lines.push(format!("- {text}")); line_count += 1; }
             }
         }
     }
