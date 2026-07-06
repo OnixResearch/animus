@@ -107,6 +107,7 @@ impl Default for ToolPanelState {
 #[must_use]
 pub fn render_tool_panel_snapshot(panel: &ToolPanelState) -> String {
     const MAX_RENDER_LINES: usize = 512;
+    assert!(panel.active_cards().len() < 1000);
     if panel.has_pending_approval() {
         assert!(!panel.approval_choices().is_empty());
     }

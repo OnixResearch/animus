@@ -42,6 +42,13 @@ mod tool_panel_tests {
 }
 
 include!("view/status.rs");
+
+#[cfg(test)]
+mod status_rail_tests {
+    use super::*;
+    include!("view/statustest.rs");
+}
+
 include!("view/control.rs");
 include!("view/shell.rs");
 
