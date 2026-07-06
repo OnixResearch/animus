@@ -47,7 +47,7 @@ pub struct AppShellState {
     /// Terminal lifecycle state.
     terminal: TerminalState,
     /// Conversation render model state index.
-    transcript_entry_count: usize,
+    transcript_entry_count: u64,
     /// Prompt input content.
     prompt_input: String,
     /// Agent dashboard status label.
@@ -87,13 +87,13 @@ impl AppShellState {
     }
 
     /// Sets the transcript entry count from the conversation model.
-    pub fn set_transcript_entry_count(&mut self, count: usize) {
+    pub fn set_transcript_entry_count(&mut self, count: u64) {
         self.transcript_entry_count = count;
     }
 
     /// Returns the transcript entry count.
     #[must_use]
-    pub const fn transcript_entry_count(&self) -> usize {
+    pub const fn transcript_entry_count(&self) -> u64 {
         self.transcript_entry_count
     }
 
@@ -322,7 +322,7 @@ mod shell_tests {
         state.set_session_label("work");
         state.set_agent_status("streaming");
         state.set_prompt_input("What is Rust?");
-        state.set_transcript_entry_count(42);
+        state.set_transcript_entry_count(42_u64);
         let snapshot = render_app_shell_snapshot(&state);
         assert!(snapshot.contains("terminal: app ready"));
         assert!(snapshot.contains("session: work"));
