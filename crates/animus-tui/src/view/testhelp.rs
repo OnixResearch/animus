@@ -80,16 +80,16 @@ pub fn idle_rail() -> StatusRailState {
 }
 
 /// Helper: build a valid tool request.
-pub fn tool_req(tname: &str, tvalue: &str) -> animus_adapters::ToolRequest {
+pub fn tool_req(req_name: &str, contents: &str) -> animus_adapters::ToolRequest {
     unwrap_or_abort(
-        animus_adapters::ToolRequest::new(tname, tvalue),
+        animus_adapters::ToolRequest::new(req_name, contents),
         "request should validate",
     )
 }
 
 /// Helper: build a tool call card from name+input.
-pub fn tool_card(cname: &str, cinput: &str) -> ToolCallCard {
-    ToolCallCard::from_request(&tool_req(cname, cinput))
+pub fn tool_card(title: &str, body: &str) -> ToolCallCard {
+    ToolCallCard::from_request(&tool_req(title, body))
 }
 
 /// Helper: build a fresh tool panel state.
