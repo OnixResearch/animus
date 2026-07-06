@@ -248,13 +248,17 @@ pub fn render_app_shell_snapshot(state: &AppShellState) -> String {
 mod shell_tests {
     use super::*;
 
+    fn new_shell() -> AppShellState {
+        AppShellState::new()
+    }
+
     // -----------------------------------------------------------------------
     // App shell state tests
     // -----------------------------------------------------------------------
 
     #[test]
     fn new_shell_is_uninitialized() {
-        let state = AppShellState::new();
+        let state = new_shell();
         assert_eq!(state.terminal_state(), TerminalState::Uninitialized);
         assert!(!state.is_shutdown_requested());
         assert!(state.last_error().is_none());
@@ -262,7 +266,7 @@ mod shell_tests {
 
     #[test]
     fn terminal_state_transitions() {
-        let mut state = AppShellState::new();
+        let mut state = new_shell();
         state.set_terminal_state(TerminalState::Ready);
         assert_eq!(state.terminal_state(), TerminalState::Ready);
         state.set_terminal_state(TerminalState::Failed);
@@ -271,7 +275,7 @@ mod shell_tests {
 
     #[test]
     fn shutdown_request() {
-        let mut state = AppShellState::new();
+        let mut state = new_shell();
         assert!(!state.is_shutdown_requested());
         state.request_shutdown();
         assert!(state.is_shutdown_requested());
@@ -279,7 +283,7 @@ mod shell_tests {
 
     #[test]
     fn prompt_input_tracking() {
-        let mut state = AppShellState::new();
+        let mut state = new_shell();
         assert!(state.prompt_input().is_empty());
         state.set_prompt_input("hello");
         assert_eq!(state.prompt_input(), "hello");
@@ -287,7 +291,7 @@ mod shell_tests {
 
     #[test]
     fn error_recording() {
-        let mut state = AppShellState::new();
+        let mut state = new_shell();
         assert!(state.last_error().is_none());
         state.record_error("something went wrong");
         assert_eq!(state.last_error(), Some("something went wrong"));
@@ -295,7 +299,7 @@ mod shell_tests {
 
     #[test]
     fn agent_and_session_labels() {
-        let mut state = AppShellState::new();
+        let mut state = new_shell();
         state.set_agent_status("streaming");
         state.set_session_label("session-1");
         assert_eq!(state.agent_status(), "streaming");
@@ -308,7 +312,7 @@ mod shell_tests {
 
     #[test]
     fn idle_shell_snapshot() {
-        let state = AppShellState::new();
+        let state = new_shell();
         let snapshot = render_app_shell_snapshot(&state);
         assert!(snapshot.contains("terminal: uninitialized"));
         assert!(snapshot.contains("agent: idle"));
@@ -317,7 +321,7 @@ mod shell_tests {
 
     #[test]
     fn populated_shell_snapshot() {
-        let mut state = AppShellState::new();
+        let mut state = new_shell();
         state.set_terminal_state(TerminalState::Ready);
         state.set_session_label("work");
         state.set_agent_status("streaming");
@@ -337,7 +341,7 @@ mod shell_tests {
 
     #[test]
     fn terminal_setup_failure_records_error() {
-        let mut state = AppShellState::new();
+        let mut state = new_shell();
         state.set_terminal_state(TerminalState::Failed);
         state.record_error("crossterm::enable_raw_mode failed");
         assert_eq!(state.terminal_state(), TerminalState::Failed);
@@ -348,7 +352,7 @@ mod shell_tests {
     #[test]
     fn dropped_event_consumer_does_not_panic() {
         // Simulate a shutdown after terminal failure
-        let mut state = AppShellState::new();
+        let mut state = new_shell();
         state.set_terminal_state(TerminalState::Failed);
         state.record_error("event consumer closed");
         state.request_shutdown();
@@ -360,7 +364,7 @@ mod shell_tests {
 
     #[test]
     fn cancelled_command_channel_does_not_corrupt() {
-        let mut state = AppShellState::new();
+        let mut state = new_shell();
         state.set_terminal_state(TerminalState::Ready);
         state.set_agent_status("busy");
         // Cancel via shutdown
@@ -372,7 +376,7 @@ mod shell_tests {
     #[test]
     fn layout_mismatch_does_not_panic() {
         // Simulate receiving a resize event with extreme values
-        let mut state = AppShellState::new();
+        let mut state = new_shell();
         state.set_terminal_state(TerminalState::Ready);
         // Resize with 0 dimensions shouldn't cause issues
         state.record_error("layout: zero-area terminal");
