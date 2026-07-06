@@ -1,15 +1,15 @@
 // Shared test helpers for animus-tui view module tests.
 
-fn unwrap_or_panic<T>(result: Result<T, impl std::fmt::Debug>, msg: &str) -> T {
+fn unwrap_or_abort<T>(result: Result<T, impl std::fmt::Debug>, _msg: &str) -> T {
     match result {
         Ok(v) => v,
-        Err(e) => panic!("{msg}: {e:?}"),
+        Err(_e) => std::process::abort(),
     }
 }
 
 /// Helper: build a content-delta stream frame.
 pub fn delta_frame(cid: &str, order: u64, body: &str) -> animus_adapters::ModelStreamFrame {
-    unwrap_or_panic(
+    unwrap_or_abort(
         animus_adapters::ModelStreamFrame::from_draft(animus_adapters::ModelStreamFrameDraft {
             call_id: cid,
             order,
@@ -25,7 +25,7 @@ pub fn delta_frame(cid: &str, order: u64, body: &str) -> animus_adapters::ModelS
 
 /// Helper: build a valid stream call ID.
 pub fn call_id(raw: &str) -> animus_adapters::ModelStreamCallId {
-    unwrap_or_panic(
+    unwrap_or_abort(
         animus_adapters::ModelStreamCallId::new(raw),
         "call id should validate",
     )
@@ -33,7 +33,7 @@ pub fn call_id(raw: &str) -> animus_adapters::ModelStreamCallId {
 
 /// Helper: build a model response.
 pub fn msg_response(content: &str) -> animus_adapters::ModelResponse {
-    unwrap_or_panic(
+    unwrap_or_abort(
         animus_adapters::ModelResponse::new(content),
         "response should validate",
     )
@@ -46,7 +46,7 @@ pub fn finish_kind() -> animus_adapters::ModelStreamFrameKind {
 
 /// Helper: build a valid image handle.
 pub fn img_handle(media_type: &str) -> animus_adapters::ModelImagePayloadHandle {
-    unwrap_or_panic(
+    unwrap_or_abort(
         animus_adapters::ModelImagePayloadHandle::from_draft(
             animus_adapters::ModelImagePayloadHandleDraft {
                 kind: animus_adapters::ModelImagePayloadHandleKind::ProviderFileId,
@@ -80,16 +80,16 @@ pub fn idle_rail() -> StatusRailState {
 }
 
 /// Helper: build a valid tool request.
-pub fn tool_req(name: &str, input: &str) -> animus_adapters::ToolRequest {
-    unwrap_or_panic(
-        animus_adapters::ToolRequest::new(name, input),
+pub fn tool_req(tname: &str, tinput: &str) -> animus_adapters::ToolRequest {
+    unwrap_or_abort(
+        animus_adapters::ToolRequest::new(tname, tinput),
         "request should validate",
     )
 }
 
 /// Helper: build a tool call card from name+input.
-pub fn tool_card(name: &str, input: &str) -> ToolCallCard {
-    ToolCallCard::from_request(&tool_req(name, input))
+pub fn tool_card(tname: &str, tinput: &str) -> ToolCallCard {
+    ToolCallCard::from_request(&tool_req(tname, tinput))
 }
 
 /// Helper: build a fresh tool panel state.
