@@ -37,10 +37,12 @@ pub use runner::{
 pub use view::{
     CompletionCandidate, CompletionMenu, ConversationRenderModel, DiffLine, DiffView, EntryMetadata,
     ImageDisplay, PromptInputState, ScrollbackMetadata, SlashCommand, SlashCommandDetector,
-    AgentDashboardState, AgentStatus, ControlCommand, QueueItem, QueueItemStatus, StatusRailState,
+    AgentDashboardState, AgentStatus, AppShellConfig, AppShellState, ControlCommand, QueueItem,
+    QueueItemStatus, ShellEvent, ShellEventOutcome, StatusRailState, TerminalState,
     ToolCallCard, ToolCardProgress, ToolPanelState, TranscriptEntry,
     TranscriptEntryKind, ToolApprovalPanel, ToolPanel, ToolRenderModel, ToolSessionStatus,
-    render_agent_dashboard_snapshot, render_conversation_snapshot, render_status_rail_snapshot,
+    render_agent_dashboard_snapshot, render_app_shell_snapshot, render_conversation_snapshot,
+    render_status_rail_snapshot,
     render_streaming_snapshot,
     render_text_snapshot, render_tool_panel_snapshot,
 };
