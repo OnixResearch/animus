@@ -38,8 +38,8 @@ impl RouteResult {
     ///
     /// # Errors
     ///
-    /// Returns [`animus_adapters::AdapterContractError`] when output-contract labels are invalid.
-    pub fn new(draft: ResultDraft<'_>) -> Result<Self, animus_adapters::AdapterContractError> {
+    /// Returns [`crate::AdapterContractError`] when output-contract labels are invalid.
+    pub fn new(draft: ResultDraft<'_>) -> Result<Self, crate::AdapterContractError> {
         let output_contract = crate::OutputContract::parse(draft.output_contract)?;
         let fallback_policy = crate::FallbackPolicy::parse(draft.fallback_policy)?;
         let status = result_status(

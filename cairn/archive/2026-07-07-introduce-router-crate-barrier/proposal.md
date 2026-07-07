@@ -8,7 +8,7 @@ Animus already owns a substantial router module inside `animus-adapters::router`
 
 - Add a new `crates/animus-router` workspace crate, `#![no_std]` with `alloc` only, owning the routing decision: recipe/role/output-contract DTOs, signal projection, recipe selection, execution-plan materialization, route-result aggregation, and safe receipt assembly.
 - Move `crates/animus-adapters/src/router/` into `animus-router` and re-export the public surface from `animus-adapters::router` for a transition window so existing dependents compile without churn.
-- Keep `animus-adapters` owning implementation-free model/tool/port contracts and the shared validation helpers the router consumes; `animus-router` depends on `animus-adapters` for those helpers, not the reverse.
+- Keep `animus-adapters` owning implementation-free model/tool/port contracts while `animus-router` owns the router-specific validation helpers; `animus-adapters` depends on `animus-router` only for the transition re-export shim, never for runtime authority.
 - Add the crate to the workspace `Cargo.toml`, root `animus` compatibility facade (gated behind a `router` feature), flake packages, `check-wasm-surface` allowlist, runtime facade inventory, and adapter conformance index.
 - Add a router conformance-index fixture and Nickel policy hook so router recipe/role/bounds contracts stay policy-reviewed.
 

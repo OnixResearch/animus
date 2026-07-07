@@ -60,6 +60,7 @@ name = "animus-adapters"
 version = "0.1.0"
 dependencies = [
  "animus-core",
+ "animus-router",
  "blake3",
 ]
 

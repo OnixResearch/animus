@@ -1,17 +1,15 @@
-const RECIPE_ID_FIELD: animus_adapters::FieldName =
-    animus_adapters::FieldName::new("router_recipe_id");
-const FAMILY_FIELD: animus_adapters::FieldName =
-    animus_adapters::FieldName::new("router_route_family");
-const ROLE_FIELD: animus_adapters::FieldName =
-    animus_adapters::FieldName::new("router_model_role");
-const OUTPUT_FIELD: animus_adapters::FieldName =
-    animus_adapters::FieldName::new("router_output_contract");
+const RECIPE_ID_FIELD: crate::FieldName = crate::FieldName::new("router_recipe_id");
+const FAMILY_FIELD: crate::FieldName = crate::FieldName::new("router_route_family");
+const ROLE_FIELD: crate::FieldName = crate::FieldName::new("router_model_role");
+const OUTPUT_FIELD: crate::FieldName = crate::FieldName::new("router_output_contract");
+
 const FAMILY_SINGLE: &str = "single";
 const FAMILY_CONFIDENCE: &str = "confidence";
 const FAMILY_RATINGS: &str = "ratings";
 const FAMILY_REMOM: &str = "remom";
 const FAMILY_FUSION: &str = "fusion";
 const FAMILY_WORKFLOW: &str = "workflow";
+
 const ROLE_PRIMARY: &str = "primary";
 const ROLE_ESCALATION: &str = "escalation";
 const ROLE_RATER: &str = "rater";
@@ -21,6 +19,7 @@ const ROLE_FINALIZER: &str = "finalizer";
 const ROLE_WORKER: &str = "worker";
 const ROLE_REPAIR: &str = "repair";
 const ROLE_FALLBACK: &str = "fallback";
+
 const CONTRACT_TEXT: &str = "text";
 const CONTRACT_JSON: &str = "json";
 const CONTRACT_TOOL_CALL: &str = "tool_call";
@@ -48,8 +47,8 @@ impl RouteFamily {
     ///
     /// # Errors
     ///
-    /// Returns [`animus_adapters::AdapterContractError`] for empty, malformed, or unknown labels.
-    pub fn parse(value: &str) -> Result<Self, animus_adapters::AdapterContractError> {
+    /// Returns [`crate::AdapterContractError`] for empty, malformed, or unknown labels.
+    pub fn parse(value: &str) -> Result<Self, crate::AdapterContractError> {
         crate::parse_value(FAMILY_FIELD, value, Self::from_normalized)
     }
 
@@ -107,8 +106,8 @@ impl Role {
     ///
     /// # Errors
     ///
-    /// Returns [`animus_adapters::AdapterContractError`] for empty, malformed, or unknown labels.
-    pub fn parse(value: &str) -> Result<Self, animus_adapters::AdapterContractError> {
+    /// Returns [`crate::AdapterContractError`] for empty, malformed, or unknown labels.
+    pub fn parse(value: &str) -> Result<Self, crate::AdapterContractError> {
         crate::parse_value(ROLE_FIELD, value, Self::from_normalized)
     }
 
@@ -162,8 +161,8 @@ impl OutputContract {
     ///
     /// # Errors
     ///
-    /// Returns [`animus_adapters::AdapterContractError`] for empty, malformed, or unknown labels.
-    pub fn parse(value: &str) -> Result<Self, animus_adapters::AdapterContractError> {
+    /// Returns [`crate::AdapterContractError`] for empty, malformed, or unknown labels.
+    pub fn parse(value: &str) -> Result<Self, crate::AdapterContractError> {
         crate::parse_value(OUTPUT_FIELD, value, Self::from_normalized)
     }
 
@@ -207,7 +206,7 @@ impl Recipe {
     /// Returns [`crate::ValidationError`] when the recipe is malformed, has
     /// duplicate roles, unknown labels, missing output contract, or invalid bounds.
     pub fn new(draft: RecipeDraft<'_>) -> Result<Self, crate::ValidationError> {
-        let id = animus_adapters::normalized_adapter_field(RECIPE_ID_FIELD, draft.id)?;
+        let id = crate::normalized_adapter_field(RECIPE_ID_FIELD, draft.id)?;
         let family = RouteFamily::parse(draft.family)?;
         let roles = collect_roles(draft.roles)?;
         let output_contract = OutputContract::parse(draft.output_contract)?;

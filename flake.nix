@@ -316,6 +316,14 @@
             cargo check -p animus --features preserves --locked
           '';
 
+          cargo-router = cargoCheck "animus-cargo-router" [ ] ''
+            cargo check -p animus-router --locked
+          '';
+
+          cargo-router-feature = cargoCheck "animus-cargo-router-feature" [ ] ''
+            cargo check -p animus --features router --locked
+          '';
+
           cargo-runtime = cargoCheck "animus-cargo-runtime" [ ] ''
             cargo check -p animus-runtime --locked
           '';
@@ -527,6 +535,7 @@
                   -p animus \
                   -p animus-adapters \
                   -p animus-core \
+                  -p animus-router \
                   -p animus-runtime \
                   -p animus-std \
                   -p animus-tui

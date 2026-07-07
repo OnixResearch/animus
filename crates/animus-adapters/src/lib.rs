@@ -41,7 +41,8 @@ mod queue;
 mod recover;
 mod resource;
 mod review;
-mod router;
+/// Transition shim for the dedicated `animus-router` crate.
+pub mod router;
 mod safe;
 mod security;
 #[cfg(test)]

@@ -37,6 +37,7 @@ cd "${repo_root}"
 
 cargo check -p animus-core --target "${TARGET}" --locked
 cargo check -p animus-adapters --target "${TARGET}" --locked
+cargo check -p animus-router --target "${TARGET}" --locked
 cargo check -p animus --no-default-features --target "${TARGET}" --locked
 
 cargo tree \

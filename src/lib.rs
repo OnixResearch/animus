@@ -54,6 +54,10 @@ pub use trellis;
 #[cfg(feature = "preserves")]
 pub use animus_preserves;
 
+/// Re-export of the optional model-router decision core.
+#[cfg(feature = "router")]
+pub use animus_router;
+
 /// Re-export of the optional reusable agent-loop runtime.
 #[cfg(feature = "runtime")]
 pub use animus_runtime;

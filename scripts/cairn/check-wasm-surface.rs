@@ -18,6 +18,7 @@ const EXCLUDED_PACKAGES: &[&str] = &[
     "animus-steel",
     "animus-tui",
     "animus-preserves",
+    "animus-router-preserves",
     "redb",
     "steel-core",
     "rat-widgets",

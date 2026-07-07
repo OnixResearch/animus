@@ -55,6 +55,10 @@ const PUBLIC_EXPORT_SOURCES: &[(&str, &str)] = &[
     ("animus-adapters", "crates/animus-adapters/src/aliases/wire.rs"),
     (
         "animus-adapters",
+        "crates/animus-adapters/src/aliases/wire/conformance.rs",
+    ),
+    (
+        "animus-adapters",
         "crates/animus-adapters/src/aliases/facade/component.rs",
     ),
     (
@@ -62,6 +66,7 @@ const PUBLIC_EXPORT_SOURCES: &[(&str, &str)] = &[
         "crates/animus-adapters/src/aliases/facade/lifecycle.rs",
     ),
     ("animus-adapters", "crates/animus-adapters/src/front/guidance.rs"),
+    ("animus-router", "crates/animus-router/src/lib.rs"),
     ("animus-preserves", "crates/animus-preserves/src/lib.rs"),
     ("animus-runtime", "crates/animus-runtime/src/lib.rs"),
     ("animus-runtime", "crates/animus-runtime/src/exports.rs"),
@@ -94,6 +99,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "provenance",
     "quality",
     "research",
+    "router",
     "scaffold",
     "status",
     "worker-team",
@@ -122,6 +128,7 @@ const ALLOWED_FAMILIES: &[&str] = &[
     "provenance",
     "quality",
     "research",
+    "router",
     "scaffold",
     "status",
     "tool",

@@ -1,7 +1,5 @@
-const MODEL_LABEL_FIELD: animus_adapters::FieldName =
-    animus_adapters::FieldName::new("router_model_label");
-const BACKEND_FIELD: animus_adapters::FieldName =
-    animus_adapters::FieldName::new("router_backend");
+const MODEL_LABEL_FIELD: crate::FieldName = crate::FieldName::new("router_model_label");
+const BACKEND_FIELD: crate::FieldName = crate::FieldName::new("router_backend");
 
 /// Safe catalog projection used by recipe selection.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -17,11 +15,11 @@ impl CatalogEntry {
     ///
     /// # Errors
     ///
-    /// Returns [`animus_adapters::AdapterContractError`] when labels or roles are invalid.
-    pub fn new(draft: CatalogEntryDraft<'_>) -> Result<Self, animus_adapters::AdapterContractError> {
+    /// Returns [`crate::AdapterContractError`] when labels or roles are invalid.
+    pub fn new(draft: CatalogEntryDraft<'_>) -> Result<Self, crate::AdapterContractError> {
         Ok(Self {
-            label: animus_adapters::normalized_adapter_field(MODEL_LABEL_FIELD, draft.label)?,
-            backend: animus_adapters::normalized_adapter_field(BACKEND_FIELD, draft.backend)?,
+            label: crate::normalized_adapter_field(MODEL_LABEL_FIELD, draft.label)?,
+            backend: crate::normalized_adapter_field(BACKEND_FIELD, draft.backend)?,
             role: crate::Role::parse(draft.role)?,
             local: draft.local,
         })
@@ -77,16 +75,14 @@ impl Budget {
     ///
     /// # Errors
     ///
-    /// Returns [`animus_adapters::AdapterContractError`] when backend labels are invalid.
+    /// Returns [`crate::AdapterContractError`] when backend labels are invalid.
     pub fn new(
         max_candidates: u32,
         allowed_backends: &[&str],
-    ) -> Result<Self, animus_adapters::AdapterContractError> {
+    ) -> Result<Self, crate::AdapterContractError> {
         let allowed_backends = allowed_backends
             .iter()
-            .map(|backend| {
-                animus_adapters::normalized_adapter_field(BACKEND_FIELD, backend)
-            })
+            .map(|backend| crate::normalized_adapter_field(BACKEND_FIELD, backend))
             .collect::<Result<alloc::vec::Vec<_>, _>>()?;
         Ok(Self {
             max_candidates,

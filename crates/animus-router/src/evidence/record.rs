@@ -1,18 +1,12 @@
 const EMPTY_MODELS_FIELD: &str = "router_selected_models";
 const EMPTY_REDACTIONS_FIELD: &str = "router_receipt_redactions";
 const EMPTY_BUCKETS_FIELD: &str = "router_signal_buckets";
-const RECIPE_ID_FIELD: animus_adapters::FieldName =
-    animus_adapters::FieldName::new("router_recipe_id");
-const MODEL_LABEL_FIELD: animus_adapters::FieldName =
-    animus_adapters::FieldName::new("router_model_label");
-const TASK_FIELD: animus_adapters::FieldName =
-    animus_adapters::FieldName::new("router_task_shape");
-const QUORUM_FIELD: animus_adapters::FieldName =
-    animus_adapters::FieldName::new("router_quorum_class");
-const DURATION_FIELD: animus_adapters::FieldName =
-    animus_adapters::FieldName::new("router_duration_bucket");
-const REDACTION_FIELD: animus_adapters::FieldName =
-    animus_adapters::FieldName::new("router_redaction_marker");
+const RECIPE_ID_FIELD: crate::FieldName = crate::FieldName::new("router_recipe_id");
+const MODEL_LABEL_FIELD: crate::FieldName = crate::FieldName::new("router_model_label");
+const TASK_FIELD: crate::FieldName = crate::FieldName::new("router_task_shape");
+const QUORUM_FIELD: crate::FieldName = crate::FieldName::new("router_quorum_class");
+const DURATION_FIELD: crate::FieldName = crate::FieldName::new("router_duration_bucket");
+const REDACTION_FIELD: crate::FieldName = crate::FieldName::new("router_redaction_marker");
 const HASH_SCHEMA: &str = "animus.router-recipe-receipt.v1";
 const QUORUM_NONE: &str = "none";
 const QUORUM_MET: &str = "met";
@@ -45,8 +39,8 @@ impl QuorumClass {
     ///
     /// # Errors
     ///
-    /// Returns [`animus_adapters::AdapterContractError`] for unsupported labels.
-    pub fn parse(value: &str) -> Result<Self, animus_adapters::AdapterContractError> {
+    /// Returns [`crate::AdapterContractError`] for unsupported labels.
+    pub fn parse(value: &str) -> Result<Self, crate::AdapterContractError> {
         crate::parse_value(QUORUM_FIELD, value, |normalized| match normalized {
             QUORUM_NONE => Some(Self::None),
             QUORUM_MET => Some(Self::Met),
@@ -82,8 +76,8 @@ impl DurationBucket {
     ///
     /// # Errors
     ///
-    /// Returns [`animus_adapters::AdapterContractError`] for unsupported labels.
-    pub fn parse(value: &str) -> Result<Self, animus_adapters::AdapterContractError> {
+    /// Returns [`crate::AdapterContractError`] for unsupported labels.
+    pub fn parse(value: &str) -> Result<Self, crate::AdapterContractError> {
         crate::parse_value(DURATION_FIELD, value, |normalized| match normalized {
             DURATION_FAST => Some(Self::Fast),
             DURATION_BOUNDED => Some(Self::Bounded),
@@ -129,8 +123,8 @@ impl Redaction {
     ///
     /// # Errors
     ///
-    /// Returns [`animus_adapters::AdapterContractError`] for unsupported labels.
-    pub fn parse(value: &str) -> Result<Self, animus_adapters::AdapterContractError> {
+    /// Returns [`crate::AdapterContractError`] for unsupported labels.
+    pub fn parse(value: &str) -> Result<Self, crate::AdapterContractError> {
         crate::parse_value(REDACTION_FIELD, value, |normalized| match normalized {
             REDACTION_PROMPT_OMITTED => Some(Self::PromptOmitted),
             REDACTION_PROVIDER_PAYLOAD_OMITTED => Some(Self::ProviderPayloadOmitted),
@@ -170,7 +164,7 @@ pub struct Receipt {
     success_count: u32,
     quorum_class: QuorumClass,
     fallback_policy: crate::FallbackPolicy,
-    policy_hash: animus_adapters::SafeHash,
+    policy_hash: crate::SafeHash,
     duration_bucket: DurationBucket,
     redactions: alloc::vec::Vec<Redaction>,
     identity_hash: alloc::string::String,
@@ -184,17 +178,16 @@ impl Receipt {
     /// Returns [`crate::ValidationError`] when required safe labels, hashes, or
     /// redaction evidence are malformed or missing.
     pub fn new(draft: ReceiptDraft<'_>) -> Result<Self, crate::ValidationError> {
-        let recipe_id =
-            animus_adapters::normalized_adapter_field(RECIPE_ID_FIELD, draft.recipe_id)?;
+        let recipe_id = crate::normalized_adapter_field(RECIPE_ID_FIELD, draft.recipe_id)?;
         let signal_buckets = collect_labels(EMPTY_BUCKETS_FIELD, TASK_FIELD, draft.signal_buckets)?;
         let selected_models =
             collect_labels(EMPTY_MODELS_FIELD, MODEL_LABEL_FIELD, draft.selected_models)?;
-        let quorum_class = QuorumClass::parse(draft.quorum_class)
-            .map_err(crate::ValidationError::Contract)?;
+        let quorum_class =
+            QuorumClass::parse(draft.quorum_class).map_err(crate::ValidationError::Contract)?;
         let fallback_policy = crate::FallbackPolicy::parse(draft.fallback_policy)
             .map_err(crate::ValidationError::Contract)?;
-        let policy_hash = animus_adapters::SafeHash::new(draft.policy_hash)
-            .map_err(crate::ValidationError::Contract)?;
+        let policy_hash =
+            crate::SafeHash::new(draft.policy_hash).map_err(crate::ValidationError::Contract)?;
         let observed_bucket = DurationBucket::parse(draft.duration_bucket)
             .map_err(crate::ValidationError::Contract)?;
         let redactions = collect_redactions(draft.redactions)?;
@@ -279,20 +272,15 @@ pub struct ReceiptDraft<'a> {
 
 fn collect_labels(
     empty_field: &'static str,
-    field: animus_adapters::FieldName,
+    field: crate::FieldName,
     values: &[&str],
 ) -> Result<alloc::vec::Vec<alloc::string::String>, crate::ValidationError> {
     if values.is_empty() {
-        return Err(animus_adapters::AdapterContractError::EmptyCollection {
-            field: empty_field,
-        }
-        .into());
+        return Err(crate::AdapterContractError::EmptyCollection { field: empty_field }.into());
     }
     values
         .iter()
-        .map(|value| {
-            animus_adapters::normalized_adapter_field(field, value)
-        })
+        .map(|value| crate::normalized_adapter_field(field, value))
         .collect::<Result<alloc::vec::Vec<_>, _>>()
         .map_err(crate::ValidationError::Contract)
 }
@@ -301,7 +289,7 @@ fn collect_redactions(
     values: &[&str],
 ) -> Result<alloc::vec::Vec<Redaction>, crate::ValidationError> {
     if values.is_empty() {
-        return Err(animus_adapters::AdapterContractError::EmptyCollection {
+        return Err(crate::AdapterContractError::EmptyCollection {
             field: EMPTY_REDACTIONS_FIELD,
         }
         .into());

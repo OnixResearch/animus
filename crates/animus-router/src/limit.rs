@@ -1,7 +1,5 @@
-const DEADLINE_FIELD: animus_adapters::FieldName =
-    animus_adapters::FieldName::new("router_timeout_class");
-const FALLBACK_FIELD: animus_adapters::FieldName =
-    animus_adapters::FieldName::new("router_fallback_policy");
+const DEADLINE_FIELD: crate::FieldName = crate::FieldName::new("router_timeout_class");
+const FALLBACK_FIELD: crate::FieldName = crate::FieldName::new("router_fallback_policy");
 const ZERO_COUNT: u32 = 0;
 
 const DEADLINE_SHORT: &str = "short";
@@ -27,8 +25,8 @@ impl DeadlineClass {
     ///
     /// # Errors
     ///
-    /// Returns [`animus_adapters::AdapterContractError`] for unsupported labels.
-    pub fn parse(value: &str) -> Result<Self, animus_adapters::AdapterContractError> {
+    /// Returns [`crate::AdapterContractError`] for unsupported labels.
+    pub fn parse(value: &str) -> Result<Self, crate::AdapterContractError> {
         crate::parse_value(DEADLINE_FIELD, value, |normalized| match normalized {
             DEADLINE_SHORT => Some(Self::Short),
             DEADLINE_STANDARD => Some(Self::Standard),
@@ -64,8 +62,8 @@ impl FallbackPolicy {
     ///
     /// # Errors
     ///
-    /// Returns [`animus_adapters::AdapterContractError`] for unsupported labels.
-    pub fn parse(value: &str) -> Result<Self, animus_adapters::AdapterContractError> {
+    /// Returns [`crate::AdapterContractError`] for unsupported labels.
+    pub fn parse(value: &str) -> Result<Self, crate::AdapterContractError> {
         crate::parse_value(FALLBACK_FIELD, value, |normalized| match normalized {
             FALLBACK_DENY => Some(Self::Deny),
             FALLBACK_BEST_VALID_EVIDENCE => Some(Self::BestValidEvidence),

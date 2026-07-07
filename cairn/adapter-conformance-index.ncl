@@ -58,6 +58,7 @@ in
 let case_line = fun record => "case|%{record.family_id}|%{record.case_id}|%{record.disposition}|%{record.evidence}|%{record.reason}"
 in
 let family_entries = [
+  family "model-router" "crates/animus-router/src/lib.rs" "pure model-routing decisions run before host dispatch and own no ambient authority" "router receipts carry safe labels, counts, redaction markers, and BLAKE3 identities only" "Preserves projection is absent by default and must revalidate DTOs when enabled" "animus_router::{Recipe,Signals,Budget,SelectedPlan,Receipt,select_recipe,validate_receipt_text}; animus_adapters::router transition shim" "cargo test -p animus-router --locked; cargo test -p animus-adapters router --locked" "test_support::positive::deterministic_selection_covers_recipe_families" "test_support::negative::router_receipt_leak_fixtures_fail_closed" "family:model-router",
   family "model" "crates/animus-adapters/src/model.rs" "host-injected ModelAdapter only after exact runtime capability admission; canonical model DTOs remain provider-neutral" "safe responses and canonical envelopes only; durable receipts remain hashed runtime or policy metadata" "Preserves bridge optional through animus-preserves; adapter DTOs stay no_std" "animus_adapters::{ModelAdapter,ModelRequest,ModelResponse,CanonicalModelRequest,CanonicalModelResponseEnvelope,ModelOutcomeAdapter}; animus_runtime::tool_prelude" "cargo test -p animus-adapters model --locked; cargo test -p animus-runtime shell::tests --locked" "model::canonical_tests::canonical_request_accepts_structured_conversation" "model::canonical_tests::canonical_response_rejects_impossible_combinations_and_leaks" "family:model",
   family "tool" "crates/animus-adapters/src/tool.rs" "host-injected ToolAdapter only after exact runtime capability admission and tool provenance checks" "tool outputs and mutation receipts are bounded or hashed; raw output references are rejected" "Preserves bridge optional through animus-preserves; tool DTOs stay no_std" "animus_adapters::{ToolAdapter,ToolRequest,ToolResponse,ToolOutcomeAdapter}; animus_runtime::tool_prelude" "cargo test -p animus-adapters tool::tests --locked; cargo test -p animus-runtime shell::tests --locked" "tool::tests::positive::request_accepts_valid_input" "tool::tests::negative::missing_executor_and_denied_capability_fail_without_fallback" "family:tool",
   family "host-status" "crates/animus-adapters/src/status" "host-injected HostStatusAdapter reports observations; pure runtime selection resolves precedence without ambient polling" "status evidence uses bounded safe hashes and redacted summaries only" "status DTOs are text-safe no_std contracts; no required serialization backend" "animus_adapters::{HostStatusAdapter,HostStatusRequest,HostStatusObservationBatch}; animus_runtime::status_prelude" "cargo test -p animus-adapters status::tests --locked; cargo test -p animus-runtime status::tests --locked" "status::tests::host_adapter_uses_typed_observation_contract" "status::tests::lifecycle_report_rejects_malformed_state" "family:host-status",
@@ -67,6 +68,20 @@ let family_entries = [
 ]
 in
 let case_entries = [
+  covered "model-router" "happy_path" "test_support::positive::deterministic_selection_covers_recipe_families",
+  na "model-router" "missing_service" "model-router selection is pure data validation and does not dispatch services",
+  covered "model-router" "denied_capability" "test_support::negative::deterministic_selection_denies_unsafe_eligibility",
+  na "model-router" "unavailable_service" "model-router core owns no service availability state",
+  na "model-router" "timeout" "model-router core owns no clock or deadline authority beyond labels",
+  na "model-router" "cancellation" "model-router core owns no cancellation handle authority",
+  covered "model-router" "malformed_output" "test_support::positive::output_contract_validation_fails_closed_or_falls_back",
+  na "model-router" "oversized_output" "model-router receipts use bounded typed fields and safe hashes rather than raw output bodies",
+  covered "model-router" "unsafe_reference" "test_support::negative::signal_projection_rejects_unsupported_labels",
+  covered "model-router" "schema_mismatch" "test_support::negative::recipe_contracts_reject_invalid_shapes",
+  na "model-router" "duplicate_field" "model-router constructors use typed scalar fields and arrays rather than open keyed maps",
+  na "model-router" "unknown_field" "model-router constructors do not parse unbounded unknown fields",
+  covered "model-router" "leak_rejection" "test_support::negative::router_receipt_leak_fixtures_fail_closed",
+
   covered "model" "happy_path" "model::canonical_tests::canonical_request_accepts_structured_conversation",
   covered "model" "missing_service" "runtime::shell::tests::model_absence_fails_closed_without_tool_call",
   covered "model" "denied_capability" "runtime::shell::tests::unrelated_model_capability_fails_before_adapter_call",

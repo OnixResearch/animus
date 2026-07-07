@@ -2,19 +2,19 @@
 
 ## Context
 
-`animus-adapters::router` currently mixes two concerns: implementation-free adapter contracts (the shared field-validation helpers) and routing *decision* logic (`select_recipe`, `preferred_family`, `select_entries`, BLAKE3 `hash_parts`). Animus keeps each reusable boundary in its own crate so embedders depend on the smallest surface and so purity rails can target one crate. The router module has crossed the threshold where it deserves its own barrier.
+`animus-adapters::router` currently mixes two concerns: implementation-free adapter contracts and routing *decision* logic (`select_recipe`, `preferred_family`, `select_entries`, BLAKE3 `hash_parts`). Animus keeps each reusable boundary in its own crate so embedders depend on the smallest surface and so purity rails can target one crate. The router module has crossed the threshold where it deserves its own barrier.
 
 ## Decisions
 
-### 1. animus-router owns the routing decision, not adapter contracts
+### 1. animus-router owns the routing decision and router field validation
 
-**Choice:** The new `crates/animus-router` crate owns recipe/role/output-contract DTOs, signal projection, recipe selection, execution-plan materialization, route-result aggregation, and safe receipt assembly. `animus-adapters` keeps the shared `validation` helpers and model/tool/port contracts the router consumes.
+**Choice:** The new `crates/animus-router` crate owns recipe/role/output-contract DTOs, signal projection, recipe selection, execution-plan materialization, route-result aggregation, safe receipt assembly, and the router-specific field validation helpers used by those DTOs. `animus-adapters` keeps model/tool/port contracts and depends on `animus-router` only to provide the transition re-export shim.
 
-**Rationale:** Routing decisions are a separable pure core that embedders may want without pulling all adapter contracts. Keeping the validation helpers in adapters preserves a one-way dependency: `animus-router` depends on `animus-adapters`, never the reverse.
+**Rationale:** Routing decisions are a separable pure core that embedders may want without pulling all adapter contracts. The shim must re-export concrete `animus-router` items from `animus-adapters::router`, so the acyclic dependency direction during the transition window is `animus-adapters` → `animus-router`; removing the shim later removes that dependency.
 
 ### 2. no_std + alloc, matching animus-core and animus-adapters
 
-**Choice:** `animus-router` is `#![no_std]` with `alloc` only and reuses `animus-adapters`' BLAKE3 dependency through a shared workspace crate.
+**Choice:** `animus-router` is `#![no_std]` with `alloc` only and depends directly on the shared BLAKE3 workspace crate for safe receipt identities.
 
 **Rationale:** The router must compile to the Wasm boundary alongside core/adapters and stay testable without standing up providers, shells, or async runtimes.
 

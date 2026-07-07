@@ -39,7 +39,7 @@ pub type SelectedRoutePlan = crate::router::SelectedPlan;
 /// Timeout/deadline class for bounded host execution.
 pub type TimeoutClass = crate::router::DeadlineClass;
 /// Borrowed final-output validation facts.
-pub type RouteResultDraft<'a> = crate::router::outcome::ResultDraft<'a>;
+pub type RouteResultDraft<'a> = crate::router::ResultDraft<'a>;
 
 /// Validates safe router receipt text for known leak sentinels.
 ///

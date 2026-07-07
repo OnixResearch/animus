@@ -1,17 +1,10 @@
-const TASK_FIELD: animus_adapters::FieldName =
-    animus_adapters::FieldName::new("router_task_shape");
-const RISK_FIELD: animus_adapters::FieldName =
-    animus_adapters::FieldName::new("router_risk_band");
-const PRESSURE_FIELD: animus_adapters::FieldName =
-    animus_adapters::FieldName::new("router_pressure_band");
-const LATENCY_FIELD: animus_adapters::FieldName =
-    animus_adapters::FieldName::new("router_latency_band");
-const COST_FIELD: animus_adapters::FieldName =
-    animus_adapters::FieldName::new("router_cost_band");
-const PRIVACY_FIELD: animus_adapters::FieldName =
-    animus_adapters::FieldName::new("router_privacy_band");
-const FALLBACK_FIELD: animus_adapters::FieldName =
-    animus_adapters::FieldName::new("router_fallback_eligibility");
+const TASK_FIELD: crate::FieldName = crate::FieldName::new("router_task_shape");
+const RISK_FIELD: crate::FieldName = crate::FieldName::new("router_risk_band");
+const PRESSURE_FIELD: crate::FieldName = crate::FieldName::new("router_pressure_band");
+const LATENCY_FIELD: crate::FieldName = crate::FieldName::new("router_latency_band");
+const COST_FIELD: crate::FieldName = crate::FieldName::new("router_cost_band");
+const PRIVACY_FIELD: crate::FieldName = crate::FieldName::new("router_privacy_band");
+const FALLBACK_FIELD: crate::FieldName = crate::FieldName::new("router_fallback_eligibility");
 
 const TASK_SIMPLE: &str = "simple";
 const TASK_REASONING: &str = "reasoning";
@@ -46,7 +39,7 @@ pub enum TaskShape {
 }
 
 impl TaskShape {
-    pub(crate) fn parse(value: &str) -> Result<Self, animus_adapters::AdapterContractError> {
+    pub(crate) fn parse(value: &str) -> Result<Self, crate::AdapterContractError> {
         crate::parse_value(TASK_FIELD, value, |normalized| match normalized {
             TASK_SIMPLE => Some(Self::Simple),
             TASK_REASONING => Some(Self::Reasoning),
@@ -83,9 +76,9 @@ pub enum SignalBand {
 
 impl SignalBand {
     pub(crate) fn parse(
-        field: animus_adapters::FieldName,
+        field: crate::FieldName,
         value: &str,
-    ) -> Result<Self, animus_adapters::AdapterContractError> {
+    ) -> Result<Self, crate::AdapterContractError> {
         crate::parse_value(field, value, |normalized| match normalized {
             BAND_LOW => Some(Self::Low),
             BAND_MEDIUM => Some(Self::Medium),
@@ -115,7 +108,7 @@ pub enum PrivacyBand {
 }
 
 impl PrivacyBand {
-    pub(crate) fn parse(value: &str) -> Result<Self, animus_adapters::AdapterContractError> {
+    pub(crate) fn parse(value: &str) -> Result<Self, crate::AdapterContractError> {
         crate::parse_value(PRIVACY_FIELD, value, |normalized| match normalized {
             PRIVACY_LOCAL => Some(Self::LocalOnly),
             PRIVACY_REMOTE => Some(Self::RemoteAllowed),
@@ -141,7 +134,7 @@ pub enum FallbackEligibility {
 }
 
 impl FallbackEligibility {
-    pub(crate) fn parse(value: &str) -> Result<Self, animus_adapters::AdapterContractError> {
+    pub(crate) fn parse(value: &str) -> Result<Self, crate::AdapterContractError> {
         crate::parse_value(FALLBACK_FIELD, value, |normalized| match normalized {
             FALLBACK_ELIGIBLE => Some(Self::Eligible),
             FALLBACK_INELIGIBLE => Some(Self::Ineligible),
@@ -175,9 +168,9 @@ impl Signals {
     ///
     /// # Errors
     ///
-    /// Returns [`animus_adapters::AdapterContractError`] when any signal label is empty,
+    /// Returns [`crate::AdapterContractError`] when any signal label is empty,
     /// malformed, or unsupported.
-    pub fn project(draft: SignalDraft<'_>) -> Result<Self, animus_adapters::AdapterContractError> {
+    pub fn project(draft: SignalDraft<'_>) -> Result<Self, crate::AdapterContractError> {
         Ok(Self {
             task_shape: TaskShape::parse(draft.task_shape)?,
             risk: SignalBand::parse(RISK_FIELD, draft.risk_band)?,

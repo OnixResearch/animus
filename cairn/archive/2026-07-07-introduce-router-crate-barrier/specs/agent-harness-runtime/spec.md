@@ -4,7 +4,7 @@
 
 ### Requirement: Dedicated router crate boundary
 
-r[agent_harness_runtime.model_router.crate_barrier] Animus MUST own a dedicated `animus-router` workspace crate that is `#![no_std]` with `alloc` only and that owns the routing decision surface (recipe/role/output-contract DTOs, request-signal projection, recipe selection, execution-plan materialization, route-result aggregation, and safe receipt assembly), while `animus-adapters` keeps implementation-free model/tool/port contracts and the shared field-validation helpers the router consumes.
+r[agent_harness_runtime.model_router.crate_barrier] Animus MUST own a dedicated `animus-router` workspace crate that is `#![no_std]` with `alloc` only and that owns the routing decision surface (recipe/role/output-contract DTOs, request-signal projection, recipe selection, execution-plan materialization, route-result aggregation, safe receipt assembly, and router-specific field validation), while `animus-adapters` keeps implementation-free model/tool/port contracts and exposes only a transition re-export shim for router items.
 
 #### Scenario: Embedders depend on the router without all adapter contracts
 
@@ -12,7 +12,8 @@ r[agent_harness_runtime.model_router.crate_barrier.smallest_dependency]
 - GIVEN an embedder needs only deterministic routing decisions
 - WHEN they select workspace crates
 - THEN they can depend on `animus-router` without pulling model, tool, host-effect, provider, filesystem, process, network, terminal, credential, or persistence behavior
-- AND the dependency direction is `animus-router` depending on `animus-adapters`, never the reverse.
+- AND the crate does not depend on model, tool, host-effect, provider, filesystem, process, network, terminal, credential, or persistence crates
+- AND the only temporary dependency direction for compatibility is `animus-adapters` depending on `animus-router` for the re-export shim.
 
 #### Scenario: Router crate stays pure and Wasm-eligible
 
