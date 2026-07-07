@@ -32,6 +32,18 @@ pub(super) const REPAIR_NONE: u32 = 0;
 pub(super) const REPAIR_ONE: u32 = 1;
 pub(super) const WORKER_COUNT: u32 = 3;
 pub(super) const SUCCESS_COUNT: u32 = 2;
+pub(super) const SIMPLE_PROMPT_CHARS: u32 = 500;
+pub(super) const REVIEW_PROMPT_CHARS: u32 = 4_000;
+pub(super) const REASONING_PROMPT_CHARS: u32 = 9_000;
+pub(super) const STRICT_PROMPT_CHARS: u32 = 25_000;
+pub(super) const OVERSIZED_BOUNDED_PROMPT_CHARS: u32 = 120_000;
+pub(super) const LOW_CONTEXT_PER_MILLE: u16 = 100;
+pub(super) const HIGH_CONTEXT_PER_MILLE: u16 = 800;
+pub(super) const STRICT_CONTEXT_PER_MILLE: u16 = 950;
+pub(super) const INVALID_CONTEXT_PER_MILLE: u16 = 1_001;
+pub(super) const TOOL_COUNT_NONE: u32 = 0;
+pub(super) const TOOL_COUNT_ONE: u32 = 1;
+pub(super) const TOOL_COUNT_TWO: u32 = 2;
 
 #[derive(Clone, Copy)]
 pub(super) struct RecipeFixture<'a> {

@@ -44,6 +44,79 @@ fn recipe_contracts_reject_invalid_shapes() {
 }
 
 #[test]
+fn request_projection_rejects_malformed_metadata() {
+    let empty = crate::RequestMetadata::new(crate::RequestMetadataDraft {
+        prompt_char_estimate: ZERO_COUNT,
+        tool_call_count: TOOL_COUNT_NONE,
+        contains_code: false,
+        requires_structured_output: false,
+        context_window_fill_per_mille: LOW_CONTEXT_PER_MILLE,
+        privacy_policy: "remote_allowed",
+        fallback_hint: "eligible",
+    });
+    let missing_privacy = crate::RequestMetadata::new(crate::RequestMetadataDraft {
+        prompt_char_estimate: SIMPLE_PROMPT_CHARS,
+        tool_call_count: TOOL_COUNT_NONE,
+        contains_code: false,
+        requires_structured_output: false,
+        context_window_fill_per_mille: LOW_CONTEXT_PER_MILLE,
+        privacy_policy: "",
+        fallback_hint: "eligible",
+    });
+    let unsafe_payload = crate::RequestMetadata::new(crate::RequestMetadataDraft {
+        prompt_char_estimate: SIMPLE_PROMPT_CHARS,
+        tool_call_count: TOOL_COUNT_NONE,
+        contains_code: false,
+        requires_structured_output: false,
+        context_window_fill_per_mille: LOW_CONTEXT_PER_MILLE,
+        privacy_policy: "prompt: secret",
+        fallback_hint: "eligible",
+    });
+    let invalid_context = crate::RequestMetadata::new(crate::RequestMetadataDraft {
+        prompt_char_estimate: SIMPLE_PROMPT_CHARS,
+        tool_call_count: TOOL_COUNT_NONE,
+        contains_code: false,
+        requires_structured_output: false,
+        context_window_fill_per_mille: INVALID_CONTEXT_PER_MILLE,
+        privacy_policy: "remote_allowed",
+        fallback_hint: "eligible",
+    });
+
+    assert_eq!(empty, Err(crate::SignalProjectionError::EmptyMetadata));
+    assert_eq!(
+        missing_privacy,
+        Err(crate::SignalProjectionError::MissingPrivacyPolicy)
+    );
+    assert!(matches!(
+        unsafe_payload,
+        Err(crate::SignalProjectionError::UnsafePayload { .. })
+    ));
+    assert!(matches!(
+        invalid_context,
+        Err(crate::SignalProjectionError::ContextWindowOutOfRange { .. })
+    ));
+}
+
+#[test]
+fn oversized_but_bounded_metadata_projects_safely() {
+    let metadata = crate::RequestMetadata::new(crate::RequestMetadataDraft {
+        prompt_char_estimate: OVERSIZED_BOUNDED_PROMPT_CHARS,
+        tool_call_count: TOOL_COUNT_ONE,
+        contains_code: false,
+        requires_structured_output: true,
+        context_window_fill_per_mille: STRICT_CONTEXT_PER_MILLE,
+        privacy_policy: "remote_allowed",
+        fallback_hint: "eligible",
+    })
+    .expect("bounded metadata should validate");
+    let draft = crate::project_signals(&metadata).expect("bounded metadata should project");
+    let signals = crate::Signals::project(draft).expect("projected labels should parse");
+
+    assert_eq!(signals.risk(), crate::SignalBand::Strict);
+    assert_eq!(signals.contract_pressure(), crate::SignalBand::Strict);
+}
+
+#[test]
 fn signal_projection_rejects_unsupported_labels() {
     let error = crate::Signals::project(crate::SignalDraft {
         task_shape: BAD_VALUE,

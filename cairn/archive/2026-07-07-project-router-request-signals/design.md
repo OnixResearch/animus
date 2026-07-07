@@ -14,9 +14,9 @@
 
 ### 2. SignalSource adapter trait is the classifier seam
 
-**Choice:** Define `trait SignalSource { fn project(&self, metadata: &RequestMetadata) -> Result<SignalDraft, SignalProjectionError>; }` in `animus-adapters`. The rule projector is a `RuleSignalSource` struct that implements it. Hosts may inject any `SignalSource`.
+**Choice:** Define `trait SignalSource { fn project(&self, metadata: &RequestMetadata) -> Result<SignalDraft<'static>, SignalProjectionError>; }` in `animus-router` and re-export it through `animus-adapters`. The rule projector is a `RuleSignalSource` struct that implements it. Hosts may inject any `SignalSource`.
 
-**Rationale:** Keeps the classifier pluggable so a later Supra-Router adapter can replace the rule projector without touching router core. The trait lives in adapters (implementation-free contracts), the rule implementation lives in router.
+**Rationale:** Keeps the classifier pluggable so a later Supra-Router adapter can replace the rule projector without touching router selection. The trait lives with the router-owned DTOs to preserve the acyclic crate barrier (`animus-adapters` depends on `animus-router` for the transition shim, not the reverse).
 
 ### 3. Projection consumes only bounded, safe metadata
 

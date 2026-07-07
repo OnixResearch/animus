@@ -2,10 +2,13 @@
 //! `animus-adapters::router` resolves to the live `animus-router` type
 //! with the same API shape after the crate-extraction barrier.
 
-const EXPECTED_ROUTER_ITEM_COUNT: usize = 30;
-const EXPECTED_ALIAS_COUNT: usize = 17;
+const EXPECTED_ROUTER_ITEM_COUNT: usize = 35;
+const EXPECTED_ALIAS_COUNT: usize = 21;
+const PARITY_PROMPT_CHARS: u32 = 1;
+const PARITY_TOOL_CALLS: u32 = 0;
+const PARITY_CONTEXT_PER_MILLE: u16 = 1;
 
-fn assert_type<T>() {}
+fn assert_type<T: ?Sized>() {}
 
 /// Every re-exported type name compiles from the original path.
 #[test]
@@ -38,9 +41,15 @@ fn adapter_reexport_types_resolve() {
     assert_type::<animus_adapters::router::CatalogEntryDraft<'_>>();
     assert_type::<animus_adapters::router::ReceiptDraft<'_>>();
     assert_type::<animus_adapters::router::RecipeDraft<'_>>();
+    assert_type::<animus_adapters::router::RequestMetadata>();
+    assert_type::<animus_adapters::router::RequestMetadataDraft<'_>>();
+    assert_type::<animus_adapters::router::RuleSignalSource>();
     assert_type::<animus_adapters::router::SignalDraft<'_>>();
+    assert_type::<animus_adapters::router::SignalProjectionError>();
+    assert_type::<dyn animus_adapters::router::SignalSource>();
     assert_type::<animus_adapters::router::ResultDraft<'_>>();
 
+    let _project_signals = animus_adapters::router::project_signals;
     let _select_recipe = animus_adapters::router::select_recipe;
     let _validate_receipt_text = animus_adapters::router::validate_receipt_text;
 
@@ -78,9 +87,15 @@ fn direct_router_types_resolve() {
     assert_type::<animus_router::CatalogEntryDraft<'_>>();
     assert_type::<animus_router::ReceiptDraft<'_>>();
     assert_type::<animus_router::RecipeDraft<'_>>();
+    assert_type::<animus_router::RequestMetadata>();
+    assert_type::<animus_router::RequestMetadataDraft<'_>>();
+    assert_type::<animus_router::RuleSignalSource>();
     assert_type::<animus_router::SignalDraft<'_>>();
+    assert_type::<animus_router::SignalProjectionError>();
+    assert_type::<dyn animus_router::SignalSource>();
     assert_type::<animus_router::ResultDraft<'_>>();
 
+    let _project_signals = animus_router::project_signals;
     let _select_recipe = animus_router::select_recipe;
     let _validate_receipt_text = animus_router::validate_receipt_text;
 
@@ -97,17 +112,36 @@ fn facade_aliases_resolve() {
     assert_type::<animus_adapters::ModelRole>();
     assert_type::<animus_adapters::RequestSignalDraft<'_>>();
     assert_type::<animus_adapters::RequestSignals>();
+    assert_type::<animus_adapters::RouterRequestMetadata>();
+    assert_type::<animus_adapters::RouterRequestMetadataDraft<'_>>();
     assert_type::<animus_adapters::RouterBudget>();
     assert_type::<animus_adapters::RouterReceipt>();
     assert_type::<animus_adapters::RouterRedaction>();
     assert_type::<animus_adapters::RouterRecipe>();
     assert_type::<animus_adapters::RouterRecipeDraft<'_>>();
     assert_type::<animus_adapters::RouterValidationError>();
+    assert_type::<animus_adapters::RouterSignalProjectionError>();
+    assert_type::<animus_adapters::RuleRouterSignalSource>();
     assert_type::<animus_adapters::SelectedRoutePlan>();
     assert_type::<animus_adapters::TimeoutClass>();
     assert_type::<animus_adapters::RouteResultDraft<'_>>();
     assert_type::<animus_adapters::RouterReceiptLeak>();
 
+    let _project_router_signals = animus_adapters::project_router_signals;
+    let source = animus_adapters::router::RuleSignalSource;
+    let metadata =
+        animus_adapters::RouterRequestMetadata::new(animus_adapters::RouterRequestMetadataDraft {
+            prompt_char_estimate: PARITY_PROMPT_CHARS,
+            tool_call_count: PARITY_TOOL_CALLS,
+            contains_code: false,
+            requires_structured_output: false,
+            context_window_fill_per_mille: PARITY_CONTEXT_PER_MILLE,
+            privacy_policy: "remote_allowed",
+            fallback_hint: "eligible",
+        })
+        .expect("parity metadata should validate");
+    let _ = animus_adapters::project_router_signals_with_source(&source, &metadata)
+        .expect("parity source should project");
     let _validate_router_receipt_text = animus_adapters::validate_router_receipt_text;
 
     assert_eq!(EXPECTED_ALIAS_COUNT, alias_names().len());
@@ -143,7 +177,12 @@ fn router_item_names() -> [&'static str; EXPECTED_ROUTER_ITEM_COUNT] {
         "CatalogEntryDraft",
         "ReceiptDraft",
         "RecipeDraft",
+        "RequestMetadata",
+        "RequestMetadataDraft",
+        "RuleSignalSource",
         "SignalDraft",
+        "SignalProjectionError",
+        "SignalSource",
         "ResultDraft",
     ]
 }
@@ -157,12 +196,16 @@ fn alias_names() -> [&'static str; EXPECTED_ALIAS_COUNT] {
         "ModelRole",
         "RequestSignalDraft",
         "RequestSignals",
+        "RouterRequestMetadata",
+        "RouterRequestMetadataDraft",
         "RouterBudget",
         "RouterReceipt",
         "RouterRedaction",
         "RouterRecipe",
         "RouterRecipeDraft",
         "RouterValidationError",
+        "RouterSignalProjectionError",
+        "RuleRouterSignalSource",
         "SelectedRoutePlan",
         "TimeoutClass",
         "RouteResultDraft",

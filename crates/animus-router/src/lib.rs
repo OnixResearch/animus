@@ -218,6 +218,7 @@ mod limit;
 pub(crate) mod outcome;
 mod policy;
 mod projection;
+mod request;
 mod schema;
 
 /// Evidence module (edition-2024 file-style entry point).
@@ -241,6 +242,10 @@ pub use outcome::{ResultDraft, RouteResult, RouteResultStatus};
 pub use policy::ROUTER_RECIPE_POLICY_JSON;
 pub use projection::{
     FallbackEligibility, PrivacyBand, SignalBand, SignalDraft, Signals, TaskShape,
+};
+pub use request::{
+    RequestMetadata, RequestMetadataDraft, RuleSignalSource, SignalProjectionError, SignalSource,
+    project_signals,
 };
 pub use schema::{OutputContract, Recipe, RecipeDraft, Role, RouteFamily};
 

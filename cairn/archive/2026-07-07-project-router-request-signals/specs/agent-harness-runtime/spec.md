@@ -24,7 +24,7 @@ r[agent_harness_runtime.model_router.request_projection.missing_privacy]
 
 ### Requirement: Pluggable SignalSource adapter seam
 
-r[agent_harness_runtime.model_router.request_projection.signal_source] Animus MUST define an implementation-free `SignalSource` adapter trait in `animus-adapters` that returns a `SignalDraft` from `RequestMetadata`, and the rule-based projector MUST be the default `SignalSource` implementation in `animus-router` so hosts may inject richer classifiers without changing router core.
+r[agent_harness_runtime.model_router.request_projection.signal_source] Animus MUST define an implementation-free `SignalSource` trait in `animus-router` (re-exported through `animus-adapters`) that returns a `SignalDraft` from `RequestMetadata`, and the rule-based projector MUST be the default `SignalSource` implementation so hosts may inject richer classifiers without changing router core.
 
 #### Scenario: Host classifier overrides the rule projector
 

@@ -1,4 +1,5 @@
 use super::*;
+use crate::SignalSource;
 
 #[derive(Clone, Copy)]
 struct SelectCase<'a> {
@@ -60,6 +61,121 @@ fn signal_projection_uses_only_bounded_labels() {
     assert!(!rendered.contains("prompt:"));
     assert!(!rendered.contains("provider payload"));
     assert!(!rendered.contains("credential"));
+}
+
+#[test]
+fn request_projection_derives_safe_signal_bands() {
+    let cases = [
+        (
+            metadata(crate::RequestMetadataDraft {
+                prompt_char_estimate: SIMPLE_PROMPT_CHARS,
+                tool_call_count: TOOL_COUNT_NONE,
+                contains_code: false,
+                requires_structured_output: false,
+                context_window_fill_per_mille: LOW_CONTEXT_PER_MILLE,
+                privacy_policy: "remote_allowed",
+                fallback_hint: "eligible",
+            }),
+            [
+                "simple",
+                "low",
+                "low",
+                "low",
+                "low",
+                "low",
+                "remote_allowed",
+                "eligible",
+            ],
+        ),
+        (
+            metadata(crate::RequestMetadataDraft {
+                prompt_char_estimate: SIMPLE_PROMPT_CHARS,
+                tool_call_count: TOOL_COUNT_NONE,
+                contains_code: true,
+                requires_structured_output: false,
+                context_window_fill_per_mille: LOW_CONTEXT_PER_MILLE,
+                privacy_policy: "local_only",
+                fallback_hint: "ineligible",
+            }),
+            [
+                "coding",
+                "low",
+                "low",
+                "low",
+                "low",
+                "low",
+                "local_only",
+                "ineligible",
+            ],
+        ),
+        (
+            metadata(crate::RequestMetadataDraft {
+                prompt_char_estimate: REVIEW_PROMPT_CHARS,
+                tool_call_count: TOOL_COUNT_NONE,
+                contains_code: false,
+                requires_structured_output: true,
+                context_window_fill_per_mille: HIGH_CONTEXT_PER_MILLE,
+                privacy_policy: "remote_allowed",
+                fallback_hint: "eligible",
+            }),
+            [
+                "review",
+                "medium",
+                "strict",
+                "high",
+                "medium",
+                "medium",
+                "remote_allowed",
+                "eligible",
+            ],
+        ),
+        (
+            metadata(crate::RequestMetadataDraft {
+                prompt_char_estimate: REASONING_PROMPT_CHARS,
+                tool_call_count: TOOL_COUNT_TWO,
+                contains_code: false,
+                requires_structured_output: false,
+                context_window_fill_per_mille: STRICT_CONTEXT_PER_MILLE,
+                privacy_policy: "remote_allowed",
+                fallback_hint: "eligible",
+            }),
+            [
+                "workflow",
+                "strict",
+                "high",
+                "strict",
+                "high",
+                "high",
+                "remote_allowed",
+                "eligible",
+            ],
+        ),
+    ];
+
+    for (metadata, expected) in cases {
+        assert_signal_labels(metadata, expected);
+    }
+}
+
+#[test]
+fn rule_signal_source_feeds_signal_projection() {
+    let source = crate::RuleSignalSource;
+    let draft = source
+        .project(&metadata(crate::RequestMetadataDraft {
+            prompt_char_estimate: STRICT_PROMPT_CHARS,
+            tool_call_count: TOOL_COUNT_ONE,
+            contains_code: false,
+            requires_structured_output: false,
+            context_window_fill_per_mille: STRICT_CONTEXT_PER_MILLE,
+            privacy_policy: "remote_allowed",
+            fallback_hint: "eligible",
+        }))
+        .expect("rule source should project");
+    let projected = crate::Signals::project(draft).expect("projected labels should parse");
+
+    assert_eq!(projected.task_shape(), crate::TaskShape::Reasoning);
+    assert_eq!(projected.risk(), crate::SignalBand::Strict);
+    assert_eq!(projected.privacy(), crate::PrivacyBand::RemoteAllowed);
 }
 
 #[test]
@@ -216,6 +332,23 @@ fn assert_selects(
         .expect("selection should succeed");
 
     assert_eq!(selected.family(), case.expected);
+}
+
+fn assert_signal_labels(
+    metadata: crate::RequestMetadata,
+    expected: [&str; crate::projection::SIGNAL_BUCKET_COUNT],
+) {
+    let draft = crate::project_signals(&metadata).expect("request metadata should project");
+    let projected = crate::Signals::project(draft).expect("signal labels should parse");
+    let actual = projected.bucket_labels();
+
+    for (actual_label, expected_label) in actual.iter().zip(expected) {
+        assert_eq!(actual_label.as_str(), expected_label);
+    }
+}
+
+fn metadata(draft: crate::RequestMetadataDraft<'_>) -> crate::RequestMetadata {
+    crate::RequestMetadata::new(draft).expect("metadata should validate")
 }
 
 fn result(final_output_valid: bool, fallback_policy: &str, evidence: bool) -> crate::RouteResult {

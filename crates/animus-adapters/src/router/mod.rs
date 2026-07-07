@@ -8,7 +8,9 @@
 pub use animus_router::{
     Bounds, BoundsDraft, Budget, CatalogEntry, CatalogEntryDraft, DeadlineClass, DurationBucket,
     FallbackEligibility, FallbackPolicy, OutputContract, PrivacyBand, QuorumClass, Receipt,
-    ReceiptDraft, ReceiptLeak, Recipe, RecipeDraft, Redaction, ResultDraft, Role, RouteFamily,
-    RouteResult, RouteResultStatus, SelectedPlan, SelectionDenial, SignalBand, SignalDraft,
-    Signals, TaskShape, ValidationError, select_recipe, validate_receipt_text,
+    ReceiptDraft, ReceiptLeak, Recipe, RecipeDraft, Redaction, RequestMetadata,
+    RequestMetadataDraft, ResultDraft, Role, RouteFamily, RouteResult, RouteResultStatus,
+    RuleSignalSource, SelectedPlan, SelectionDenial, SignalBand, SignalDraft,
+    SignalProjectionError, SignalSource, Signals, TaskShape, ValidationError, project_signals,
+    select_recipe, validate_receipt_text,
 };
