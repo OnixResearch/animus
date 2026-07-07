@@ -185,6 +185,7 @@
                 || baseName == "check-exec-policy"
                 || baseName == "check-plugin-manifest-runtime-neutral"
                 || baseName == "check-request-lifecycle"
+                || baseName == "check-router-policy"
                 || baseName == "check-steel-runtime-policy"
                 || baseName == "check-syndicate-dataspace-isolation"
                 || baseName == "check-trellis-verified-core"
@@ -322,6 +323,10 @@
 
           cargo-router-feature = cargoCheck "animus-cargo-router-feature" [ ] ''
             cargo check -p animus --features router --locked
+          '';
+
+          router-policy = cargoCheck "animus-router-policy" [ pkgs.nickel ] ''
+            sh scripts/cairn/check-router-policy --root .
           '';
 
           cargo-runtime = cargoCheck "animus-cargo-runtime" [ ] ''

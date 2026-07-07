@@ -8,6 +8,13 @@ repos:
     pass_filenames: false
     stages:
     - pre-commit
+  - entry: scripts/cairn/check-router-policy
+    id: router-policy
+    language: script
+    name: Router policy conformance
+    pass_filenames: false
+    stages:
+    - pre-commit
   - entry: scripts/hooks/octet-lints
     id: octet-lints
     language: script

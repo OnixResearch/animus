@@ -84,6 +84,7 @@ let entry_values = [
   router_record "animus-router::FallbackPolicy" "animus-router" router router_feature stable "model routing fallback policy DTO",
   router_record "animus-router::OutputContract" "animus-router" router router_feature stable "model routing output contract DTO",
   router_record "animus-router::PrivacyBand" "animus-router" router router_feature stable "model routing privacy band DTO",
+  router_record "animus-router::ROUTER_RECIPE_POLICY_JSON" "animus-router" router router_feature stable "checked-in generated model-router recipe policy JSON",
   router_record "animus-router::QuorumClass" "animus-router" router router_feature stable "model routing quorum class DTO",
   router_record "animus-router::Receipt" "animus-router" router router_feature stable "safe model routing receipt DTO",
   router_record "animus-router::ReceiptDraft" "animus-router" router router_feature stable "borrowed safe model routing receipt draft DTO",

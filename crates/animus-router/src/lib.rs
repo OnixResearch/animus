@@ -216,6 +216,7 @@ fn validate_hash(field: FieldName, value: &str) -> Result<(), AdapterContractErr
 mod choose;
 mod limit;
 pub(crate) mod outcome;
+mod policy;
 mod projection;
 mod schema;
 
@@ -237,6 +238,7 @@ pub use evidence::{
 };
 pub use limit::{Bounds, BoundsDraft, DeadlineClass, FallbackPolicy};
 pub use outcome::{ResultDraft, RouteResult, RouteResultStatus};
+pub use policy::ROUTER_RECIPE_POLICY_JSON;
 pub use projection::{
     FallbackEligibility, PrivacyBand, SignalBand, SignalDraft, Signals, TaskShape,
 };

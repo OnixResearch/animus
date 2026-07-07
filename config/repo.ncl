@@ -57,6 +57,9 @@ let octet_hook_entry = "scripts/hooks/octet-lints" in
 let nickel_config_hook_id = "nickel-configs" in
 let nickel_config_hook_name = "Nickel generated configs" in
 let nickel_config_hook_entry = "scripts/config/check-nickel-configs" in
+let router_policy_hook_id = "router-policy" in
+let router_policy_hook_name = "Router policy conformance" in
+let router_policy_hook_entry = "scripts/cairn/check-router-policy" in
 let script_language = "script" in
 let pre_commit_stage = "pre-commit" in
 let local_repo = "local" in
@@ -141,6 +144,14 @@ let local_repo = "local" in
             id = nickel_config_hook_id,
             name = nickel_config_hook_name,
             entry = nickel_config_hook_entry,
+            language = script_language,
+            pass_filenames = false,
+            stages = [pre_commit_stage],
+          },
+          {
+            id = router_policy_hook_id,
+            name = router_policy_hook_name,
+            entry = router_policy_hook_entry,
             language = script_language,
             pass_filenames = false,
             stages = [pre_commit_stage],

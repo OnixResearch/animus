@@ -1,29 +1,14 @@
+use crate::policy::{
+    CONTRACT_ARTIFACT, CONTRACT_JSON, CONTRACT_TEXT, CONTRACT_TOOL_CALL, FAMILY_CONFIDENCE,
+    FAMILY_FUSION, FAMILY_RATINGS, FAMILY_REMOM, FAMILY_SINGLE, FAMILY_WORKFLOW, ROLE_ESCALATION,
+    ROLE_FALLBACK, ROLE_FINALIZER, ROLE_JUDGE, ROLE_PRIMARY, ROLE_RATER, ROLE_REPAIR,
+    ROLE_SYNTHESIZER, ROLE_WORKER,
+};
+
 const RECIPE_ID_FIELD: crate::FieldName = crate::FieldName::new("router_recipe_id");
 const FAMILY_FIELD: crate::FieldName = crate::FieldName::new("router_route_family");
 const ROLE_FIELD: crate::FieldName = crate::FieldName::new("router_model_role");
 const OUTPUT_FIELD: crate::FieldName = crate::FieldName::new("router_output_contract");
-
-const FAMILY_SINGLE: &str = "single";
-const FAMILY_CONFIDENCE: &str = "confidence";
-const FAMILY_RATINGS: &str = "ratings";
-const FAMILY_REMOM: &str = "remom";
-const FAMILY_FUSION: &str = "fusion";
-const FAMILY_WORKFLOW: &str = "workflow";
-
-const ROLE_PRIMARY: &str = "primary";
-const ROLE_ESCALATION: &str = "escalation";
-const ROLE_RATER: &str = "rater";
-const ROLE_SYNTHESIZER: &str = "synthesizer";
-const ROLE_JUDGE: &str = "judge";
-const ROLE_FINALIZER: &str = "finalizer";
-const ROLE_WORKER: &str = "worker";
-const ROLE_REPAIR: &str = "repair";
-const ROLE_FALLBACK: &str = "fallback";
-
-const CONTRACT_TEXT: &str = "text";
-const CONTRACT_JSON: &str = "json";
-const CONTRACT_TOOL_CALL: &str = "tool_call";
-const CONTRACT_ARTIFACT: &str = "artifact";
 
 /// Model-router recipe family.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

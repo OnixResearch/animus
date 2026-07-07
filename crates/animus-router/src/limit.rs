@@ -1,13 +1,11 @@
+use crate::policy::{
+    DEADLINE_EXTENDED, DEADLINE_SHORT, DEADLINE_STANDARD, FALLBACK_BEST_VALID_EVIDENCE,
+    FALLBACK_DENY, FALLBACK_SAFE_SINGLE,
+};
+
 const DEADLINE_FIELD: crate::FieldName = crate::FieldName::new("router_timeout_class");
 const FALLBACK_FIELD: crate::FieldName = crate::FieldName::new("router_fallback_policy");
 const ZERO_COUNT: u32 = 0;
-
-const DEADLINE_SHORT: &str = "short";
-const DEADLINE_STANDARD: &str = "standard";
-const DEADLINE_EXTENDED: &str = "extended";
-const FALLBACK_DENY: &str = "deny";
-const FALLBACK_BEST_VALID_EVIDENCE: &str = "best_valid_evidence";
-const FALLBACK_SAFE_SINGLE: &str = "safe_single";
 
 /// Timeout/deadline class for bounded host execution.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
