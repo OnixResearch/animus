@@ -1,8 +1,3 @@
-use crate::policy::{
-    DEADLINE_EXTENDED, DEADLINE_SHORT, DEADLINE_STANDARD, FALLBACK_BEST_VALID_EVIDENCE,
-    FALLBACK_DENY, FALLBACK_SAFE_SINGLE,
-};
-
 const DEADLINE_FIELD: crate::FieldName = crate::FieldName::new("router_timeout_class");
 const FALLBACK_FIELD: crate::FieldName = crate::FieldName::new("router_fallback_policy");
 const ZERO_COUNT: u32 = 0;
@@ -26,9 +21,9 @@ impl DeadlineClass {
     /// Returns [`crate::AdapterContractError`] for unsupported labels.
     pub fn parse(value: &str) -> Result<Self, crate::AdapterContractError> {
         crate::parse_value(DEADLINE_FIELD, value, |normalized| match normalized {
-            DEADLINE_SHORT => Some(Self::Short),
-            DEADLINE_STANDARD => Some(Self::Standard),
-            DEADLINE_EXTENDED => Some(Self::Extended),
+            crate::policy::DEADLINE_SHORT => Some(Self::Short),
+            crate::policy::DEADLINE_STANDARD => Some(Self::Standard),
+            crate::policy::DEADLINE_EXTENDED => Some(Self::Extended),
             _ => None,
         })
     }
@@ -37,9 +32,9 @@ impl DeadlineClass {
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
-            Self::Short => DEADLINE_SHORT,
-            Self::Standard => DEADLINE_STANDARD,
-            Self::Extended => DEADLINE_EXTENDED,
+            Self::Short => crate::policy::DEADLINE_SHORT,
+            Self::Standard => crate::policy::DEADLINE_STANDARD,
+            Self::Extended => crate::policy::DEADLINE_EXTENDED,
         }
     }
 }
@@ -63,9 +58,9 @@ impl FallbackPolicy {
     /// Returns [`crate::AdapterContractError`] for unsupported labels.
     pub fn parse(value: &str) -> Result<Self, crate::AdapterContractError> {
         crate::parse_value(FALLBACK_FIELD, value, |normalized| match normalized {
-            FALLBACK_DENY => Some(Self::Deny),
-            FALLBACK_BEST_VALID_EVIDENCE => Some(Self::BestValidEvidence),
-            FALLBACK_SAFE_SINGLE => Some(Self::SafeSingle),
+            crate::policy::FALLBACK_DENY => Some(Self::Deny),
+            crate::policy::FALLBACK_BEST_VALID_EVIDENCE => Some(Self::BestValidEvidence),
+            crate::policy::FALLBACK_SAFE_SINGLE => Some(Self::SafeSingle),
             _ => None,
         })
     }
@@ -74,9 +69,9 @@ impl FallbackPolicy {
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
-            Self::Deny => FALLBACK_DENY,
-            Self::BestValidEvidence => FALLBACK_BEST_VALID_EVIDENCE,
-            Self::SafeSingle => FALLBACK_SAFE_SINGLE,
+            Self::Deny => crate::policy::FALLBACK_DENY,
+            Self::BestValidEvidence => crate::policy::FALLBACK_BEST_VALID_EVIDENCE,
+            Self::SafeSingle => crate::policy::FALLBACK_SAFE_SINGLE,
         }
     }
 }

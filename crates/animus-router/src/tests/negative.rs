@@ -225,12 +225,17 @@ fn router_receipt_rejects_uppercase_policy_hash() {
         redactions: &["prompt_omitted"],
     });
 
-    assert!(matches!(
-        error,
-        Err(crate::ValidationError::Contract(
-            crate::AdapterContractError::InvalidEvidenceHash { .. }
-        ))
-    ));
+    assert!(error.is_err());
+    let Err(crate::ValidationError::Contract(crate::AdapterContractError::InvalidEvidenceHash {
+        field,
+        reason,
+    })) = error
+    else {
+        panic!("uppercase policy hash must fail with an invalid evidence hash");
+    };
+
+    assert_eq!(field, "router_effect_receipt_hash");
+    assert_eq!(reason, "effect hash must contain lowercase hex only");
 }
 
 fn assert_bounds_error(case: &BoundsCase) {

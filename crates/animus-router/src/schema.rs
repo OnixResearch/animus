@@ -1,10 +1,3 @@
-use crate::policy::{
-    CONTRACT_ARTIFACT, CONTRACT_JSON, CONTRACT_TEXT, CONTRACT_TOOL_CALL, FAMILY_CONFIDENCE,
-    FAMILY_FUSION, FAMILY_RATINGS, FAMILY_REMOM, FAMILY_SINGLE, FAMILY_WORKFLOW, ROLE_ESCALATION,
-    ROLE_FALLBACK, ROLE_FINALIZER, ROLE_JUDGE, ROLE_PRIMARY, ROLE_RATER, ROLE_REPAIR,
-    ROLE_SYNTHESIZER, ROLE_WORKER,
-};
-
 const RECIPE_ID_FIELD: crate::FieldName = crate::FieldName::new("router_recipe_id");
 const FAMILY_FIELD: crate::FieldName = crate::FieldName::new("router_route_family");
 const ROLE_FIELD: crate::FieldName = crate::FieldName::new("router_model_role");
@@ -39,12 +32,12 @@ impl RouteFamily {
 
     fn from_normalized(value: &str) -> Option<Self> {
         match value {
-            FAMILY_SINGLE => Some(Self::Single),
-            FAMILY_CONFIDENCE => Some(Self::Confidence),
-            FAMILY_RATINGS => Some(Self::Ratings),
-            FAMILY_REMOM => Some(Self::Remom),
-            FAMILY_FUSION => Some(Self::Fusion),
-            FAMILY_WORKFLOW => Some(Self::Workflow),
+            crate::policy::FAMILY_SINGLE => Some(Self::Single),
+            crate::policy::FAMILY_CONFIDENCE => Some(Self::Confidence),
+            crate::policy::FAMILY_RATINGS => Some(Self::Ratings),
+            crate::policy::FAMILY_REMOM => Some(Self::Remom),
+            crate::policy::FAMILY_FUSION => Some(Self::Fusion),
+            crate::policy::FAMILY_WORKFLOW => Some(Self::Workflow),
             _ => None,
         }
     }
@@ -53,12 +46,12 @@ impl RouteFamily {
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
-            Self::Single => FAMILY_SINGLE,
-            Self::Confidence => FAMILY_CONFIDENCE,
-            Self::Ratings => FAMILY_RATINGS,
-            Self::Remom => FAMILY_REMOM,
-            Self::Fusion => FAMILY_FUSION,
-            Self::Workflow => FAMILY_WORKFLOW,
+            Self::Single => crate::policy::FAMILY_SINGLE,
+            Self::Confidence => crate::policy::FAMILY_CONFIDENCE,
+            Self::Ratings => crate::policy::FAMILY_RATINGS,
+            Self::Remom => crate::policy::FAMILY_REMOM,
+            Self::Fusion => crate::policy::FAMILY_FUSION,
+            Self::Workflow => crate::policy::FAMILY_WORKFLOW,
         }
     }
 }
@@ -98,15 +91,15 @@ impl Role {
 
     fn from_normalized(value: &str) -> Option<Self> {
         match value {
-            ROLE_PRIMARY => Some(Self::Primary),
-            ROLE_ESCALATION => Some(Self::Escalation),
-            ROLE_RATER => Some(Self::Rater),
-            ROLE_SYNTHESIZER => Some(Self::Synthesizer),
-            ROLE_JUDGE => Some(Self::Judge),
-            ROLE_FINALIZER => Some(Self::Finalizer),
-            ROLE_WORKER => Some(Self::Worker),
-            ROLE_REPAIR => Some(Self::Repair),
-            ROLE_FALLBACK => Some(Self::Fallback),
+            crate::policy::ROLE_PRIMARY => Some(Self::Primary),
+            crate::policy::ROLE_ESCALATION => Some(Self::Escalation),
+            crate::policy::ROLE_RATER => Some(Self::Rater),
+            crate::policy::ROLE_SYNTHESIZER => Some(Self::Synthesizer),
+            crate::policy::ROLE_JUDGE => Some(Self::Judge),
+            crate::policy::ROLE_FINALIZER => Some(Self::Finalizer),
+            crate::policy::ROLE_WORKER => Some(Self::Worker),
+            crate::policy::ROLE_REPAIR => Some(Self::Repair),
+            crate::policy::ROLE_FALLBACK => Some(Self::Fallback),
             _ => None,
         }
     }
@@ -115,15 +108,15 @@ impl Role {
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
-            Self::Primary => ROLE_PRIMARY,
-            Self::Escalation => ROLE_ESCALATION,
-            Self::Rater => ROLE_RATER,
-            Self::Synthesizer => ROLE_SYNTHESIZER,
-            Self::Judge => ROLE_JUDGE,
-            Self::Finalizer => ROLE_FINALIZER,
-            Self::Worker => ROLE_WORKER,
-            Self::Repair => ROLE_REPAIR,
-            Self::Fallback => ROLE_FALLBACK,
+            Self::Primary => crate::policy::ROLE_PRIMARY,
+            Self::Escalation => crate::policy::ROLE_ESCALATION,
+            Self::Rater => crate::policy::ROLE_RATER,
+            Self::Synthesizer => crate::policy::ROLE_SYNTHESIZER,
+            Self::Judge => crate::policy::ROLE_JUDGE,
+            Self::Finalizer => crate::policy::ROLE_FINALIZER,
+            Self::Worker => crate::policy::ROLE_WORKER,
+            Self::Repair => crate::policy::ROLE_REPAIR,
+            Self::Fallback => crate::policy::ROLE_FALLBACK,
         }
     }
 }
@@ -153,10 +146,10 @@ impl OutputContract {
 
     fn from_normalized(value: &str) -> Option<Self> {
         match value {
-            CONTRACT_TEXT => Some(Self::Text),
-            CONTRACT_JSON => Some(Self::Json),
-            CONTRACT_TOOL_CALL => Some(Self::ToolCall),
-            CONTRACT_ARTIFACT => Some(Self::Artifact),
+            crate::policy::CONTRACT_TEXT => Some(Self::Text),
+            crate::policy::CONTRACT_JSON => Some(Self::Json),
+            crate::policy::CONTRACT_TOOL_CALL => Some(Self::ToolCall),
+            crate::policy::CONTRACT_ARTIFACT => Some(Self::Artifact),
             _ => None,
         }
     }
@@ -165,10 +158,10 @@ impl OutputContract {
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
-            Self::Text => CONTRACT_TEXT,
-            Self::Json => CONTRACT_JSON,
-            Self::ToolCall => CONTRACT_TOOL_CALL,
-            Self::Artifact => CONTRACT_ARTIFACT,
+            Self::Text => crate::policy::CONTRACT_TEXT,
+            Self::Json => crate::policy::CONTRACT_JSON,
+            Self::ToolCall => crate::policy::CONTRACT_TOOL_CALL,
+            Self::Artifact => crate::policy::CONTRACT_ARTIFACT,
         }
     }
 }

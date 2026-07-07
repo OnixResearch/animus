@@ -2,6 +2,10 @@
 //! `animus-adapters::router` resolves to the live `animus-router` type
 //! with the same API shape after the crate-extraction barrier.
 
+// Type-parity tests intentionally spend most statements on compile-time type
+// resolution. Runtime assertion density is checked by the router unit tests.
+#![allow(unknown_lints, assertion_density)]
+
 const EXPECTED_ROUTER_ITEM_COUNT: usize = 35;
 const EXPECTED_ALIAS_COUNT: usize = 21;
 const PARITY_PROMPT_CHARS: u32 = 1;
@@ -129,7 +133,7 @@ fn facade_aliases_resolve() {
 
     let _project_router_signals = animus_adapters::project_router_signals;
     let source = animus_adapters::router::RuleSignalSource;
-    let metadata =
+    let metadata_result =
         animus_adapters::RouterRequestMetadata::new(animus_adapters::RouterRequestMetadataDraft {
             prompt_char_estimate: PARITY_PROMPT_CHARS,
             tool_call_count: PARITY_TOOL_CALLS,
@@ -138,10 +142,14 @@ fn facade_aliases_resolve() {
             context_window_fill_per_mille: PARITY_CONTEXT_PER_MILLE,
             privacy_policy: "remote_allowed",
             fallback_hint: "eligible",
-        })
-        .expect("parity metadata should validate");
-    let _ = animus_adapters::project_router_signals_with_source(&source, &metadata)
-        .expect("parity source should project");
+        });
+    assert!(metadata_result.is_ok());
+    let metadata = match metadata_result {
+        Ok(metadata) => metadata,
+        Err(_error) => return,
+    };
+    let projection_result = animus_adapters::project_router_signals_with_source(&source, &metadata);
+    assert!(projection_result.is_ok());
     let _validate_router_receipt_text = animus_adapters::validate_router_receipt_text;
 
     assert_eq!(EXPECTED_ALIAS_COUNT, alias_names().len());
