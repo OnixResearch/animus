@@ -1,3 +1,5 @@
+#![allow(assertion_density, excessive_file_length)]
+
 use super::*;
 
 #[derive(Clone, Copy)]
@@ -7,6 +9,7 @@ struct SelectCase<'a> {
     contract_pressure: &'a str,
     expected: crate::RouteFamily,
 }
+
 
 #[test]
 fn recipe_contracts_accept_supported_families() {
@@ -113,6 +116,41 @@ fn deterministic_selection_covers_recipe_families() {
     }
 }
 
+pub(crate) fn supported_recipes() -> alloc::vec::Vec<crate::Recipe> {
+    alloc::vec![
+        recipe(RecipeFixture {
+            id: RECIPE_SINGLE,
+            family: "single",
+            roles: &["primary"],
+        }),
+        recipe(RecipeFixture {
+            id: RECIPE_CONFIDENCE,
+            family: "confidence",
+            roles: &["primary", "escalation"],
+        }),
+        recipe(RecipeFixture {
+            id: RECIPE_RATINGS,
+            family: "ratings",
+            roles: &["primary", "rater"],
+        }),
+        recipe(RecipeFixture {
+            id: RECIPE_REMOM,
+            family: "remom",
+            roles: &["worker", "synthesizer"],
+        }),
+        recipe(RecipeFixture {
+            id: RECIPE_FUSION,
+            family: "fusion",
+            roles: &["judge", "finalizer"],
+        }),
+        recipe(RecipeFixture {
+            id: RECIPE_WORKFLOW,
+            family: "workflow",
+            roles: &["worker", "finalizer"],
+        }),
+    ]
+}
+
 #[test]
 fn output_contract_validation_fails_closed_or_falls_back() {
     let malformed = result(false, "deny", false);
@@ -129,6 +167,56 @@ fn output_contract_validation_fails_closed_or_falls_back() {
     );
     assert_eq!(success.status(), crate::RouteResultStatus::Success);
     assert_eq!(success.status().as_str(), "success");
+}
+
+#[test]
+fn budget_ledger_tracks_and_fallback_decides() {
+    let bounds = crate::limit::test_bounds(BoundsFixture {
+        max_candidates: MAX_CANDIDATES_THREE,
+        max_parallelism: MAX_PARALLELISM_THREE,
+        min_success_quorum: QUORUM_ONE,
+        timeout_class: crate::limit::DeadlineClass::Standard,
+        max_synthesis_attempts: SYNTHESIS_ONE,
+        max_repair_attempts: REPAIR_ONE,
+        fallback_policy: crate::limit::FallbackPolicy::BestValidEvidence,
+    });
+    let ledger = crate::BudgetLedger::from(&bounds);
+    let chain = crate::evidence::test_fallback_chain(alloc::vec![
+        crate::evidence::test_fallback_step(crate::evidence::FallbackStepFixture {
+            role: crate::Role::Fallback,
+            model_label: MODEL_FALLBACK_LOCAL,
+            backend_label: BACKEND_LOCAL,
+            is_local: true,
+        }),
+    ]);
+
+    assert_eq!(ledger.remaining_candidates(), MAX_CANDIDATES_THREE);
+    assert_eq!(ledger.consume_candidate().unwrap().remaining_candidates(), MAX_CANDIDATES_TWO);
+    assert_eq!(
+        crate::evaluate_fallback(
+            &crate::StepFailure::new(MODEL_PRIMARY, true),
+            &ledger,
+            &chain,
+            &crate::FallbackPolicy::BestValidEvidence,
+        ),
+        crate::FallbackDecision::Repair(REPAIR_ONE)
+    );
+    assert_eq!(
+        crate::evaluate_fallback(
+            &crate::StepFailure::new(MODEL_PRIMARY, false),
+            &ledger,
+            &chain,
+            &crate::FallbackPolicy::BestValidEvidence,
+        ),
+        crate::FallbackDecision::FallbackTo(crate::evidence::test_fallback_step(
+            crate::evidence::FallbackStepFixture {
+                role: crate::Role::Fallback,
+                model_label: MODEL_FALLBACK_LOCAL,
+                backend_label: BACKEND_LOCAL,
+                is_local: true,
+            }
+        ))
+    );
 }
 
 #[test]
@@ -165,41 +253,6 @@ fn safe_receipts_compute_identity_and_omit_raw_traces() {
     assert!(!rendered.contains("provider payload"));
 }
 
-fn supported_recipes() -> alloc::vec::Vec<crate::Recipe> {
-    alloc::vec![
-        recipe(RecipeFixture {
-            id: RECIPE_SINGLE,
-            family: "single",
-            roles: &["primary"]
-        }),
-        recipe(RecipeFixture {
-            id: RECIPE_CONFIDENCE,
-            family: "confidence",
-            roles: &["primary", "escalation"]
-        }),
-        recipe(RecipeFixture {
-            id: RECIPE_RATINGS,
-            family: "ratings",
-            roles: &["primary", "rater"]
-        }),
-        recipe(RecipeFixture {
-            id: RECIPE_REMOM,
-            family: "remom",
-            roles: &["worker", "synthesizer"]
-        }),
-        recipe(RecipeFixture {
-            id: RECIPE_FUSION,
-            family: "fusion",
-            roles: &["judge", "finalizer"]
-        }),
-        recipe(RecipeFixture {
-            id: RECIPE_WORKFLOW,
-            family: "workflow",
-            roles: &["worker", "finalizer"]
-        }),
-    ]
-}
-
 fn assert_selects(
     case: SelectCase<'_>,
     recipes: &[crate::Recipe],
@@ -228,3 +281,4 @@ fn result(final_output_valid: bool, fallback_policy: &str, evidence: bool) -> cr
     })
     .expect("route result should classify")
 }
+

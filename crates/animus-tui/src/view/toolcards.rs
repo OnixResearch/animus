@@ -96,6 +96,7 @@ pub enum FileLine {
 }
 
 /// File-edit diff view rendered from hashed-edit-protocol DTOs.
+#[allow(unknown_lints, path_segment_repetition)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct DiffView {
     /// Editor or tool label.

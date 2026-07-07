@@ -6,7 +6,7 @@
 // resolution. Runtime assertion density is checked by the router unit tests.
 #![allow(unknown_lints, assertion_density)]
 
-const EXPECTED_ROUTER_ITEM_COUNT: usize = 35;
+const EXPECTED_ROUTER_ITEM_COUNT: usize = 40;
 const EXPECTED_ALIAS_COUNT: usize = 21;
 const PARITY_PROMPT_CHARS: u32 = 1;
 const PARITY_TOOL_CALLS: u32 = 0;
@@ -33,6 +33,11 @@ fn adapter_reexport_types_resolve() {
     assert_type::<animus_adapters::router::Role>();
     assert_type::<animus_adapters::router::RouteFamily>();
     assert_type::<animus_adapters::router::SelectedPlan>();
+    assert_type::<animus_adapters::router::ExecutionPlanError>();
+    assert_type::<animus_adapters::router::FallbackChain>();
+    assert_type::<animus_adapters::router::FallbackStep>();
+    assert_type::<animus_adapters::router::RoleStep>();
+    assert_type::<animus_adapters::router::RouterExecutionPlan>();
     assert_type::<animus_adapters::router::SelectionDenial>();
     assert_type::<animus_adapters::router::SignalBand>();
     assert_type::<animus_adapters::router::Signals>();
@@ -55,6 +60,7 @@ fn adapter_reexport_types_resolve() {
 
     let _project_signals = animus_adapters::router::project_signals;
     let _select_recipe = animus_adapters::router::select_recipe;
+    let _materialize_execution_plan = animus_adapters::router::materialize_execution_plan;
     let _validate_receipt_text = animus_adapters::router::validate_receipt_text;
 
     assert_eq!(EXPECTED_ROUTER_ITEM_COUNT, router_item_names().len());
@@ -79,6 +85,11 @@ fn direct_router_types_resolve() {
     assert_type::<animus_router::Role>();
     assert_type::<animus_router::RouteFamily>();
     assert_type::<animus_router::SelectedPlan>();
+    assert_type::<animus_router::ExecutionPlanError>();
+    assert_type::<animus_router::FallbackChain>();
+    assert_type::<animus_router::FallbackStep>();
+    assert_type::<animus_router::RoleStep>();
+    assert_type::<animus_router::RouterExecutionPlan>();
     assert_type::<animus_router::SelectionDenial>();
     assert_type::<animus_router::SignalBand>();
     assert_type::<animus_router::Signals>();
@@ -101,6 +112,7 @@ fn direct_router_types_resolve() {
 
     let _project_signals = animus_router::project_signals;
     let _select_recipe = animus_router::select_recipe;
+    let _materialize_execution_plan = animus_router::materialize_execution_plan;
     let _validate_receipt_text = animus_router::validate_receipt_text;
 
     assert_eq!(EXPECTED_ROUTER_ITEM_COUNT, router_item_names().len());
@@ -173,6 +185,11 @@ fn router_item_names() -> [&'static str; EXPECTED_ROUTER_ITEM_COUNT] {
         "Role",
         "RouteFamily",
         "SelectedPlan",
+        "ExecutionPlanError",
+        "FallbackChain",
+        "FallbackStep",
+        "RoleStep",
+        "RouterExecutionPlan",
         "SelectionDenial",
         "SignalBand",
         "Signals",

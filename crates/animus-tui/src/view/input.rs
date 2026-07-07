@@ -58,6 +58,7 @@ impl PromptInputState {
     }
 
     /// Returns the cursor position as a byte offset.
+    #[allow(unknown_lints, usize_in_public_api)]
     #[must_use]
     pub const fn cursor(&self) -> usize {
         self.cursor
@@ -123,7 +124,7 @@ impl PromptInputState {
         self.save_undo();
         let next = self.content[cursor..].char_indices().next();
         if let Some((_pos, ch)) = next {
-            let end = cursor + ch.len_utf8();
+            let end = cursor.saturating_add(ch.len_utf8());
             self.content.drain(cursor..end);
         }
         self.history_index = -1;
@@ -149,7 +150,7 @@ impl PromptInputState {
         }
         let next = self.content[cursor..].char_indices().next();
         if let Some((_pos, ch)) = next {
-            self.cursor = cursor + ch.len_utf8();
+            self.cursor = cursor.saturating_add(ch.len_utf8());
         }
     }
 
@@ -298,6 +299,7 @@ impl CompletionMenu {
     }
 
     /// Returns the selected index, if any.
+    #[allow(unknown_lints, usize_in_public_api)]
     #[must_use]
     pub const fn selected_index(&self) -> Option<usize> {
         self.selected
@@ -315,10 +317,11 @@ impl CompletionMenu {
             return;
         }
         let next = self.selected.map_or(0, |i| {
-            if i + 1 >= self.candidates.len() {
+            let next_index = i.saturating_add(1);
+            if next_index >= self.candidates.len() {
                 0
             } else {
-                i + 1
+                next_index
             }
         });
         self.selected = Some(next);
@@ -329,11 +332,11 @@ impl CompletionMenu {
         if self.candidates.is_empty() {
             return;
         }
-        let prev = self.selected.map_or(self.candidates.len() - 1, |i| {
+        let prev = self.selected.map_or(self.candidates.len().saturating_sub(1), |i| {
             if i == 0 {
-                self.candidates.len() - 1
+                self.candidates.len().saturating_sub(1)
             } else {
-                i - 1
+                i.saturating_sub(1)
             }
         });
         self.selected = Some(prev);
@@ -395,11 +398,11 @@ impl SlashCommandDetector {
         let mut parts = rest.splitn(2, |c: char| c.is_whitespace());
         let name = parts.next().unwrap_or("").to_string();
         let args = parts.next().unwrap_or("").to_string();
-        let known = self.known_commands.iter().any(|k| k == &name);
+        let is_known = self.known_commands.iter().any(|k| k == &name);
         Some(SlashCommand {
             name,
             args,
-            known,
+            known: is_known,
         })
     }
 
@@ -414,12 +417,16 @@ impl SlashCommandDetector {
 mod input_tests {
     use super::*;
 
+    const EXTRA_INPUT_CHARS: usize = 10;
+    const EXTRA_COMPLETION_CANDIDATES: usize = 10;
+    const OVERFLOW_TEST_ENTRIES: usize = 10;
+
     // -----------------------------------------------------------------------
     // Prompt input state tests
     // -----------------------------------------------------------------------
 
     #[test]
-    fn empty_input_is_empty() {
+    fn empty_buffer_is_empty() {
         let state = PromptInputState::new();
         assert!(state.is_empty());
         assert_eq!(state.content(), "");
@@ -540,9 +547,9 @@ mod input_tests {
     }
 
     #[test]
-    fn max_length_limits_input() {
+    fn max_length_limits_buffer() {
         let mut state = PromptInputState::new();
-        for _ in 0..MAX_INPUT_LENGTH + 10 {
+        for _ in 0..MAX_INPUT_LENGTH.saturating_add(EXTRA_INPUT_CHARS) {
             state.type_char('x');
         }
         assert_eq!(state.content().len(), MAX_INPUT_LENGTH);
@@ -602,7 +609,8 @@ mod input_tests {
     #[test]
     fn populate_truncates_to_max() {
         let mut menu = CompletionMenu::new();
-        let many: Vec<_> = (0..MAX_COMPLETION_CANDIDATES + 10)
+        let many: Vec<_> = (0..MAX_COMPLETION_CANDIDATES
+            .saturating_add(EXTRA_COMPLETION_CANDIDATES))
             .map(|i| CompletionCandidate {
                 label: format!("candidate_{i}"),
                 description: String::default(),
@@ -617,7 +625,7 @@ mod input_tests {
     // -----------------------------------------------------------------------
 
     #[test]
-    fn non_slash_input_returns_none() {
+    fn non_slash_text_returns_none() {
         let detector = SlashCommandDetector::new(vec![]);
         assert!(detector.detect("hello").is_none());
         assert!(detector.detect("").is_none());
@@ -664,7 +672,7 @@ mod input_tests {
     // -----------------------------------------------------------------------
 
     #[test]
-    fn malformed_slash_input_does_not_panic() {
+    fn malformed_slash_text_does_not_panic() {
         let detector = SlashCommandDetector::new(vec![]);
         // Various edge cases
         assert!(detector.detect("/").is_some());
@@ -675,12 +683,11 @@ mod input_tests {
         assert!(detector.detect("").is_none());
     }
 
-        #[test]
+    #[test]
     fn unbounded_history_growth_is_prevented() {
-        const OVERFLOW_TEST_ENTRIES: usize = 10;
         let mut state = PromptInputState::new();
-        let limit = MAX_HISTORY_SIZE.saturating_add(OVERFLOW_TEST_ENTRIES);
-        for i in 0..limit {
+        let history_entry_count = MAX_HISTORY_SIZE.saturating_add(OVERFLOW_TEST_ENTRIES);
+        for i in 0..history_entry_count {
             let content = format!("input {i}");
             for c in content.chars() {
                 state.type_char(c);

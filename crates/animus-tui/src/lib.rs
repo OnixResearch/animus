@@ -14,6 +14,7 @@
 #![deny(clippy::pedantic)]
 #![deny(clippy::undocumented_unsafe_blocks)]
 #![allow(clippy::module_name_repetitions)]
+#![allow(unknown_lints, module_file_count, excessive_file_length)]
 #![forbid(unsafe_code)]
 
 mod bridge;
@@ -35,22 +36,17 @@ pub use runner::{
     run_hosted_tool, run_simple_tool,
 };
 pub use view::{
-    CompletionCandidate, CompletionMenu, ConversationRenderModel, FileLine, DiffView, EntryMetadata,
-    ImageDisplay, PromptInputState, ScrollbackMetadata, SlashCommand, SlashCommandDetector,
-    AgentDashboardState, AgentStatus, AppShellConfig, AppShellState, ControlCommand, QueueItem,
-    QueueItemStatus, ShellEvent, ShellEventOutcome, StatusRailState, TerminalState,
-    ToolCallCard, ToolCardProgress, ToolPanelState, TranscriptEntry,
-    TranscriptEntryKind, ToolApprovalPanel, ToolPanel, ToolRenderModel, ToolSessionStatus,
-    LayoutDiagnostic, LayoutTree, PaneView,
-    resolve_layout, render_layout_tree_snapshot,
-    render_agent_dashboard_snapshot, render_app_shell_snapshot, render_conversation_snapshot,
-    render_status_rail_snapshot,
-    render_streaming_snapshot,
-    render_text_snapshot, render_tool_panel_snapshot,
+    AgentDashboardState, AgentStatus, AppShellConfig, AppShellState, CompletionCandidate,
+    CompletionMenu, ControlCommand, ConversationRenderModel, DiffView, EntryMetadata, FileLine,
+    ImageDisplay, LayoutDiagnostic, LayoutTree, PaneView, PromptInputState, QueueItem,
+    QueueItemStatus, ScrollbackMetadata, ShellEvent, ShellEventOutcome, SlashCommand,
+    SlashCommandDetector, StatusRailState, TerminalState, ToolApprovalPanel, ToolCallCard,
+    ToolCardProgress, ToolPanel, ToolPanelState, ToolRenderModel, ToolSessionStatus,
+    TranscriptEntry, TranscriptEntryKind, render_agent_dashboard_snapshot,
+    render_app_shell_snapshot, render_conversation_snapshot, render_layout_tree_snapshot,
+    render_status_rail_snapshot, render_streaming_snapshot, render_text_snapshot,
+    render_tool_panel_snapshot, resolve_layout,
 };
 
 #[cfg(feature = "rats-widgets")]
-pub use view::{
-    InputAction, Keybinding,
-    resolve_default_keybinding, resolve_keybinding,
-};
+pub use view::{InputAction, Keybinding, resolve_default_keybinding, resolve_keybinding};

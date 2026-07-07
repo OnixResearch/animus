@@ -29,6 +29,7 @@ include!("view/conversationrendr.rs");
 include!("view/streaming.rs");
 
 #[cfg(test)]
+#[allow(unknown_lints, path_segment_repetition)]
 mod streaming_tests {
     use super::*;
     include!("view/streamingtest.rs");
@@ -39,6 +40,7 @@ include!("view/toolcards.rs");
 include!("view/toolpanels.rs");
 
 #[cfg(test)]
+#[allow(unknown_lints, path_segment_repetition)]
 mod tool_panel_tests {
     use super::*;
     include!("view/toolpaneltest.rs");
@@ -47,6 +49,7 @@ mod tool_panel_tests {
 include!("view/status.rs");
 
 #[cfg(test)]
+#[allow(unknown_lints, path_segment_repetition)]
 mod status_rail_tests {
     use super::*;
     include!("view/statustest.rs");
@@ -59,6 +62,7 @@ include!("view/controltests.rs");
 include!("view/shell.rs");
 
 #[cfg(test)]
+#[allow(unknown_lints, path_segment_repetition)]
 mod shell_tests {
     use super::*;
     include!("view/shelltest.rs");

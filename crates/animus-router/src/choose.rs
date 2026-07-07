@@ -90,10 +90,16 @@ impl Budget {
         })
     }
 
-    fn allows_backend(&self, backend: &str) -> bool {
+    pub(crate) fn allows_backend(&self, backend: &str) -> bool {
         self.allowed_backends
             .iter()
             .any(|allowed| allowed == backend)
+    }
+
+    /// Returns max candidates.
+    #[must_use]
+    pub const fn max_candidates(&self) -> u32 {
+        self.max_candidates
     }
 }
 
@@ -105,6 +111,8 @@ pub struct SelectedPlan {
     selected_models: alloc::vec::Vec<alloc::string::String>,
     output_contract: crate::OutputContract,
     bounds: crate::Bounds,
+    privacy: crate::PrivacyBand,
+    fallback_eligibility: crate::FallbackEligibility,
 }
 
 impl SelectedPlan {
@@ -136,6 +144,18 @@ impl SelectedPlan {
     #[must_use]
     pub const fn bounds(&self) -> &crate::Bounds {
         &self.bounds
+    }
+
+    /// Returns the projected privacy band.
+    #[must_use]
+    pub const fn privacy(&self) -> crate::PrivacyBand {
+        self.privacy
+    }
+
+    /// Returns the projected fallback eligibility.
+    #[must_use]
+    pub const fn fallback_eligibility(&self) -> crate::FallbackEligibility {
+        self.fallback_eligibility
     }
 }
 
@@ -186,6 +206,8 @@ pub fn select_recipe(
         selected_models,
         output_contract: recipe.output_contract(),
         bounds: recipe.bounds().clone(),
+        privacy: signals.privacy(),
+        fallback_eligibility: signals.fallback_eligibility(),
     })
 }
 
@@ -248,3 +270,22 @@ fn entry_allowed(
         && budget.allows_backend(entry.backend())
         && (signals.privacy() == crate::PrivacyBand::RemoteAllowed || entry.is_local())
 }
+
+#[cfg(test)]
+pub(crate) fn test_selected_plan(fixture: crate::test_support::SelectedPlanFixture<'_>) -> SelectedPlan {
+    SelectedPlan {
+        recipe_id: alloc::string::String::from(fixture.recipe_id),
+        family: fixture.family,
+        selected_models: fixture
+            .selected_models
+            .iter()
+            .map(|model| alloc::string::String::from(*model))
+            .collect(),
+        output_contract: fixture.output_contract,
+        bounds: fixture.bounds,
+        privacy: fixture.privacy,
+        fallback_eligibility: fixture.fallback_eligibility,
+    }
+}
+
+

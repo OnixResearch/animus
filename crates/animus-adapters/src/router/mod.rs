@@ -6,11 +6,13 @@
 //! migrate to `animus-router` directly.
 
 pub use animus_router::{
-    Bounds, BoundsDraft, Budget, CatalogEntry, CatalogEntryDraft, DeadlineClass, DurationBucket,
-    FallbackEligibility, FallbackPolicy, OutputContract, PrivacyBand, QuorumClass, Receipt,
-    ReceiptDraft, ReceiptLeak, Recipe, RecipeDraft, Redaction, RequestMetadata,
-    RequestMetadataDraft, ResultDraft, Role, RouteFamily, RouteResult, RouteResultStatus,
-    RuleSignalSource, SelectedPlan, SelectionDenial, SignalBand, SignalDraft,
-    SignalProjectionError, SignalSource, Signals, TaskShape, ValidationError, project_signals,
-    select_recipe, validate_receipt_text,
+    Bounds, BoundsDraft, Budget, BudgetExhausted, BudgetKind, BudgetLedger, CatalogEntry,
+    CatalogEntryDraft, DeadlineClass, DurationBucket, ExecutionPlanError, FallbackChain,
+    FallbackDecision, FallbackEligibility, FallbackPolicy, FallbackRouteReason, FallbackStep,
+    OutputContract, PrivacyBand, QuorumClass, Receipt, ReceiptDraft, ReceiptLeak, Recipe,
+    RecipeDraft, Redaction, RequestMetadata, RequestMetadataDraft, ResultDraft, Role, RoleStep,
+    RouteFamily, RouteResult, RouteResultStatus, RouterExecutionPlan, RuleSignalSource,
+    SelectedPlan, SelectionDenial, SignalBand, SignalDraft, SignalProjectionError, SignalSource,
+    Signals, StepFailure, TaskShape, ValidationError, evaluate_fallback, materialize_execution_plan,
+    project_signals, select_recipe, validate_receipt_text,
 };

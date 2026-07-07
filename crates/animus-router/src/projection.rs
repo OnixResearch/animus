@@ -207,6 +207,12 @@ impl Signals {
         self.privacy
     }
 
+    /// Returns fallback eligibility.
+    #[must_use]
+    pub const fn fallback_eligibility(&self) -> FallbackEligibility {
+        self.fallback
+    }
+
     /// Returns safe signal bucket labels for receipts.
     #[must_use]
     pub fn bucket_labels(&self) -> [alloc::string::String; SIGNAL_BUCKET_COUNT] {

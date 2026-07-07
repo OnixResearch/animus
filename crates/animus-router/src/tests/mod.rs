@@ -16,12 +16,14 @@ pub(super) const MODEL_SYNTHESIZER: &str = "model:synthesizer";
 pub(super) const MODEL_JUDGE: &str = "model:judge";
 pub(super) const MODEL_FINALIZER: &str = "model:finalizer";
 pub(super) const MODEL_WORKER: &str = "model:worker";
+pub(super) const MODEL_FALLBACK_LOCAL: &str = "model:fallback:local";
 pub(super) const BACKEND_LOCAL: &str = "backend:local";
 pub(super) const BACKEND_REMOTE: &str = "backend:remote";
 pub(super) const SAFE_HASH: &str =
     "0000000000000000000000000000000000000000000000000000000000000000";
 pub(super) const ZERO_COUNT: u32 = 0;
 pub(super) const MAX_CANDIDATES_ONE: u32 = 1;
+pub(super) const MAX_CANDIDATES_TWO: u32 = 2;
 pub(super) const MAX_CANDIDATES_THREE: u32 = 3;
 pub(super) const MAX_PARALLELISM_ONE: u32 = 1;
 pub(super) const MAX_PARALLELISM_THREE: u32 = 3;
@@ -45,6 +47,28 @@ pub(super) const INVALID_CONTEXT_PER_MILLE: u16 = 1_001;
 pub(super) const TOOL_COUNT_NONE: u32 = 0;
 pub(super) const TOOL_COUNT_ONE: u32 = 1;
 pub(super) const TOOL_COUNT_TWO: u32 = 2;
+
+#[derive(Clone, Copy)]
+pub(super) struct BoundsFixture {
+    pub(super) max_candidates: u32,
+    pub(super) max_parallelism: u32,
+    pub(super) min_success_quorum: u32,
+    pub(super) timeout_class: crate::limit::DeadlineClass,
+    pub(super) max_synthesis_attempts: u32,
+    pub(super) max_repair_attempts: u32,
+    pub(super) fallback_policy: crate::limit::FallbackPolicy,
+}
+
+#[derive(Clone)]
+pub(super) struct SelectedPlanFixture<'a> {
+    pub(super) recipe_id: &'a str,
+    pub(super) family: crate::RouteFamily,
+    pub(super) selected_models: &'a [&'a str],
+    pub(super) output_contract: crate::OutputContract,
+    pub(super) bounds: crate::Bounds,
+    pub(super) privacy: crate::PrivacyBand,
+    pub(super) fallback_eligibility: crate::FallbackEligibility,
+}
 
 #[derive(Clone, Copy)]
 pub(super) struct RecipeFixture<'a> {
@@ -132,6 +156,12 @@ pub(super) fn catalog() -> alloc::vec::Vec<crate::CatalogEntry> {
             role: "worker",
             local: false,
         }),
+        entry(EntryFixture {
+            label: MODEL_FALLBACK_LOCAL,
+            backend: BACKEND_LOCAL,
+            role: "fallback",
+            local: true,
+        }),
     ]
 }
 
@@ -155,4 +185,92 @@ pub(super) fn signal_draft() -> crate::SignalDraft<'static> {
 
 pub(super) fn signals(draft: crate::SignalDraft<'_>) -> crate::Signals {
     crate::Signals::project(draft).expect("valid signals should parse")
+}
+
+pub(super) fn plan_bounds(fixture: BoundsFixture) -> crate::Bounds {
+    crate::limit::test_bounds(fixture)
+}
+
+pub(super) fn selected_plan(fixture: SelectedPlanFixture<'_>) -> crate::SelectedPlan {
+    crate::choose::test_selected_plan(fixture)
+}
+
+#[test]
+fn materialize_execution_plan_rejects_cyclic_fallback() {
+    // r[verify agent_harness_runtime.model_router.execution_plan.invariants.cyclic_fallback]
+    let cycle_catalog = alloc::vec![
+        entry(EntryFixture {
+            label: MODEL_PRIMARY,
+            backend: BACKEND_LOCAL,
+            role: "primary",
+            local: true,
+        }),
+        entry(EntryFixture {
+            label: MODEL_ESCALATION,
+            backend: BACKEND_LOCAL,
+            role: "escalation",
+            local: true,
+        }),
+        entry(EntryFixture {
+            label: MODEL_PRIMARY,
+            backend: BACKEND_LOCAL,
+            role: "fallback",
+            local: true,
+        }),
+    ];
+    let plan = selected_plan(SelectedPlanFixture {
+        recipe_id: RECIPE_CONFIDENCE,
+        family: crate::RouteFamily::Confidence,
+        selected_models: &[MODEL_PRIMARY, MODEL_ESCALATION],
+        output_contract: crate::OutputContract::Json,
+        bounds: plan_bounds(BoundsFixture {
+            max_candidates: MAX_CANDIDATES_THREE,
+            max_parallelism: MAX_PARALLELISM_THREE,
+            min_success_quorum: QUORUM_ONE,
+            timeout_class: crate::limit::DeadlineClass::Standard,
+            max_synthesis_attempts: SYNTHESIS_ONE,
+            max_repair_attempts: REPAIR_ONE,
+            fallback_policy: crate::limit::FallbackPolicy::BestValidEvidence,
+        }),
+        privacy: crate::PrivacyBand::RemoteAllowed,
+        fallback_eligibility: crate::FallbackEligibility::Eligible,
+    });
+
+    assert_eq!(plan.family(), crate::RouteFamily::Confidence);
+    assert_eq!(plan.selected_models().len(), 2);
+    assert_eq!(plan.privacy(), crate::PrivacyBand::RemoteAllowed);
+    assert_eq!(
+        crate::materialize_execution_plan(&plan, &cycle_catalog, &budget()),
+        Err(crate::ExecutionPlanError::CyclicFallback)
+    );
+}
+
+#[test]
+fn materialize_execution_plan_rejects_ineligible_fallback() {
+    // r[verify agent_harness_runtime.model_router.execution_plan.invariants.fallback_eligibility]
+    let plan = selected_plan(SelectedPlanFixture {
+        recipe_id: RECIPE_CONFIDENCE,
+        family: crate::RouteFamily::Confidence,
+        selected_models: &[MODEL_PRIMARY, MODEL_ESCALATION],
+        output_contract: crate::OutputContract::Json,
+        bounds: plan_bounds(BoundsFixture {
+            max_candidates: MAX_CANDIDATES_THREE,
+            max_parallelism: MAX_PARALLELISM_THREE,
+            min_success_quorum: QUORUM_ONE,
+            timeout_class: crate::limit::DeadlineClass::Standard,
+            max_synthesis_attempts: SYNTHESIS_ONE,
+            max_repair_attempts: REPAIR_ONE,
+            fallback_policy: crate::limit::FallbackPolicy::BestValidEvidence,
+        }),
+        privacy: crate::PrivacyBand::RemoteAllowed,
+        fallback_eligibility: crate::FallbackEligibility::Ineligible,
+    });
+
+    assert_eq!(plan.family(), crate::RouteFamily::Confidence);
+    assert_eq!(plan.selected_models().len(), 2);
+    assert_eq!(plan.privacy(), crate::PrivacyBand::RemoteAllowed);
+    assert_eq!(
+        crate::materialize_execution_plan(&plan, &catalog(), &budget()),
+        Err(crate::ExecutionPlanError::FallbackModelNotEligible)
+    );
 }

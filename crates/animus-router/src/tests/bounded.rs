@@ -152,3 +152,135 @@ fn assert_signal_labels(
 fn metadata(draft: crate::RequestMetadataDraft<'_>) -> crate::RequestMetadata {
     crate::RequestMetadata::new(draft).expect("metadata should validate")
 }
+
+#[test]
+fn materialize_execution_plan_rejects_zero_quorum() {
+    // r[verify agent_harness_runtime.model_router.execution_plan.invariants.zero_quorum]
+    let plan = selected_plan(SelectedPlanFixture {
+        recipe_id: RECIPE_SINGLE,
+        family: crate::RouteFamily::Single,
+        selected_models: &[MODEL_PRIMARY],
+        output_contract: crate::OutputContract::Json,
+        bounds: plan_bounds(BoundsFixture {
+            max_candidates: MAX_CANDIDATES_ONE,
+            max_parallelism: MAX_PARALLELISM_ONE,
+            min_success_quorum: ZERO_COUNT,
+            timeout_class: crate::limit::DeadlineClass::Standard,
+            max_synthesis_attempts: SYNTHESIS_ONE,
+            max_repair_attempts: REPAIR_ONE,
+            fallback_policy: crate::limit::FallbackPolicy::BestValidEvidence,
+        }),
+        privacy: crate::PrivacyBand::RemoteAllowed,
+        fallback_eligibility: crate::FallbackEligibility::Eligible,
+    });
+
+    assert_eq!(
+        crate::materialize_execution_plan(&plan, &catalog(), &budget()),
+        Err(crate::ExecutionPlanError::ZeroQuorum)
+    );
+}
+
+#[test]
+fn materialize_execution_plan_rejects_impossible_quorum() {
+    // r[verify agent_harness_runtime.model_router.execution_plan.invariants.impossible_quorum]
+    let plan = selected_plan(SelectedPlanFixture {
+        recipe_id: RECIPE_SINGLE,
+        family: crate::RouteFamily::Single,
+        selected_models: &[MODEL_PRIMARY],
+        output_contract: crate::OutputContract::Json,
+        bounds: plan_bounds(BoundsFixture {
+            max_candidates: MAX_CANDIDATES_ONE,
+            max_parallelism: MAX_PARALLELISM_ONE,
+            min_success_quorum: QUORUM_TWO,
+            timeout_class: crate::limit::DeadlineClass::Standard,
+            max_synthesis_attempts: SYNTHESIS_ONE,
+            max_repair_attempts: REPAIR_ONE,
+            fallback_policy: crate::limit::FallbackPolicy::BestValidEvidence,
+        }),
+        privacy: crate::PrivacyBand::RemoteAllowed,
+        fallback_eligibility: crate::FallbackEligibility::Eligible,
+    });
+
+    assert_eq!(
+        crate::materialize_execution_plan(&plan, &catalog(), &budget()),
+        Err(crate::ExecutionPlanError::ImpossibleQuorum)
+    );
+}
+
+#[test]
+fn materialize_execution_plan_rejects_unbounded_repair() {
+    // r[verify agent_harness_runtime.model_router.execution_plan.invariants.unbounded_repair]
+    let plan = selected_plan(SelectedPlanFixture {
+        recipe_id: RECIPE_CONFIDENCE,
+        family: crate::RouteFamily::Confidence,
+        selected_models: &[MODEL_PRIMARY, MODEL_ESCALATION],
+        output_contract: crate::OutputContract::Json,
+        bounds: plan_bounds(BoundsFixture {
+            max_candidates: MAX_CANDIDATES_THREE,
+            max_parallelism: MAX_PARALLELISM_THREE,
+            min_success_quorum: QUORUM_ONE,
+            timeout_class: crate::limit::DeadlineClass::Standard,
+            max_synthesis_attempts: SYNTHESIS_ONE,
+            max_repair_attempts: ZERO_COUNT,
+            fallback_policy: crate::limit::FallbackPolicy::BestValidEvidence,
+        }),
+        privacy: crate::PrivacyBand::RemoteAllowed,
+        fallback_eligibility: crate::FallbackEligibility::Eligible,
+    });
+
+    assert_eq!(
+        crate::materialize_execution_plan(&plan, &catalog(), &budget()),
+        Err(crate::ExecutionPlanError::UnboundedRepair)
+    );
+}
+
+#[test]
+fn materialize_execution_plan_rejects_missing_role_mapping() {
+    // r[verify agent_harness_runtime.model_router.execution_plan.invariants.missing_role_mapping]
+    let plan = selected_plan(SelectedPlanFixture {
+        recipe_id: RECIPE_RATINGS,
+        family: crate::RouteFamily::Ratings,
+        selected_models: &[MODEL_PRIMARY],
+        output_contract: crate::OutputContract::Json,
+        bounds: plan_bounds(BoundsFixture {
+            max_candidates: MAX_CANDIDATES_THREE,
+            max_parallelism: MAX_PARALLELISM_THREE,
+            min_success_quorum: QUORUM_ONE,
+            timeout_class: crate::limit::DeadlineClass::Standard,
+            max_synthesis_attempts: SYNTHESIS_ONE,
+            max_repair_attempts: REPAIR_ONE,
+            fallback_policy: crate::limit::FallbackPolicy::BestValidEvidence,
+        }),
+        privacy: crate::PrivacyBand::RemoteAllowed,
+        fallback_eligibility: crate::FallbackEligibility::Eligible,
+    });
+
+    assert_eq!(
+        crate::materialize_execution_plan(&plan, &catalog(), &budget()),
+        Err(crate::ExecutionPlanError::MissingRoleMapping)
+    );
+}
+
+#[test]
+fn budget_ledger_rejects_exhausted_consumption() {
+    let ledger = crate::BudgetLedger::from(&crate::limit::test_bounds(BoundsFixture {
+        max_candidates: ZERO_COUNT,
+        max_parallelism: ZERO_COUNT,
+        min_success_quorum: QUORUM_ONE,
+        timeout_class: crate::limit::DeadlineClass::Standard,
+        max_synthesis_attempts: SYNTHESIS_NONE,
+        max_repair_attempts: REPAIR_NONE,
+        fallback_policy: crate::limit::FallbackPolicy::Deny,
+    }));
+    let cases = [
+        (ledger.consume_candidate(), crate::BudgetKind::Candidate),
+        (ledger.consume_parallelism(), crate::BudgetKind::Parallelism),
+        (ledger.consume_synthesis_attempt(), crate::BudgetKind::Synthesis),
+        (ledger.consume_repair_attempt(), crate::BudgetKind::Repair),
+    ];
+
+    for (result, kind) in cases {
+        assert_eq!(result, Err(crate::BudgetExhausted::new(kind, ZERO_COUNT)));
+    }
+}
+
