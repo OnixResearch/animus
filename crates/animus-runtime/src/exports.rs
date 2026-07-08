@@ -129,8 +129,8 @@ pub use crate::orchestration::{
     KanbanMutationIntent, KanbanPriority, KanbanPromotionDecision, KanbanPromotionOutcome,
     KanbanQuarantinedHandoff, KanbanTask, KanbanTaskDraft, KanbanTaskGraph, KanbanTaskGraphDraft,
     KanbanTaskState, KanbanTenantPolicy, KanbanWorkspaceAdmission, KanbanWorkspaceKind,
-    KanbanWorkspaceScope, append_kanban_handoff, assemble_kanban_context,
-    evaluate_kanban_promotion, load_kanban_graph, validate_kanban_graph,
+    KanbanWorkspaceScope, OrchestrationAdapterBoardService, append_kanban_handoff,
+    assemble_kanban_context, evaluate_kanban_promotion, load_kanban_graph, validate_kanban_graph,
     validate_kanban_workspace_mutation,
 };
 pub use crate::pi_compaction::{

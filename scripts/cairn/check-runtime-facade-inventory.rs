@@ -134,6 +134,7 @@ const ALLOWED_FAMILIES: &[&str] = &[
     "tool",
     "worker-team",
     "steel",
+    "orchestration",
 ];
 
 const AMBIENT_AUTHORITY_MARKERS: &[&str] = &[

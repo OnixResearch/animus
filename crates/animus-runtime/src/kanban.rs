@@ -30,6 +30,8 @@ const STALE_COMPLETION_REASON: &str = "completion record does not match the task
 const OUT_OF_SCOPE_REASON: &str = "mutation target is outside declared workspace scope";
 const MISSING_BOARD_SERVICE_REASON: &str =
     "Kanban orchestration requires an injected board service";
+const ADAPTER_BRIDGE_ACTOR_LABEL: &str = "runtime-kanban-bridge";
+const ADAPTER_BRIDGE_POLICY_LABEL: &str = "kanban-compatibility";
 const ROOT_CAPABILITY_FIELD: &str = "workspace_scope.root_capability";
 const WORKSPACE_TARGET_FIELD: &str = "workspace_scope.targets";
 const TASK_ID_FIELD: &str = "task_id";
@@ -68,6 +70,7 @@ const UNSAFE_TEXT_MARKERS: &[&str] = &[
     "sk-",
     "/home/",
 ];
+const OPENAI_KEY_PREFIX_MARKER: &str = "sk-";
 
 #[derive(Clone, Copy)]
 struct StringInput<'a> {
@@ -621,6 +624,52 @@ pub trait KanbanBoardService {
     fn append_handoff(&mut self, handoff: &KanbanContextHandoff) -> Result<(), KanbanError>;
 }
 
+/// Compatibility bridge from the public orchestration adapter family to the
+/// existing runtime-local Kanban board-service seam.
+pub struct OrchestrationAdapterBoardService<'a> {
+    service: &'a mut dyn animus_adapters::orchestration::OrchestrationService,
+}
+
+impl<'a> OrchestrationAdapterBoardService<'a> {
+    /// Builds a compatibility bridge over an injected orchestration service.
+    #[must_use]
+    pub const fn new(
+        service: &'a mut dyn animus_adapters::orchestration::OrchestrationService,
+    ) -> Self {
+        Self { service }
+    }
+}
+
+impl KanbanBoardService for OrchestrationAdapterBoardService<'_> {
+    fn load_task_graph(&mut self, board_label: &str) -> Result<KanbanTaskGraphDraft, KanbanError> {
+        let metadata = adapter_operation_metadata()?;
+        let request = animus_adapters::orchestration::OrchestrationTaskGraphLoadRequest::new(
+            board_label,
+            metadata,
+        )
+        .map_err(adapter_error_to_kanban)?;
+        let adapter_graph = animus_adapters::orchestration::load_orchestration_task_graph(
+            Some(self.service),
+            &request,
+        )
+        .map_err(adapter_error_to_kanban)?;
+        Ok(adapter_graph_to_kanban(&adapter_graph))
+    }
+
+    fn append_handoff(&mut self, handoff: &KanbanContextHandoff) -> Result<(), KanbanError> {
+        let metadata = adapter_operation_metadata()?;
+        let adapter_handoff =
+            kanban_handoff_to_adapter(handoff).map_err(adapter_error_to_kanban)?;
+        let request = animus_adapters::orchestration::OrchestrationHandoffAppendRequest::new(
+            adapter_handoff,
+            metadata,
+        );
+        animus_adapters::orchestration::append_orchestration_handoff(Some(self.service), &request)
+            .map(|_receipt| ())
+            .map_err(adapter_error_to_kanban)
+    }
+}
+
 /// Validates an in-memory Kanban task graph snapshot.
 ///
 /// # Errors
@@ -821,6 +870,259 @@ fn injected_board_service(
             MISSING_BOARD_SERVICE_REASON,
         )
     })
+}
+
+fn adapter_operation_metadata()
+-> Result<animus_adapters::orchestration::OrchestrationOperationMetadata, KanbanError> {
+    animus_adapters::orchestration::OrchestrationOperationMetadata::new(
+        ADAPTER_BRIDGE_ACTOR_LABEL,
+        ADAPTER_BRIDGE_POLICY_LABEL,
+        None,
+    )
+    .map_err(adapter_error_to_kanban)
+}
+
+fn adapter_graph_to_kanban(
+    graph: &animus_adapters::orchestration::OrchestrationTaskGraphDraft,
+) -> KanbanTaskGraphDraft {
+    let mut tasks = Vec::with_capacity(graph.tasks().len());
+    for task in graph.tasks() {
+        tasks.push(adapter_task_to_kanban(task));
+    }
+    KanbanTaskGraphDraft { tasks }
+}
+
+fn adapter_task_to_kanban(
+    task: &animus_adapters::orchestration::OrchestrationTaskDraft,
+) -> KanbanTaskDraft {
+    KanbanTaskDraft {
+        task_id: String::from(task.task_id()),
+        title: String::from(task.title()),
+        body: String::from(task.body()),
+        assignee_label: task.assignee_label().map(String::from),
+        state: adapter_task_state_to_kanban(task.state()),
+        parent_ids: task.parent_ids().to_vec(),
+        child_ids: task.child_ids().to_vec(),
+        priority: adapter_priority_to_kanban(task.priority()),
+        workspace_scope: task
+            .workspace_scope()
+            .map(adapter_workspace_scope_to_kanban),
+        tenant_label: task.tenant_label().map(String::from),
+        comments: adapter_comments_to_kanban(task.comments()),
+        heartbeats: adapter_heartbeats_to_kanban(task.heartbeats()),
+        block_records: adapter_blocks_to_kanban(task.block_records()),
+        completion: task.completion().map(adapter_completion_to_kanban),
+        metadata: task.metadata().clone(),
+        revision: task.revision(),
+    }
+}
+
+fn adapter_workspace_scope_to_kanban(
+    scope: &animus_adapters::orchestration::OrchestrationWorkspaceScope,
+) -> KanbanWorkspaceScope {
+    KanbanWorkspaceScope {
+        kind: match scope.kind() {
+            animus_adapters::orchestration::OrchestrationWorkspaceKind::Scratch => {
+                KanbanWorkspaceKind::Scratch
+            }
+            animus_adapters::orchestration::OrchestrationWorkspaceKind::Directory => {
+                KanbanWorkspaceKind::Directory
+            }
+            animus_adapters::orchestration::OrchestrationWorkspaceKind::IsolatedBranch => {
+                KanbanWorkspaceKind::Worktree
+            }
+        },
+        root_capability: String::from(scope.root_capability()),
+        writable_targets: scope.writable_targets().to_vec(),
+        approval_required_targets: scope.approval_required_targets().to_vec(),
+    }
+}
+
+fn adapter_task_state_to_kanban(
+    state: animus_adapters::orchestration::OrchestrationTaskState,
+) -> KanbanTaskState {
+    match state {
+        animus_adapters::orchestration::OrchestrationTaskState::Draft => KanbanTaskState::Draft,
+        animus_adapters::orchestration::OrchestrationTaskState::Ready => KanbanTaskState::Ready,
+        animus_adapters::orchestration::OrchestrationTaskState::InProgress => {
+            KanbanTaskState::InProgress
+        }
+        animus_adapters::orchestration::OrchestrationTaskState::Blocked => KanbanTaskState::Blocked,
+        animus_adapters::orchestration::OrchestrationTaskState::Completed => {
+            KanbanTaskState::Completed
+        }
+        animus_adapters::orchestration::OrchestrationTaskState::Cancelled => {
+            KanbanTaskState::Cancelled
+        }
+    }
+}
+
+fn adapter_priority_to_kanban(
+    priority: animus_adapters::orchestration::OrchestrationPriority,
+) -> KanbanPriority {
+    match priority {
+        animus_adapters::orchestration::OrchestrationPriority::Low => KanbanPriority::Low,
+        animus_adapters::orchestration::OrchestrationPriority::Normal => KanbanPriority::Normal,
+        animus_adapters::orchestration::OrchestrationPriority::High => KanbanPriority::High,
+        animus_adapters::orchestration::OrchestrationPriority::Urgent => KanbanPriority::Urgent,
+    }
+}
+
+fn adapter_comments_to_kanban(
+    comments: &[animus_adapters::orchestration::OrchestrationComment],
+) -> Vec<KanbanComment> {
+    comments
+        .iter()
+        .map(|comment| KanbanComment {
+            actor_label: String::from(comment.actor_label()),
+            sequence: comment.sequence(),
+            body: String::from(comment.body()),
+            tenant_label: comment.tenant_label().map(String::from),
+            metadata: comment.metadata().clone(),
+        })
+        .collect()
+}
+
+fn adapter_heartbeats_to_kanban(
+    heartbeats: &[animus_adapters::orchestration::OrchestrationHeartbeat],
+) -> Vec<KanbanHeartbeat> {
+    heartbeats
+        .iter()
+        .map(|heartbeat| KanbanHeartbeat {
+            actor_label: String::from(heartbeat.actor_label()),
+            sequence: heartbeat.sequence(),
+            summary: String::from(heartbeat.summary()),
+            tenant_label: heartbeat.tenant_label().map(String::from),
+            metadata: heartbeat.metadata().clone(),
+        })
+        .collect()
+}
+
+fn adapter_blocks_to_kanban(
+    blocks: &[animus_adapters::orchestration::OrchestrationBlockRecord],
+) -> Vec<KanbanBlockRecord> {
+    blocks
+        .iter()
+        .map(|block| KanbanBlockRecord {
+            actor_label: String::from(block.actor_label()),
+            sequence: block.sequence(),
+            reason: String::from(block.reason()),
+            context: block.context().map(String::from),
+            next_action: block.next_action().map(String::from),
+            tenant_label: block.tenant_label().map(String::from),
+            metadata: block.metadata().clone(),
+        })
+        .collect()
+}
+
+fn adapter_completion_to_kanban(
+    completion: &animus_adapters::orchestration::OrchestrationCompletion,
+) -> KanbanCompletion {
+    KanbanCompletion {
+        actor_label: String::from(completion.actor_label()),
+        sequence: completion.sequence(),
+        summary: String::from(completion.summary()),
+        task_revision: completion.task_revision(),
+        tenant_label: completion.tenant_label().map(String::from),
+        metadata: completion.metadata().clone(),
+    }
+}
+
+fn kanban_handoff_to_adapter(
+    handoff: &KanbanContextHandoff,
+) -> Result<
+    animus_adapters::orchestration::OrchestrationContextHandoff,
+    animus_adapters::orchestration::OrchestrationError,
+> {
+    animus_adapters::orchestration::OrchestrationContextHandoff::new(
+        &animus_adapters::orchestration::OrchestrationContextHandoffDraft {
+            handoff_id: handoff.handoff_id.as_str(),
+            task_id: handoff.task_id.as_str(),
+            tenant_label: handoff.tenant_label.as_deref(),
+            body: handoff.body.as_str(),
+            sequence: handoff.sequence,
+            metadata: &handoff.metadata,
+        },
+    )
+}
+
+fn adapter_error_to_kanban(
+    error: animus_adapters::orchestration::OrchestrationError,
+) -> KanbanError {
+    let reason = error.to_string();
+    match error {
+        animus_adapters::orchestration::OrchestrationError::Contract(contract) => {
+            adapter_contract_error_to_kanban(contract, reason)
+        }
+        animus_adapters::orchestration::OrchestrationError::MissingService => KanbanError::new(
+            KanbanErrorKind::BoardServiceUnavailable,
+            BOARD_SERVICE_FIELD,
+            MISSING_BOARD_SERVICE_REASON,
+        ),
+        animus_adapters::orchestration::OrchestrationError::BackendUnavailable
+        | animus_adapters::orchestration::OrchestrationError::CapabilityDenied
+        | animus_adapters::orchestration::OrchestrationError::InvalidGraph
+        | animus_adapters::orchestration::OrchestrationError::UnsupportedOperation
+        | animus_adapters::orchestration::OrchestrationError::SchemaMismatch => KanbanError::new(
+            KanbanErrorKind::InjectedServiceFailure,
+            BOARD_SERVICE_FIELD,
+            reason,
+        ),
+        animus_adapters::orchestration::OrchestrationError::UnsafeHandoff
+        | animus_adapters::orchestration::OrchestrationError::UnsafeEvidence { .. } => {
+            KanbanError::new(KanbanErrorKind::UnsafeText, HANDOFF_BODY_FIELD, reason)
+        }
+        animus_adapters::orchestration::OrchestrationError::CrossTenantLeak => {
+            KanbanError::new(KanbanErrorKind::CrossTenantLeak, TENANT_FIELD, reason)
+        }
+        animus_adapters::orchestration::OrchestrationError::OutOfScopeMutation => KanbanError::new(
+            KanbanErrorKind::OutOfScopeMutation,
+            MUTATION_TARGET_FIELD,
+            reason,
+        ),
+        animus_adapters::orchestration::OrchestrationError::EmptyCollection { .. } => {
+            KanbanError::new(KanbanErrorKind::EmptyField, BOARD_SERVICE_FIELD, reason)
+        }
+        animus_adapters::orchestration::OrchestrationError::TooManyItems { .. } => {
+            KanbanError::new(KanbanErrorKind::TooManyItems, BOARD_SERVICE_FIELD, reason)
+        }
+        animus_adapters::orchestration::OrchestrationError::NonMonotonicSequence { .. } => {
+            KanbanError::new(KanbanErrorKind::EmptyField, SEQUENCE_FIELD, reason)
+        }
+    }
+}
+
+fn adapter_contract_error_to_kanban(
+    contract: animus_adapters::AdapterContractError,
+    reason: String,
+) -> KanbanError {
+    match contract {
+        animus_adapters::AdapterContractError::EmptyField { field } => {
+            KanbanError::new(KanbanErrorKind::EmptyField, field, reason)
+        }
+        animus_adapters::AdapterContractError::FieldTooLong { field, .. } => {
+            KanbanError::new(KanbanErrorKind::FieldTooLong, field, reason)
+        }
+        animus_adapters::AdapterContractError::NulCharacter { field, .. }
+        | animus_adapters::AdapterContractError::InvalidEvidenceHash { field, .. } => {
+            KanbanError::new(KanbanErrorKind::UnsafeText, field, reason)
+        }
+        animus_adapters::AdapterContractError::UnsupportedStatusState { field, .. }
+        | animus_adapters::AdapterContractError::UnsupportedStatusObservationKind {
+            field, ..
+        }
+        | animus_adapters::AdapterContractError::UnsupportedSessionReferenceKind {
+            field, ..
+        }
+        | animus_adapters::AdapterContractError::UnsupportedWorkspaceValue { field, .. }
+        | animus_adapters::AdapterContractError::UnsupportedDataspaceValue { field, .. }
+        | animus_adapters::AdapterContractError::UnsupportedRouterValue { field, .. } => {
+            KanbanError::new(KanbanErrorKind::InjectedServiceFailure, field, reason)
+        }
+        animus_adapters::AdapterContractError::EmptyCollection { field } => {
+            KanbanError::new(KanbanErrorKind::EmptyField, field, reason)
+        }
+    }
 }
 
 fn validate_task_count(tasks: &[KanbanTaskDraft]) -> Result<(), KanbanError> {
@@ -1228,7 +1530,14 @@ fn contains_unsafe_marker(value: &str) -> bool {
     let lower = value.to_ascii_lowercase();
     UNSAFE_TEXT_MARKERS
         .iter()
-        .any(|marker| lower.contains(&marker.to_ascii_lowercase()))
+        .any(|marker| contains_unsafe_marker_value(lower.as_str(), marker))
+}
+
+fn contains_unsafe_marker_value(value: &str, marker: &str) -> bool {
+    if marker == OPENAI_KEY_PREFIX_MARKER {
+        return value.starts_with(marker) || value.contains(" sk-");
+    }
+    value.contains(&marker.to_ascii_lowercase())
 }
 
 fn validate_links(tasks: &[KanbanTask]) -> Result<(), KanbanError> {
@@ -1802,6 +2111,259 @@ mod tests {
         KanbanTaskGraphDraft {
             tasks: vec![first, second],
         }
+    }
+
+    #[test]
+    fn adapter_family_bridge_loads_graph_and_appends_handoff() {
+        // r[verify agent_harness_runtime.orchestration_adapters.runtime_bridge]
+        // r[verify agent_harness_runtime.orchestration_adapters.verification]
+        let mut adapter = RecordingOrchestrationService::default();
+        {
+            let mut bridge = OrchestrationAdapterBoardService::new(&mut adapter);
+            let graph = load_kanban_graph(Some(&mut bridge), BOARD).expect("bridge graph load");
+            assert_eq!(graph.tasks().len(), EXPECTED_PARENT_COUNT);
+
+            let handoff = KanbanContextHandoff {
+                handoff_id: String::from(HANDOFF),
+                task_id: String::from(PARENT_A),
+                tenant_label: Some(String::from(TENANT_ALPHA)),
+                body: String::from(SAFE_HANDOFF_BODY),
+                sequence: MIN_KANBAN_SEQUENCE,
+                metadata: std::collections::BTreeMap::new(),
+            };
+            append_kanban_handoff(Some(&mut bridge), &handoff).expect("bridge handoff append");
+        }
+        assert_eq!(adapter.loads, EXPECTED_SINGLE_ITEM);
+        assert_eq!(adapter.handoffs, EXPECTED_SINGLE_ITEM);
+    }
+
+    #[test]
+    fn adapter_family_bridge_maps_fail_closed_errors() {
+        // r[verify agent_harness_runtime.orchestration_adapters.runtime_bridge]
+        // r[verify agent_harness_runtime.orchestration_adapters.fail_closed]
+        let mut failing = FailingOrchestrationService {
+            error: animus_adapters::orchestration::OrchestrationError::BackendUnavailable,
+        };
+        let mut bridge = OrchestrationAdapterBoardService::new(&mut failing);
+        let unavailable = load_kanban_graph(Some(&mut bridge), BOARD)
+            .expect_err("backend unavailable should fail closed");
+        assert_eq!(unavailable.kind(), KanbanErrorKind::InjectedServiceFailure);
+
+        let unsafe_handoff = KanbanContextHandoff {
+            handoff_id: String::from(HANDOFF),
+            task_id: String::from(PARENT_A),
+            tenant_label: Some(String::from(TENANT_ALPHA)),
+            body: String::from("RAW_PROMPT: hidden"),
+            sequence: MIN_KANBAN_SEQUENCE,
+            metadata: std::collections::BTreeMap::new(),
+        };
+        let unsafe_error = append_kanban_handoff(Some(&mut bridge), &unsafe_handoff)
+            .expect_err("unsafe handoff should fail before host append");
+        assert_eq!(unsafe_error.kind(), KanbanErrorKind::UnsafeText);
+    }
+
+    #[derive(Default)]
+    struct RecordingOrchestrationService {
+        loads: usize,
+        handoffs: usize,
+    }
+
+    impl animus_adapters::orchestration::OrchestrationService for RecordingOrchestrationService {
+        fn load_task_graph(
+            &mut self,
+            request: &animus_adapters::orchestration::OrchestrationTaskGraphLoadRequest,
+        ) -> Result<
+            animus_adapters::orchestration::OrchestrationTaskGraphDraft,
+            animus_adapters::orchestration::OrchestrationError,
+        > {
+            assert_eq!(request.board_label(), BOARD);
+            self.loads = self
+                .loads
+                .checked_add(EXPECTED_SINGLE_ITEM)
+                .expect("adapter load count stays within fixture bound");
+            adapter_graph_draft()
+        }
+
+        fn append_handoff(
+            &mut self,
+            request: &animus_adapters::orchestration::OrchestrationHandoffAppendRequest,
+        ) -> Result<
+            animus_adapters::orchestration::OrchestrationReceipt,
+            animus_adapters::orchestration::OrchestrationError,
+        > {
+            assert_eq!(request.handoff().handoff_id(), HANDOFF);
+            self.handoffs = self
+                .handoffs
+                .checked_add(EXPECTED_SINGLE_ITEM)
+                .expect("adapter handoff count stays within fixture bound");
+            adapter_receipt(
+                animus_adapters::orchestration::OrchestrationOperationKind::AppendHandoff,
+            )
+        }
+
+        fn admit_scheduling(
+            &mut self,
+            _request: &animus_adapters::orchestration::OrchestrationSchedulingAdmissionRequest,
+        ) -> Result<
+            animus_adapters::orchestration::OrchestrationSchedulingAdmission,
+            animus_adapters::orchestration::OrchestrationError,
+        > {
+            Err(animus_adapters::orchestration::OrchestrationError::UnsupportedOperation)
+        }
+
+        fn cancel_task(
+            &mut self,
+            _request: &animus_adapters::orchestration::OrchestrationCancellationRequest,
+        ) -> Result<
+            animus_adapters::orchestration::OrchestrationCancellationOutcome,
+            animus_adapters::orchestration::OrchestrationError,
+        > {
+            Err(animus_adapters::orchestration::OrchestrationError::UnsupportedOperation)
+        }
+
+        fn record_lifecycle_evidence(
+            &mut self,
+            _request: &animus_adapters::orchestration::OrchestrationLifecycleEvidenceRequest,
+        ) -> Result<
+            animus_adapters::orchestration::OrchestrationReceipt,
+            animus_adapters::orchestration::OrchestrationError,
+        > {
+            Err(animus_adapters::orchestration::OrchestrationError::UnsupportedOperation)
+        }
+    }
+
+    struct FailingOrchestrationService {
+        error: animus_adapters::orchestration::OrchestrationError,
+    }
+
+    impl animus_adapters::orchestration::OrchestrationService for FailingOrchestrationService {
+        fn load_task_graph(
+            &mut self,
+            _request: &animus_adapters::orchestration::OrchestrationTaskGraphLoadRequest,
+        ) -> Result<
+            animus_adapters::orchestration::OrchestrationTaskGraphDraft,
+            animus_adapters::orchestration::OrchestrationError,
+        > {
+            Err(self.error.clone())
+        }
+
+        fn append_handoff(
+            &mut self,
+            _request: &animus_adapters::orchestration::OrchestrationHandoffAppendRequest,
+        ) -> Result<
+            animus_adapters::orchestration::OrchestrationReceipt,
+            animus_adapters::orchestration::OrchestrationError,
+        > {
+            Err(self.error.clone())
+        }
+
+        fn admit_scheduling(
+            &mut self,
+            _request: &animus_adapters::orchestration::OrchestrationSchedulingAdmissionRequest,
+        ) -> Result<
+            animus_adapters::orchestration::OrchestrationSchedulingAdmission,
+            animus_adapters::orchestration::OrchestrationError,
+        > {
+            Err(self.error.clone())
+        }
+
+        fn cancel_task(
+            &mut self,
+            _request: &animus_adapters::orchestration::OrchestrationCancellationRequest,
+        ) -> Result<
+            animus_adapters::orchestration::OrchestrationCancellationOutcome,
+            animus_adapters::orchestration::OrchestrationError,
+        > {
+            Err(self.error.clone())
+        }
+
+        fn record_lifecycle_evidence(
+            &mut self,
+            _request: &animus_adapters::orchestration::OrchestrationLifecycleEvidenceRequest,
+        ) -> Result<
+            animus_adapters::orchestration::OrchestrationReceipt,
+            animus_adapters::orchestration::OrchestrationError,
+        > {
+            Err(self.error.clone())
+        }
+    }
+
+    fn adapter_graph_draft() -> Result<
+        animus_adapters::orchestration::OrchestrationTaskGraphDraft,
+        animus_adapters::orchestration::OrchestrationError,
+    > {
+        let parent = adapter_task(PARENT_A, &[], &[CHILD])?;
+        let child = adapter_task(CHILD, &[PARENT_A], &[])?;
+        animus_adapters::orchestration::OrchestrationTaskGraphDraft::new(vec![parent, child])
+    }
+
+    fn adapter_task(
+        task_id: &str,
+        parent_ids: &[&str],
+        child_ids: &[&str],
+    ) -> Result<
+        animus_adapters::orchestration::OrchestrationTaskDraft,
+        animus_adapters::orchestration::OrchestrationError,
+    > {
+        animus_adapters::orchestration::OrchestrationTaskDraft::new(
+            animus_adapters::orchestration::OrchestrationTaskDraftInput {
+                task_id,
+                title: TITLE,
+                body: BODY,
+                assignee_label: Some(ACTOR),
+                state: animus_adapters::orchestration::OrchestrationTaskState::Ready,
+                parent_ids,
+                child_ids,
+                priority: animus_adapters::orchestration::OrchestrationPriority::Normal,
+                workspace_scope: Some(adapter_workspace_scope()),
+                tenant_label: Some(TENANT_ALPHA),
+                comments: &[],
+                heartbeats: &[],
+                block_records: &[],
+                completion: None,
+                metadata: &std::collections::BTreeMap::new(),
+                revision: MIN_KANBAN_REVISION,
+            },
+        )
+    }
+
+    fn adapter_workspace_scope() -> animus_adapters::orchestration::OrchestrationWorkspaceScope {
+        animus_adapters::orchestration::OrchestrationWorkspaceScope::new(
+            animus_adapters::orchestration::OrchestrationWorkspaceKind::Scratch,
+            ROOT,
+            &[WRITABLE_DOCS],
+            &[GUARDED_POLICY],
+        )
+        .expect("adapter workspace scope should validate")
+    }
+
+    fn adapter_receipt(
+        operation: animus_adapters::orchestration::OrchestrationOperationKind,
+    ) -> Result<
+        animus_adapters::orchestration::OrchestrationReceipt,
+        animus_adapters::orchestration::OrchestrationError,
+    > {
+        let hash = animus_adapters::orchestration::blake3_orchestration_hash(&[
+            operation.as_str(),
+            BOARD,
+            PARENT_A,
+        ]);
+        animus_adapters::orchestration::OrchestrationReceipt::new(
+            &animus_adapters::orchestration::OrchestrationReceiptDraft {
+                contract_identity:
+                    animus_adapters::orchestration::ORCHESTRATION_RECEIPT_CONTRACT_IDENTITY,
+                operation,
+                status: animus_adapters::orchestration::OrchestrationStatusClass::Accepted,
+                family_label: animus_adapters::orchestration::ORCHESTRATION_FAMILY_LABEL,
+                board_label: BOARD,
+                task_label: Some(PARENT_A),
+                policy_label: ADAPTER_BRIDGE_POLICY_LABEL,
+                redaction_markers: &["payload_not_captured"],
+                item_count: EXPECTED_SINGLE_ITEM,
+                dto_hash: hash.as_str(),
+                summary: Some("bridge receipt"),
+            },
+        )
     }
 
     #[derive(Default)]

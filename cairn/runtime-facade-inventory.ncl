@@ -53,6 +53,22 @@ let tui = "crates/animus-tui/src/lib.rs" in
 let router = "crates/animus-router/src/lib.rs" in
 let router_feature = "router" in
 let router_family = "router" in
+let orchestration_family = "orchestration" in
+let orchestration_record = fun export_path_value owning_crate_value source_value class_value side_effect_value stability_value review_note_value required_authority_value => {
+  export_path = export_path_value,
+  owning_crate = owning_crate_value,
+  source = source_value,
+  class = class_value,
+  side_effect = side_effect_value,
+  stability = stability_value,
+  review_note = review_note_value,
+  feature_gate = default_feature,
+  required_authority = required_authority_value,
+  depends_on = [],
+  composes_with = [],
+  capability_family = orchestration_family,
+}
+in
 let router_record = fun export_path_value owning_crate_value source_value feature_gate_value stability_value review_note_value => {
   export_path = export_path_value,
   owning_crate = owning_crate_value,
@@ -186,6 +202,7 @@ let entry_values = [
   entry "animus-adapters::node" "animus-adapters" adapters reusable none stable "optional host-owned node capability DTO validation module",
   entry "animus-adapters::openclaw_guardrails" "animus-adapters" adapters reusable none stable "host-supplied security audit and extension guardrail validation module",
   entry "animus-adapters::openclaw_session" "animus-adapters" adapters reusable none stable "host-store-neutral session isolation and session-tool planning module",
+  orchestration_record "animus-adapters::orchestration" "animus-adapters" adapters injection injected stable "public orchestration DTO and injected service contract module" "injected-service",
   entry "animus-adapters::AgentSessionReference" "animus-adapters" adapters reusable none stable "status session reference DTO",
   entry "animus-adapters::AgentSessionReferenceDraft" "animus-adapters" adapters reusable none stable "status session reference draft DTO",
   entry "animus-adapters::AgentSessionReferenceKind" "animus-adapters" adapters reusable none stable "status session reference kind DTO",
@@ -1393,6 +1410,7 @@ let entry_values = [
   entry "animus-runtime::inspect_dataset_exports" "animus-runtime" runtime reusable none stable "auto-classified public export for composition inventory",
   entry "animus-runtime::KanbanBlockRecord" "animus-runtime" runtime reusable none stable "auto-classified public export for composition inventory",
   entry "animus-runtime::KanbanBoardService" "animus-runtime" runtime injection injected stable "auto-classified public export for composition inventory",
+  orchestration_record "animus-runtime::OrchestrationAdapterBoardService" "animus-runtime" runtime injection injected stable "compatibility bridge from public orchestration service to Kanban board seam" "injected-service",
   entry "animus-runtime::KanbanComment" "animus-runtime" runtime reusable none stable "auto-classified public export for composition inventory",
   entry "animus-runtime::KanbanCompletion" "animus-runtime" runtime reusable none stable "auto-classified public export for composition inventory",
   entry "animus-runtime::KanbanContextAssembly" "animus-runtime" runtime reusable none stable "auto-classified public export for composition inventory",

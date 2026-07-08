@@ -46,6 +46,8 @@ mod observability;
 pub mod openclaw_guardrails;
 /// OpenClaw-inspired session isolation and session-tool planning DTOs.
 pub mod openclaw_session;
+/// Public orchestration adapter-family DTOs and service contracts.
+pub mod orchestration;
 mod port;
 mod profile;
 mod prompt;
