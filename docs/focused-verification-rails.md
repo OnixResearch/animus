@@ -33,6 +33,7 @@ A focused rail MAY print bounded stdout instead of writing a receipt when it is 
 | Wasm/no-std dependency isolation | `scripts/cairn/check-wasm-surface --root .` | Core, adapters, router, and no-default root facade compile plus allowed/rejected dependency-tree fixtures in `cairn/wasm-surface-fixtures/` | `checks.x86_64-linux.wasm-surface` |
 | Router recipe policy conformance | `scripts/cairn/check-router-policy --root .` | Nickel router policy, generated JSON drift, positive family fixtures, and negative family/role/bounds/fallback/backend fixtures | `checks.x86_64-linux.router-policy` |
 | Product-surface rejection | `scripts/cairn/check-clankers-product-surfaces --root .` | Bounded-doc positive fixture and reusable-contract negative fixture | `checks.x86_64-linux.clankers-product-surfaces` |
+| Dogfood readiness claims | `scripts/cairn/check-dogfood-readiness --root .` | Maintained readiness roadmap anchors plus positive and negative claim-index fixtures for fake-backed claims, live-provider overclaims, Clankers parity overclaims, and missing non-claims | `checks.x86_64-linux.dogfood-readiness` |
 | Tool catalog descriptors | `scripts/cairn/check-tool-catalog --root .` | Nickel schema export plus positive and negative catalog fixtures for descriptor validation and runtime-neutrality markers | not wired |
 
 ## Closeout use

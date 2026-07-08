@@ -76,6 +76,11 @@ let tier_entries = [
 in
 
 let change_entries = [
+  change "define-dogfoodable-host-readiness-roadmap" foundation_role "roadmap-sequencing" [
+    "agent_harness_runtime.cairn_policy.closeout",
+    "agent_harness_runtime.clankers_focused_rails.closeout",
+    "agent_harness_runtime.validation",
+  ] ["adapt-claude-code-headless-surfaces", "adapt-pi-headless-rpc-protocol", "add-ratatui-tool-host-surface", "adapt-claude-code-mcp-bridge", "add-concrete-std-runtime-adapters", "adapt-clankers-batch-trajectory-runner"],
   change "add-canonical-model-message-contracts" core_role "injected-services" [
     "agent_harness_runtime.model_dispatch.plan",
     "agent_harness_runtime.multimodal_image_payloads.typed_parts",

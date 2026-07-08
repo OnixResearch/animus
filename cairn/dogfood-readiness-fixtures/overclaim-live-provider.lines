@@ -1,0 +1,14 @@
+# Negative: live-provider claim lacks live-provider-smoke evidence.
+expected_issue=DOGFOOD_CLAIM_MISSING_EVIDENCE
+evidence|deterministic-fixtures
+evidence|fake-backed-integration
+claim|deterministic-fixture-checks
+claim|fake-backed-dogfood
+claim|live-providers
+non_claim|packaged-headless-dogfood
+non_claim|tui-dogfood
+non_claim|daemon-attach
+non_claim|plugin-runtime
+non_claim|persistent-session
+non_claim|production-readiness
+non_claim|clankers-parity

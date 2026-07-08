@@ -1,0 +1,12 @@
+# Negative: production readiness is neither backed by evidence nor listed as a non-claim.
+expected_issue=DOGFOOD_CLAIM_MISSING_NON_CLAIM
+evidence|deterministic-fixtures
+claim|deterministic-fixture-checks
+non_claim|fake-backed-dogfood
+non_claim|packaged-headless-dogfood
+non_claim|live-providers
+non_claim|tui-dogfood
+non_claim|daemon-attach
+non_claim|plugin-runtime
+non_claim|persistent-session
+non_claim|clankers-parity

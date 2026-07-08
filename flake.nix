@@ -179,6 +179,7 @@
                 || baseName == "config.toml"
                 || baseName == "README.md"
                 || baseName == "check-clankers-product-surfaces"
+                || baseName == "check-dogfood-readiness"
                 || baseName == "check-adapter-conformance-index"
                 || baseName == "check-clash-ucan-authority"
                 || baseName == "check-composition-conformance"
@@ -441,6 +442,22 @@
                 chmod -R u+w source
                 cd source
                 sh scripts/cairn/check-clankers-product-surfaces --root .
+                touch "$out"
+              '';
+
+          dogfood-readiness =
+            pkgs.runCommand "animus-dogfood-readiness"
+              {
+                nativeBuildInputs = [
+                  pkgs.rustc
+                  pkgs.gcc
+                ];
+              }
+              ''
+                cp -r ${source} source
+                chmod -R u+w source
+                cd source
+                sh scripts/cairn/check-dogfood-readiness --root .
                 touch "$out"
               '';
 

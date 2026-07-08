@@ -1,0 +1,14 @@
+# Positive: deterministic and fake-backed claims are backed by indexed evidence; optional surfaces stay non-claims.
+expected_issue=OK
+evidence|deterministic-fixtures
+evidence|fake-backed-integration
+claim|deterministic-fixture-checks
+claim|fake-backed-dogfood
+non_claim|packaged-headless-dogfood
+non_claim|live-providers
+non_claim|tui-dogfood
+non_claim|daemon-attach
+non_claim|plugin-runtime
+non_claim|persistent-session
+non_claim|production-readiness
+non_claim|clankers-parity

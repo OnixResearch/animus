@@ -19,7 +19,7 @@ Animus rejects default adoption of these Clankers product surfaces:
 - product tools shipped as Animus reusable defaults; and
 - release tagging workflow ownership.
 
-These surfaces may remain useful references for host applications. They are not reusable Animus defaults, and they must not appear as required dependencies, runtime assumptions, global paths, or implicit shell behavior in `animus-core`, `animus-adapters`, `animus-preserves`, `animus-steel`, or the default `animus-std` contracts.
+These surfaces may remain useful references for host applications. They are not reusable Animus defaults, and they must not appear as required dependencies, runtime assumptions, global paths, or implicit shell behavior in `animus-core`, `animus-adapters`, `animus-preserves`, `animus-steel`, or the default `animus-std` contracts. The [dogfoodable host readiness roadmap](dogfoodable-host-readiness-roadmap.md) defines how optional host-owned dogfoodability can advance without weakening this default rejection stance.
 
 ## Bounded pattern adoption
 

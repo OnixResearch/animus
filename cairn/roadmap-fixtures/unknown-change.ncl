@@ -4,13 +4,14 @@ let Fixture = {
 }
 in
 {
-  expected_issue = "ROADMAP_UNKNOWN_CHANGE_ID",
+  expected_issue = "ROADMAP_UNKNOWN_OVERLAP_OWNER",
   roadmap_lines =
     std.string.join
       "\n"
       [
         "tier|runtime||Runtime",
         "active|known-change",
-        "change|ghost-change|core-runtime|runtime||",
+        "change|known-change|core-runtime|runtime||",
+        "overlap|unknown-change-reference|ghost-change|known-change",
       ],
 } | Fixture

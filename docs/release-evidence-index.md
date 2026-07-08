@@ -59,4 +59,4 @@ The rail validates the Nickel sample and fixtures for:
 - missing-mode rejection;
 - optional-surface overclaim rejection.
 
-This is a fixture validation rail only. It is not a release generator and does not prove live providers, UI/daemon behavior, VM packaging, plugin runtime behavior, remote auth, performance, or production readiness.
+This is a fixture validation rail only. It is not a release generator and does not prove live providers, UI/daemon behavior, VM packaging, plugin runtime behavior, remote auth, performance, or production readiness. Dogfood-specific claims must also satisfy `scripts/cairn/check-dogfood-readiness --root .` so omitted optional host surfaces remain explicit non-claims.

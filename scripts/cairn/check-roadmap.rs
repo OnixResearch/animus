@@ -38,7 +38,6 @@ const ISSUE_DUPLICATE_TIER_ID: &str = "ROADMAP_DUPLICATE_TIER_ID";
 const ISSUE_UNKNOWN_RECORD_KIND: &str = "ROADMAP_UNKNOWN_RECORD_KIND";
 const ISSUE_UNKNOWN_ROLE: &str = "ROADMAP_UNKNOWN_ROLE";
 const ISSUE_UNKNOWN_TIER_ID: &str = "ROADMAP_UNKNOWN_TIER_ID";
-const ISSUE_UNKNOWN_CHANGE_ID: &str = "ROADMAP_UNKNOWN_CHANGE_ID";
 const ISSUE_UNCLASSIFIED_ACTIVE_CHANGE: &str = "ROADMAP_UNCLASSIFIED_ACTIVE_CHANGE";
 const ISSUE_UNKNOWN_PREREQUISITE_ID: &str = "ROADMAP_UNKNOWN_PREREQUISITE_ID";
 const ISSUE_DEPENDENCY_CYCLE: &str = "ROADMAP_DEPENDENCY_CYCLE";
@@ -357,7 +356,7 @@ fn validate_roadmap(
     let mut report = ValidationReport::default();
     let tier_ids = collect_tier_ids(roadmap, &mut report);
     let change_ids = collect_change_ids(roadmap, &mut report);
-    validate_change_membership(roadmap, active_changes, &change_ids, &mut report);
+    validate_change_membership(active_changes, &change_ids, &mut report);
     validate_tiers(roadmap, &tier_ids, &mut report);
     validate_changes(
         roadmap,
@@ -367,7 +366,7 @@ fn validate_roadmap(
         accepted_requirements,
         &mut report,
     );
-    validate_overlaps(roadmap, &change_ids, active_changes, &mut report);
+    validate_overlaps(roadmap, &change_ids, &mut report);
     validate_change_cycles(roadmap, &change_ids, &mut report);
     validate_tier_cycles(roadmap, &tier_ids, &mut report);
     validate_product_surface_safety(roadmap, &change_ids, &accepted_requirements, &mut report);
@@ -419,23 +418,10 @@ fn collect_change_ids(roadmap: &Roadmap, report: &mut ValidationReport) -> BTree
 }
 
 fn validate_change_membership(
-    roadmap: &Roadmap,
     active_changes: &BTreeSet<String>,
     change_ids: &BTreeSet<String>,
     report: &mut ValidationReport,
 ) {
-    for change in &roadmap.changes {
-        if change.id.starts_with("ROADMAP_") {
-            continue;
-        }
-        if !active_changes.contains(&change.id) {
-            report.issues.push(issue(
-                ISSUE_UNKNOWN_CHANGE_ID,
-                &change.id,
-                "roadmap classifies a change that is not active",
-            ));
-        }
-    }
     for active_change in active_changes {
         if !change_ids.contains(active_change) {
             report.issues.push(issue(
@@ -510,11 +496,10 @@ fn validate_changes(
 fn validate_overlaps(
     roadmap: &Roadmap,
     change_ids: &BTreeSet<String>,
-    active_changes: &BTreeSet<String>,
     report: &mut ValidationReport,
 ) {
     for overlap in &roadmap.overlaps {
-        if !change_ids.contains(&overlap.owner) || !active_changes.contains(&overlap.owner) {
+        if !change_ids.contains(&overlap.owner) {
             report.issues.push(issue(
                 ISSUE_UNKNOWN_OVERLAP_OWNER,
                 &overlap.concept,
@@ -522,7 +507,7 @@ fn validate_overlaps(
             ));
         }
         for related in &overlap.related {
-            if !change_ids.contains(related) || !active_changes.contains(related) {
+            if !change_ids.contains(related) {
                 report.issues.push(issue(
                     ISSUE_UNKNOWN_OVERLAP_RELATED,
                     &overlap.concept,
