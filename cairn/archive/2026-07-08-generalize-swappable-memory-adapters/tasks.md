@@ -1,0 +1,13 @@
+# Tasks
+
+- [x] [serial] Define generic memory adapter family DTOs for source/import, store, retrieval/search, extraction, embedding/search support, admission, update/delete, and instruction-source behavior. r[agent_harness_runtime.memory_adapters.family]
+- [x] [depends:family] Add missing-adapter tests proving enabled memory use or generation fails closed without ambient filesystem, database, MCP, network, provider, or vector-index fallback. r[agent_harness_runtime.memory_adapters.family.missing]
+- [x] [serial] Define and validate normalized memory record envelopes with safe identity, kind, scope, evidence, trust/admission, freshness, confidence, sensitivity, body hash, budget, expiration, supersession, and conflict metadata. r[agent_harness_runtime.memory_adapters.record_envelope]
+- [x] [depends:record_envelope] Add negative fixtures for missing evidence, invalid scope, invalid confidence, zero budget, expired freshness, malformed hashes, and unsafe raw-body markers. r[agent_harness_runtime.memory_adapters.record_envelope.invalid]
+- [x] [serial] Implement pure store-agnostic retrieval planning over query context, scope policy, candidate records, match reasons, freshness, conflicts, and prompt budgets. r[agent_harness_runtime.memory_adapters.retrieval_plan]
+- [x] [depends:retrieval_plan] Add backend-equivalence tests proving two different adapters that return the same normalized records produce the same selected memories, skips, conflicts, and ledger entries. r[agent_harness_runtime.memory_adapters.retrieval_plan.backend_equivalence]
+- [x] [serial] Split candidate extraction, host admission, storage, update/delete, and prompt influence into separate typed steps. r[agent_harness_runtime.memory_adapters.extraction_admission]
+- [x] [depends:extraction_admission] Add denied-candidate tests proving rejected extraction output is not persisted, updated, injected, or treated as authority. r[agent_harness_runtime.memory_adapters.extraction_admission.denied]
+- [x] [serial] Define safe memory operation and influence receipts with adapter labels, safe IDs, counts, status, redaction class, policy hash, and BLAKE3 body hashes. r[agent_harness_runtime.memory_adapters.receipts]
+- [x] [depends:receipts] Add receipt leak fixtures for raw memory bodies, credentials, full paths, provider payloads, hidden memory bodies, and unbounded prompt text. r[agent_harness_runtime.memory_adapters.receipts.rejects_leaks]
+- [x] [depends:family.missing,record_envelope.invalid,retrieval_plan.backend_equivalence,extraction_admission.denied,receipts.rejects_leaks] Update docs and run focused memory-adapter tests, workspace checks, Cairn validation, and Cairn gates with reviewable evidence. r[agent_harness_runtime.memory_adapters.verification]

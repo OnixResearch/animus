@@ -6103,6 +6103,247 @@ r[agent_harness_runtime.openai_codex_opt_in_memories.non_authoritative.guidance]
 - THEN those required rules remain active
 - AND no memory state is required for the rules to apply.
 
+### Requirement: Memory adapter family
+
+r[agent_harness_runtime.memory_adapters.family] Reusable Animus memory behavior MUST be split across swappable host-injected adapters for source/import, durable storage, retrieval/search, extraction, embedding or search support, admission, update/delete, and instruction-source behavior, and reusable core/runtime logic MUST NOT construct concrete memory databases, file formats, MCP clients, provider extractors, vector indexes, or host path layouts.
+
+#### Scenario: Missing memory adapter fails closed
+
+r[agent_harness_runtime.memory_adapters.family.missing]
+- GIVEN a run enables memory use or memory generation
+- AND the required memory adapter for storage, retrieval, extraction, admission, or instruction-source import is absent
+- WHEN reusable memory planning evaluates the operation
+- THEN the result records a typed unavailable or unsupported outcome
+- AND no ambient filesystem, database, MCP, network, provider extraction, or vector-index fallback is attempted.
+
+### Requirement: Normalized memory record envelope
+
+r[agent_harness_runtime.memory_adapters.record_envelope] Memory records crossing adapter boundaries MUST normalize into typed envelopes with stable record ID, kind, scope, safe source label, evidence handle, trust or admission status, freshness state, confidence, sensitivity or redaction class, BLAKE3 body hash, prompt-budget units, and optional expiration, supersession, and conflict metadata before they can influence retrieval planning or prompt assembly.
+
+#### Scenario: Malformed memory record is rejected
+
+r[agent_harness_runtime.memory_adapters.record_envelope.invalid]
+- GIVEN a memory adapter returns a record without evidence metadata, with an invalid scope, invalid confidence, zero budget units, expired freshness, malformed BLAKE3 hash, or unsafe raw-body marker
+- WHEN record envelope validation runs
+- THEN validation rejects the record with a typed diagnostic
+- AND the record is ineligible for retrieval, prompt injection, storage updates, and influence receipts.
+
+### Requirement: Store-agnostic retrieval planning
+
+r[agent_harness_runtime.memory_adapters.retrieval_plan] Memory retrieval planning MUST be pure deterministic logic over query context, scope policy, normalized candidate records, adapter-declared match reasons, freshness, confidence, conflicts, and prompt budgets, producing selected, skipped, stale, redacted, conflicting, and over-budget outcomes without calling storage, embedding, provider, filesystem, clock, or network services.
+
+#### Scenario: Equivalent backend records produce equivalent plans
+
+r[agent_harness_runtime.memory_adapters.retrieval_plan.backend_equivalence]
+- GIVEN two different memory adapters return the same normalized candidate records and match reasons for the same query context
+- WHEN retrieval planning runs with the same policy and budget
+- THEN selected memories, skipped memories, conflict diagnostics, budget use, and ledger entries are equivalent
+- AND backend-specific identifiers do not affect model-visible ordering.
+
+### Requirement: Extraction and admission are separate
+
+r[agent_harness_runtime.memory_adapters.extraction_admission] Memory extraction, host admission, storage, update/delete, and prompt influence MUST be separate typed steps; extractor output MAY propose candidate memories, but only admitted candidates MAY persist, update existing records, or become eligible for prompt injection.
+
+#### Scenario: Denied candidate is not persisted or injected
+
+r[agent_harness_runtime.memory_adapters.extraction_admission.denied]
+- GIVEN an extraction adapter proposes a candidate memory from a prior interaction
+- WHEN host admission denies the candidate or policy marks the source ineligible
+- THEN no store, update, or prompt-injection operation is planned for that candidate
+- AND the denial receipt records safe candidate identity and reason without embedding the raw candidate body.
+
+### Requirement: Safe memory operation receipts
+
+r[agent_harness_runtime.memory_adapters.receipts] Memory operation and influence receipts MUST record adapter family label, operation kind, safe record or candidate IDs, source labels, counts, status, redaction class, policy hash, and BLAKE3 body hashes, and MUST NOT include raw memory bodies, credentials, full path dumps, provider payloads, hidden memory bodies, or unbounded prompt text.
+
+#### Scenario: Memory receipt leak is rejected
+
+r[agent_harness_runtime.memory_adapters.receipts.rejects_leaks]
+- GIVEN a memory operation receipt fixture includes raw memory body text, a credential-looking value, an absolute path dump, provider JSON, hidden memory body, or unbounded prompt text
+- WHEN receipt validation runs
+- THEN validation rejects the fixture with a typed leak diagnostic.
+
+### Requirement: Memory adapter verification
+
+r[agent_harness_runtime.memory_adapters.verification] The generic memory adapter adaptation MUST include focused positive and negative tests for adapter availability, normalized records, malformed records, equivalent backend planning, extraction/admission separation, denied candidates, safe receipts, leak rejection, budget handling, stale records, and conflicts.
+
+#### Scenario: Closeout evidence covers memory adapter fixtures
+
+r[agent_harness_runtime.memory_adapters.verification.closeout]
+- GIVEN maintainers intend to archive the swappable memory adapter adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused adapter-family, record-envelope, retrieval-plan, extraction/admission, receipt, workspace, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Adapter-neutral memory control commands
+
+r[agent_harness_runtime.memory_controls.commands] Animus memory control surfaces MUST represent list, show, search, why, approve, reject, forget, update or supersede, and safe export-summary operations as adapter-neutral DTOs over normalized memory identities, scopes, policies, and safe output budgets.
+
+#### Scenario: Memory listing exposes only safe descriptors
+
+r[agent_harness_runtime.memory_controls.commands.safe_listing]
+- GIVEN a host lists or searches available memories through the control surface
+- WHEN reusable command projection builds the response
+- THEN the response contains safe descriptors, scopes, statuses, summaries, evidence handles, and hashes within budget
+- AND raw hidden memory bodies, credentials, provider payloads, full paths, and unbounded text are absent.
+
+### Requirement: Memory control validation precedes mutation
+
+r[agent_harness_runtime.memory_controls.validation] Memory control requests MUST be validated for scope, capability, admission policy, freshness, required evidence, backend support, and safe output posture before invoking storage, update/delete, extraction, remote, or prompt-influence adapters.
+
+#### Scenario: Denied control request performs no mutation
+
+r[agent_harness_runtime.memory_controls.validation.denied]
+- GIVEN a caller requests memory update, forget, export, approval, or prompt-visible use without required scope, capability, admission, or freshness
+- WHEN control validation runs
+- THEN validation returns a typed denial or stale-command diagnostic
+- AND no adapter mutation, remote call, prompt injection, or receipt claiming completion occurs.
+
+### Requirement: Extracted candidate review states
+
+r[agent_harness_runtime.memory_controls.review] Extracted memory candidates MUST move through explicit review states, including pending, approved, rejected, expired, superseded, unavailable, and persisted, before they can be stored or influence prompts.
+
+#### Scenario: Approval requires scope and evidence
+
+r[agent_harness_runtime.memory_controls.review.approval]
+- GIVEN an extracted memory candidate is pending review
+- WHEN a host approves or rejects it
+- THEN approval requires a valid scope, source label, evidence handle, confidence, redaction status, and admission decision
+- AND rejection records safe reason metadata without persisting or injecting the candidate.
+
+### Requirement: Forget, update, and supersede are adapter-dispatched
+
+r[agent_harness_runtime.memory_controls.forget_update] Forget, update, tombstone, and supersession operations MUST dispatch through injected memory adapters and return typed complete, partial, denied, stale, unavailable, or unsupported outcomes with safe receipts.
+
+#### Scenario: Unavailable backend does not claim deletion
+
+r[agent_harness_runtime.memory_controls.forget_update.unavailable]
+- GIVEN a caller requests forgetting a memory record
+- AND the active store adapter is unavailable or does not support deletion
+- WHEN the control operation runs
+- THEN the result records unavailable or unsupported status
+- AND no receipt claims the record was deleted, tombstoned, or superseded.
+
+### Requirement: Memory influence explanation is safe
+
+r[agent_harness_runtime.memory_controls.influence_explain] Memory `why` or influence explanations MUST be derived from prompt-injection ledgers and MUST include only safe record IDs, source labels, ranks, match reasons, scope, confidence, freshness, policy decision, consumed budget, skip reason, redaction class, and BLAKE3 body hashes.
+
+#### Scenario: Why output omits private bodies
+
+r[agent_harness_runtime.memory_controls.influence_explain.safe]
+- GIVEN a user asks why a memory was included or skipped for a prompt
+- WHEN the control surface renders the explanation
+- THEN the response names the safe inclusion or skip reasons and policy inputs
+- AND raw memory bodies, credentials, provider payloads, full paths, and hidden memory text are absent.
+
+### Requirement: Remote memory controls require admission
+
+r[agent_harness_runtime.memory_controls.remote_admission] Remote, headless, MCP, or automation-triggered memory control requests MUST pass admission and authority checks before prompt-visible use, approval, update, deletion, export, or store mutation is dispatched to any memory adapter.
+
+#### Scenario: Remote denial blocks memory mutation
+
+r[agent_harness_runtime.memory_controls.remote_admission.denied]
+- GIVEN a remote caller requests approving, updating, deleting, exporting, or using memory
+- WHEN remote admission is missing, denied, expired, or malformed
+- THEN the memory control request fails before adapter dispatch
+- AND the denial receipt records safe caller, scope, action, and reason metadata without leaking raw memory content.
+
+### Requirement: Memory control verification
+
+r[agent_harness_runtime.memory_controls.verification] The memory control surface MUST include focused positive and negative tests for safe listing, command validation, unauthorized requests, candidate approval and rejection, forget/update outcomes, unavailable backends, influence explanation, remote admission denial, and receipt leak rejection.
+
+#### Scenario: Closeout evidence covers memory control fixtures
+
+r[agent_harness_runtime.memory_controls.verification.closeout]
+- GIVEN maintainers intend to archive the memory control surface
+- WHEN closeout validation runs
+- THEN evidence names focused command, validation, review, forget/update, influence-explain, remote-admission, workspace, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Memory conformance matrix
+
+r[agent_harness_runtime.memory_conformance.matrix] Animus MUST maintain a memory adapter conformance matrix that records backend family, adapter role, declared capabilities, owner, applicability, positive case, negative case, and safe evidence label for null/no-op, local file or markdown, SQL or document, vector or hybrid search, MCP or remote, extractor, and admission adapter families.
+
+#### Scenario: Matrix row without failure coverage is rejected
+
+r[agent_harness_runtime.memory_conformance.matrix.coverage]
+- GIVEN a memory conformance matrix row omits owner, capability declaration, positive case, negative case, safe evidence label, or not-applicable reason
+- WHEN matrix validation runs
+- THEN validation rejects the row with a typed coverage diagnostic
+- AND the row cannot count as release evidence.
+
+### Requirement: Null memory backend is first-class
+
+r[agent_harness_runtime.memory_conformance.null_backend] A null or no-op memory backend MUST be a valid adapter family that reports disabled, unavailable, or no-influence outcomes without storing records, retrieving records, injecting memory, or generating new memory candidates.
+
+#### Scenario: Disabled memory performs no side effects
+
+r[agent_harness_runtime.memory_conformance.null_backend.disabled]
+- GIVEN memory use and generation are disabled or backed by the null adapter
+- WHEN runtime prepares a turn and closes the turn
+- THEN no storage, retrieval, prompt injection, background extraction, update, or deletion operation is planned
+- AND required guidance and policy remain active without memory state.
+
+### Requirement: File-backed memory remains host-owned
+
+r[agent_harness_runtime.memory_conformance.filesystem_backend] Local file or markdown memory adapters MUST remain host-owned shells that convert already-admitted file contents into normalized records; reusable core logic MUST NOT read directories, canonicalize paths, parse markdown files from disk, write memory files, or rely on a host path layout.
+
+#### Scenario: File path is redacted from reusable evidence
+
+r[agent_harness_runtime.memory_conformance.filesystem_backend.path_redaction]
+- GIVEN a file-backed host adapter imports a memory record from a local markdown file
+- WHEN reusable receipt or influence-ledger validation runs
+- THEN evidence uses a safe source label and BLAKE3 body hash
+- AND full paths and raw memory bodies are absent from reusable receipts and model-visible ledger metadata.
+
+### Requirement: Semantic memory backends expose normalized results
+
+r[agent_harness_runtime.memory_conformance.semantic_backend] SQL, document, vector, and hybrid search backends MUST expose normalized record envelopes plus safe backend-declared match reasons or scores; reusable planning MUST NOT depend on backend-specific query languages, vector dimensions, embedding provider clients, collection names, or index internals.
+
+#### Scenario: Semantic backend unavailable has no ambient fallback
+
+r[agent_harness_runtime.memory_conformance.semantic_backend.unavailable]
+- GIVEN a vector or hybrid search adapter is configured but returns unavailable, timed-out, or unsupported
+- WHEN reusable memory retrieval planning receives that status
+- THEN the plan records a typed unavailable outcome
+- AND no keyword search, provider call, network request, local index scan, or alternate backend is attempted unless an explicit alternate adapter was injected and admitted.
+
+### Requirement: Remote memory backend receipts are scoped and redacted
+
+r[agent_harness_runtime.memory_conformance.remote_backend] MCP or remote memory adapters MUST represent remote service access through scoped descriptors, typed request/response DTOs, timeout and denial statuses, redacted remote IDs, and safe receipts that exclude credentials, raw provider payloads, transport envelopes, and unbounded remote output.
+
+#### Scenario: Remote memory failure is safe
+
+r[agent_harness_runtime.memory_conformance.remote_backend.failures]
+- GIVEN an MCP or remote memory adapter returns denied, timed-out, malformed, unavailable, or unsafe output
+- WHEN reusable memory planning evaluates the response
+- THEN the operation fails with the corresponding typed status
+- AND no receipt claims successful storage, retrieval, update, deletion, or prompt influence.
+
+### Requirement: Shared memory failure taxonomy
+
+r[agent_harness_runtime.memory_conformance.failure_taxonomy] Memory adapter conformance MUST use a shared failure taxonomy that covers unavailable, denied, timed-out, malformed-record, stale, over-budget, redacted, conflicting, unsafe-receipt, and leak diagnostics.
+
+#### Scenario: Failure taxonomy is stable across backends
+
+r[agent_harness_runtime.memory_conformance.failure_taxonomy.stable]
+- GIVEN two backend families encounter equivalent unavailable, denied, malformed, stale, over-budget, conflict, or leak conditions
+- WHEN conformance cases map their results
+- THEN reusable diagnostics use the same failure taxonomy
+- AND backend-specific details remain safe metadata rather than model-visible raw output.
+
+### Requirement: Memory conformance verification
+
+r[agent_harness_runtime.memory_conformance.verification] The memory conformance rail MUST include focused positive and negative fixtures for matrix validation, null memory behavior, file-backed boundaries, semantic backend normalization, remote backend failures, failure taxonomy stability, no ambient fallback, and receipt leak rejection.
+
+#### Scenario: Closeout evidence covers memory conformance fixtures
+
+r[agent_harness_runtime.memory_conformance.verification.closeout]
+- GIVEN maintainers intend to archive the memory adapter conformance rail
+- WHEN closeout validation runs
+- THEN evidence names focused matrix, null-backend, filesystem-boundary, semantic-backend, remote-backend, failure-taxonomy, workspace, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
 ### Requirement: Bounded MCP bridge reference
 
 r[agent_harness_runtime.claude_code_mcp.scope] Animus MUST treat Claude Code MCP support as a bounded interoperability reference, and MUST NOT make MCP a core dependency, auto-discover or auto-trust servers, execute network or process transports from reusable core crates, or replace Animus-owned tool contracts.

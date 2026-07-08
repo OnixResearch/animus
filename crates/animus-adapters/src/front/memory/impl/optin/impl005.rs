@@ -198,6 +198,16 @@ pub enum MemoryError {
         /// Record identity.
         record_id: String,
     },
+    /// Memory adapter descriptor did not declare capabilities.
+    MissingAdapterCapabilities {
+        /// Adapter identity.
+        adapter_label: String,
+    },
+    /// Memory record or command did not include evidence metadata.
+    MissingEvidence {
+        /// Record, candidate, or command identity.
+        record_id: String,
+    },
     /// Memory confidence was outside the supported range.
     InvalidConfidence {
         /// Minimum supported confidence percentage.
@@ -254,6 +264,12 @@ impl core::fmt::Display for MemoryError {
             }
             Self::MissingRecordScope { record_id } => {
                 write!(formatter, "{record_id} is missing memory record scope")
+            }
+            Self::MissingAdapterCapabilities { adapter_label } => {
+                write!(formatter, "{adapter_label} is missing memory adapter capabilities")
+            }
+            Self::MissingEvidence { record_id } => {
+                write!(formatter, "{record_id} is missing memory evidence metadata")
             }
             Self::InvalidConfidence {
                 min_percent,

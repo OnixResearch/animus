@@ -42,10 +42,16 @@ include!("memory/impl/optin/impl005.rs");
 include!("memory/impl/optin/impl006.rs");
 include!("memory/impl/optin/impl007.rs");
 include!("memory/impl/optin/impl008.rs");
+include!("memory/impl/generic/impl009.rs");
+include!("memory/impl/generic/impl010.rs");
+include!("memory/impl/generic/impl011.rs");
 
 #[cfg(test)]
 mod tests {
     include!("memory/tests/support.rs");
     include!("memory/tests/tests001.rs");
     include!("memory/tests/tests002.rs");
+    include!("memory/tests/tests003.rs");
+    include!("memory/tests/tests004.rs");
+    include!("memory/tests/tests005.rs");
 }
