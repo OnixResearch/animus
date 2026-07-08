@@ -4,11 +4,8 @@
 // All state is projected from accepted DTOs; controls issue typed commands
 // to the runtime/host without holding ambient authority.
 
-#[allow(unknown_lints, non_trait_imports)]
-use animus_adapters::{
-    HostEvent, HostEventKind, HostSelector, HostSemanticStatus,
-    HostTopologySnapshot,
-};
+#[cfg_attr(animus_octet, allow(non_trait_imports))]
+use animus_adapters::{HostEvent, HostEventKind, HostSelector, HostSemanticStatus, HostTopologySnapshot};
 
 /// Label for the idle status state.
 const IDLE_STATUS_LABEL: &str = "idle";
@@ -236,7 +233,7 @@ impl QueueItemStatus {
 #[must_use]
 pub fn render_agent_dashboard_snapshot(dashboard: &AgentDashboardState) -> String {
     let mut lines: Vec<String> = Vec::with_capacity(32);
-    debug_assert!(dashboard.status().as_str().len() > 0, "empty status");
+    debug_assert!(!dashboard.status().as_str().is_empty(), "empty status");
     lines.push(format!("status: {}", dashboard.status().as_str()));
     if dashboard.can_start() {
         lines.push(String::from("control: start"));

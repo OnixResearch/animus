@@ -28,7 +28,10 @@ pub use bridge::{
     ApprovalRequest, ToolCommandChoice, ToolCorrelationId, ToolHostCommand, ToolHostError,
     ToolHostEvent, ToolHostFailure, ToolHostFailureClass, ToolProgress, ToolRunId,
 };
-/// Re-export of the Rats terminal widget package used by the optional TUI host.
+/// Re-export of the Subwayrat terminal keymap package used by the optional TUI host.
+#[cfg(feature = "rats-widgets")]
+pub use rat_keymap;
+/// Re-export of the Subwayrat terminal widget package used by the optional TUI host.
 #[cfg(feature = "rats-widgets")]
 pub use rats;
 pub use runner::{

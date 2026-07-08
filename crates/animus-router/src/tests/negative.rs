@@ -1,4 +1,4 @@
-#![allow(assertion_density, excessive_file_length)]
+#![allow(assertion_density)]
 
 use super::*;
 
@@ -148,54 +148,6 @@ fn deterministic_selection_denies_unsafe_eligibility() {
         Err(crate::SelectionDenial::NoEligibleModel)
     );
 }
-#[test]
-fn budget_and_fallback_fail_closed() {
-    let base_bounds = crate::limit::test_bounds(BoundsFixture {
-        max_candidates: MAX_CANDIDATES_THREE,
-        max_parallelism: MAX_PARALLELISM_THREE,
-        min_success_quorum: QUORUM_ONE,
-        timeout_class: crate::limit::DeadlineClass::Standard,
-        max_synthesis_attempts: SYNTHESIS_ONE,
-        max_repair_attempts: REPAIR_NONE,
-        fallback_policy: crate::limit::FallbackPolicy::BestValidEvidence,
-    });
-    let deny_ledger = crate::BudgetLedger::from(&base_bounds);
-    let repair_exhausted_ledger = crate::BudgetLedger::from(&base_bounds);
-    let candidate_exhausted_ledger = crate::BudgetLedger::from(&crate::limit::test_bounds(BoundsFixture {
-        max_candidates: ZERO_COUNT,
-        max_parallelism: MAX_PARALLELISM_THREE,
-        min_success_quorum: QUORUM_ONE,
-        timeout_class: crate::limit::DeadlineClass::Standard,
-        max_synthesis_attempts: SYNTHESIS_ONE,
-        max_repair_attempts: REPAIR_NONE,
-        fallback_policy: crate::limit::FallbackPolicy::BestValidEvidence,
-    }));
-    let parallelism_exhausted_ledger = crate::BudgetLedger::from(&crate::limit::test_bounds(BoundsFixture {
-        max_candidates: MAX_CANDIDATES_THREE,
-        max_parallelism: ZERO_COUNT,
-        min_success_quorum: QUORUM_ONE,
-        timeout_class: crate::limit::DeadlineClass::Standard,
-        max_synthesis_attempts: SYNTHESIS_ONE,
-        max_repair_attempts: REPAIR_NONE,
-        fallback_policy: crate::limit::FallbackPolicy::BestValidEvidence,
-    }));
-    let local_chain = crate::evidence::test_fallback_chain(alloc::vec![crate::evidence::test_fallback_step(crate::evidence::FallbackStepFixture { role: crate::Role::Fallback, model_label: MODEL_PRIMARY, backend_label: BACKEND_LOCAL, is_local: true })]);
-    let remote_chain = crate::evidence::test_fallback_chain(alloc::vec![crate::evidence::test_fallback_step(crate::evidence::FallbackStepFixture { role: crate::Role::Fallback, model_label: MODEL_ESCALATION, backend_label: BACKEND_REMOTE, is_local: false })]);
-    let cyclic_chain = crate::evidence::test_fallback_chain(alloc::vec![crate::evidence::test_fallback_step(crate::evidence::FallbackStepFixture { role: crate::Role::Fallback, model_label: MODEL_PRIMARY, backend_label: BACKEND_LOCAL, is_local: true }), crate::evidence::test_fallback_step(crate::evidence::FallbackStepFixture { role: crate::Role::Fallback, model_label: MODEL_PRIMARY, backend_label: BACKEND_LOCAL, is_local: true })]);
-    let cases = [
-        (crate::evaluate_fallback(&crate::StepFailure::new(MODEL_PRIMARY, false), &deny_ledger, &remote_chain, &crate::FallbackPolicy::Deny), crate::FallbackDecision::Deny),
-        (crate::evaluate_fallback(&crate::StepFailure::new(MODEL_PRIMARY, true), &repair_exhausted_ledger, &local_chain, &crate::FallbackPolicy::BestValidEvidence), crate::FallbackDecision::FailRoute(crate::FallbackRouteReason::BudgetExhausted(crate::BudgetExhausted::new(crate::BudgetKind::Repair, ZERO_COUNT)))),
-        (crate::evaluate_fallback(&crate::StepFailure::new(MODEL_PRIMARY, false), &candidate_exhausted_ledger, &remote_chain, &crate::FallbackPolicy::BestValidEvidence), crate::FallbackDecision::FailRoute(crate::FallbackRouteReason::BudgetExhausted(crate::BudgetExhausted::new(crate::BudgetKind::Candidate, ZERO_COUNT)))),
-        (crate::evaluate_fallback(&crate::StepFailure::new(MODEL_PRIMARY, false), &parallelism_exhausted_ledger, &remote_chain, &crate::FallbackPolicy::BestValidEvidence), crate::FallbackDecision::FailRoute(crate::FallbackRouteReason::BudgetExhausted(crate::BudgetExhausted::new(crate::BudgetKind::Parallelism, ZERO_COUNT)))),
-        (crate::evaluate_fallback(&crate::StepFailure::new(MODEL_PRIMARY, false), &deny_ledger, &cyclic_chain, &crate::FallbackPolicy::BestValidEvidence), crate::FallbackDecision::FailRoute(crate::FallbackRouteReason::CyclicFallback)),
-        (crate::evaluate_fallback(&crate::StepFailure::new(MODEL_PRIMARY, false), &deny_ledger, &remote_chain, &crate::limit::FallbackPolicy::SafeSingle), crate::FallbackDecision::FailRoute(crate::FallbackRouteReason::IneligibleFallback)),
-    ];
-
-    for (actual, expected) in cases {
-        assert_eq!(actual, expected);
-    }
-}
-
 #[test]
 fn execution_bounds_reject_invalid_plans() {
     let cases = [

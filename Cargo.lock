@@ -125,7 +125,7 @@ dependencies = [
  "animus-adapters",
  "animus-runtime",
  "animus-std",
- "crossterm",
+ "rat-keymap",
  "rat-widgets",
 ]
 
@@ -1855,6 +1855,14 @@ source = "git+ssh://git@github.com/brittonr/rats.git?rev=e9cb7865fe400de6220aea8
 dependencies = [
  "ratatui",
  "unicode-width 0.2.2",
+]
+
+[[package]]
+name = "rat-keymap"
+version = "0.1.0"
+source = "git+ssh://git@github.com/brittonr/rats.git?rev=e9cb7865fe400de6220aea8bfc08ddf4f75da3d3#e9cb7865fe400de6220aea8bfc08ddf4f75da3d3"
+dependencies = [
+ "ratatui",
 ]
 
 [[package]]

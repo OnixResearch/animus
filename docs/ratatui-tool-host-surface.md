@@ -1,10 +1,10 @@
 # Ratatui-compatible tool host surface
 
-Animus keeps terminal UI dependencies at the host shell boundary. `animus-tui` is the only crate that may depend on Rats/Ratatui-facing packages; reusable crates (`animus-core`, `animus-adapters`, `animus-steel`, `animus-runtime`, and default adapter contracts) stay terminal-free.
+Animus keeps terminal UI dependencies at the host shell boundary. `animus-tui` is the only crate that may depend on Rats/Subwayrat/Ratatui-facing packages; reusable crates (`animus-core`, `animus-adapters`, `animus-steel`, `animus-runtime`, and default adapter contracts) stay terminal-free.
 
 ## Boundary
 
-- `animus-tui` owns host-only terminal dependencies and re-exports the pinned Rats widget package for TUI hosts.
+- `animus-tui` owns host-only terminal dependencies and re-exports the pinned Subwayrat widget and keymap packages for TUI hosts.
 - UI-neutral bridge DTOs describe hosted tool lifecycle events, progress, bounded output, approval requests, correlated commands, cancellation, final responses, and typed failures.
 - Tools and reusable runtime code exchange validated `ToolRequest` and `ToolResponse` values. They never receive terminal handles, Ratatui frames, key events, raw-mode controls, redraw loops, or Rats widget types.
 - Terminal setup, cleanup, polling, channels, keybindings, and rendering backends remain imperative-shell concerns outside reusable contracts.
@@ -24,7 +24,7 @@ cargo test -p animus-tui
 scripts/cairn/check-ratatui-tool-host-surface --root .
 ```
 
-The rail verifies that the Rats dependency is SSH-pinned in `animus-tui`, reusable crate manifests and public exports remain terminal-free, and bridge/reducer code does not import terminal backend types.
+The rail verifies that the Subwayrat dependencies are SSH-pinned in `animus-tui`, `animus-tui` does not bypass Subwayrat with a direct Crossterm dependency, reusable crate manifests and public exports remain terminal-free, and bridge/reducer code does not import terminal backend types.
 
 ## Non-claims
 

@@ -92,10 +92,10 @@ fn populated_shell_snapshot() {
 fn terminal_setup_failure_records_error() {
     let mut state = fresh_shell();
     state.set_terminal_state(TerminalState::Failed);
-    state.record_error("crossterm::enable_raw_mode failed");
+    state.record_error("terminal raw mode failed");
     assert_eq!(state.terminal_state(), TerminalState::Failed);
     let snapshot = render_app_shell_snapshot(&state);
-    assert!(snapshot.contains("error: crossterm::enable_raw_mode failed"));
+    assert!(snapshot.contains("error: terminal raw mode failed"));
 }
 
 #[test]

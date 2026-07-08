@@ -2,7 +2,7 @@
 // layout DTOs. Layout types stay in the TUI crate; mismatches fail closed
 // with a typed diagnostic.
 
-#[allow(unknown_lints, non_trait_imports)]
+#[cfg_attr(animus_octet, allow(non_trait_imports))]
 use animus_adapters::LayoutAxis;
 
 /// Typed layout diagnostic for mismatch/failure cases.
@@ -227,19 +227,21 @@ pub fn render_layout_tree_snapshot(tree: &LayoutTree) -> String {
     lines.join("\n")
 }
 
+const LAYOUT_STACK_INITIAL_CAPACITY: usize = 16;
+
+struct LayoutStackEntry<'a> {
+    item: &'a LayoutTree,
+    depth: usize,
+}
+
 /// Iterative renderer that avoids recursion.
 #[allow(unknown_lints, borrowed_argument_types)]
-fn render_tree_iterative<'a>(tree: &'a LayoutTree, lines: &mut Vec<String>) {
-    debug_assert!(tree.node_id().len() > 0, "empty tree");
-
-    struct StackEntry<'a> {
-        item: &'a LayoutTree,
-        depth: usize,
-    }
+fn render_tree_iterative(tree: &LayoutTree, lines: &mut Vec<String>) {
+    debug_assert!(!tree.node_id().is_empty(), "empty tree");
 
     // Pre-allocate with a reasonable initial capacity.
-    let mut stack: Vec<StackEntry<'_>> = Vec::with_capacity(16);
-    stack.push(StackEntry {
+    let mut stack: Vec<LayoutStackEntry<'_>> = Vec::with_capacity(LAYOUT_STACK_INITIAL_CAPACITY);
+    stack.push(LayoutStackEntry {
         item: tree,
         depth: 0,
     });
@@ -268,7 +270,7 @@ fn render_tree_iterative<'a>(tree: &'a LayoutTree, lines: &mut Vec<String>) {
                 };
                 lines.push(format!("{indent}split: {node_id} [{axis_label}]"));
                 for child in children.iter().rev() {
-                    stack.push(StackEntry {
+                    stack.push(LayoutStackEntry {
                         item: child,
                         depth: entry.depth.wrapping_add(1),
                     });

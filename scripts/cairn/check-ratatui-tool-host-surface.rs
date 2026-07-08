@@ -8,13 +8,18 @@ const EXIT_SUCCESS: i32 = 0;
 const TUI_MANIFEST: &str = "crates/animus-tui/Cargo.toml";
 const TUI_LIB: &str = "crates/animus-tui/src/lib.rs";
 const TUI_BRIDGE: &str = "crates/animus-tui/src/bridge.rs";
-const TUI_HOSTED: &str = "crates/animus-tui/src/hosted.rs";
-const TUI_RENDER: &str = "crates/animus-tui/src/render.rs";
-const RATS_PACKAGE: &str = "package = \"rat-widgets\"";
+const TUI_RUNNER: &str = "crates/animus-tui/src/runner.rs";
+const TUI_RENDER_MODEL: &str = "crates/animus-tui/src/view/model.rs";
+const TUI_RENDER_TEXT: &str = "crates/animus-tui/src/view/text.rs";
+const RATS_WIDGET_PACKAGE: &str = "package = \"rat-widgets\"";
+const RATS_KEYMAP_PACKAGE: &str = "package = \"rat-keymap\"";
 const RATS_GIT: &str = "git = \"ssh://git@github.com/brittonr/rats.git\"";
 const REV_PREFIX: &str = "rev = \"";
 const FLOATING_BRANCH: &str = "branch =";
 const FLOATING_TAG: &str = "tag =";
+const DIRECT_CROSSTERM_DEPENDENCY: &str = "crossterm =";
+const REQUIRED_SUBWAYRAT_DEPENDENCIES: usize = 2;
+const PUBLIC_RAT_KEYMAP_REEXPORT: &str = "pub use rat_keymap";
 const PUBLIC_RATS_REEXPORT: &str = "pub use rats";
 const TOOL_HOST_EVENT_EXPORT: &str = "ToolHostEvent";
 const TOOL_RENDER_MODEL_EXPORT: &str = "ToolRenderModel";
@@ -22,6 +27,7 @@ const GUARDED_TOOL_EXPORT: &str = "run_guarded_tool";
 const ISSUE_TUI_MANIFEST_MISSING: &str = "RATATUI_TOOL_HOST_TUI_MANIFEST_MISSING";
 const ISSUE_RATS_NOT_PINNED: &str = "RATATUI_TOOL_HOST_RATS_NOT_PINNED";
 const ISSUE_RATS_FLOATING: &str = "RATATUI_TOOL_HOST_RATS_FLOATING";
+const ISSUE_TUI_DIRECT_TERMINAL_DEPENDENCY: &str = "RATATUI_TOOL_HOST_DIRECT_TERMINAL_DEPENDENCY";
 const ISSUE_REUSABLE_DEPENDENCY_LEAK: &str = "RATATUI_TOOL_HOST_REUSABLE_DEPENDENCY_LEAK";
 const ISSUE_PUBLIC_API_LEAK: &str = "RATATUI_TOOL_HOST_PUBLIC_API_LEAK";
 const ISSUE_BRIDGE_TERMINAL_LEAK: &str = "RATATUI_TOOL_HOST_BRIDGE_TERMINAL_LEAK";
@@ -45,23 +51,27 @@ const REUSABLE_LIBS: &[&str] = &[
 
 const REUSABLE_DEPENDENCY_TOKENS: &[&str] = &[
     "rat-widgets",
+    "rat-keymap",
     "github.com/brittonr/rats",
     "ratatui =",
     "crossterm =",
+    "rat-keymap =",
     "rats =",
 ];
 
 const PUBLIC_API_TOKENS: &[&str] = &[
+    "pub use rat_keymap",
     "pub use rats",
     "pub type Rats",
     "pub struct Rats",
     "pub enum Rats",
     "pub trait Rats",
+    "rat_keymap::",
     "ratatui::",
     "crossterm::",
 ];
 
-const BRIDGE_TERMINAL_TOKENS: &[&str] = &["ratatui::", "crossterm::", "rats::"];
+const BRIDGE_TERMINAL_TOKENS: &[&str] = &["rat_keymap::", "ratatui::", "crossterm::", "rats::"];
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct Config {
@@ -138,11 +148,22 @@ fn validate_tui_manifest(root: &Path) -> Vec<Issue> {
         )];
     };
     let mut issues = Vec::new();
-    if !(text.contains(RATS_PACKAGE) && text.contains(RATS_GIT) && text.contains(REV_PREFIX)) {
+    let has_subwayrat_packages =
+        text.contains(RATS_WIDGET_PACKAGE) && text.contains(RATS_KEYMAP_PACKAGE);
+    let has_pinned_subwayrat_sources = text.matches(RATS_GIT).count() >= REQUIRED_SUBWAYRAT_DEPENDENCIES
+        && text.matches(REV_PREFIX).count() >= REQUIRED_SUBWAYRAT_DEPENDENCIES;
+    if !(has_subwayrat_packages && has_pinned_subwayrat_sources) {
         issues.push(issue(
             ISSUE_RATS_NOT_PINNED,
             TUI_MANIFEST,
-            "animus-tui must depend on rat-widgets through the SSH git URL with an explicit rev",
+            "animus-tui must depend on Subwayrat rat-widgets and rat-keymap through the SSH git URL with explicit revs",
+        ));
+    }
+    if text.contains(DIRECT_CROSSTERM_DEPENDENCY) {
+        issues.push(issue(
+            ISSUE_TUI_DIRECT_TERMINAL_DEPENDENCY,
+            TUI_MANIFEST,
+            "animus-tui key handling must go through Subwayrat rat-keymap instead of a direct Crossterm dependency",
         ));
     }
     if text.contains(FLOATING_BRANCH) || text.contains(FLOATING_TAG) {
@@ -206,6 +227,7 @@ fn validate_tui_exports(root: &Path) -> Vec<Issue> {
         )];
     };
     let required_exports = [
+        PUBLIC_RAT_KEYMAP_REEXPORT,
         PUBLIC_RATS_REEXPORT,
         TOOL_HOST_EVENT_EXPORT,
         TOOL_RENDER_MODEL_EXPORT,
@@ -226,7 +248,7 @@ fn validate_tui_exports(root: &Path) -> Vec<Issue> {
 
 fn validate_bridge_neutrality(root: &Path) -> Vec<Issue> {
     let mut issues = Vec::new();
-    for relative in [TUI_BRIDGE, TUI_HOSTED, TUI_RENDER] {
+    for relative in [TUI_BRIDGE, TUI_RUNNER, TUI_RENDER_MODEL, TUI_RENDER_TEXT] {
         match read_required(root, relative) {
             Ok(text) => {
                 for token in BRIDGE_TERMINAL_TOKENS {

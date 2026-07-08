@@ -165,9 +165,9 @@ impl Default for AppShellState {
 /// Events that the shell event loop can process.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ShellEvent {
-    /// Terminal key event (gated by rats-widgets feature).
+    /// Terminal key chord from Subwayrat's keymap layer (gated by rats-widgets feature).
     #[cfg(feature = "rats-widgets")]
-    Key(crossterm::event::KeyEvent),
+    Key(rat_keymap::KeyCombo),
     /// Terminal resize event.
     Resize(u16, u16),
     /// Runtime event from the turn loop.

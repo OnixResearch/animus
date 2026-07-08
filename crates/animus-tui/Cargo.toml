@@ -12,11 +12,11 @@ workspace = true
 
 [features]
 default = []
-rats-widgets = ["dep:rats", "dep:crossterm"]
+rats-widgets = ["dep:rats", "dep:rat-keymap"]
 
 [dependencies]
 animus-adapters = { path = "../animus-adapters", version = "0.1.0" }
 animus-runtime = { path = "../animus-runtime", version = "0.1.0" }
 animus-std = { path = "../animus-std", version = "0.1.0" }
-crossterm = { version = "0.29", optional = true }
+rat-keymap = { package = "rat-keymap", git = "ssh://git@github.com/brittonr/rats.git", rev = "e9cb7865fe400de6220aea8bfc08ddf4f75da3d3", optional = true }
 rats = { package = "rat-widgets", git = "ssh://git@github.com/brittonr/rats.git", rev = "e9cb7865fe400de6220aea8bfc08ddf4f75da3d3", default-features = false, optional = true }

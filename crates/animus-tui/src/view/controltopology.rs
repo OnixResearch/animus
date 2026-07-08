@@ -66,17 +66,16 @@ impl AgentDashboardState {
 
     /// Handles a host-control-protocol event, updating dashboard state.
     ///
-    /// AgentStatus events update the semantic status and control availability.
+    /// `AgentStatus` events update the semantic status and control availability.
     /// Other event kinds are acknowledged but don't change dashboard state.
     pub fn handle_host_event(&mut self, event: &HostEvent) {
         match event.kind() {
             HostEventKind::AgentStatus => {
                 if let Some(status) = event.status() {
                     self.status = match status {
-                        HostSemanticStatus::Idle => AgentStatus::Idle,
+                        HostSemanticStatus::Idle | HostSemanticStatus::Done => AgentStatus::Idle,
                         HostSemanticStatus::Running => AgentStatus::Busy,
                         HostSemanticStatus::Waiting => AgentStatus::Waiting,
-                        HostSemanticStatus::Done => AgentStatus::Idle,
                         HostSemanticStatus::Failed => AgentStatus::Error,
                     };
                     match self.status {

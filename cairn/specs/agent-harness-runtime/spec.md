@@ -5515,15 +5515,16 @@ r[agent_harness_runtime.ratatui_tool_host.boundary.terminal_free]
 
 ### Requirement: Rats dependency is host-only and SSH-pinned
 
-r[agent_harness_runtime.ratatui_tool_host.rats_dependency] The optional TUI host crate MUST depend on the Rats workspace through an SSH-authenticated Cargo Git URL pinned to an explicit revision, and MUST NOT expose Rats types through reusable core, adapter, Steel, std runtime, or tool contract APIs.
+r[agent_harness_runtime.ratatui_tool_host.rats_dependency] The optional TUI host crate MUST depend on the Rats workspace's Subwayrat `rat-widgets` and `rat-keymap` packages through SSH-authenticated Cargo Git URLs pinned to explicit revisions, and MUST NOT expose Rats types through reusable core, adapter, Steel, std runtime, or tool contract APIs.
 
 #### Scenario: Rats dependency stays inside TUI crate
 
 r[agent_harness_runtime.ratatui_tool_host.rats_dependency.host_only]
 - GIVEN the optional TUI host dependency graph is inspected
 - WHEN the Rats dependency is resolved from `ssh://git@github.com/brittonr/rats.git`
-- THEN only the TUI host crate depends on Rats packages
-- AND the dependency is pinned to a concrete revision rather than a floating branch.
+- THEN only the TUI host crate depends on Rats/Subwayrat packages
+- AND the dependencies are pinned to concrete revisions rather than floating branches
+- AND keybinding interpretation goes through Subwayrat `rat-keymap` rather than a direct Crossterm dependency.
 
 ### Requirement: UI-neutral tool host bridge
 
