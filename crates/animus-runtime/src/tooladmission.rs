@@ -147,7 +147,7 @@ pub enum ToolDispatchFallbackPolicy {
 }
 
 /// Borrowed tool dispatch policy inputs before pure admission.
-#[allow(path_segment_repetition)]
+#[allow(clippy::struct_excessive_bools, path_segment_repetition)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ToolDispatchPolicyDraft<'a> {
     /// Request shape label.
@@ -358,9 +358,8 @@ fn select_denial_issue(
     definition: Option<&animus_adapters::tool::Definition>,
     parsed: ParsedPolicy,
 ) -> Option<ToolDispatchPlanIssue> {
-    let definition = match definition {
-        Some(definition) => definition,
-        None => return Some(ToolDispatchPlanIssue::UnknownTool),
+    let Some(definition) = definition else {
+        return Some(ToolDispatchPlanIssue::UnknownTool);
     };
     definition_issue(definition)
         .or_else(|| request_shape_issue(request.policy))
@@ -572,13 +571,13 @@ fn admitted_plan(
     definition: &animus_adapters::tool::Definition,
     parsed: ParsedPolicy,
 ) -> ToolDispatchPlan {
-    build_plan(
+    build_plan(PlanBuildInput {
         request,
-        Some(definition),
+        definition: Some(definition),
         parsed,
-        ToolDispatchPlanStatus::Admitted,
-        ToolDispatchPlanIssue::None,
-    )
+        status: ToolDispatchPlanStatus::Admitted,
+        issue: ToolDispatchPlanIssue::None,
+    })
 }
 
 fn denied_plan(
@@ -587,39 +586,43 @@ fn denied_plan(
     parsed: ParsedPolicy,
     issue: ToolDispatchPlanIssue,
 ) -> ToolDispatchPlan {
-    build_plan(
+    build_plan(PlanBuildInput {
         request,
         definition,
         parsed,
-        ToolDispatchPlanStatus::Denied,
+        status: ToolDispatchPlanStatus::Denied,
         issue,
-    )
+    })
 }
 
-fn build_plan(
-    request: ToolDispatchPlanRequest<'_>,
-    definition: Option<&animus_adapters::tool::Definition>,
+#[derive(Clone, Copy, Debug)]
+struct PlanBuildInput<'a> {
+    request: ToolDispatchPlanRequest<'a>,
+    definition: Option<&'a animus_adapters::tool::Definition>,
     parsed: ParsedPolicy,
     status: ToolDispatchPlanStatus,
     issue: ToolDispatchPlanIssue,
-) -> ToolDispatchPlan {
+}
+
+fn build_plan(input: PlanBuildInput<'_>) -> ToolDispatchPlan {
     ToolDispatchPlan {
-        status,
-        issue,
-        tool_name: String::from(request.request.name()),
-        definition_source_identity: definition
+        status: input.status,
+        issue: input.issue,
+        tool_name: String::from(input.request.request.name()),
+        definition_source_identity: input
+            .definition
             .map(|definition| String::from(definition.source_identity())),
         request_contract_identity: animus_adapters::TOOL_REQUEST_CONTRACT_IDENTITY,
         dispatch_contract_identity: TOOL_DISPATCH_NEUTRAL_CONTRACT_IDENTITY,
-        schema_identity: String::from(request.request.schema_identity()),
-        required_capability_labels: string_vec(request.request.required_capability_labels()),
-        mutation_targets: string_vec(request.request.mutation_targets()),
-        approval_posture: request.request.approval_posture(),
-        output_policy: request.request.output_policy(),
-        cancellation_posture: parsed.cancellation_posture,
-        timeout_posture: parsed.timeout_posture,
-        output_boundary: parsed.output_boundary,
-        fallback_policy: parsed.fallback_policy,
+        schema_identity: String::from(input.request.request.schema_identity()),
+        required_capability_labels: string_vec(input.request.request.required_capability_labels()),
+        mutation_targets: string_vec(input.request.request.mutation_targets()),
+        approval_posture: input.request.request.approval_posture(),
+        output_policy: input.request.request.output_policy(),
+        cancellation_posture: input.parsed.cancellation_posture,
+        timeout_posture: input.parsed.timeout_posture,
+        output_boundary: input.parsed.output_boundary,
+        fallback_policy: input.parsed.fallback_policy,
     }
 }
 
@@ -770,7 +773,7 @@ mod tests {
         assert_denied(
             ToolDispatchPlanRequest {
                 request: &request,
-                definitions: &[active.clone()],
+                definitions: core::slice::from_ref(&active),
                 registry: &registry,
                 executor_present: false,
                 policy: ToolDispatchPolicyDraft::current_defaults(),
@@ -926,7 +929,7 @@ mod tests {
             assert_denied(
                 ToolDispatchPlanRequest {
                     request: &request,
-                    definitions: &[definition.clone()],
+                    definitions: core::slice::from_ref(&definition),
                     registry: &registry,
                     executor_present: true,
                     policy,

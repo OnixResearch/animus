@@ -59,13 +59,10 @@ pub fn validate_router_receipt_text(text: &str) -> Result<(), RouterReceiptLeak>
 }
 
 /// Projects bounded request metadata with the default router rules.
-///
-/// # Errors
-///
-/// Returns [`RouterSignalProjectionError`] when metadata is malformed or unsafe.
+#[must_use]
 pub fn project_router_signals(
     metadata: &RouterRequestMetadata,
-) -> Result<crate::router::SignalDraft<'static>, RouterSignalProjectionError> {
+) -> crate::router::SignalDraft<'static> {
     project_signals(metadata)
 }
 

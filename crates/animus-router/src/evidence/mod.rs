@@ -4,6 +4,7 @@
 //! directory-style module entry point still expose the full evidence surface.
 
 mod label;
+mod plan;
 mod record;
 mod screen;
 
@@ -15,6 +16,7 @@ pub use screen::{
 };
 
 #[cfg(test)]
+#[derive(Clone, Copy, Debug)]
 pub(crate) struct FallbackStepFixture<'a> {
     pub(crate) role: crate::Role,
     pub(crate) model_label: &'a str,

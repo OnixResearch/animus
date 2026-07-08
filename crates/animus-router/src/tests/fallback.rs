@@ -6,8 +6,8 @@ use super::*;
 fn fallback_policy_deny_returns_deny() {
     assert_eq!(
         evaluate_with(
-            standard_ledger(),
-            remote_chain(),
+            &standard_ledger(),
+            &remote_chain(),
             crate::FallbackPolicy::Deny,
             false,
         ),
@@ -19,8 +19,8 @@ fn fallback_policy_deny_returns_deny() {
 fn exhausted_repair_budget_fails_route() {
     assert_eq!(
         evaluate_with(
-            standard_ledger(),
-            local_chain(),
+            &standard_ledger(),
+            &local_chain(),
             crate::FallbackPolicy::BestValidEvidence,
             true,
         ),
@@ -32,8 +32,8 @@ fn exhausted_repair_budget_fails_route() {
 fn exhausted_candidate_budget_fails_route() {
     assert_eq!(
         evaluate_with(
-            candidate_exhausted_ledger(),
-            remote_chain(),
+            &candidate_exhausted_ledger(),
+            &remote_chain(),
             crate::FallbackPolicy::BestValidEvidence,
             false,
         ),
@@ -45,8 +45,8 @@ fn exhausted_candidate_budget_fails_route() {
 fn exhausted_parallelism_budget_fails_route() {
     assert_eq!(
         evaluate_with(
-            parallelism_exhausted_ledger(),
-            remote_chain(),
+            &parallelism_exhausted_ledger(),
+            &remote_chain(),
             crate::FallbackPolicy::BestValidEvidence,
             false,
         ),
@@ -58,8 +58,8 @@ fn exhausted_parallelism_budget_fails_route() {
 fn cyclic_fallback_chain_fails_route() {
     assert_eq!(
         evaluate_with(
-            standard_ledger(),
-            cyclic_chain(),
+            &standard_ledger(),
+            &cyclic_chain(),
             crate::FallbackPolicy::BestValidEvidence,
             false,
         ),
@@ -71,8 +71,8 @@ fn cyclic_fallback_chain_fails_route() {
 fn safe_single_requires_eligible_fallback() {
     assert_eq!(
         evaluate_with(
-            standard_ledger(),
-            remote_chain(),
+            &standard_ledger(),
+            &remote_chain(),
             crate::FallbackPolicy::SafeSingle,
             false,
         ),
@@ -81,16 +81,16 @@ fn safe_single_requires_eligible_fallback() {
 }
 
 fn evaluate_with(
-    ledger: crate::BudgetLedger,
-    chain: crate::FallbackChain,
+    ledger: &crate::BudgetLedger,
+    chain: &crate::FallbackChain,
     policy: crate::FallbackPolicy,
     can_retry_same_model: bool,
 ) -> crate::FallbackDecision {
     crate::evaluate_fallback(
         &crate::StepFailure::new(MODEL_PRIMARY, can_retry_same_model),
-        &ledger,
-        &chain,
-        &policy,
+        ledger,
+        chain,
+        policy,
     )
 }
 

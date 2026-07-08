@@ -196,6 +196,11 @@ pub(crate) fn validate_required_adapter_field(
 ///
 /// Returns [`AdapterContractError`] when the field is empty, exceeds
 /// [`MAX_ADAPTER_FIELD_CHARS`], or contains a NUL character.
+///
+/// # Panics
+///
+/// Panics only if required-field validation succeeds while the normalized field
+/// still violates the adapter length invariants.
 pub fn normalized_adapter_field(
     field_name: FieldName,
     field_text: &str,

@@ -18,7 +18,7 @@ fn simple_remote_request_projects_low_bands() {
     });
 
     assert_signal_labels(
-        metadata,
+        &metadata,
         [
             "simple",
             "low",
@@ -45,7 +45,7 @@ fn local_code_request_projects_coding_bands() {
     });
 
     assert_signal_labels(
-        metadata,
+        &metadata,
         [
             "coding",
             "low",
@@ -72,7 +72,7 @@ fn structured_review_request_projects_pressure_bands() {
     });
 
     assert_signal_labels(
-        metadata,
+        &metadata,
         [
             "review",
             "medium",
@@ -99,7 +99,7 @@ fn workflow_request_projects_strict_bands() {
     });
 
     assert_signal_labels(
-        metadata,
+        &metadata,
         [
             "workflow",
             "strict",
@@ -136,10 +136,10 @@ fn rule_signal_source_feeds_signal_projection() {
 }
 
 fn assert_signal_labels(
-    metadata: crate::RequestMetadata,
+    metadata: &crate::RequestMetadata,
     expected: [&str; crate::projection::SIGNAL_BUCKET_COUNT],
 ) {
-    let draft = crate::project_signals(&metadata).expect("request metadata should project");
+    let draft = crate::project_signals(metadata);
     let projected = crate::Signals::project(draft).expect("signal labels should parse");
     let actual = projected.bucket_labels();
 

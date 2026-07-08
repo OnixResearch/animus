@@ -200,7 +200,7 @@ fn budget_ledger_tracks_and_fallback_decides() {
             &crate::StepFailure::new(MODEL_PRIMARY, true),
             &ledger,
             &chain,
-            &crate::FallbackPolicy::BestValidEvidence,
+            crate::FallbackPolicy::BestValidEvidence,
         ),
         crate::FallbackDecision::Repair(REPAIR_ONE)
     );
@@ -209,7 +209,7 @@ fn budget_ledger_tracks_and_fallback_decides() {
             &crate::StepFailure::new(MODEL_PRIMARY, false),
             &ledger,
             &chain,
-            &crate::FallbackPolicy::BestValidEvidence,
+            crate::FallbackPolicy::BestValidEvidence,
         ),
         crate::FallbackDecision::FallbackTo(crate::evidence::test_fallback_step(
             crate::evidence::FallbackStepFixture {

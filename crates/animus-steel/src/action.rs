@@ -83,7 +83,7 @@ fn from_tool_items(items: &[steel::SteelVal]) -> Result<Decision, crate::LoopErr
             fields: argument_drafts.as_slice(),
         },
     )
-    .map_err(tool_contract_error)?;
+    .map_err(|error| tool_contract_error(&error))?;
     let mutation_targets = required_string_list(items, TOOL_MUTATION_TARGETS_INDEX)?;
     let mutation_target_refs = string_refs(&mutation_targets);
     let capability_labels = required_string_list(items, TOOL_CAPABILITIES_INDEX)?;
@@ -100,7 +100,7 @@ fn from_tool_items(items: &[steel::SteelVal]) -> Result<Decision, crate::LoopErr
         required_capability_labels: capability_label_refs.as_slice(),
         approval_posture: required_string(items, TOOL_APPROVAL_INDEX)?,
     })
-    .map_err(tool_contract_error)?;
+    .map_err(|error| tool_contract_error(&error))?;
     Ok(Decision::CallTool { request })
 }
 
@@ -261,7 +261,7 @@ fn string_refs(strings: &[String]) -> Vec<&str> {
     strings.iter().map(String::as_str).collect()
 }
 
-fn tool_contract_error(error: animus_adapters::tool::ContractError) -> crate::LoopError {
+fn tool_contract_error(error: &animus_adapters::tool::ContractError) -> crate::LoopError {
     crate::LoopError::InvalidDecision {
         reason: format!("tool request failed current contract: {error:?}"),
     }

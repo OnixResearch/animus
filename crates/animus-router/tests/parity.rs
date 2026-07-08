@@ -11,8 +11,13 @@ const EXPECTED_ALIAS_COUNT: usize = 21;
 const PARITY_PROMPT_CHARS: u32 = 1;
 const PARITY_TOOL_CALLS: u32 = 0;
 const PARITY_CONTEXT_PER_MILLE: u16 = 1;
+const FUNCTION_ITEM_BYTES: usize = 0;
 
 fn assert_type<T: ?Sized>() {}
+
+fn assert_function_item<F>(function: &F) {
+    assert_eq!(core::mem::size_of_val(function), FUNCTION_ITEM_BYTES);
+}
 
 /// Every re-exported type name compiles from the original path.
 #[test]
@@ -58,10 +63,10 @@ fn adapter_reexport_types_resolve() {
     assert_type::<dyn animus_adapters::router::SignalSource>();
     assert_type::<animus_adapters::router::ResultDraft<'_>>();
 
-    let _project_signals = animus_adapters::router::project_signals;
-    let _select_recipe = animus_adapters::router::select_recipe;
-    let _materialize_execution_plan = animus_adapters::router::materialize_execution_plan;
-    let _validate_receipt_text = animus_adapters::router::validate_receipt_text;
+    assert_function_item(&animus_adapters::router::project_signals);
+    assert_function_item(&animus_adapters::router::select_recipe);
+    assert_function_item(&animus_adapters::router::materialize_execution_plan);
+    assert_function_item(&animus_adapters::router::validate_receipt_text);
 
     assert_eq!(EXPECTED_ROUTER_ITEM_COUNT, router_item_names().len());
 }
@@ -110,10 +115,10 @@ fn direct_router_types_resolve() {
     assert_type::<dyn animus_router::SignalSource>();
     assert_type::<animus_router::ResultDraft<'_>>();
 
-    let _project_signals = animus_router::project_signals;
-    let _select_recipe = animus_router::select_recipe;
-    let _materialize_execution_plan = animus_router::materialize_execution_plan;
-    let _validate_receipt_text = animus_router::validate_receipt_text;
+    assert_function_item(&animus_router::project_signals);
+    assert_function_item(&animus_router::select_recipe);
+    assert_function_item(&animus_router::materialize_execution_plan);
+    assert_function_item(&animus_router::validate_receipt_text);
 
     assert_eq!(EXPECTED_ROUTER_ITEM_COUNT, router_item_names().len());
 }
@@ -143,7 +148,7 @@ fn facade_aliases_resolve() {
     assert_type::<animus_adapters::RouteResultDraft<'_>>();
     assert_type::<animus_adapters::RouterReceiptLeak>();
 
-    let _project_router_signals = animus_adapters::project_router_signals;
+    assert_function_item(&animus_adapters::project_router_signals);
     let source = animus_adapters::router::RuleSignalSource;
     let metadata_result =
         animus_adapters::RouterRequestMetadata::new(animus_adapters::RouterRequestMetadataDraft {
@@ -162,7 +167,7 @@ fn facade_aliases_resolve() {
     };
     let projection_result = animus_adapters::project_router_signals_with_source(&source, &metadata);
     assert!(projection_result.is_ok());
-    let _validate_router_receipt_text = animus_adapters::validate_router_receipt_text;
+    assert_function_item(&animus_adapters::validate_router_receipt_text);
 
     assert_eq!(EXPECTED_ALIAS_COUNT, alias_names().len());
 }

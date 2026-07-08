@@ -189,17 +189,22 @@ pub enum ExecutionPlanError {
 }
 
 /// Materializes a deterministic router execution plan.
+///
+/// # Errors
+///
+/// Returns [`ExecutionPlanError`] when selected roles, quorum, budget, or fallback
+/// constraints cannot produce a safe deterministic execution plan.
 // r[impl agent_harness_runtime.model_router.execution_plan]
 pub fn materialize_execution_plan(
     selected: &crate::SelectedPlan,
     catalog: &[crate::CatalogEntry],
     budget: &crate::Budget,
 ) -> Result<RouterExecutionPlan, ExecutionPlanError> {
-    let roles = super::label::roles_for_family(selected.family());
+    let roles = super::plan::roles_for_family(selected.family());
     validate_plan_constraints(selected, roles.len())?;
     let (role_steps, route_labels) = build_role_steps(selected, catalog, budget, roles)?;
     let fallback_chain =
-        super::label::build_fallback_chain(selected, catalog, budget, &route_labels)?;
+        super::plan::build_fallback_chain(selected, catalog, budget, &route_labels)?;
 
     Ok(super::record::assemble_execution_plan(
         selected,
@@ -245,7 +250,7 @@ fn build_role_steps(
     budget: &crate::Budget,
     roles: &[crate::Role],
 ) -> Result<(Vec<RoleStep>, Vec<String>), ExecutionPlanError> {
-    assert!(roles.len() > 0, "role mapping must exist");
+    assert!(!roles.is_empty(), "role mapping must exist");
     assert!(
         selected.bounds().max_candidates() > crate::limit::ZERO_COUNT,
         "candidate cap must be positive"
@@ -262,11 +267,16 @@ fn build_role_steps(
             None => return Err(ExecutionPlanError::MissingRoleMapping),
         };
         let candidate_labels =
-            super::label::collect_role_candidates(selected, selected_label, role, catalog, budget)?;
+            super::plan::collect_role_candidates(super::plan::RoleCandidateRequest {
+                selected,
+                selected_label,
+                role,
+                catalog,
+                budget,
+            })?;
         let quorum = selected.bounds().min_success_quorum();
-        let quorum_index = match usize::try_from(quorum) {
-            Ok(value) => value,
-            Err(_) => return Err(ExecutionPlanError::ImpossibleQuorum),
+        let Ok(quorum_index) = usize::try_from(quorum) else {
+            return Err(ExecutionPlanError::ImpossibleQuorum);
         };
         if quorum_index > candidate_labels.len() {
             return Err(ExecutionPlanError::ImpossibleQuorum);

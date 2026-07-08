@@ -208,13 +208,14 @@ pub enum FallbackRouteReason {
 }
 
 /// Resolves fallback for a failed step.
+#[must_use]
 pub fn evaluate_fallback(
     failure: &StepFailure,
     ledger: &crate::BudgetLedger,
     chain: &crate::FallbackChain,
-    policy: &crate::FallbackPolicy,
+    policy: crate::FallbackPolicy,
 ) -> FallbackDecision {
-    if *policy == crate::FallbackPolicy::Deny {
+    if policy == crate::FallbackPolicy::Deny {
         return FallbackDecision::Deny;
     }
 
@@ -267,7 +268,7 @@ pub fn evaluate_fallback(
     FallbackDecision::FailRoute(FallbackRouteReason::NoEligibleFallback)
 }
 
-fn policy_allows_step(step: &crate::FallbackStep, policy: &crate::FallbackPolicy) -> bool {
+fn policy_allows_step(step: &crate::FallbackStep, policy: crate::FallbackPolicy) -> bool {
     match policy {
         crate::FallbackPolicy::BestValidEvidence => true,
         crate::FallbackPolicy::SafeSingle => step.is_local(),

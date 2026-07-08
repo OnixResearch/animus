@@ -175,24 +175,32 @@ impl SafeHash {
     }
 }
 
+const _: () = assert!(
+    SafeHash::HEX_CHARS > MIN_ADAPTER_FIELD_CHARS,
+    "BLAKE3 hash length must exceed a single character"
+);
+
 fn validate_hash(field: FieldName, value: &str) -> Result<(), AdapterContractError> {
+    let field_name = field.as_str();
     assert!(
-        field.as_str().chars().count() >= MIN_ADAPTER_FIELD_CHARS,
+        field_name.chars().count() >= MIN_ADAPTER_FIELD_CHARS,
         "hash diagnostic field name must be non-empty"
     );
     assert!(
-        SafeHash::HEX_CHARS > MIN_ADAPTER_FIELD_CHARS,
-        "BLAKE3 hash length must exceed a single character"
+        field_name.starts_with("router_"),
+        "hash diagnostic field name must stay router-scoped"
+    );
+    assert!(
+        field_name.ends_with("_hash"),
+        "hash diagnostic field name must identify hash material"
     );
 
     if value.is_empty() {
-        return Err(AdapterContractError::EmptyField {
-            field: field.as_str(),
-        });
+        return Err(AdapterContractError::EmptyField { field: field_name });
     }
     if value.len() != SafeHash::HEX_CHARS {
         return Err(AdapterContractError::InvalidEvidenceHash {
-            field: field.as_str(),
+            field: field_name,
             reason: "effect hash must use the configured BLAKE3 hex length",
         });
     }
@@ -201,7 +209,7 @@ fn validate_hash(field: FieldName, value: &str) -> Result<(), AdapterContractErr
         .all(|character| character.is_ascii_hexdigit() && !character.is_ascii_uppercase())
     {
         return Err(AdapterContractError::InvalidEvidenceHash {
-            field: field.as_str(),
+            field: field_name,
             reason: "effect hash must contain lowercase hex only",
         });
     }

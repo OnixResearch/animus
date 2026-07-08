@@ -42,20 +42,14 @@ impl SignalSource for RuleSignalSource {
         &self,
         metadata: &super::RequestMetadata,
     ) -> Result<crate::SignalDraft<'static>, super::SignalProjectionError> {
-        project_signals(metadata)
+        Ok(project_signals(metadata))
     }
 }
 
 /// Pure default projector from bounded request metadata to router signal bands.
-///
-/// # Errors
-///
-/// Returns [`super::SignalProjectionError`] only when supplied metadata is invalid;
-/// validated [`super::RequestMetadata`] projects deterministically.
-pub fn project_signals(
-    metadata: &super::RequestMetadata,
-) -> Result<crate::SignalDraft<'static>, super::SignalProjectionError> {
-    Ok(crate::SignalDraft {
+#[must_use]
+pub fn project_signals(metadata: &super::RequestMetadata) -> crate::SignalDraft<'static> {
+    crate::SignalDraft {
         task_shape: task_shape(metadata),
         risk_band: risk_band(metadata),
         contract_pressure: contract_pressure(metadata),
@@ -64,7 +58,7 @@ pub fn project_signals(
         cost_band: cost_band(metadata),
         privacy_band: metadata.privacy_signal(),
         fallback_eligibility: metadata.fallback_signal(),
-    })
+    }
 }
 
 fn task_shape(metadata: &super::RequestMetadata) -> &'static str {

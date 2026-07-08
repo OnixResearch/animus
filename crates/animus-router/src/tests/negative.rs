@@ -109,7 +109,7 @@ fn oversized_but_bounded_metadata_projects_safely() {
         fallback_hint: "eligible",
     })
     .expect("bounded metadata should validate");
-    let draft = crate::project_signals(&metadata).expect("bounded metadata should project");
+    let draft = crate::project_signals(&metadata);
     let signals = crate::Signals::project(draft).expect("projected labels should parse");
 
     assert_eq!(signals.risk(), crate::SignalBand::Strict);
