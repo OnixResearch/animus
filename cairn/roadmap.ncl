@@ -172,6 +172,29 @@ let change_entries = [
     "aggregate-router-route-results",
     "emit-router-safe-receipts",
   ] [],
+  change "adapt-openclaw-gateway-control-plane" host_role "ui-headless" [
+    "agent_harness_runtime.pi_headless_protocol.command_response",
+    "agent_harness_runtime.pi_headless_protocol.event_stream",
+    "agent_harness_runtime.clankers_remote_admission.before_effects",
+  ] ["adapt-openclaw-node-capability-hosts", "adapt-openclaw-session-isolation-tools", "adapt-openclaw-security-plugin-guardrails"],
+  change "adapt-openclaw-node-capability-hosts" host_role "concrete-adapters" [
+    "adapt-openclaw-gateway-control-plane",
+    "agent_harness_runtime.host_control.transport_neutral",
+    "agent_harness_runtime.clankers_confirmation_broker.requests",
+    "agent_harness_runtime.zerostack_permission_kernel.receipts",
+  ] ["adapt-openclaw-security-plugin-guardrails"],
+  change "adapt-openclaw-session-isolation-tools" core_role "session-ledger" [
+    "agent_harness_runtime.provenance_ledger.session_ledger",
+    "agent_harness_runtime.pi_session_tree.ledger_contract",
+    "agent_harness_runtime.subagent_facade.boundary",
+    "agent_harness_runtime.subagent_coordinator.lifecycle",
+  ] ["adapt-openclaw-gateway-control-plane", "adapt-openclaw-security-plugin-guardrails"],
+  change "adapt-openclaw-security-plugin-guardrails" host_role "policy-guidance" [
+    "agent_harness_runtime.clash_ucan.capability_request",
+    "agent_harness_runtime.zerostack_permission_kernel.receipts",
+    "agent_harness_runtime.hermes_plugin_manifests.validation",
+    "agent_harness_runtime.plugin_action_manifests.diagnostics",
+  ] ["adapt-openclaw-gateway-control-plane", "adapt-openclaw-node-capability-hosts", "adapt-openclaw-session-isolation-tools"],
 ]
 in
 
@@ -182,6 +205,10 @@ let overlap_entries = [
   overlap "router-execution-plan-materialization" "define-router-execution-plan" ["wire-router-into-runtime-loop", "gate-router-budget-and-fallback"],
   overlap "router-signal-projection" "project-router-request-signals" ["add-supra-router-signal-adapter"],
   overlap "router-receipt-assembly" "emit-router-safe-receipts" ["wire-router-into-runtime-loop", "evaluate-router-recipe-coverage"],
+  overlap "openclaw-gateway-control-plane" "adapt-openclaw-gateway-control-plane" ["adapt-openclaw-node-capability-hosts", "adapt-openclaw-session-isolation-tools", "adapt-openclaw-security-plugin-guardrails"],
+  overlap "openclaw-node-invocation" "adapt-openclaw-node-capability-hosts" ["adapt-openclaw-gateway-control-plane", "adapt-openclaw-security-plugin-guardrails"],
+  overlap "openclaw-session-tool-visibility" "adapt-openclaw-session-isolation-tools" ["adapt-openclaw-security-plugin-guardrails"],
+  overlap "openclaw-security-plugin-guardrails" "adapt-openclaw-security-plugin-guardrails" ["adapt-openclaw-gateway-control-plane", "adapt-openclaw-node-capability-hosts", "adapt-openclaw-session-isolation-tools"],
 ]
 in
 
