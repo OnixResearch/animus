@@ -42,6 +42,8 @@ mod multimodal;
 /// Optional OpenClaw-inspired node capability-host DTOs.
 pub mod node;
 mod observability;
+/// OpenClaw-inspired session isolation and session-tool planning DTOs.
+pub mod openclaw_session;
 mod port;
 mod profile;
 mod prompt;
