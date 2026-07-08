@@ -62,6 +62,7 @@ mod researchspec;
 mod scaffold;
 mod shell;
 mod status;
+pub mod subagents;
 mod telemetry;
 mod transition;
 mod trust_boundary;

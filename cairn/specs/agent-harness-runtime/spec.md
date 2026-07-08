@@ -8276,3 +8276,482 @@ r[agent_harness_runtime.model_router.request_projection.verification.closeout]
 - WHEN closeout validation runs
 - THEN evidence names focused band-derivation, signal-source, fail-closed, facade-inventory, workspace, Cairn validation, and Cairn gate checks
 - AND any skipped rail includes a concrete blocker and next-best validation.
+
+
+
+### Requirement: Runtime uses typed subagent capabilities
+
+r[agent_harness_runtime.subagent_typed_capabilities.types] Subagent runtime decisions MUST represent capabilities as typed values for context reads, search, named tool use, named mutation intents, workspace access, model use, and host-admitted external services rather than relying only on unstructured strings.
+
+#### Scenario: Valid catalog label becomes typed capability
+
+- GIVEN a capability catalog contains a valid label for a read-only search tool
+- WHEN adapter capability labels are converted for runtime resolution
+- THEN the label becomes a typed search or named-tool capability
+- AND the original stable label remains available for receipts and diagnostics.
+
+### Requirement: Capability intersections report denial source
+
+r[agent_harness_runtime.subagent_typed_capabilities.intersection] Effective subagent capability resolution MUST intersect typed parent policy, recipe or profile ceilings, request ceilings, workspace scope, and host admission, and MUST report which source denied each rejected capability.
+
+#### Scenario: Workspace scope denies mutation intent
+
+- GIVEN parent policy and host admission allow a mutation intent but the workspace scope is read-only
+- WHEN a subagent requests the mutation intent
+- THEN capability resolution denies the typed capability with a workspace-scope denial
+- AND the child run cannot dispatch the mutation.
+
+### Requirement: String labels remain boundary compatible
+
+r[agent_harness_runtime.subagent_typed_capabilities.compatibility] Animus MUST preserve stable capability string labels at adapter, fixture, policy, and receipt boundaries while requiring catalog validation before those labels influence typed runtime decisions.
+
+#### Scenario: Receipt keeps stable capability label
+
+- GIVEN a typed capability is accepted for a subagent run
+- WHEN a safe receipt is produced
+- THEN the receipt records the stable catalog label and safe capability class
+- AND it does not expose internal enum debug output as the public contract.
+
+### Requirement: Capability conversion fails closed
+
+r[agent_harness_runtime.subagent_typed_capabilities.fail_closed] Capability conversion and resolution MUST reject unknown labels, duplicate normalized labels, wildcard authority, malformed catalog entries, unauthorized tools, unsupported capability classes, and label collisions before child-run dispatch.
+
+#### Scenario: Wildcard label is rejected
+
+- GIVEN a subagent request includes a capability label that normalizes to wildcard authority
+- WHEN capability conversion runs
+- THEN conversion returns an overbroad-authority diagnostic
+- AND no typed capability is admitted for dispatch.
+
+### Requirement: Typed capability closeout is evidenced
+
+r[agent_harness_runtime.subagent_typed_capabilities.verification] Typed subagent capability adoption MUST include positive conversion/intersection tests, negative fail-closed tests, compatibility fixture tests, docs, Cairn validation, and Cairn gates before archive.
+
+#### Scenario: Typed capability evidence is complete
+
+- GIVEN the typed capability change is ready to archive
+- WHEN closeout validation runs
+- THEN evidence names catalog conversion tests, intersection tests, compatibility tests, docs, Cairn validation, and Cairn gates
+- AND skipped checks record a blocker and next-best validation.
+
+
+
+### Requirement: Subagents use shared minimized context packets
+
+r[agent_harness_runtime.subagent_context_packets.shared_packet] Animus MUST provide a shared minimized context-packet contract for subagent child runs, covering selected parent excerpts, summaries, file observations, memory descriptors, bounded tool-result summaries, and admitted context references.
+
+#### Scenario: Recipe-backed subagent receives minimized context
+
+- GIVEN a recipe-backed review subagent needs parent context
+- WHEN the child-run draft is assembled
+- THEN the context is represented as a shared minimized packet with selected safe items
+- AND the full parent transcript is not included by default.
+
+### Requirement: Unsafe context requires admission and leak validation
+
+r[agent_harness_runtime.subagent_context_packets.unsafe_admission] Shared subagent context packets MUST reject full transcripts, raw hidden memory, credentials, provider-native payloads, unbounded tool output, and unsafe raw material unless the context class is explicitly admitted and leak validation succeeds.
+
+#### Scenario: Credential context is rejected
+
+- GIVEN a child-run context packet contains credential-looking material without explicit admission
+- WHEN packet validation runs
+- THEN validation returns an unsafe-context diagnostic
+- AND the child run cannot start with that packet.
+
+### Requirement: Context packet identity is deterministic and safe
+
+r[agent_harness_runtime.subagent_context_packets.identity] Shared subagent context packets MUST carry deterministic BLAKE3 packet identities and budget summaries derived from stable safe packet fields, and MUST NOT include raw prompt bodies, credentials, provider payloads, full paths, or unbounded output in receipts.
+
+#### Scenario: Packet identity can be recorded without raw context
+
+- GIVEN a valid minimized packet contains safe summaries and evidence references
+- WHEN a child-run receipt is produced
+- THEN the receipt records the packet BLAKE3 identity and budget summary
+- AND it does not include raw parent prompt or tool output bodies.
+
+### Requirement: Every child-run kind can project context packets
+
+r[agent_harness_runtime.subagent_context_packets.kind_projection] Recipe-backed subagents, fresh-context investigations, read-only side questions, and worker-team tasks MUST consume or losslessly project their context inputs through the shared context-packet contract.
+
+#### Scenario: Fresh-context task keeps admitted references
+
+- GIVEN a fresh-context task declares admitted context references
+- WHEN the task is projected into the shared packet form
+- THEN each admitted reference is represented with its safe label and budget metadata
+- AND no parent-only secret or hidden prompt is inherited.
+
+### Requirement: Context-packet failures fail closed
+
+r[agent_harness_runtime.subagent_context_packets.fail_closed] Context-packet validation MUST fail closed for missing packet identity, empty required safe items, over-budget packets, unsafe raw markers, unadmitted unsafe classes, duplicate item labels, and lossy child-run projections.
+
+#### Scenario: Over-budget packet is rejected
+
+- GIVEN a child-run context packet exceeds its configured item or token budget
+- WHEN packet validation runs
+- THEN validation returns an over-budget diagnostic
+- AND no scheduler, worker, model, tool, or external adapter receives the packet.
+
+### Requirement: Context-packet closeout is evidenced
+
+r[agent_harness_runtime.subagent_context_packets.verification] Shared context-packet adoption MUST include positive minimized packet tests, negative unsafe-context tests, identity tests, child-kind projection tests, docs, Cairn validation, and Cairn gates before archive.
+
+#### Scenario: Context-packet evidence is complete
+
+- GIVEN the shared context-packet change is ready to archive
+- WHEN closeout validation runs
+- THEN evidence names packet validation tests, projection tests, leak tests, docs, Cairn validation, and Cairn gates
+- AND skipped checks record a blocker and next-best validation.
+
+
+
+### Requirement: Runtime exposes a unified child-run facade
+
+r[agent_harness_runtime.subagent_facade.boundary] Animus runtime MUST expose a unified subagent facade that represents recipe-backed subagents, fresh-context investigations, read-only side questions, and worker-team tasks as typed child-run drafts, kinds, admissions, diagnostics, and receipts.
+
+#### Scenario: Embedder validates through one facade
+
+r[agent_harness_runtime.subagent_facade.all_kinds]
+- GIVEN an embedder has one valid recipe-backed subagent, one valid fresh-context investigation, one valid side question, and one valid worker-team task
+- WHEN each draft is validated through the subagent facade
+- THEN each accepted result identifies the child-run kind and safe identity
+- AND validation performs no model, tool, scheduler, worker-service, filesystem, process, network, or credential side effect.
+
+### Requirement: Facade projections are lossless
+
+r[agent_harness_runtime.subagent_facade.lossless_projection] The subagent facade MUST preserve source-specific child-run metadata, diagnostics, handoff settings, capability ceilings, context identities, and safe receipt hashes without collapsing them into untyped free-form maps.
+
+#### Scenario: Source-specific diagnostic survives projection
+
+- GIVEN a recipe-backed subagent is denied because recipe trust is missing
+- WHEN the denial is converted into the facade diagnostic type
+- THEN the diagnostic still identifies the recipe-trust failure class and source child-run kind
+- AND no lower-level denial reason is replaced by a generic unknown failure.
+
+### Requirement: Facade validation fails closed
+
+r[agent_harness_runtime.subagent_facade.fail_closed] The subagent facade MUST fail closed for unsupported child-run kinds, missing kind-specific required fields, invalid lower-level DTOs, lossy projection attempts, or any validation path that would require execution authority.
+
+#### Scenario: Unsupported child-run kind is rejected
+
+- GIVEN a child-run draft names a kind that has no registered typed validator
+- WHEN facade validation runs
+- THEN validation returns an unsupported-kind diagnostic
+- AND no fallback child runner, shell command, external CLI, or model request is attempted.
+
+### Requirement: Facade closeout is evidenced
+
+r[agent_harness_runtime.subagent_facade.verification] The unified subagent facade adoption MUST include positive validation tests for every supported child-run kind, negative fail-closed tests, public export checks, documentation, Cairn validation, and Cairn gates before archive.
+
+#### Scenario: Facade evidence is complete
+
+- GIVEN the unified subagent facade change is ready to archive
+- WHEN closeout validation runs
+- THEN evidence names facade conversion tests, lower-level validator compatibility tests, docs, Cairn validation, and Cairn gates
+- AND skipped checks record a blocker and next-best validation.
+
+
+
+### Requirement: Subagent execution uses injected services
+
+r[agent_harness_runtime.subagent_coordinator.service] Animus runtime MUST coordinate subagent execution through injected host services for enqueue, status, cancel, and collect operations, and MUST NOT construct concrete queues, provider clients, process runners, external-agent clients, filesystem stores, network transports, or credential readers in reusable runtime code.
+
+#### Scenario: Coordinator enqueues through an injected service
+
+- GIVEN a validated child-run admission and an injected service for that child-run kind
+- WHEN the coordinator enqueues the child run
+- THEN the service receives the validated admission and returns a typed handle
+- AND runtime does not discover or construct a fallback executor.
+
+### Requirement: Coordinator transitions are deterministic
+
+r[agent_harness_runtime.subagent_coordinator.state_machine] Subagent coordinator state transitions MUST be pure over the current child-run state, validated admission, requested operation, and injected service outcome.
+
+#### Scenario: Running child cancellation is explicit
+
+- GIVEN a child run is running with a valid service handle
+- WHEN cancellation is requested and the injected service accepts cancellation
+- THEN the coordinator moves the child run to a cancelling or cancelled state according to the typed outcome
+- AND no completed receipt is emitted until a terminal collect or cancellation outcome is validated.
+
+### Requirement: Lifecycle events are safe projections
+
+r[agent_harness_runtime.subagent_coordinator.lifecycle] Subagent coordinator lifecycle events MUST include safe child identity, parent identity, child-run kind, status, failure class, budget summary when available, and bounded evidence references, and MUST NOT include raw transcripts, provider payloads, credentials, full path dumps, or unbounded tool output.
+
+#### Scenario: Malformed child report is visible without leaking raw output
+
+- GIVEN an injected service returns a malformed child report
+- WHEN the coordinator classifies the outcome
+- THEN the lifecycle event records a malformed-report failure class and safe evidence reference
+- AND raw child output is not inserted into the event or parent context.
+
+### Requirement: Coordinator failures fail closed
+
+r[agent_harness_runtime.subagent_coordinator.fail_closed] The subagent coordinator MUST fail closed when required services are missing, handles are stale, service calls are denied, unavailable, timed out, cancelled, malformed, or would require ambient fallback.
+
+#### Scenario: Missing service does not spawn fallback work
+
+- GIVEN a valid child-run admission requires a scheduler or worker service
+- WHEN no matching service is injected
+- THEN the coordinator returns a service-unavailable diagnostic
+- AND no shell command, background thread, external CLI, model call, or network request is attempted.
+
+### Requirement: Coordinator closeout is evidenced
+
+r[agent_harness_runtime.subagent_coordinator.verification] The subagent coordinator adoption MUST include positive enqueue/status/cancel/collect tests, negative fail-closed service tests, safe lifecycle event tests, docs, Cairn validation, and Cairn gates before archive.
+
+#### Scenario: Coordinator evidence is complete
+
+- GIVEN the coordinator API change is ready to archive
+- WHEN closeout validation runs
+- THEN evidence names state-machine tests, service fake tests, failure classification tests, docs, Cairn validation, and Cairn gates
+- AND skipped checks record a blocker and next-best validation.
+
+
+
+### Requirement: Fan-out plans are declarative and bounded
+
+r[agent_harness_runtime.subagent_fanout_fanin.plan] Animus MUST represent subagent fan-out as declarative plans containing child-run admissions or drafts, concurrency policy, shared budget, cancellation policy, aggregation schema, and mutation-arbitration policy without starting child execution during plan validation.
+
+#### Scenario: Valid fan-out plan is accepted without execution
+
+- GIVEN a fan-out plan contains two read-only child-run admissions, a bounded concurrency policy, and a shared budget
+- WHEN plan validation runs
+- THEN validation accepts the plan and returns safe plan metadata
+- AND no scheduler, worker, model, tool, or external adapter is invoked.
+
+### Requirement: Fan-in aggregation is deterministic
+
+r[agent_harness_runtime.subagent_fanout_fanin.aggregation] Animus MUST aggregate fan-in results with a deterministic reducer that distinguishes success, partial success, failure, timeout, cancellation, malformed output, denied capability, budget exhaustion, and write conflict outcomes.
+
+#### Scenario: Partial success is explicit
+
+- GIVEN one child succeeds and one child times out
+- WHEN fan-in aggregation runs
+- THEN the aggregate status is partial success or timeout-bearing partial result according to policy
+- AND the timed-out child is not counted as successful.
+
+### Requirement: Cancellation and budget exhaustion are terminal evidence
+
+r[agent_harness_runtime.subagent_fanout_fanin.cancellation_budget] Fan-out/fan-in orchestration MUST treat cancellation, timeout, and budget exhaustion as explicit terminal or blocking outcomes with safe diagnostics and receipt evidence.
+
+#### Scenario: Shared budget exhaustion cancels remaining children
+
+- GIVEN fan-out execution exhausts its shared budget before all children complete
+- WHEN the coordinator records remaining child outcomes
+- THEN unfinished children receive budget-exhausted or cancelled outcomes
+- AND the aggregate report explains the budget stop without raw child logs.
+
+### Requirement: Mutation intents require arbitration
+
+r[agent_harness_runtime.subagent_fanout_fanin.mutation_arbitration] Fan-in aggregation MUST preserve, deny, or mark child mutation intents unresolved, and MUST NOT apply workspace, ledger, filesystem, process, network, or provider effects during aggregation.
+
+#### Scenario: Conflicting mutation intents do not apply
+
+- GIVEN two child reports propose incompatible mutation intents
+- WHEN fan-in aggregation runs
+- THEN the aggregate records a structured write-conflict or unresolved-mutation result
+- AND neither mutation is dispatched before normal policy and coordination accept a later action.
+
+### Requirement: Fan-out/fan-in failures fail closed
+
+r[agent_harness_runtime.subagent_fanout_fanin.fail_closed] Fan-out/fan-in validation and aggregation MUST fail closed for missing child admissions, unsafe concurrency policies, over-budget plans, malformed child reports, denied capabilities, duplicate child ids, write conflicts, mutation bypass attempts, and lossy aggregate receipts.
+
+#### Scenario: Duplicate child id is rejected
+
+- GIVEN a fan-out plan contains two child runs with the same safe child identity
+- WHEN plan validation runs
+- THEN validation returns a duplicate-child diagnostic
+- AND no child is enqueued from that plan.
+
+### Requirement: Fan-out/fan-in closeout is evidenced
+
+r[agent_harness_runtime.subagent_fanout_fanin.verification] Fan-out/fan-in adoption MUST include positive plan and aggregation tests, negative fail-closed tests, mutation arbitration tests, docs, Cairn validation, and Cairn gates before archive.
+
+#### Scenario: Fan-out/fan-in evidence is complete
+
+- GIVEN the fan-out/fan-in change is ready to archive
+- WHEN closeout validation runs
+- THEN evidence names plan tests, aggregate reducer tests, mutation arbitration tests, docs, Cairn validation, and Cairn gates
+- AND skipped checks record a blocker and next-best validation.
+
+
+
+### Requirement: Ledger records parent/child subagent lineage
+
+r[agent_harness_runtime.subagent_lineage_ledger.record] Animus MUST record subagent lineage using safe parent id, child id, child-run kind, delegation source, admission identity, effective capability identity, context packet identity, output hash, handoff mode, terminal status, and failure class fields.
+
+#### Scenario: Completed child run has lineage record
+
+- GIVEN a child run completes and contributes a summary to the parent
+- WHEN the lineage record is built
+- THEN the record links the child id to its parent id, kind, delegation source, capability identity, context packet identity, output hash, and handoff mode
+- AND the record contains no raw child transcript.
+
+### Requirement: Lifecycle events project into lineage records
+
+r[agent_harness_runtime.subagent_lineage_ledger.lifecycle_projection] Coordinator lifecycle events SHOULD project into validated lineage records that preserve safe status, failure, budget, evidence, and receipt references while rejecting raw transcripts, provider payloads, credentials, and unbounded tool output.
+
+#### Scenario: Failed child run produces safe lineage
+
+- GIVEN a child run times out before returning a valid summary
+- WHEN lifecycle projection runs
+- THEN the lineage record stores the timeout failure class and safe evidence reference
+- AND no raw partial output is copied into the ledger record.
+
+### Requirement: Replay validates child influence
+
+r[agent_harness_runtime.subagent_lineage_ledger.replay] Session replay MUST be able to validate parent-visible child influence against lineage records, accepted handoff mode, context packet identity, output hash, and safe receipt identity without requiring raw child transcript storage.
+
+#### Scenario: Parent imports child summary without lineage
+
+- GIVEN a parent session contains a child summary import
+- WHEN replay cannot find a matching lineage record and output hash
+- THEN replay marks the import as invalid or unaudited
+- AND the child summary is not treated as verified influence.
+
+### Requirement: Lineage validation fails closed
+
+r[agent_harness_runtime.subagent_lineage_ledger.fail_closed] Subagent lineage validation MUST reject missing lineage for imported child output, mismatched parent or child ids, invalid BLAKE3 hashes, unsupported handoff modes, malformed receipts, raw transcript markers, unsafe summaries, and unbounded evidence references.
+
+#### Scenario: Raw transcript marker is rejected
+
+- GIVEN a lineage record attempts to include raw child log text or an unsafe raw transcript marker
+- WHEN lineage validation runs
+- THEN validation returns a leak diagnostic
+- AND the record is not accepted for replay or durable evidence.
+
+### Requirement: Lineage closeout is evidenced
+
+r[agent_harness_runtime.subagent_lineage_ledger.verification] Subagent lineage adoption MUST include positive lineage/replay tests, negative fail-closed leak and mismatch tests, receipt tests, docs, Cairn validation, and Cairn gates before archive.
+
+#### Scenario: Lineage evidence is complete
+
+- GIVEN the subagent lineage change is ready to archive
+- WHEN closeout validation runs
+- THEN evidence names lineage validation tests, replay tests, receipt tests, docs, Cairn validation, and Cairn gates
+- AND skipped checks record a blocker and next-best validation.
+
+
+
+### Requirement: Subagent status projection is UI-neutral
+
+r[agent_harness_runtime.subagent_ux_hooks.status_projection] Animus MUST expose UI-neutral subagent status projections for queued, running, cancelling, completed, cancelled, failed, timed-out, blocked, and awaiting-parent states without depending on terminal widgets, headless transports, or host-control implementations.
+
+#### Scenario: TUI and headless hosts render the same status
+
+- GIVEN a child run is running with safe identity and budget metadata
+- WHEN runtime builds a subagent status projection
+- THEN TUI and headless hosts can render the same state from the projection
+- AND the projection contains no terminal-specific widget state.
+
+### Requirement: UX projections include safe metadata only
+
+r[agent_harness_runtime.subagent_ux_hooks.safe_metadata] Subagent UX projections MUST include safe child identity, parent identity, child-run kind, budget usage, denial reason, handoff summary reference, evidence reference, and pending mutation-intent summaries when available, and MUST NOT include raw child logs, full transcripts, credentials, provider payloads, full path dumps, or unbounded tool output.
+
+#### Scenario: Denied child run explains boundary safely
+
+- GIVEN a child run is denied by capability policy
+- WHEN the UX projection is built
+- THEN the projection names the denial class and safe evidence reference
+- AND it does not include raw prompt, credential, or provider payload material.
+
+### Requirement: UX actions are command descriptors
+
+r[agent_harness_runtime.subagent_ux_hooks.command_descriptors] Subagent UX controls MUST be represented as command descriptors for cancel, bounded detail import request, acknowledgement, and mutation-intent arbitration request rather than direct effects.
+
+#### Scenario: Detail import request is bounded
+
+- GIVEN a user asks to inspect child details from the UI
+- WHEN the host constructs a detail import command descriptor
+- THEN the descriptor includes requested bound, handoff mode, child id, and reason
+- AND no detail is imported until policy and bounds checks accept the request.
+
+### Requirement: UX commands route through normal policy
+
+r[agent_harness_runtime.subagent_ux_hooks.policy_routing] UX command descriptors MUST route through coordinator state checks, capability policy, confirmation policy when required, and mutation arbitration policy before causing cancellation, detail import, acknowledgement, or mutation-intent follow-up effects.
+
+#### Scenario: Unauthorized cancel is rejected
+
+- GIVEN a UI sends a cancel command for a child run outside the user's admitted authority
+- WHEN command routing evaluates the descriptor
+- THEN routing returns an unauthorized-action diagnostic
+- AND the child run is not cancelled.
+
+### Requirement: UX hook failures fail closed
+
+r[agent_harness_runtime.subagent_ux_hooks.fail_closed] Subagent UX projection and command routing MUST fail closed for raw-log exposure, unbounded detail import, unauthorized cancellation, mutation bypass attempts, stale handles, malformed command descriptors, hidden credential metadata, and lossy status projection.
+
+#### Scenario: Raw-log projection is rejected
+
+- GIVEN a status projection draft includes raw child log text
+- WHEN projection validation runs
+- THEN validation returns a leak diagnostic
+- AND the projection is not emitted to TUI, headless, or host-control surfaces.
+
+### Requirement: UX hook closeout is evidenced
+
+r[agent_harness_runtime.subagent_ux_hooks.verification] Subagent UX hook adoption MUST include positive status and command descriptor tests, negative fail-closed tests, docs, Cairn validation, and Cairn gates before archive.
+
+#### Scenario: UX hook evidence is complete
+
+- GIVEN the UX hook change is ready to archive
+- WHEN closeout validation runs
+- THEN evidence names status projection tests, command-routing tests, leak tests, docs, Cairn validation, and Cairn gates
+- AND skipped checks record a blocker and next-best validation.
+
+
+
+### Requirement: External subagent fixtures cover admitted descriptors
+
+r[agent_harness_runtime.subagent_external_conformance.positive_fixtures] Animus MUST include positive external subagent fixtures for admitted ACP and MCP descriptors with explicit protocol labels, safe external identities, injected service labels, declared tools, optional credential reference labels, and bounded capability ceilings.
+
+#### Scenario: Valid MCP descriptor fixture is accepted
+
+- GIVEN a fixture declares an MCP external subagent with an injected service label and declared read-only tools
+- WHEN descriptor conformance validation runs
+- THEN the fixture is accepted
+- AND no live MCP server, CLI, network connection, or credential read is required.
+
+### Requirement: External subagent fixtures cover denied descriptors
+
+r[agent_harness_runtime.subagent_external_conformance.negative_fixtures] Animus MUST include negative external subagent fixtures for missing service labels, undeclared tools, ambient CLI discovery, inherited credentials, malformed protocol labels, unsafe output imports, and overbroad capability claims.
+
+#### Scenario: Ambient CLI fixture is denied
+
+- GIVEN a fixture requests external subagent discovery from PATH or another ambient CLI source
+- WHEN descriptor conformance validation runs
+- THEN validation returns an ambient-discovery-denied failure class
+- AND no CLI lookup is attempted.
+
+### Requirement: Conformance index is machine-checkable
+
+r[agent_harness_runtime.subagent_external_conformance.index] External subagent conformance fixtures SHOULD be indexed with fixture identity, expected status, expected failure class when denied, protocol kind, declared tools, and covered requirement identifiers.
+
+#### Scenario: Missing expected failure class is rejected
+
+- GIVEN a negative fixture is listed without an expected failure class
+- WHEN the conformance index check runs
+- THEN the check fails with a missing-expected-failure diagnostic
+- AND the fixture is not counted as coverage.
+
+### Requirement: External conformance has no live dependency
+
+r[agent_harness_runtime.subagent_external_conformance.no_live_dependency] External subagent conformance validation MUST run over checked-in fixtures and pure descriptor validation without requiring live ACP services, MCP services, network access, ambient CLI lookup, filesystem discovery outside the fixture set, or credentials.
+
+#### Scenario: Offline conformance succeeds
+
+- GIVEN only checked-in external subagent fixtures are available
+- WHEN focused conformance validation runs
+- THEN accepted and denied fixtures are classified as expected
+- AND no external process, network, or credential dependency is required.
+
+### Requirement: External conformance closeout is evidenced
+
+r[agent_harness_runtime.subagent_external_conformance.verification] External subagent conformance adoption MUST include positive and negative fixture tests, index validation, offline validation evidence, docs, Cairn validation, and Cairn gates before archive.
+
+#### Scenario: External conformance evidence is complete
+
+- GIVEN the external conformance change is ready to archive
+- WHEN closeout validation runs
+- THEN evidence names fixture tests, index checks, offline validation, docs, Cairn validation, and Cairn gates
+- AND skipped checks record a blocker and next-best validation.
