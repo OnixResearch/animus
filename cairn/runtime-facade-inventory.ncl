@@ -184,6 +184,7 @@ let entry_values = [
   entry "animus-adapters::validation" "animus-adapters" adapters reusable none stable "adapter boundary validation helper module",
   entry "animus-adapters::gateway" "animus-adapters" adapters reusable none stable "optional product-host control-plane DTO validation module",
   entry "animus-adapters::node" "animus-adapters" adapters reusable none stable "optional host-owned node capability DTO validation module",
+  entry "animus-adapters::openclaw_guardrails" "animus-adapters" adapters reusable none stable "host-supplied security audit and extension guardrail validation module",
   entry "animus-adapters::openclaw_session" "animus-adapters" adapters reusable none stable "host-store-neutral session isolation and session-tool planning module",
   entry "animus-adapters::AgentSessionReference" "animus-adapters" adapters reusable none stable "status session reference DTO",
   entry "animus-adapters::AgentSessionReferenceDraft" "animus-adapters" adapters reusable none stable "status session reference draft DTO",
