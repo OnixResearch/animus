@@ -2583,6 +2583,98 @@ r[agent_harness_runtime.pi_event_lifecycle.mode_neutral.headless]
 - THEN the host receives the same stable lifecycle facts as an in-process SDK subscriber
 - AND no event requires terminal UI state to interpret.
 
+### Requirement: Implementation-free observability adapter contracts
+
+r[agent_harness_runtime.observability_adapters.contracts] Animus MUST define implementation-free observability contracts for metrics and logging that represent safe metric samples, log records, labels, units, levels, sink requests, sink responses, and sink failure classes without depending on concrete logging frameworks, global subscribers, files, network exporters, clocks, storage, or UI state from reusable crates.
+
+#### Scenario: Host injects a metrics and logging sink
+
+r[agent_harness_runtime.observability_adapters.contracts.positive]
+- GIVEN a host wants runtime metrics and logs
+- WHEN it composes Animus runtime with observability support
+- THEN it can inject a metrics adapter, logging adapter, or equivalent combined observability adapter through typed contracts
+- AND reusable runtime code does not construct a concrete sink.
+
+#### Scenario: Unsafe observability DTOs are rejected
+
+r[agent_harness_runtime.observability_adapters.contracts.negative]
+- GIVEN an observability DTO has an empty metric name, invalid label key, overlong label value, unbounded message, or unsafe redaction state
+- WHEN the DTO is constructed or validated
+- THEN validation fails with a typed contract error
+- AND no sink request is produced.
+
+### Requirement: Pure safe projection from runtime events
+
+r[agent_harness_runtime.observability_adapters.projection] Animus MUST provide pure deterministic projection from `RuntimeEvent` and `RunReport` into safe metric samples and log records using event kind, sequence, terminal status, adapter component, failure class, middleware boundary, bounded counts, safe labels, redaction markers, and BLAKE3 fingerprints when correlation is needed.
+
+#### Scenario: Runtime lifecycle projects to safe metrics and logs
+
+r[agent_harness_runtime.observability_adapters.projection.events]
+- GIVEN a run emits start, turn, model/tool, failure, final-response, stop, max-turn, cancellation, compaction, and shutdown events
+- WHEN observability projection runs
+- THEN it emits bounded metrics and log records classified by stable event and status labels
+- AND it performs no file I/O, clock reads, global logging, network export, storage write, or adapter dispatch.
+
+#### Scenario: Projection rejects raw private material
+
+r[agent_harness_runtime.observability_adapters.projection.redaction]
+- GIVEN runtime events contain model requests, model responses, tool requests, tool responses, provider payloads, credentials, headers, environment values, full paths, or unbounded text
+- WHEN projection builds metrics or log records for sinks
+- THEN raw private material is omitted, redacted, bounded, or represented only by approved BLAKE3 fingerprints and safe labels
+- AND unsafe sink records fail validation before delivery.
+
+### Requirement: Ordered runtime observer delivery
+
+r[agent_harness_runtime.observability_adapters.runtime_wiring] The runtime shell MUST deliver newly emitted runtime events to injected observe-only middleware or observability adapters in the same order as `RunReport::events()` and MUST NOT allow observer delivery to mutate, reorder, or drop events from the returned report.
+
+#### Scenario: Observer order matches report order
+
+r[agent_harness_runtime.observability_adapters.runtime_wiring.ordering]
+- GIVEN a run emits model, tool, final-response, stop, or max-turn lifecycle events
+- WHEN observer delivery is enabled
+- THEN observer records preserve the same event-kind sequence as the returned `RunReport`
+- AND the report remains available even when no observer is configured.
+
+#### Scenario: Best-effort sink failure does not break runtime by default
+
+r[agent_harness_runtime.observability_adapters.runtime_wiring.best_effort]
+- GIVEN a metrics or logging sink is unavailable under the default best-effort policy
+- WHEN the runtime emits an observability record
+- THEN runtime records a bounded observability diagnostic or sink failure class
+- AND it continues without making extra model or tool adapter calls.
+
+#### Scenario: Audit-grade mode can fail closed
+
+r[agent_harness_runtime.observability_adapters.runtime_wiring.fail_closed]
+- GIVEN a host enables an audit-grade observability policy that requires sink delivery before guarded adapter dispatch
+- WHEN required metrics or log delivery fails
+- THEN runtime fails closed with a typed observability failure before the guarded model or tool adapter is called
+- AND the failure evidence excludes raw prompt, tool, provider, credential, path, and unbounded log material.
+
+### Requirement: Standard-library observability sinks stay host-owned
+
+r[agent_harness_runtime.observability_adapters.std_sinks] `animus-std` MUST provide no-op and in-memory observability sink implementations for deterministic tests and embedding, while JSONL, `tracing`, OpenTelemetry, Prometheus, or other exporters MUST remain optional host-owned shell features or downstream adapters rather than reusable runtime dependencies.
+
+#### Scenario: Deterministic std sinks support tests
+
+r[agent_harness_runtime.observability_adapters.std_sinks.tests]
+- GIVEN tests run without external telemetry configuration
+- WHEN no-op or in-memory observability sinks are selected
+- THEN safe metric samples and log records can be collected or ignored deterministically
+- AND unavailable, closed, or unsafe sink behavior returns typed failures without external side effects.
+
+### Requirement: Observability adapter verification
+
+r[agent_harness_runtime.observability_adapters.verification] Observability adapter work MUST include focused positive and negative tests for DTO validation, projection, event ordering, default best-effort failures, opt-in fail-closed audit behavior, std no-op and in-memory sinks, leak rejection, workspace checks, adapter/facade safety rails, Cairn validation, and Cairn gates before archive.
+
+#### Scenario: Closeout evidence covers observability adapters
+
+r[agent_harness_runtime.observability_adapters.verification.closeout]
+- GIVEN maintainers intend to archive the observability adapter change
+- WHEN closeout validation runs
+- THEN evidence names focused DTO, projection, runtime wiring, std sink, leak rejection, facade inventory, workspace, Cairn validation, and Cairn gate checks
+- AND any skipped external telemetry backend is recorded as a non-claim with a blocker and next-best validation.
+
 ### Requirement: Typed lifecycle hook registry
 
 r[agent_harness_runtime.openai_codex_hook_trust_lifecycle.event_registry] Animus MUST expose typed lifecycle hook events for session, prompt, tool, permission, compaction, subagent, and stop boundaries without requiring concrete hook execution in the runtime core.
@@ -4381,6 +4473,107 @@ r[agent_harness_runtime.clankers_context_references.verification.closeout]
 - WHEN closeout validation runs
 - THEN evidence names focused parser, resolver, policy, budget, metadata, workspace, Cairn validation, and Cairn gate checks
 - AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Context adapter family
+
+r[agent_harness_runtime.context_adapters.family] Animus MUST maintain `family:context` as a public adapter contract family that names owner modules, stability or version posture, authority boundary, safe receipt behavior, serialization bridge status, focused surfaces, positive evidence, negative evidence, and focused validation checks for context-reference resolvers, context-layer descriptor sources, external context handles, and prompt context assembly boundaries.
+
+#### Scenario: Context family has discoverable ownership
+
+r[agent_harness_runtime.context_adapters.family.indexed]
+- GIVEN an embedder needs to provide model-visible context through Animus
+- WHEN they inspect the contracts index or adapter conformance index
+- THEN the context family identifies the prompt/context modules and std-shell resolver surfaces they can implement
+- AND the index states that reusable crates own parsing, planning, budgeting, admission, and safe provenance rather than host I/O.
+
+### Requirement: Role-specific context contracts
+
+r[agent_harness_runtime.context_adapters.role_contracts] Context adapter contracts MUST remain split by explicit role, including file, directory, diff, image, URL, context-layer source, and external-handle resolution roles, and MUST NOT require a monolithic adapter that combines filesystem, VCS, image, network, crawler, credential, and global discovery authority.
+
+#### Scenario: Host registers only the needed context role
+
+r[agent_harness_runtime.context_adapters.role_contracts.positive]
+- GIVEN a host supports local file context but not URL fetching or image decoding
+- WHEN it composes context services
+- THEN it can provide a file resolver without providing URL, image, crawler, credential, or global discovery authority
+- AND planner logic treats absent roles as unavailable instead of falling back to ambient access.
+
+#### Scenario: Missing or denied context role fails closed
+
+r[agent_harness_runtime.context_adapters.role_contracts.negative]
+- GIVEN a prompt requests a directory, diff, image, URL, layered context source, or external context handle
+- AND the corresponding resolver role is absent, unsupported, unavailable, or denied by policy
+- WHEN context planning runs
+- THEN the request fails closed before resolver dispatch
+- AND no filesystem read, VCS command, image decode, network fetch, credential lookup, or global discovery is attempted by reusable code.
+
+### Requirement: Context adapter conformance matrix
+
+r[agent_harness_runtime.context_adapters.conformance] The context adapter family MUST declare conformance expectations for happy path, missing service, denied capability, unavailable service, timeout, cancellation, malformed output, oversized output, unsafe reference, schema mismatch, duplicate field, unknown field, and leak rejection cases, or provide explicit safe non-applicability reasons for cases where reusable context contracts own no clock, cancellation handle, or open-map parser.
+
+#### Scenario: Context matrix includes positive and negative evidence
+
+r[agent_harness_runtime.context_adapters.conformance.coverage]
+- GIVEN maintainers add or change context adapter behavior
+- WHEN adapter-conformance checks run
+- THEN the context family has a covered positive evidence label and a covered negative evidence label for every applicable case
+- AND unsupported or not-applicable cases include safe reasons without raw prompts, file bodies, private paths, credentials, provider payloads, or unbounded logs.
+
+### Requirement: Safe context evidence
+
+r[agent_harness_runtime.context_adapters.safe_evidence] Context adapter outcomes, receipts, and provenance records MUST store only safe target labels, resolver role, source kind, status, policy decision, bounded counts, truncation state, redaction markers, omission reasons, and BLAKE3 content or body hashes when durable evidence is needed.
+
+#### Scenario: Context evidence rejects leaks
+
+r[agent_harness_runtime.context_adapters.safe_evidence.leak_rejection]
+- GIVEN a context resolver output, context-layer descriptor, external context handle, or receipt draft includes raw expanded body text, raw prompt text, credentials, provider payloads, headers, environment values, full private paths, hidden transcripts, or unbounded logs in durable metadata
+- WHEN context evidence validation runs
+- THEN validation rejects or redacts the unsafe material before persistence, logging, metrics, or review summaries
+- AND the failure evidence itself remains bounded and safe.
+
+### Requirement: Standard-library context resolvers
+
+r[agent_harness_runtime.context_adapters.std_resolvers] `animus-std` SHOULD provide explicit no-op/null context services and policy-gated local file, directory, and diff resolver implementations for deterministic embedding, while URL fetching, image decoding, repository-wide crawling, credentialed remote handles, and external context stores MUST remain absent by default or downstream/feature-gated host-owned adapters.
+
+#### Scenario: Std local context resolves within policy
+
+r[agent_harness_runtime.context_adapters.std_resolvers.positive]
+- GIVEN a host selects the std local file, directory, or diff resolver with a policy that admits the requested target
+- WHEN context-reference expansion runs
+- THEN the resolver returns an already-loaded candidate that reusable code budgets, hashes, and classifies deterministically
+- AND no default network, image, crawler, credential, or global discovery service is enabled.
+
+#### Scenario: Std local context denies unsafe targets
+
+r[agent_harness_runtime.context_adapters.std_resolvers.negative]
+- GIVEN a context request attempts path escape, absolute private path access, binary or oversized body inclusion, unavailable VCS state, denied network/image authority, or malformed resolver output
+- WHEN the std resolver or reusable validator handles the request
+- THEN it returns a typed denied, unavailable, malformed, oversized, or unsafe outcome
+- AND no unsafe body or private host path is emitted as model-visible prompt content or durable evidence.
+
+### Requirement: Context adapter documentation
+
+r[agent_harness_runtime.context_adapters.docs] Animus MUST document how embedders choose between host context, context-reference resolvers, context-layer descriptors, fresh-context task descriptors, and std-shell context services, and MUST state that absence of a resolver means absence of authority rather than implicit fallback.
+
+#### Scenario: Embedder selects the smallest context surface
+
+r[agent_harness_runtime.context_adapters.docs.smallest_surface]
+- GIVEN an embedder only needs direct host-supplied project notes or only needs local file references
+- WHEN they read Animus context adapter documentation
+- THEN they can identify the minimal DTOs and resolver roles to implement
+- AND docs do not imply default network fetching, repository crawling, image decoding, credentialed remote access, or ambient global context discovery.
+
+### Requirement: Context adapter verification
+
+r[agent_harness_runtime.context_adapters.verification] Context adapter family work MUST include focused positive and negative tests for family indexing, role-specific contracts, missing service, denied capability, unavailable service, malformed output, oversized output, unsafe references, safe evidence, std local resolvers, documentation, workspace checks, adapter/facade safety rails, Cairn validation, and Cairn gates before archive.
+
+#### Scenario: Closeout evidence covers context adapters
+
+r[agent_harness_runtime.context_adapters.verification.closeout]
+- GIVEN maintainers intend to archive the context adapter family change
+- WHEN closeout validation runs
+- THEN evidence names focused context-reference, context-layering, std resolver, adapter-conformance, facade inventory, workspace, Cairn validation, and Cairn gate checks
+- AND any skipped URL fetching, image decoding, crawler, credentialed remote handle, or external context-store implementation is recorded as a non-claim with a blocker and next-best validation.
 
 ### Requirement: Local batch run planning
 

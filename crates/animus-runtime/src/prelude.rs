@@ -8,12 +8,13 @@ pub mod loop_prelude {
         ModelDispatchTimeoutPosture, RunReport, RuntimeCapabilityFamily,
         RuntimeCapabilityFamilyMapError, RuntimeCapabilityFamilyRecord, RuntimeConfig,
         RuntimeError, RuntimeFailure, RuntimeInput, RuntimeLoopContractError, RuntimeLoopDecision,
-        RuntimeLoopDecisionDraft, RuntimeLoopTurn, RuntimeStatus, ToolDispatchCancellationPosture,
-        ToolDispatchFallbackPolicy, ToolDispatchOutputBoundary, ToolDispatchPlan,
-        ToolDispatchPlanIssue, ToolDispatchPlanRequest, ToolDispatchPlanStatus,
+        RuntimeLoopDecisionDraft, RuntimeLoopTurn, RuntimeObservabilityProjection, RuntimeStatus,
+        ToolDispatchCancellationPosture, ToolDispatchFallbackPolicy, ToolDispatchOutputBoundary,
+        ToolDispatchPlan, ToolDispatchPlanIssue, ToolDispatchPlanRequest, ToolDispatchPlanStatus,
         ToolDispatchPolicyDraft, ToolDispatchTimeoutPosture, TurnPlan, TurnState,
         apply_adapter_outcome, apply_decision, complete_with_fabric_error, plan_model_dispatch,
-        plan_next_turn, plan_tool_dispatch, run_agent_loop, runtime_capability_family_map,
+        plan_next_turn, plan_tool_dispatch, project_run_report_observability,
+        project_runtime_event_observability, run_agent_loop, runtime_capability_family_map,
         validate_runtime_capability_family_map,
     };
 }

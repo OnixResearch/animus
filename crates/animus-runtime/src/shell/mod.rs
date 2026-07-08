@@ -2,6 +2,7 @@ mod runner;
 
 const NO_PLANNING_STEPS_REMAINING: usize = 0;
 const PLANNING_GUARD_EXHAUSTED: &str = "runtime planning step guard exhausted";
+const OBSERVABILITY_SINK_FAILED: &str = "observability_sink_failed";
 
 /// Borrowed injected model/tool service bundle used by runtime runners.
 pub struct RuntimeAdapters<'a, Model, Tool> {
@@ -129,21 +130,89 @@ where
     Tool::Error: core::fmt::Display,
 {
     let mut state = crate::TurnState::new(input);
+    let (mut observed_event_count, mut observation_diagnostics) = collect_new_observations(
+        &mut adapters.middleware,
+        state.events(),
+        NO_PLANNING_STEPS_REMAINING,
+    );
     let mut planning_steps_remaining = config
         .max_turns()
         .count()
         .saturating_add(crate::MIN_MAX_TURNS.count());
+    debug_assert_eq!(observed_event_count, state.events().len());
+    debug_assert!(planning_steps_remaining > NO_PLANNING_STEPS_REMAINING);
 
     while planning_steps_remaining != NO_PLANNING_STEPS_REMAINING {
         planning_steps_remaining =
             planning_steps_remaining.saturating_sub(crate::MIN_MAX_TURNS.count());
         match runner::run_planned_step(config, state, fabric, &mut adapters) {
-            runner::Step::Continue { state: next_state } => state = next_state,
-            runner::Step::Complete { report } => return report,
+            runner::Step::Continue { state: next_state } => {
+                state = next_state;
+                let (next_observed_count, mut step_diagnostics) = collect_new_observations(
+                    &mut adapters.middleware,
+                    state.events(),
+                    observed_event_count,
+                );
+                observed_event_count = next_observed_count;
+                observation_diagnostics.append(&mut step_diagnostics);
+            }
+            runner::Step::Complete { report } => {
+                return finalize_observed_report(
+                    report,
+                    &mut adapters.middleware,
+                    observed_event_count,
+                    observation_diagnostics,
+                );
+            }
         }
     }
 
-    crate::complete_with_fabric_error(state, String::from(PLANNING_GUARD_EXHAUSTED))
+    let failure_result =
+        crate::complete_with_fabric_error(state, String::from(PLANNING_GUARD_EXHAUSTED));
+    finalize_observed_report(
+        failure_result,
+        &mut adapters.middleware,
+        observed_event_count,
+        observation_diagnostics,
+    )
+}
+
+fn collect_new_observations(
+    middleware: &mut crate::RuntimeMiddlewareStack<'_>,
+    events: &[crate::RuntimeEvent],
+    observed_event_count: usize,
+) -> (usize, Vec<crate::RuntimeEvent>) {
+    let mut diagnostics = Vec::with_capacity(events.len().saturating_sub(observed_event_count));
+    for event in events.iter().skip(observed_event_count) {
+        if let Err(error) = middleware.observe_event(event) {
+            diagnostics.push(observation_failure_event(&error));
+        }
+    }
+    (events.len(), diagnostics)
+}
+
+fn finalize_observed_report(
+    report: crate::RunReport,
+    middleware: &mut crate::RuntimeMiddlewareStack<'_>,
+    observed_event_count: usize,
+    mut diagnostics: Vec<crate::RuntimeEvent>,
+) -> crate::RunReport {
+    let status = report.status().clone();
+    let mut events = report.into_events();
+    let (final_observed_count, mut final_diagnostics) =
+        collect_new_observations(middleware, events.as_slice(), observed_event_count);
+    debug_assert_eq!(final_observed_count, events.len());
+    diagnostics.append(&mut final_diagnostics);
+    events.append(&mut diagnostics);
+    crate::RunReport::new(events, status)
+}
+
+fn observation_failure_event(error: &crate::MiddlewareError) -> crate::RuntimeEvent {
+    crate::RuntimeEvent::HookFailed {
+        boundary: crate::HookBoundary::Observe,
+        hook: String::from(error.hook()),
+        message: String::from(OBSERVABILITY_SINK_FAILED),
+    }
 }
 
 /// Runs the agent loop with a Steel program as the default loop fabric.

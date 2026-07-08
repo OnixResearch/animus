@@ -65,6 +65,8 @@ let family_entries = [
   family "workspace" "crates/animus-adapters/src/workspace" "workspace adapters are descriptors and plans; concrete VCS or filesystem mutation stays shell-owned" "workspace receipts must carry safe labels, hashes, and restore evidence without raw prompt or file bodies" "workspace DTOs are no_std contracts; host shells may serialize with their own backend" "animus_adapters::{WorkspaceAdapterDescriptor,WorkspaceIsolationPlan,WorkspaceReceipt}; documented workspace export set" "cargo test -p animus-adapters workspace::tests --locked" "workspace::tests::planning::plan_accepts_leaf_commit_and_receipt_hashes_are_stable" "workspace::tests::planning::plan_fails_closed_for_unavailable_partial_or_placeholder_adapters" "family:workspace",
   family "security-policy" "crates/animus-adapters/src/effect" "policy resolution is pure and denies by default; concrete enforcement authority is injected or shell-owned" "permission, authorization, confirmation, and sandbox receipts are redacted and leak-scanned" "policy DTOs are no_std contracts; external policy stores remain outside adapter core" "animus_adapters::{CapabilityPolicyContract,RuntimePolicyService,PermissionPolicy,SandboxPolicy}; animus_runtime::policy_prelude" "cargo test -p animus-adapters effect::tests --locked" "effect::permit::tests::positive::trusted_allow_policy_executes_after_authority_passes" "effect::permit::tests::negative::deny_policy_and_missing_authority_fail_before_dispatch" "family:security-policy",
   family "safe-receipt" "crates/animus-adapters/src/effect/audit.rs" "safe receipts are reusable DTOs and validators with no provider, filesystem, process, network, credential, or plugin authority" "safe receipts store bounded safe text, BLAKE3-like hashes, redaction labels, and leak classes only" "receipt validators are text contracts; bridge crates may encode them after revalidation" "animus_adapters::{Receipt,ReceiptDraft,SafeHash,SAFE_RECEIPT_CONTRACT_IDENTITY}; receipt validation functions" "cargo test -p animus-adapters effect::tests --locked; cargo test -p animus-adapters contract::tests --locked" "effect::tests::completed_service_outcome_carries_completed_receipt" "effect::tests::safe_hash_rejects_wrong_length" "family:safe-receipt",
+  family "context" "crates/animus-adapters/src/prompt; crates/animus-runtime/src/context_layering; crates/animus-std/src/context.rs" "context roles are injected or shell-owned; reusable crates only parse, plan, budget, admit, and project safe provenance" "context evidence stores safe target labels, roles, statuses, policy decisions, bounded counts, truncation or omission reasons, and BLAKE3 hashes only" "Preserves bridge is absent by default and must revalidate context DTOs when enabled" "animus_adapters::{ContextReference,ContextResolverSet,ContextAdapterRoleRecord,ContextAdapterFamilyManifest,ContextReferenceProvenance}; animus_std::{NullContextResolver,LocalFileContextResolver,LocalDirectoryContextResolver,LocalDiffContextResolver}" "cargo test -p animus-adapters context --locked; cargo test -p animus-runtime context_layering --locked; cargo test -p animus-std context --locked" "prompt::tests::family::context_adapter_roles_register_independently" "prompt::tests::family::context_adapter_roles_fail_closed_for_mismatches_and_unsafe_metadata" "family:context",
+  family "observability" "crates/animus-adapters/src/observability.rs; crates/animus-runtime/src/telemetry; crates/animus-std/src/observability.rs" "runtime projection is pure and concrete metrics/log sinks, files, clocks, global subscribers, storage, networks, and dashboards are host-owned" "metrics and logs carry event kind, sequence, component, failure, terminal labels, bounded messages, and redaction markers only" "export serialization is host-owned and must revalidate metric/log records" "animus_adapters::{MetricSample,LogRecord,MetricsAdapter,LoggingAdapter}; animus_runtime::{project_runtime_event_observability,project_run_report_observability}; animus_std::{NoopObservabilitySink,InMemoryObservabilitySink}" "cargo test -p animus-adapters observability --locked; cargo test -p animus-runtime observability --locked; cargo test -p animus-std observability --locked" "observability::tests::observability_dtos_accept_safe_metrics_logs_and_sink_outcomes" "observability::tests::observability_dtos_reject_empty_names_unsafe_labels_and_unbounded_messages" "family:observability",
 ]
 in
 let case_entries = [
@@ -165,6 +167,34 @@ let case_entries = [
   na "safe-receipt" "duplicate_field" "safe receipt constructors use typed scalar fields and arrays rather than open keyed maps",
   na "safe-receipt" "unknown_field" "safe receipt constructors do not accept unbounded unknown fields",
   covered "safe-receipt" "leak_rejection" "effect::permit::tests::negative::permission_receipt_leak_fixtures_are_rejected",
+
+  covered "context" "happy_path" "prompt::tests::family::context_adapter_roles_register_independently",
+  covered "context" "missing_service" "prompt::tests::flow::planning_rejects_missing_resolver_without_fallback",
+  covered "context" "denied_capability" "prompt::tests::flow::planning_denies_url_without_invoking_resolver",
+  covered "context" "unavailable_service" "context::tests::std_local_context_resolvers_report_missing_files_without_private_paths",
+  na "context" "timeout" "context role contracts own no clock; host shells map deadlines to typed outcomes before returning records",
+  na "context" "cancellation" "context role contracts own no cancellation handle; host shells map cancellation to typed outcomes before returning records",
+  covered "context" "malformed_output" "context::tests::std_local_context_resolvers_fail_closed_for_denied_and_unsafe_targets",
+  covered "context" "oversized_output" "context::tests::std_local_context_resolvers_fail_closed_for_denied_and_unsafe_targets",
+  covered "context" "unsafe_reference" "prompt::tests::parse::parser_rejects_malformed_and_unsafe_references",
+  covered "context" "schema_mismatch" "prompt::tests::family::context_adapter_roles_fail_closed_for_mismatches_and_unsafe_metadata",
+  covered "context" "duplicate_field" "prompt::tests::family::context_adapter_manifest_rejects_duplicate_roles",
+  na "context" "unknown_field" "context DTO constructors use typed fields rather than open maps",
+  covered "context" "leak_rejection" "prompt::tests::family::context_adapter_roles_fail_closed_for_mismatches_and_unsafe_metadata",
+
+  covered "observability" "happy_path" "observability::tests::observability_dtos_accept_safe_metrics_logs_and_sink_outcomes",
+  covered "observability" "missing_service" "shell::tests::hooks::model_run_events_preserve_turn_order",
+  covered "observability" "denied_capability" "observability::tests::observability_dtos_accept_safe_metrics_logs_and_sink_outcomes",
+  covered "observability" "unavailable_service" "observability::tests::in_memory_observability_sink_reports_unavailable_closed_and_unsafe_records",
+  na "observability" "timeout" "observability DTOs own no clock; host sinks map timeouts to sink failure outcomes",
+  na "observability" "cancellation" "observability DTOs own no cancellation handle; host sinks map cancellation to sink failure outcomes",
+  covered "observability" "malformed_output" "observability::tests::observability_dtos_reject_empty_names_unsafe_labels_and_unbounded_messages",
+  covered "observability" "oversized_output" "observability::tests::observability_dtos_reject_empty_names_unsafe_labels_and_unbounded_messages",
+  covered "observability" "unsafe_reference" "observability::tests::observability_dtos_reject_empty_names_unsafe_labels_and_unbounded_messages",
+  covered "observability" "schema_mismatch" "observability::tests::observability_dtos_reject_empty_names_unsafe_labels_and_unbounded_messages",
+  na "observability" "duplicate_field" "observability constructors use typed labels and arrays rather than open keyed maps",
+  na "observability" "unknown_field" "observability constructors do not parse unbounded unknown fields",
+  covered "observability" "leak_rejection" "observability::tests::observability_dtos_reject_empty_names_unsafe_labels_and_unbounded_messages",
 ]
 in
 {

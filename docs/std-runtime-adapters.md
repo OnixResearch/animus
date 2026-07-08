@@ -8,6 +8,16 @@ Default checks use deterministic fixtures for model, filesystem, process, networ
 
 Before a concrete adapter performs a host effect, the shell plans the effect with `EffectPrerequisites`. Missing provider metadata, missing tool contracts, policy denial, sandbox mismatch, missing receipts/events, absent host approval, missing credentials, malformed output, timeout, or cancellation all fail closed before dispatch.
 
+## Context and observability shells
+
+`animus-std` includes deterministic, opt-in context and observability shells:
+
+- `NullContextResolver` denies every context role without fallback authority.
+- `LocalFileContextResolver`, `LocalDirectoryContextResolver`, and `LocalDiffContextResolver` are policy-gated local shells for already-admitted roots and preloaded diff text. They reject path escapes, binary or oversized bodies, missing files, unavailable roots, and denied roles; URL fetching, image decoding, crawlers, credentialed remote handles, and global discovery remain absent by default.
+- `NoopObservabilitySink` and `InMemoryObservabilitySink` accept only validated `MetricSample` and `LogRecord` DTOs. JSONL, `tracing`, OpenTelemetry, Prometheus, dashboards, global subscribers, durable log stores, and network exporters are host-owned optional adapters.
+
+Runtime observability projection is pure over `RuntimeEvent` and `RunReport`. Observe-only middleware receives events in report order; failures are best-effort by default and add bounded `observe` diagnostics without extra model/tool dispatch.
+
 ## Opt-in live smoke tests
 
 Live provider calls, real filesystem mutation, process execution, and HTTP/network access are not part of deterministic default checks. A host may add explicit smoke tests only when all of the following are true:

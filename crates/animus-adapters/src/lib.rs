@@ -37,6 +37,7 @@ mod manifest;
 mod mcpapp;
 mod model;
 mod multimodal;
+mod observability;
 mod port;
 mod profile;
 mod prompt;
@@ -182,6 +183,28 @@ pub use manifest::{
     RedactionPolicy, RedactionPolicyDraft, RuntimeKind, SandboxMode, SandboxRequirements,
     SandboxRequirementsDraft, ToolDescriptor, ToolDescriptorDraft, WorkingDirectoryMode,
 };
+pub use observability::{
+    LogLevel, LogRecord, LogRecordDraft, LoggingAdapter, MetricKind, MetricLabel, MetricLabelDraft,
+    MetricSample, MetricSampleDraft, MetricUnit, MetricsAdapter,
+};
+/// Observability delivery policy for root-facade consumers.
+pub type ObservabilityDeliveryPolicy = observability::DeliveryPolicy;
+/// Observability validation error for root-facade consumers.
+pub type ObservabilityError = observability::Error;
+/// Observability guarded-dispatch decision for root-facade consumers.
+pub type ObservabilityGuardDecision = observability::GuardDecision;
+/// Observability sink failure class for root-facade consumers.
+pub type ObservabilitySinkFailureClass = observability::SinkFailureClass;
+/// Observability sink outcome for root-facade consumers.
+pub type ObservabilitySinkOutcome = observability::SinkOutcome;
+/// Evaluates observability delivery for root-facade consumers.
+#[must_use]
+pub fn evaluate_observability_delivery(
+    policy: ObservabilityDeliveryPolicy,
+    outcome: &ObservabilitySinkOutcome,
+) -> ObservabilityGuardDecision {
+    observability::evaluate_delivery(policy, outcome)
+}
 pub use port::{ComponentAdapter, HostStatusAdapter, ModelAdapter, ToolAdapter};
 pub use review::{
     ReviewDiagnostic, ReviewDiagnosticCode, ReviewFinding, ReviewMetricFinding, ReviewMetricRecord,
@@ -217,22 +240,24 @@ pub use flow::{
     validate_recipe_output,
 };
 pub use prompt::{
-    ContextLineRange, ContextOversizedPolicy, ContextReference, ContextReferenceBudget,
-    ContextReferenceCounts, ContextReferenceError, ContextReferenceFragment, ContextReferenceKind,
-    ContextReferencePolicy, ContextReferencePolicyDecision, ContextReferenceProvenance,
-    ContextReferenceProvenanceDraft, ContextReferenceStatus, ContextRenderMode,
-    ContextResolutionPlan, ContextResolverKind, ContextResolverSet, ContextSourceTrust,
-    ContextTruncationState, DiffContextResolver, DirectoryContextResolver, FileContextResolver,
-    ImageContextResolver, ProfileAssembly, ProfileAssemblyDiagnostic, ProfileAssemblyPolicy,
-    ProfileCapability, ProfileCapabilityBinding, ProfileCapabilityBindingStatus,
-    ProfileChainDecision, ProfileChainPlan, ProfileChainRequest, ProfileDescriptor,
-    ProfileDescriptorDraft, ProfileDirectiveDiagnostic, ProfileDirectiveIssue,
+    ContextAdapterAvailability, ContextAdapterFamilyManifest, ContextAdapterOutcomeClass,
+    ContextAdapterPolicyDecision, ContextAdapterRole, ContextAdapterRoleDraft,
+    ContextAdapterRoleRecord, ContextLineRange, ContextOversizedPolicy, ContextReference,
+    ContextReferenceBudget, ContextReferenceCounts, ContextReferenceError,
+    ContextReferenceFragment, ContextReferenceKind, ContextReferencePolicy,
+    ContextReferencePolicyDecision, ContextReferenceProvenance, ContextReferenceProvenanceDraft,
+    ContextReferenceStatus, ContextRenderMode, ContextResolutionPlan, ContextResolverKind,
+    ContextResolverSet, ContextSourceTrust, ContextTruncationState, DiffContextResolver,
+    DirectoryContextResolver, FileContextResolver, ImageContextResolver, ProfileAssembly,
+    ProfileAssemblyDiagnostic, ProfileAssemblyPolicy, ProfileCapability, ProfileCapabilityBinding,
+    ProfileCapabilityBindingStatus, ProfileChainDecision, ProfileChainPlan, ProfileChainRequest,
+    ProfileDescriptor, ProfileDescriptorDraft, ProfileDirectiveDiagnostic, ProfileDirectiveIssue,
     ProfileDirectiveReport, ProfileError, ProfileInclusionPolicy, ProfileMode, ProfileModeBinding,
     ProfileModeBindingRequest, ProfileOmittedReason, ProfileReceipt, ProfileReceiptRedaction,
     ProfileSegment, ProfileSourceAdmission, ProfileSourceTrust, ProfileTrustScope,
     ResolvedContextCandidate, UrlContextResolver, apply_context_budget, assemble_profiles,
     bind_profile_mode, expand_context_reference, parse_context_reference, parse_profile_directives,
-    plan_context_resolution,
+    plan_context_resolution, validate_context_resolver_role,
 };
 pub use queue::{
     BackgroundQueueService, QueueCapabilities, QueueCapabilityKind, QueueContractError,

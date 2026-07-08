@@ -11,6 +11,9 @@ const MODE_NEUTRAL_FORBIDDEN_TUI: &str = "tui";
 const MODE_NEUTRAL_FORBIDDEN_TERMINAL: &str = "terminal";
 const CANCELLATION_REASON: &str = "host_cancelled";
 const COMPACTION_SUMMARY: &str = "safe compaction summary";
+const OBSERVER_LABEL: &str = "runtime_observer";
+const OBSERVER_FAILURE: &str = "observer failed";
+const OBSERVABILITY_SINK_FAILED: &str = "observability_sink_failed";
 
 struct BlockingToolHook;
 
@@ -70,6 +73,38 @@ impl crate::RuntimeMiddleware for AppendModelHook {
 #[derive(Default)]
 struct ObserveAndReplaceModelHook {
     observed: Vec<String>,
+}
+
+#[derive(Default)]
+struct EventObserverHook {
+    observed: Vec<crate::RuntimeEventKind>,
+}
+
+impl crate::RuntimeMiddleware for EventObserverHook {
+    fn label(&self) -> &str {
+        OBSERVER_LABEL
+    }
+
+    fn observe(&mut self, event: &crate::RuntimeEvent) -> Result<(), crate::MiddlewareError> {
+        self.observed.push(event.kind());
+        Ok(())
+    }
+}
+
+struct FailingObserverHook;
+
+impl crate::RuntimeMiddleware for FailingObserverHook {
+    fn label(&self) -> &str {
+        OBSERVER_LABEL
+    }
+
+    fn observe(&mut self, _event: &crate::RuntimeEvent) -> Result<(), crate::MiddlewareError> {
+        Err(crate::MiddlewareError::new(
+            crate::HookBoundary::Observe,
+            OBSERVER_LABEL,
+            OBSERVER_FAILURE,
+        ))
+    }
 }
 
 impl crate::RuntimeMiddleware for ObserveAndReplaceModelHook {
@@ -234,6 +269,64 @@ fn hook_error_fails_safe_before_tool_adapter_dispatch() {
         event,
         crate::RuntimeEvent::ToolDenied { reason, .. } if reason == TOOL_HOOK_FAILURE
     )));
+}
+
+#[test]
+fn observe_only_middleware_receives_runtime_events_in_report_order() {
+    let mut observer = EventObserverHook::default();
+    let mut model = super::support::ModelStub::ok();
+    let mut tool = super::support::ToolStub::ok();
+    let result = {
+        let hooks: Vec<&mut dyn crate::RuntimeMiddleware> = vec![&mut observer];
+        super::super::run_with_steel_program(
+            super::support::MODEL_THEN_RESPOND_PROGRAM,
+            &super::support::runtime_input(),
+            super::support::runtime_config_with_followup_turn_budget(),
+            super::super::RuntimeAdapters::new(&mut model, &mut tool)
+                .with_middleware(crate::RuntimeMiddlewareStack::from_hooks(hooks)),
+        )
+    };
+
+    assert_eq!(observer.observed, event_kinds(&result));
+    assert_eq!(model.calls, super::support::EXPECTED_ADAPTER_CALLS);
+    assert_eq!(tool.calls, super::support::NO_ADAPTER_CALLS);
+}
+
+#[test]
+fn observe_only_middleware_failure_is_best_effort_and_bounded() {
+    let mut observer = FailingObserverHook;
+    let mut model = super::support::ModelStub::ok();
+    let mut tool = super::support::ToolStub::ok();
+    let result = {
+        let hooks: Vec<&mut dyn crate::RuntimeMiddleware> = vec![&mut observer];
+        super::super::run_with_steel_program(
+            super::support::MODEL_THEN_RESPOND_PROGRAM,
+            &super::support::runtime_input(),
+            super::support::runtime_config_with_followup_turn_budget(),
+            super::super::RuntimeAdapters::new(&mut model, &mut tool)
+                .with_middleware(crate::RuntimeMiddlewareStack::from_hooks(hooks)),
+        )
+    };
+
+    assert!(matches!(
+        result.status(),
+        crate::RuntimeStatus::FinalResponse { .. }
+    ));
+    assert_eq!(model.calls, super::support::EXPECTED_ADAPTER_CALLS);
+    assert_eq!(tool.calls, super::support::NO_ADAPTER_CALLS);
+    assert!(result.events().iter().any(|event| matches!(
+        event,
+        crate::RuntimeEvent::HookFailed { boundary, hook, message }
+            if *boundary == crate::HookBoundary::Observe
+                && hook == OBSERVER_LABEL
+                && message == OBSERVABILITY_SINK_FAILED
+    )));
+    assert!(result.events().iter().all(|event| {
+        !matches!(
+            event,
+            crate::RuntimeEvent::HookFailed { message, .. } if message == OBSERVER_FAILURE
+        )
+    }));
 }
 
 #[test]

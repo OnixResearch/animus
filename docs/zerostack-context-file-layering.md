@@ -2,7 +2,7 @@
 
 Animus adapts Zerostack's context file layering as explicit, host-owned discovery feeding pure runtime admission. Runtime core never walks ancestors, reads files, consults environment variables, or canonicalizes paths; hosts provide already-loaded descriptors.
 
-The reusable surface lives in `animus-runtime::context_layering` and is re-exported by `animus-runtime`.
+The reusable surface lives in `animus-runtime::context_layering` and is re-exported by `animus-runtime`. In the adapter index this is one `family:context` role, distinct from file, directory, diff, image, URL, and external-handle resolvers. Context-layer descriptor sources provide already-loaded descriptors; they do not imply filesystem discovery or authority for any other context role.
 
 ## Descriptors and discovery boundary
 
@@ -18,7 +18,7 @@ When multiple admitted descriptors target the same prompt section, higher preced
 
 ## Receipts
 
-`ContextLayerReceipt` records included and omitted descriptor IDs, classes, source kinds, safe source identities, BLAKE3 body hashes, and omission/inclusion reasons without embedding raw file bodies or private paths.
+`ContextLayerReceipt` records included and omitted descriptor IDs, classes, source kinds, safe source identities, BLAKE3 body hashes, and omission/inclusion reasons without embedding raw file bodies or private paths. The same safe-evidence posture applies to context adapter role records and std-shell resolver outcomes: durable evidence names safe labels, roles, counts, hashes, truncation or omission reasons, and redaction state rather than expanded bodies, credentials, URLs, headers, private paths, environment values, or hidden transcripts.
 
 ## Focused verification
 

@@ -221,8 +221,9 @@ pub use crate::shell::{RuntimeAdapters, run_agent_loop};
 #[cfg(feature = "steel")]
 pub use crate::shell::{SteelPolicyRuntime, run_with_steel_policy, run_with_steel_program};
 pub use crate::telemetry::{
-    AdapterComponent, LoopDecisionKind, RuntimeEvent, RuntimeEventKind, RuntimeTerminalKind,
-    project_model_stream_events,
+    AdapterComponent, LoopDecisionKind, RuntimeEvent, RuntimeEventKind,
+    RuntimeObservabilityProjection, RuntimeTerminalKind, project_model_stream_events,
+    project_run_report_observability, project_runtime_event_observability,
 };
 pub use crate::tool_admission::{
     TOOL_DISPATCH_NEUTRAL_CONTRACT_IDENTITY, ToolDispatchCancellationPosture,

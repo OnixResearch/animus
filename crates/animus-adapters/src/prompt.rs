@@ -4,6 +4,7 @@
 
 mod base;
 mod data;
+mod family;
 mod flow;
 mod host;
 mod profiles;
@@ -19,6 +20,13 @@ pub use data::{
     ContextResolutionPlan, ContextResolverKind, ContextSourceTrust, ContextTruncationState,
     ResolvedContextCandidate,
 };
+pub use family::{
+    ContextAdapterAvailability, ContextAdapterOutcomeClass, ContextAdapterPolicyDecision,
+    ContextAdapterRole, ContextAdapterRoleDraft, ContextAdapterRoleRecord,
+    validate_context_resolver_role,
+};
+/// Validated context adapter family manifest for public prompt contracts.
+pub type ContextAdapterFamilyManifest = family::Manifest;
 pub use flow::{apply_context_budget, expand_context_reference, plan_context_resolution};
 pub use host::{
     ContextResolverSet, DiffContextResolver, DirectoryContextResolver, FileContextResolver,

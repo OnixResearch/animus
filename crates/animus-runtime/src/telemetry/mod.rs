@@ -1,6 +1,32 @@
 mod dto;
+mod observability;
 
 pub use dto::RuntimeEvent;
+/// Root telemetry projection for safe observability records.
+pub type RuntimeObservabilityProjection = observability::Projection;
+
+/// Projects a complete run report into safe observability records.
+///
+/// # Errors
+///
+/// Returns [`animus_adapters::ObservabilityError`] when generated labels fail validation.
+pub fn project_run_report_observability(
+    report: &crate::RunReport,
+) -> Result<RuntimeObservabilityProjection, animus_adapters::ObservabilityError> {
+    observability::project_report(report)
+}
+
+/// Projects one runtime event into safe observability records.
+///
+/// # Errors
+///
+/// Returns [`animus_adapters::ObservabilityError`] when generated labels fail validation.
+pub fn project_runtime_event_observability(
+    event: &RuntimeEvent,
+    sequence: u32,
+) -> Result<RuntimeObservabilityProjection, animus_adapters::ObservabilityError> {
+    observability::project_runtime_event(event, sequence)
+}
 
 /// Adapter component kind used in runtime events.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -9,6 +35,17 @@ pub enum AdapterComponent {
     Model,
     /// Tool adapter component.
     Tool,
+}
+
+impl AdapterComponent {
+    /// Returns the stable adapter-component label.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Model => "model",
+            Self::Tool => "tool",
+        }
+    }
 }
 
 /// Loop decision class selected by the fabric.

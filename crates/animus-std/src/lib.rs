@@ -5,6 +5,9 @@
 //! builds core state through `animus-core`, and crosses swappable component
 //! boundaries through `animus-adapters` contracts.
 
+#![cfg_attr(animus_octet, feature(register_tool))]
+#![cfg_attr(animus_octet, register_tool(tigerstyle))]
+#![cfg_attr(animus_octet, allow(tigerstyle::excessive_file_length))]
 #![deny(missing_docs)]
 #![deny(clippy::all)]
 #![deny(clippy::pedantic)]
@@ -14,9 +17,11 @@
 
 mod adapters;
 mod config;
+mod context;
 #[cfg(feature = "syndicate-host")]
 mod dataspace;
 mod execution;
+mod observability;
 mod providers;
 
 pub use adapters::{
@@ -27,6 +32,17 @@ pub use adapters::{
 /// Backwards-compatible name for deterministic fixture bundles.
 pub type FixtureAdapters = Fixtures;
 pub use config::{INTENT_ENV_KEY, load_runtime};
+pub use context::{STD_CONTEXT_DEFAULT_MAX_BYTES, STD_CONTEXT_DEFAULT_MAX_DIRECTORY_ENTRIES};
+/// Root public name for the std local diff context resolver.
+pub type LocalDiffContextResolver = context::LocalDiffResolver;
+/// Root public name for the std local directory context resolver.
+pub type LocalDirectoryContextResolver = context::LocalDirectoryResolver;
+/// Root public name for the std local file context resolver.
+pub type LocalFileContextResolver = context::LocalFileResolver;
+/// Root public name for the std no-op context resolver.
+pub type NullContextResolver = context::NullResolver;
+/// Root public name for std context resolver policy.
+pub type StdContextPolicy = context::Policy;
 #[cfg(feature = "syndicate-host")]
 pub use dataspace::{
     SyndicateAdapterError, SyndicateHostDataspaceAdapter, SyndicateObservationDraft,
@@ -34,6 +50,10 @@ pub use dataspace::{
     build_safe_subscription, project_observation,
 };
 pub use execution::{RunError, RunReport, SummaryModelAdapter, run, run_with_model};
+/// Root public name for the in-memory observability sink.
+pub type InMemoryObservabilitySink = observability::InMemorySink;
+/// Root public name for the no-op observability sink.
+pub type NoopObservabilitySink = observability::NoopSink;
 pub use providers::{
     ApiKind, CredentialHandle, CredentialRequirement, CredentialSource, EndpointIdentity,
     InputModality, MissingCredentialDiagnostic, ModelCapabilities, ModelCapabilitiesDraft,
