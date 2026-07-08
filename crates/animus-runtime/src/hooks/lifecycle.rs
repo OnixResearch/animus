@@ -41,6 +41,10 @@ pub enum LifecycleHookEventKind {
     UserPromptSubmit,
     /// Prompt assembly lifecycle event.
     PromptAssembly,
+    /// Boundary before a loop-fabric turn is evaluated.
+    PreTurn,
+    /// Boundary after a loop-fabric turn result has been recorded.
+    PostTurn,
     /// Boundary before a model request crosses the adapter.
     ModelRequest,
     /// Boundary after a model response has been validated.
@@ -86,6 +90,8 @@ impl LifecycleHookEventKind {
             "session_end" => Ok(Self::SessionEnd),
             "user_prompt_submit" => Ok(Self::UserPromptSubmit),
             "prompt_assembly" => Ok(Self::PromptAssembly),
+            "pre_turn" => Ok(Self::PreTurn),
+            "post_turn" => Ok(Self::PostTurn),
             "model_request" => Ok(Self::ModelRequest),
             "model_response" => Ok(Self::ModelResponse),
             "pre_tool_use" => Ok(Self::PreToolUse),
@@ -117,6 +123,8 @@ impl LifecycleHookEventKind {
             Self::SessionEnd => "session_end",
             Self::UserPromptSubmit => "user_prompt_submit",
             Self::PromptAssembly => "prompt_assembly",
+            Self::PreTurn => "pre_turn",
+            Self::PostTurn => "post_turn",
             Self::ModelRequest => "model_request",
             Self::ModelResponse => "model_response",
             Self::PreToolUse => "pre_tool_use",
@@ -141,13 +149,16 @@ impl LifecycleHookEventKind {
             LifecycleHookCapability::Deny => matches!(
                 self,
                 Self::ModelRequest
+                    | Self::PreTurn
                     | Self::PreToolUse
                     | Self::PermissionRequest
                     | Self::PreMutation
                     | Self::Validation
                     | Self::Stop
             ),
-            LifecycleHookCapability::RequestContinuation => matches!(self, Self::Stop),
+            LifecycleHookCapability::RequestContinuation => {
+                matches!(self, Self::PostTurn | Self::Stop)
+            }
             LifecycleHookCapability::RequestRevalidation => matches!(
                 self,
                 Self::ModelRequest | Self::PreToolUse | Self::PreMutation | Self::Validation
@@ -162,6 +173,7 @@ impl LifecycleHookEventKind {
                 Self::SessionStart
                     | Self::UserPromptSubmit
                     | Self::PromptAssembly
+                    | Self::PreTurn
                     | Self::PreCompact
                     | Self::SubagentStart
             ),
@@ -194,7 +206,7 @@ pub enum LifecycleHookCapability {
     Annotate,
     /// Deny a guarded lifecycle action.
     Deny,
-    /// Request continuation after a stop boundary.
+    /// Request continuation after a post-turn or stop boundary.
     RequestContinuation,
     /// Request normal runtime DTO, permission, and capability revalidation.
     RequestRevalidation,
@@ -1571,6 +1583,10 @@ mod tests {
     const STOP_HOOK_ID: &str = "stop_continuation";
     const PERMISSION_HOOK_ID: &str = "permission_guard";
     const MODEL_HOOK_ID: &str = "model_guard";
+    const PRE_TURN_HOOK_ID: &str = "pre_turn_context";
+    const POST_TURN_HOOK_ID: &str = "post_turn_followup";
+    const PRE_TURN_DEFINITION_BODY: &str = "event=pre_turn;effect=additional_context";
+    const POST_TURN_DEFINITION_BODY: &str = "event=post_turn;effect=request_continuation";
     const USER_DEFINITION_BODY: &str = "event=pre_tool_use;effect=deny";
     const CHANGED_DEFINITION_BODY: &str = "event=pre_tool_use;effect=warning";
     const PROMPT_DEFINITION_BODY: &str = "event=user_prompt_submit;effect=additional_context";
@@ -1583,6 +1599,7 @@ mod tests {
     const RESOURCE_TOOL: &str = "tool";
     const RESOURCE_PROMPT: &str = "prompt";
     const RESOURCE_RUN: &str = "run";
+    const RESOURCE_TURN: &str = "turn";
     const SAFE_CONTEXT: &str = "safe bounded context";
     const SAFE_DENIAL: &str = "policy_denied";
     const SAFE_CONTINUATION: &str = "continue_after_stop";
@@ -1664,6 +1681,36 @@ mod tests {
         .expect("model hook definition should validate")
     }
 
+    fn pre_turn_definition() -> LifecycleHookDefinition {
+        LifecycleHookDefinition::validate(&LifecycleHookDefinitionDraft {
+            hook_id: PRE_TURN_HOOK_ID,
+            event_kind: LifecycleHookEventKind::PreTurn.as_str(),
+            source: LifecycleHookDefinitionSource::Managed,
+            capabilities: &[
+                LifecycleHookCapability::Observe,
+                LifecycleHookCapability::Annotate,
+                LifecycleHookCapability::Deny,
+            ],
+            definition_body: PRE_TURN_DEFINITION_BODY,
+        })
+        .expect("pre-turn hook definition should validate")
+    }
+
+    fn post_turn_definition() -> LifecycleHookDefinition {
+        LifecycleHookDefinition::validate(&LifecycleHookDefinitionDraft {
+            hook_id: POST_TURN_HOOK_ID,
+            event_kind: LifecycleHookEventKind::PostTurn.as_str(),
+            source: LifecycleHookDefinitionSource::Managed,
+            capabilities: &[
+                LifecycleHookCapability::Observe,
+                LifecycleHookCapability::Annotate,
+                LifecycleHookCapability::RequestContinuation,
+            ],
+            definition_body: POST_TURN_DEFINITION_BODY,
+        })
+        .expect("post-turn hook definition should validate")
+    }
+
     fn input(
         kind: LifecycleHookEventKind,
         label: &str,
@@ -1671,6 +1718,11 @@ mod tests {
     ) -> LifecycleHookInput {
         let resource_class = if kind == LifecycleHookEventKind::UserPromptSubmit {
             RESOURCE_PROMPT
+        } else if matches!(
+            kind,
+            LifecycleHookEventKind::PreTurn | LifecycleHookEventKind::PostTurn
+        ) {
+            RESOURCE_TURN
         } else if kind == LifecycleHookEventKind::Stop {
             RESOURCE_RUN
         } else {
@@ -1748,25 +1800,98 @@ mod tests {
         let event_labels = [
             ("session_start", LifecycleHookEventKind::SessionStart),
             ("session_end", LifecycleHookEventKind::SessionEnd),
+            (
+                "user_prompt_submit",
+                LifecycleHookEventKind::UserPromptSubmit,
+            ),
             ("prompt_assembly", LifecycleHookEventKind::PromptAssembly),
+            ("pre_turn", LifecycleHookEventKind::PreTurn),
+            ("post_turn", LifecycleHookEventKind::PostTurn),
             ("model_request", LifecycleHookEventKind::ModelRequest),
             ("model_response", LifecycleHookEventKind::ModelResponse),
             ("pre_tool_use", LifecycleHookEventKind::PreToolUse),
+            (
+                "permission_request",
+                LifecycleHookEventKind::PermissionRequest,
+            ),
             ("post_tool_use", LifecycleHookEventKind::PostToolUse),
             ("pre_mutation", LifecycleHookEventKind::PreMutation),
             ("post_mutation", LifecycleHookEventKind::PostMutation),
+            ("pre_compact", LifecycleHookEventKind::PreCompact),
+            ("post_compact", LifecycleHookEventKind::PostCompact),
             ("validation", LifecycleHookEventKind::Validation),
             ("receipt_emission", LifecycleHookEventKind::ReceiptEmission),
+            ("subagent_start", LifecycleHookEventKind::SubagentStart),
+            ("subagent_stop", LifecycleHookEventKind::SubagentStop),
             (
                 "workflow_completion",
                 LifecycleHookEventKind::WorkflowCompletion,
             ),
+            ("stop", LifecycleHookEventKind::Stop),
         ];
 
         for (label, event_kind) in event_labels {
             assert_eq!(LifecycleHookEventKind::parse(label), Ok(event_kind));
             assert_eq!(event_kind.as_str(), label);
         }
+    }
+
+    #[test]
+    fn startup_alias_is_rejected_in_favor_of_session_start() {
+        // r[verify agent_harness_runtime.turn_lifecycle_hooks.scope.startup]
+        let error = LifecycleHookDefinition::validate(&LifecycleHookDefinitionDraft {
+            hook_id: "startup_alias",
+            event_kind: "startup",
+            source: LifecycleHookDefinitionSource::Managed,
+            capabilities: &[LifecycleHookCapability::Observe],
+            definition_body: "event=startup;effect=observe",
+        })
+        .expect_err("startup alias should fail");
+
+        assert_eq!(error.kind(), LifecycleHookErrorKind::UnknownEvent);
+        assert_eq!(
+            LifecycleHookEventKind::SessionStart.as_str(),
+            "session_start"
+        );
+    }
+
+    #[test]
+    fn turn_hook_definitions_accept_supported_capabilities() {
+        // r[verify agent_harness_runtime.turn_lifecycle_hooks.points]
+        let pre_turn = pre_turn_definition();
+        let post_turn = post_turn_definition();
+
+        assert_eq!(pre_turn.event_kind(), LifecycleHookEventKind::PreTurn);
+        assert!(pre_turn.declares_capability(LifecycleHookCapability::Deny));
+        assert_eq!(post_turn.event_kind(), LifecycleHookEventKind::PostTurn);
+        assert!(post_turn.declares_capability(LifecycleHookCapability::RequestContinuation));
+    }
+
+    #[test]
+    fn post_turn_definition_rejects_pre_action_capabilities() {
+        // r[verify agent_harness_runtime.turn_lifecycle_hooks.points.negative]
+        let denial = LifecycleHookDefinition::validate(&LifecycleHookDefinitionDraft {
+            hook_id: POST_TURN_HOOK_ID,
+            event_kind: LifecycleHookEventKind::PostTurn.as_str(),
+            source: LifecycleHookDefinitionSource::Managed,
+            capabilities: &[LifecycleHookCapability::Deny],
+            definition_body: POST_TURN_DEFINITION_BODY,
+        })
+        .expect_err("post-turn denial capability should fail");
+        let revalidation = LifecycleHookDefinition::validate(&LifecycleHookDefinitionDraft {
+            hook_id: POST_TURN_HOOK_ID,
+            event_kind: LifecycleHookEventKind::PostTurn.as_str(),
+            source: LifecycleHookDefinitionSource::Managed,
+            capabilities: &[LifecycleHookCapability::RequestRevalidation],
+            definition_body: POST_TURN_DEFINITION_BODY,
+        })
+        .expect_err("post-turn revalidation capability should fail");
+
+        assert_eq!(denial.kind(), LifecycleHookErrorKind::UnsupportedCapability);
+        assert_eq!(
+            revalidation.kind(),
+            LifecycleHookErrorKind::UnsupportedCapability
+        );
     }
 
     #[test]
@@ -1938,6 +2063,66 @@ mod tests {
     }
 
     #[test]
+    fn pre_turn_accepts_context_and_denial_effects() {
+        // r[verify agent_harness_runtime.turn_lifecycle_hooks.no_bypass]
+        let context = output(
+            LifecycleHookEventKind::PreTurn,
+            &[LifecycleHookEffectDraft {
+                kind: "additional_context",
+                value: SAFE_CONTEXT,
+            }],
+        )
+        .expect("pre-turn context effect should validate");
+        let denial = output(
+            LifecycleHookEventKind::PreTurn,
+            &[LifecycleHookEffectDraft {
+                kind: "deny",
+                value: SAFE_DENIAL,
+            }],
+        )
+        .expect("pre-turn denial effect should validate before evaluation");
+
+        assert!(matches!(
+            context.effects(),
+            [LifecycleHookEffect::AdditionalContext { summary, .. }] if summary == SAFE_CONTEXT
+        ));
+        assert!(matches!(
+            denial.effects(),
+            [LifecycleHookEffect::Deny { reason }] if reason == SAFE_DENIAL
+        ));
+    }
+
+    #[test]
+    fn post_turn_accepts_warning_and_continuation_effects() {
+        // r[verify agent_harness_runtime.turn_lifecycle_hooks.no_bypass]
+        let warning = output(
+            LifecycleHookEventKind::PostTurn,
+            &[LifecycleHookEffectDraft {
+                kind: "warning",
+                value: SAFE_CONTEXT,
+            }],
+        )
+        .expect("post-turn warning effect should validate");
+        let continuation = output(
+            LifecycleHookEventKind::PostTurn,
+            &[LifecycleHookEffectDraft {
+                kind: "request_continuation",
+                value: SAFE_CONTINUATION,
+            }],
+        )
+        .expect("post-turn continuation effect should validate");
+
+        assert!(matches!(
+            warning.effects(),
+            [LifecycleHookEffect::Warning { message }] if message == SAFE_CONTEXT
+        ));
+        assert!(matches!(
+            continuation.effects(),
+            [LifecycleHookEffect::RequestContinuation { reason }] if reason == SAFE_CONTINUATION
+        ));
+    }
+
+    #[test]
     fn malformed_outputs_reject_empty_effect_values() {
         // r[verify agent_harness_runtime.openai_codex_hook_trust_lifecycle.io_contract.unsupported]
         let fixtures = [
@@ -1947,6 +2132,8 @@ mod tests {
             ),
             (LifecycleHookEventKind::UserPromptSubmit, "warning"),
             (LifecycleHookEventKind::PreToolUse, "deny"),
+            (LifecycleHookEventKind::PreTurn, "deny"),
+            (LifecycleHookEventKind::PostTurn, "request_continuation"),
             (LifecycleHookEventKind::Stop, "request_continuation"),
         ];
 
@@ -1969,6 +2156,9 @@ mod tests {
         let fixtures = [
             (LifecycleHookEventKind::PostToolUse, "additional_context"),
             (LifecycleHookEventKind::PostToolUse, "deny"),
+            (LifecycleHookEventKind::PostTurn, "additional_context"),
+            (LifecycleHookEventKind::PostTurn, "deny"),
+            (LifecycleHookEventKind::PostTurn, "request_revalidation"),
             (LifecycleHookEventKind::PreToolUse, "request_continuation"),
             (
                 LifecycleHookEventKind::UserPromptSubmit,
@@ -1986,6 +2176,29 @@ mod tests {
             )
             .expect_err("unsupported effects should fail");
             assert_eq!(error.kind(), LifecycleHookErrorKind::UnsupportedEffect);
+        }
+    }
+
+    #[test]
+    fn post_turn_policy_bypass_effects_are_rejected_before_binding() {
+        // r[verify agent_harness_runtime.turn_lifecycle_hooks.no_bypass.post_turn]
+        let fixtures = [
+            "execute_tool",
+            "rewrite_denied_action",
+            "weaken_sandbox",
+            "suppress_approval",
+        ];
+
+        for effect_kind in fixtures {
+            let error = output(
+                LifecycleHookEventKind::PostTurn,
+                &[LifecycleHookEffectDraft {
+                    kind: effect_kind,
+                    value: SAFE_CONTEXT,
+                }],
+            )
+            .expect_err("post-turn policy bypass effects should fail");
+            assert_eq!(error.kind(), LifecycleHookErrorKind::PolicyBypass);
         }
     }
 

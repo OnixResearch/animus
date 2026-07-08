@@ -4,11 +4,13 @@ Animus treats Claude Code hooks as a bounded reference for lifecycle extension p
 
 The `animus-runtime` lifecycle hook core provides:
 
-- stable hook points for session start/end, prompt submission and assembly, model request/response, tool pre/post, mutation pre/post, validation, receipt emission, workflow completion, compaction, subagent, permission, and stop boundaries;
+- stable hook points for session start/end, prompt submission and assembly, pre/post turn, model request/response, tool pre/post, mutation pre/post, validation, receipt emission, workflow completion, compaction, subagent, permission, and stop boundaries;
 - host-owned hook definition contracts with explicit capabilities for observe, annotate, deny, request-continuation, and request-revalidation effects;
 - safe event payloads with event IDs, event classes, redacted labels, bounded summaries, sizes, statuses, and BLAKE3 body hashes instead of raw prompts, credentials, provider payloads, raw tool bodies, full paths, or unbounded outputs;
 - output validation that rejects malformed descriptors, unknown hook points, unsupported effects, undeclared capabilities, and policy-bypass attempts before any guarded action is used;
 - fail-closed required-hook-unavailable and denied-hook outcome reports for shell-owned hook adapter failures.
+
+Startup hook policy uses the existing `session_start` boundary. `pre_turn` runs before loop-fabric evaluation and may deny before work starts; `post_turn` runs after a turn result is recorded and may warn or request continuation, but cannot deny completed work or request revalidation of already-used payloads.
 
 This contract does not implement Claude Code hook files, command runners, background daemons, plugin installation, or direct adapter authority. Hooks cannot spawn shell commands from reusable runtime code, invoke tools, rewrite denied actions, weaken sandbox policy, suppress required approvals, or mutate state without normal DTO, permission, and capability revalidation.
 

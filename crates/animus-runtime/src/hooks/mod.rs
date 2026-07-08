@@ -1,6 +1,9 @@
+#![allow(renamed_imports)]
+
 pub(crate) mod chain;
 #[allow(excessive_file_length)]
 mod lifecycle;
+mod turn;
 
 pub use chain::RuntimeMiddlewareStack;
 pub use lifecycle::{
@@ -15,6 +18,11 @@ pub use lifecycle::{
     LifecycleHookTrustRecordDraft, LifecycleHookTrustScope, LifecycleHookTrustStatus,
     bind_lifecycle_hook_output_to_policy, evaluate_lifecycle_hook_trust,
     route_lifecycle_hook_requests,
+};
+pub use turn::{
+    Effect as TurnHookEffect, Error as TurnHookError, ErrorKind as TurnHookErrorKind,
+    Event as TurnHookEvent, Outcome as TurnHookOutcome, State as TurnHookState,
+    Transition as TurnHookTransition, advance as advance_turn_hooks,
 };
 
 const DEFAULT_MIDDLEWARE_LABEL: &str = "runtime_middleware";

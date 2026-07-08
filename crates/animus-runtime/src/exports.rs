@@ -119,8 +119,9 @@ pub use crate::hooks::{
     LifecycleHookRequest, LifecycleHookRoutePlan, LifecycleHookTrustDecision,
     LifecycleHookTrustRecord, LifecycleHookTrustRecordDraft, LifecycleHookTrustScope,
     LifecycleHookTrustStatus, MiddlewareError, RuntimeMiddleware, RuntimeMiddlewareStack,
-    bind_lifecycle_hook_output_to_policy, evaluate_lifecycle_hook_trust,
-    route_lifecycle_hook_requests,
+    TurnHookEffect, TurnHookError, TurnHookErrorKind, TurnHookEvent, TurnHookOutcome,
+    TurnHookState, TurnHookTransition, advance_turn_hooks, bind_lifecycle_hook_output_to_policy,
+    evaluate_lifecycle_hook_trust, route_lifecycle_hook_requests,
 };
 pub use crate::orchestration::{
     KanbanBlockRecord, KanbanBoardService, KanbanComment, KanbanCompletion, KanbanContextAssembly,
