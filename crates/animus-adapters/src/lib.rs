@@ -30,6 +30,8 @@ mod dataspace;
 mod effect;
 mod flow;
 mod front;
+/// Optional OpenClaw-inspired gateway control-plane DTOs.
+pub mod gateway;
 mod hostcontrol;
 mod invocation;
 mod ledger;
