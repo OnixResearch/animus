@@ -38,13 +38,21 @@ include!("memory/impl/base/impl001.rs");
 include!("memory/impl/base/impl002.rs");
 include!("memory/impl/base/impl003.rs");
 include!("memory/impl/base/impl004.rs");
-include!("memory/impl/optin/impl005.rs");
+#[path = "memory/impl/optin/impl005.rs"]
+mod optin_impl005;
+pub use optin_impl005::*;
 include!("memory/impl/optin/impl006.rs");
 include!("memory/impl/optin/impl007.rs");
 include!("memory/impl/optin/impl008.rs");
-include!("memory/impl/generic/impl009.rs");
-include!("memory/impl/generic/impl010.rs");
-include!("memory/impl/generic/impl011.rs");
+#[path = "memory/impl/generic/impl009.rs"]
+mod generic_impl009;
+pub use generic_impl009::*;
+#[path = "memory/impl/generic/impl010.rs"]
+mod generic_impl010;
+pub use generic_impl010::*;
+#[path = "memory/impl/generic/impl011.rs"]
+mod generic_impl011;
+pub use generic_impl011::*;
 
 #[cfg(test)]
 mod tests {
@@ -52,6 +60,7 @@ mod tests {
     include!("memory/tests/tests001.rs");
     include!("memory/tests/tests002.rs");
     include!("memory/tests/tests003.rs");
+    include!("memory/tests/tests006.rs");
     include!("memory/tests/tests004.rs");
     include!("memory/tests/tests005.rs");
 }

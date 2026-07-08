@@ -34,7 +34,13 @@ if ! command -v nickel >/dev/null 2>&1; then
 fi
 
 rust_source=${script_dir}/check-router-policy.rs
-tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/animus-router-policy.XXXXXX")
+if [ -n "${TMPDIR:-}" ]; then
+  tmp_parent=${TMPDIR}
+else
+  tmp_parent=${repo_root}/target/tmp
+fi
+mkdir -p "${tmp_parent}"
+tmp_dir=$(mktemp -d "${tmp_parent}/animus-router-policy.XXXXXX")
 trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
 
 checker=${tmp_dir}/check-router-policy

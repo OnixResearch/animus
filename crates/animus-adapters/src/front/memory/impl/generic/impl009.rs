@@ -1,3 +1,13 @@
+#![allow(unknown_lints)]
+#![cfg_attr(animus_octet, allow(tigerstyle::excessive_file_length))]
+
+use super::{
+    DESCRIPTOR_ID_FIELD, MAX_MEMORY_DESCRIPTORS, MEMORY_EVIDENCE_FIELD, MEMORY_SOURCE_FIELD,
+    MemoryAdmissionStatus, MemoryAvailabilityStatus, MemoryConfidence, MemoryError,
+    MemoryFreshness, MemoryInjectionBudget, MemoryReceiptLeak, MemoryRedactionClass,
+    MemoryTrustScope, NonZeroU32, String, Vec, memory_leak, normalize, reject_expired_descriptor,
+};
+
 const MEMORY_ADAPTER_LABEL_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("memory_adapter_label");
 const MEMORY_ADAPTER_OWNER_FIELD: crate::validation::FieldName =
@@ -11,7 +21,9 @@ const MEMORY_SUPERSESSION_FIELD: crate::validation::FieldName =
 const MEMORY_QUERY_LABEL_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("memory_query_label");
 const ZERO_MEMORY_UNITS: u32 = 0;
-const RANK_OFFSET: usize = 1;
+const RANK_OFFSET: u32 = 1;
+const RANK_OFFSET_INDEX: usize = 1;
+const MAX_MEMORY_ADAPTERS: usize = 16;
 
 /// Swappable generic memory adapter role.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -205,11 +217,17 @@ pub enum MemoryAdapterOperationAvailability {
 /// Evaluates whether a memory operation may dispatch to injected adapters only.
 ///
 /// The function performs no filesystem, database, MCP, network, provider, or vector-index fallback.
+///
+/// # Panics
+///
+/// Panics if callers provide more required roles or adapters than the memory adapter bound.
 #[must_use]
 // r[impl agent_harness_runtime.memory_adapters.family.missing]
 pub fn evaluate_memory_adapter_operation(
     input: MemoryAdapterOperationInput<'_>,
 ) -> MemoryAdapterOperationAvailability {
+    assert!(input.required_roles.len() <= MAX_MEMORY_ADAPTERS);
+    assert!(input.adapters.len() <= MAX_MEMORY_ADAPTERS);
     if !input.enabled {
         return MemoryAdapterOperationAvailability::Disabled {
             role: input.required_roles.first().copied(),
@@ -230,7 +248,10 @@ pub fn evaluate_memory_adapter_operation(
                 role: *required_role,
             };
         }
-        if !adapter.capabilities().contains(&role_capability(*required_role)) {
+        if !adapter
+            .capabilities()
+            .contains(&role_capability(*required_role))
+        {
             return MemoryAdapterOperationAvailability::Unsupported {
                 role: *required_role,
             };
@@ -351,13 +372,12 @@ impl MemoryRecordEnvelope {
             .and_then(|value| normalize(MEMORY_EVIDENCE_FIELD, value))?;
         reject_expired_descriptor(&id, draft.freshness)?;
         let confidence = MemoryConfidence::new(draft.confidence_percent)?;
-        let body_hash = crate::artifact::Hash::new(draft.body_hash)
-            .map_err(MemoryError::InvalidHash)?;
-        let budget_units = NonZeroU32::new(draft.budget_units).ok_or_else(|| {
-            MemoryError::ZeroBudgetUnits {
+        let body_hash =
+            crate::artifact::Hash::new(draft.body_hash).map_err(MemoryError::InvalidHash)?;
+        let budget_units =
+            NonZeroU32::new(draft.budget_units).ok_or_else(|| MemoryError::ZeroBudgetUnits {
                 descriptor_id: id.clone(),
-            }
-        })?;
+            })?;
         Ok(Self {
             id,
             kind: draft.kind,
@@ -568,7 +588,7 @@ pub struct MemoryRetrievalOutcome {
     status: MemoryRetrievalOutcomeStatus,
     match_reason: MemoryMatchReason,
     relevance: MemoryConfidence,
-    rank: usize,
+    rank: u32,
     requested_units: NonZeroU32,
     consumed_units: u32,
     conflict_group: Option<String>,
@@ -631,7 +651,7 @@ impl MemoryRetrievalOutcome {
 
     /// Returns model-visible rank.
     #[must_use]
-    pub const fn rank(&self) -> usize {
+    pub const fn rank(&self) -> u32 {
         self.rank
     }
 
@@ -658,7 +678,7 @@ impl MemoryRetrievalOutcome {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MemoryRetrievalPlan {
     outcomes: Vec<MemoryRetrievalOutcome>,
-    selected_count: usize,
+    selected_count: u32,
     consumed_units: u32,
 }
 
@@ -671,7 +691,7 @@ impl MemoryRetrievalPlan {
 
     /// Returns selected outcome count.
     #[must_use]
-    pub const fn selected_count(&self) -> usize {
+    pub const fn selected_count(&self) -> u32 {
         self.selected_count
     }
 
@@ -687,11 +707,17 @@ impl MemoryRetrievalPlan {
 /// # Errors
 ///
 /// Returns [`MemoryError`] when candidate metadata, scores, labels, or bounds are invalid.
+///
+/// # Panics
+///
+/// Panics only if internal memory bounds or validated budget invariants are violated.
 // r[impl agent_harness_runtime.memory_adapters.retrieval_plan]
 pub fn plan_memory_retrieval(
     input: MemoryRetrievalInput<'_>,
 ) -> Result<MemoryRetrievalPlan, MemoryError> {
     normalize(MEMORY_QUERY_LABEL_FIELD, input.policy.query_label)?;
+    assert!(MAX_MEMORY_DESCRIPTORS > usize::default());
+    assert!(input.policy.budget.units().get() > ZERO_MEMORY_UNITS);
     if input.candidates.len() > MAX_MEMORY_DESCRIPTORS {
         return Err(MemoryError::TooManyItems {
             field: DESCRIPTOR_ID_FIELD.as_str(),
@@ -699,17 +725,21 @@ pub fn plan_memory_retrieval(
             actual_items: input.candidates.len(),
         });
     }
-    let mut ordered: Vec<&MemoryRetrievalCandidate<'_>> = Vec::with_capacity(input.candidates.len());
+    assert!(input.candidates.len() <= MAX_MEMORY_DESCRIPTORS);
+    let mut ordered: Vec<&MemoryRetrievalCandidate<'_>> =
+        Vec::with_capacity(input.candidates.len());
     for candidate in input.candidates {
         normalize(MEMORY_ADAPTER_LABEL_FIELD, candidate.backend_label)?;
         MemoryConfidence::new(candidate.relevance_percent)?;
         ordered.push(candidate);
     }
+    assert_eq!(ordered.len(), input.candidates.len());
+    assert!(ordered.len() <= MAX_MEMORY_DESCRIPTORS);
     ordered.sort_by(|left, right| compare_memory_retrieval_candidates(left, right));
-    let mut conflict_groups: Vec<String> = Vec::new();
+    let mut conflict_groups: Vec<String> = Vec::with_capacity(MAX_MEMORY_DESCRIPTORS);
     let mut outcomes = Vec::with_capacity(ordered.len());
     let mut consumed_units = ZERO_MEMORY_UNITS;
-    let mut selected_count = usize::default();
+    let mut selected_count = u32::default();
     for candidate in ordered {
         let decision = memory_retrieval_decision(
             candidate,
@@ -724,12 +754,12 @@ pub fn plan_memory_retrieval(
                 conflict_groups.push(String::from(group));
             }
         }
-        outcomes.push(memory_retrieval_outcome(
+        outcomes.push(memory_retrieval_outcome(MemoryRetrievalOutcomeInput {
             candidate,
-            decision.status,
-            outcomes.len().saturating_add(RANK_OFFSET),
-            decision.consumed_units,
-        )?);
+            status: decision.status,
+            rank: memory_rank_from_len(outcomes.len())?,
+            consumed_units: decision.consumed_units,
+        })?);
     }
     Ok(MemoryRetrievalPlan {
         outcomes,
@@ -751,6 +781,11 @@ fn memory_retrieval_decision(
     conflict_groups: &[String],
 ) -> MemoryRetrievalDecision {
     let record = candidate.record;
+    assert!(!record.id().is_empty());
+    assert!(!record.source_label().is_empty());
+    assert!(!record.evidence_handle().is_empty());
+    assert!(record.budget_units().get() > ZERO_MEMORY_UNITS);
+    assert!(policy.budget.units().get() > ZERO_MEMORY_UNITS);
     if record.admission_status() != MemoryAdmissionStatus::Admitted {
         return skipped_retrieval(MemoryRetrievalOutcomeStatus::Denied);
     }
@@ -782,27 +817,32 @@ fn memory_retrieval_decision(
     }
 }
 
-fn memory_retrieval_outcome(
-    candidate: &MemoryRetrievalCandidate<'_>,
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct MemoryRetrievalOutcomeInput<'a> {
+    candidate: &'a MemoryRetrievalCandidate<'a>,
     status: MemoryRetrievalOutcomeStatus,
-    rank: usize,
+    rank: u32,
     consumed_units: u32,
+}
+
+fn memory_retrieval_outcome(
+    input: MemoryRetrievalOutcomeInput<'_>,
 ) -> Result<MemoryRetrievalOutcome, MemoryError> {
-    let relevance = MemoryConfidence::new(candidate.relevance_percent)?;
+    let relevance = MemoryConfidence::new(input.candidate.relevance_percent)?;
     Ok(MemoryRetrievalOutcome {
-        record_id: String::from(candidate.record.id()),
-        source_label: String::from(candidate.record.source_label()),
-        evidence_handle: String::from(candidate.record.evidence_handle()),
-        scope: candidate.record.scope(),
-        confidence: candidate.record.confidence(),
-        body_hash: candidate.record.body_hash().clone(),
-        status,
-        match_reason: candidate.match_reason,
+        record_id: String::from(input.candidate.record.id()),
+        source_label: String::from(input.candidate.record.source_label()),
+        evidence_handle: String::from(input.candidate.record.evidence_handle()),
+        scope: input.candidate.record.scope(),
+        confidence: input.candidate.record.confidence(),
+        body_hash: input.candidate.record.body_hash().clone(),
+        status: input.status,
+        match_reason: input.candidate.match_reason,
         relevance,
-        rank,
-        requested_units: candidate.record.budget_units(),
-        consumed_units,
-        conflict_group: candidate.record.conflict_group().map(String::from),
+        rank: input.rank,
+        requested_units: input.candidate.record.budget_units(),
+        consumed_units: input.consumed_units,
+        conflict_group: input.candidate.record.conflict_group().map(String::from),
     })
 }
 
@@ -811,6 +851,17 @@ fn skipped_retrieval(status: MemoryRetrievalOutcomeStatus) -> MemoryRetrievalDec
         status,
         consumed_units: ZERO_MEMORY_UNITS,
     }
+}
+
+fn memory_rank_from_len(len: usize) -> Result<u32, MemoryError> {
+    assert!(len < MAX_MEMORY_DESCRIPTORS);
+    let rank = len.saturating_add(RANK_OFFSET_INDEX);
+    assert!(rank <= MAX_MEMORY_DESCRIPTORS);
+    u32::try_from(rank).map_err(|_| MemoryError::TooManyItems {
+        field: DESCRIPTOR_ID_FIELD.as_str(),
+        max_items: MAX_MEMORY_DESCRIPTORS,
+        actual_items: rank,
+    })
 }
 
 fn compare_memory_retrieval_candidates(
@@ -834,7 +885,9 @@ fn role_capability(role: GenericMemoryAdapterRole) -> GenericMemoryAdapterCapabi
     match role {
         GenericMemoryAdapterRole::SourceImport => GenericMemoryAdapterCapability::SourceImport,
         GenericMemoryAdapterRole::DurableStore => GenericMemoryAdapterCapability::DurableStore,
-        GenericMemoryAdapterRole::RetrievalSearch => GenericMemoryAdapterCapability::RetrievalSearch,
+        GenericMemoryAdapterRole::RetrievalSearch => {
+            GenericMemoryAdapterCapability::RetrievalSearch
+        }
         GenericMemoryAdapterRole::Extraction => GenericMemoryAdapterCapability::Extraction,
         GenericMemoryAdapterRole::EmbeddingSearchSupport => {
             GenericMemoryAdapterCapability::EmbeddingSearch

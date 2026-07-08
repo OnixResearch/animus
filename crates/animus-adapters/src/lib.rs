@@ -6,6 +6,9 @@
 //! when they want the default standard-library shell.
 
 #![no_std]
+#![cfg_attr(animus_octet, feature(register_tool))]
+#![cfg_attr(animus_octet, register_tool(tigerstyle))]
+#![cfg_attr(animus_octet, allow(tigerstyle::excessive_file_length))]
 #![allow(unknown_lints)]
 #![allow(module_file_count)]
 #![deny(missing_docs)]

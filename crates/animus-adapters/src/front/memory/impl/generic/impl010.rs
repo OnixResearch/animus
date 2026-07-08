@@ -1,3 +1,17 @@
+#![allow(unknown_lints)]
+#![cfg_attr(animus_octet, allow(tigerstyle::excessive_file_length))]
+
+use super::{
+    DESCRIPTOR_ID_FIELD, GenericMemoryRecordKind, MAX_MEMORY_DESCRIPTORS, MEMORY_EVIDENCE_FIELD,
+    MemoryAdmissionStatus, MemoryConfidence, MemoryError, MemoryFreshness, MemoryInjectionBudget,
+    MemoryMatchReason, MemoryReceiptLeak, MemoryRecordEnvelope, MemoryRedactionClass,
+    MemoryRetrievalOutcomeStatus, MemoryRetrievalPlan, MemoryTrustScope, NonZeroU32, String, Vec,
+    memory_leak, normalize,
+};
+
+const MEMORY_ADAPTER_LABEL_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("memory_adapter_label");
+const ZERO_MEMORY_UNITS: u32 = 0;
 const MEMORY_OPERATION_LABEL_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("memory_operation_label");
 const MEMORY_COMMAND_LABEL_FIELD: crate::validation::FieldName =
@@ -378,9 +392,7 @@ impl MemoryControlRequest {
         reject_control_leaks(draft)?;
         let command_label = normalize(MEMORY_COMMAND_LABEL_FIELD, draft.command_label)?;
         if !draft.capability_granted {
-            return Err(MemoryControlError::CapabilityDenied {
-                command_label,
-            });
+            return Err(MemoryControlError::CapabilityDenied { command_label });
         }
         let scope = draft.scope.ok_or_else(|| MemoryControlError::Memory {
             source: MemoryError::MissingRecordScope {
@@ -388,9 +400,7 @@ impl MemoryControlRequest {
             },
         })?;
         if draft.kind.requires_target() && draft.target_id.is_none() {
-            return Err(MemoryControlError::MissingTarget {
-                command_label,
-            });
+            return Err(MemoryControlError::MissingTarget { command_label });
         }
         if draft.kind.requires_evidence() && draft.evidence_handle.is_none() {
             return Err(MemoryControlError::Memory {
@@ -522,7 +532,10 @@ impl core::fmt::Display for MemoryControlError {
                 write!(formatter, "{command_label} is missing a memory target")
             }
             Self::CapabilityDenied { command_label } => {
-                write!(formatter, "{command_label} is denied by memory capability policy")
+                write!(
+                    formatter,
+                    "{command_label} is denied by memory capability policy"
+                )
             }
             Self::RemoteAdmission {
                 command_label,
@@ -619,16 +632,27 @@ impl MemoryControlDescriptor {
 }
 
 /// Projects safe descriptors for memory control list/search responses within a budget.
+///
+/// # Panics
+///
+/// Panics if callers provide more than the bounded memory descriptor count.
 #[must_use]
 // r[impl agent_harness_runtime.memory_controls.commands.safe_listing]
 pub fn project_memory_control_listing(
     records: &[MemoryRecordEnvelope],
     safe_output_budget: MemoryInjectionBudget,
 ) -> Vec<MemoryControlDescriptor> {
+    assert!(records.len() <= MAX_MEMORY_DESCRIPTORS);
+    assert!(safe_output_budget.units().get() > ZERO_MEMORY_UNITS);
     let mut projected = Vec::with_capacity(records.len());
     let mut consumed_units = ZERO_MEMORY_UNITS;
     for record in records {
-        let remaining_units = safe_output_budget.units().get().saturating_sub(consumed_units);
+        assert!(!record.id().is_empty());
+        assert!(record.budget_units().get() > ZERO_MEMORY_UNITS);
+        let remaining_units = safe_output_budget
+            .units()
+            .get()
+            .saturating_sub(consumed_units);
         if record.budget_units().get() > remaining_units {
             continue;
         }
@@ -747,12 +771,18 @@ impl MemoryCandidateReviewTransition {
 /// # Errors
 ///
 /// Returns [`MemoryControlError`] when approval lacks scope, evidence, confidence, or admission.
+///
+/// # Panics
+///
+/// Panics only if normalized candidate or reason labels are unexpectedly empty after validation.
 // r[impl agent_harness_runtime.memory_controls.review]
 pub fn transition_memory_candidate_review(
     input: MemoryCandidateReviewInput<'_>,
 ) -> Result<MemoryCandidateReviewTransition, MemoryControlError> {
     let candidate_id = normalize(DESCRIPTOR_ID_FIELD, input.candidate_id)?;
     let reason_label = normalize(MEMORY_REASON_FIELD, input.reason_label)?;
+    assert!(!candidate_id.is_empty());
+    assert!(!reason_label.is_empty());
     let needs_admission = matches!(
         input.requested_state,
         MemoryCandidateReviewState::Approved | MemoryCandidateReviewState::Persisted
@@ -931,7 +961,7 @@ impl MemoryMutationReceipt {
 pub struct MemoryInfluenceExplanationEntry {
     record_id: String,
     source_label: String,
-    rank: usize,
+    rank: u32,
     match_reason: MemoryMatchReason,
     scope: MemoryTrustScope,
     confidence: MemoryConfidence,
@@ -955,7 +985,7 @@ impl MemoryInfluenceExplanationEntry {
 
     /// Returns rank.
     #[must_use]
-    pub const fn rank(&self) -> usize {
+    pub const fn rank(&self) -> u32 {
         self.rank
     }
 
@@ -1029,6 +1059,13 @@ pub fn explain_memory_influence(plan: &MemoryRetrievalPlan) -> MemoryInfluenceEx
         });
     }
     MemoryInfluenceExplanation { entries }
+}
+
+fn normalize_optional(
+    field: crate::validation::FieldName,
+    value: Option<&str>,
+) -> Result<Option<String>, MemoryError> {
+    value.map(|inner| normalize(field, inner)).transpose()
 }
 
 fn reject_operation_receipt_leaks(

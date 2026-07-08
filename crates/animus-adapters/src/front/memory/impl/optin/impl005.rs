@@ -1,3 +1,11 @@
+#![allow(unknown_lints)]
+#![cfg_attr(animus_octet, allow(tigerstyle::excessive_file_length))]
+
+use super::{
+    MemoryAdmissionDecision, MemoryAvailabilityStatus, MemoryCandidate, MemoryDescriptor,
+    MemoryPersistenceIntent, OptInMemoryRecord, PromptAssemblyError, String, Vec,
+};
+
 /// Swappable memory adapter boundary kind.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum MemoryAdapterBoundaryKind {
@@ -266,7 +274,10 @@ impl core::fmt::Display for MemoryError {
                 write!(formatter, "{record_id} is missing memory record scope")
             }
             Self::MissingAdapterCapabilities { adapter_label } => {
-                write!(formatter, "{adapter_label} is missing memory adapter capabilities")
+                write!(
+                    formatter,
+                    "{adapter_label} is missing memory adapter capabilities"
+                )
             }
             Self::MissingEvidence { record_id } => {
                 write!(formatter, "{record_id} is missing memory evidence metadata")
@@ -305,4 +316,3 @@ impl From<PromptAssemblyError> for MemoryError {
         Self::PromptAssembly(error)
     }
 }
-
