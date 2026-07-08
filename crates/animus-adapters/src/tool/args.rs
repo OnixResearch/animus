@@ -70,8 +70,8 @@ impl PreparedArguments {
             super::required_text_value(super::SCHEMA_FIELD, request.current_schema_identity)?;
         let allowed =
             super::normalized_label_set(super::ARGUMENT_NAME_FIELD, request.allowed_field_names)?;
-        let rules = normalized_rules(request.compatibility_rules)?;
-        let fields = prepared_fields(request.fields, &allowed, &rules)?;
+        reject_compatibility_rules(request.compatibility_rules)?;
+        let fields = prepared_fields(request.fields, &allowed)?;
         Ok(Self {
             schema_identity,
             fields,
@@ -94,19 +94,14 @@ impl PreparedArguments {
 fn prepared_fields(
     drafts: &[ArgumentFieldDraft<'_>],
     allowed: &[super::Text],
-    rules: &[(super::Text, super::Text)],
 ) -> Result<super::Collection<ArgumentField>, super::ContractError> {
     super::validate_item_count(super::ARGUMENT_NAME_FIELD, drafts.len())?;
     let mut fields = super::Collection::with_capacity(drafts.len());
     for draft in drafts {
         let name = super::required_text(super::ARGUMENT_NAME_FIELD, draft.name)?;
-        let current_name = mapped_argument_name(&name, rules);
-        validate_known_unique_field(&fields, allowed, &current_name)?;
+        validate_known_unique_field(&fields, allowed, &name)?;
         let value = super::required_text(super::ARGUMENT_VALUE_FIELD, draft.value)?;
-        fields.push(ArgumentField {
-            name: current_name,
-            value,
-        });
+        fields.push(ArgumentField { name, value });
     }
     Ok(fields)
 }
@@ -132,27 +127,15 @@ fn validate_known_unique_field(
     Ok(())
 }
 
-fn normalized_rules(
+fn reject_compatibility_rules(
     rules: &[ArgumentCompatibilityRule<'_>],
-) -> Result<super::Collection<(super::Text, super::Text)>, super::ContractError> {
+) -> Result<(), super::ContractError> {
     super::validate_item_count(super::ARGUMENT_NAME_FIELD, rules.len())?;
-    let mut normalized = super::Collection::with_capacity(rules.len());
-    for rule in rules {
-        normalized.push((
-            super::required_text_value(super::ARGUMENT_NAME_FIELD, rule.legacy_name)?,
-            super::required_text_value(super::ARGUMENT_NAME_FIELD, rule.current_name)?,
-        ));
+    if rules.is_empty() {
+        Ok(())
+    } else {
+        Err(super::ContractError::LegacyCompatibilityDisabled)
     }
-    Ok(normalized)
-}
-
-fn mapped_argument_name(name: &str, rules: &[(super::Text, super::Text)]) -> super::Text {
-    for (legacy_name, current_name) in rules {
-        if legacy_name == name {
-            return current_name.clone();
-        }
-    }
-    super::Text::from(name)
 }
 
 fn contains_text(values: &[super::Text], needle: &str) -> bool {

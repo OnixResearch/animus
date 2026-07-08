@@ -36,10 +36,22 @@ mod tests {
     const MODEL_MESSAGE: &str = "model answer";
     const TOOL_NAME: &str = "search";
     const TOOL_INPUT: &str = "query";
+    const TOOL_SCHEMA: &str = "schema.search.v1";
+    const TOOL_ARGUMENT_VALUE: &str = "adapter contracts";
+    const TOOL_CALL_ID: &str = "tool-call-1";
+    const TOOL_VISIBLE_BUDGET: u32 = 64;
+    const TOOL_MUTATION_TARGET: &str = "resource:file:README";
+    const TOOL_CAPABILITY: &str = "tool.read";
+    const TOOL_RESULT_SHAPE: &str = "text-summary";
+    const TOOL_PROMPT_SNIPPET: &str = "Use search for indexed project facts.";
+    const TOOL_PROMPT_GUIDELINE: &str = "Do not infer missing search results.";
+    const TOOL_SOURCE_IDENTITY: &str = "host.registry";
+    const TOOL_PROVENANCE: &str = "builtin";
     const TOOL_OUTPUT: &str = "tool result";
     const FABRIC_FAILURE: &str = "malformed decision";
     const NO_ADAPTER_CALLS: usize = 0;
     const ONE_ADAPTER_CALL: usize = 1;
+    const TOOL_ARGUMENT_COUNT: usize = ONE_ADAPTER_CALL;
     const FOLLOWUP_TURN_BUDGET: usize = 2;
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -146,9 +158,14 @@ mod tests {
             request: &animus_adapters::ToolRequest,
         ) -> Result<animus_adapters::ToolResponse, Self::Error> {
             assert_eq!(request.name(), TOOL_NAME);
-            assert_eq!(request.input(), TOOL_INPUT);
+            assert_eq!(request.schema_identity(), TOOL_SCHEMA);
+            assert_eq!(request.arguments()[NO_ADAPTER_CALLS].name(), TOOL_INPUT);
+            assert_eq!(
+                request.arguments()[NO_ADAPTER_CALLS].value(),
+                TOOL_ARGUMENT_VALUE
+            );
             self.calls = self.calls.saturating_add(ONE_ADAPTER_CALL);
-            animus_adapters::ToolResponse::new(TOOL_OUTPUT).map_err(|_error| AdapterFailure)
+            Ok(tool_response())
         }
     }
 
@@ -205,7 +222,7 @@ mod tests {
             &runtime_input(),
             runtime_config(),
             &mut missing_model_fabric,
-            crate::RuntimeAdapters::<ModelStub, ToolStub>::new_optional(None, Some(&mut tool)),
+            runtime_adapters(None, Some(&mut tool)),
         );
 
         assert!(matches!(
@@ -233,7 +250,7 @@ mod tests {
             &runtime_input(),
             runtime_config(),
             fabric,
-            crate::RuntimeAdapters::new(model, tool),
+            runtime_adapters(Some(model), Some(tool)),
         )
     }
 
@@ -252,10 +269,96 @@ mod tests {
     }
 
     fn tool_decision() -> crate::RuntimeLoopDecision {
-        crate::RuntimeLoopDecision::from_draft(crate::RuntimeLoopDecisionDraft::tool(
-            TOOL_NAME, TOOL_INPUT,
-        ))
-        .expect("tool decision should validate")
+        crate::RuntimeLoopDecision::CallTool {
+            request: tool_request(),
+        }
+    }
+
+    fn tool_request() -> animus_adapters::ToolRequest {
+        let fields = [animus_adapters::tool::ArgumentFieldDraft {
+            name: Some(TOOL_INPUT),
+            value: Some(TOOL_ARGUMENT_VALUE),
+        }];
+        let arguments = animus_adapters::tool::PreparedArguments::prepare(
+            &animus_adapters::tool::ArgumentPreparationRequest {
+                current_schema_identity: TOOL_SCHEMA,
+                allowed_field_names: &[TOOL_INPUT],
+                compatibility_rules: &[],
+                fields: &fields,
+            },
+        )
+        .expect("arguments should validate");
+        assert_eq!(arguments.schema_identity(), TOOL_SCHEMA);
+        assert_eq!(arguments.fields().len(), TOOL_ARGUMENT_COUNT);
+        let request =
+            animus_adapters::ToolRequest::from_draft(&animus_adapters::tool::RequestDraft {
+                name: Some(TOOL_NAME),
+                arguments: Some(&arguments),
+                correlation_id: Some(TOOL_CALL_ID),
+                output_policy: animus_adapters::tool::OutputPolicy {
+                    visible_char_budget: TOOL_VISIBLE_BUDGET,
+                },
+                mutation_targets: &[TOOL_MUTATION_TARGET],
+                required_capability_labels: &[TOOL_CAPABILITY],
+                approval_posture: animus_adapters::tool::ApprovalPosture::PreApproved.as_str(),
+            })
+            .expect("tool request should validate");
+        assert_eq!(request.name(), TOOL_NAME);
+        assert_eq!(request.correlation_id(), TOOL_CALL_ID);
+        request
+    }
+
+    fn tool_response() -> animus_adapters::ToolResponse {
+        let bounded = animus_adapters::tool::BoundedOutput::new(
+            &animus_adapters::tool::OutputDraft {
+                body: TOOL_OUTPUT,
+                full_output_reference: None,
+                hash_requirement: animus_adapters::tool::HashRequirement::Required,
+            },
+            animus_adapters::tool::OutputPolicy {
+                visible_char_budget: TOOL_VISIBLE_BUDGET,
+            },
+        )
+        .expect("output should bound");
+        animus_adapters::ToolResponse::from_bounded(
+            bounded,
+            animus_adapters::tool::OutputRedactionClass::Safe,
+        )
+    }
+
+    fn runtime_adapters<'a>(
+        model: Option<&'a mut ModelStub>,
+        tool: Option<&'a mut ToolStub>,
+    ) -> crate::RuntimeAdapters<'a, ModelStub, ToolStub> {
+        let registry = crate::RuntimeCapabilityRegistry::from_drafts(&[
+            crate::RuntimeCapabilityDescriptorDraft::default_model(),
+            crate::RuntimeCapabilityDescriptorDraft {
+                label: TOOL_CAPABILITY,
+                service_kind: crate::RuntimeCapabilityServiceKind::Tool.as_str(),
+                scope: None,
+            },
+        ])
+        .expect("registry should validate");
+        crate::RuntimeAdapters::<ModelStub, ToolStub>::new_optional(model, tool)
+            .with_capability_registry(registry)
+            .with_tool_definitions(vec![tool_definition()])
+    }
+
+    fn tool_definition() -> animus_adapters::tool::Definition {
+        animus_adapters::tool::Definition::validate(&animus_adapters::tool::DefinitionDraft {
+            name: Some(TOOL_NAME),
+            label: Some(TOOL_NAME),
+            description: Some(TOOL_PROMPT_SNIPPET),
+            parameter_schema_identity: Some(TOOL_SCHEMA),
+            prompt_snippet: Some(TOOL_PROMPT_SNIPPET),
+            prompt_guidelines: &[TOOL_PROMPT_GUIDELINE],
+            source_identity: Some(TOOL_SOURCE_IDENTITY),
+            provenance: Some(TOOL_PROVENANCE),
+            capability_labels: &[TOOL_CAPABILITY],
+            result_metadata_shape: Some(TOOL_RESULT_SHAPE),
+            status: animus_adapters::tool::DefinitionStatus::Active,
+        })
+        .expect("definition should validate")
     }
 
     fn response_decision(message: &str) -> crate::RuntimeLoopDecision {

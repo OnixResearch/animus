@@ -94,7 +94,7 @@ fn replacing_card_updates_in_place() {
     panel.add_card(build_card("tool", "first"));
     panel.add_card(build_card("tool", "second"));
     assert_eq!(panel.active_cards().len(), 1);
-    assert_eq!(panel.active_cards()[0].input_summary(), "second");
+    assert_eq!(panel.active_cards()[0].input_summary(), "query=second");
 }
 
 #[test]

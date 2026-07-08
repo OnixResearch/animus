@@ -1,6 +1,6 @@
 # Tool catalog and capability packs
 
-Animus treats the Clankers tool-catalog pattern as a bounded reference for descriptor shape and capability taxonomy, not as product tool adoption. The adopted boundary is an optional Animus-owned manifest that describes tools as data for host review. It does not import Clankers built-in tools, plugin runtimes, provider clients, shell commands, or network behavior.
+Animus treats the Clankers tool-catalog pattern as a bounded reference for descriptor shape and capability taxonomy, not as product tool adoption. The adopted boundary is an optional Animus-owned manifest that describes tools as data for host review. Runtime tool admission consumes only active trusted descriptors supplied by an Animus-owned catalog, manifest projection, or host-injected definition set. It does not import Clankers built-in tools, plugin runtimes, provider clients, shell commands, or network behavior.
 
 ## Adopt / adapt / reject
 
@@ -24,11 +24,11 @@ Each descriptor has:
 
 ## Validation rules
 
-Catalog validation rejects duplicate names, collisions with built-in names, unknown runtime kinds, invalid schema references, dangerous capabilities without prompt-or-deny approval, and secret-adjacent capabilities without redaction. Safe descriptors normalize deterministically by name.
+Catalog validation rejects duplicate names, collisions with built-in names, unknown runtime kinds, invalid schema references, inactive or untrusted definitions, executor-less dispatch definitions, dangerous capabilities without prompt-or-deny approval, and secret-adjacent capabilities without redaction. Safe descriptors normalize deterministically by name. Runtime dispatch requires each tool's exact declared capability identity; a broad `default-tool` capability does not authorize a tool when the per-tool label is absent.
 
 ## Runtime-neutrality
 
-Catalog parsing and validation must not execute tools, start plugins, start providers, read secrets, inherit environment values, open network connections, load Wasm modules, or spawn processes. The focused rail `scripts/cairn/check-tool-catalog` checks the Nickel schema, positive and negative fixtures, architecture-note markers, and static runtime-neutrality markers.
+Catalog parsing, validation, and prompt projection must not execute tools, start plugins, start providers, read secrets, inherit environment values, open network connections, load Wasm modules, spawn processes, or perform fallback discovery. The focused rail `scripts/cairn/check-tool-catalog` checks the Nickel schema, positive and negative fixtures, architecture-note markers, exact-capability admission language, and static runtime-neutrality markers.
 
 ## Non-claims
 

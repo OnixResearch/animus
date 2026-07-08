@@ -28,7 +28,7 @@ impl ToolCallCard {
     /// Builds a new tool-call card from a tool request.
     #[must_use]
     pub fn from_request(request: &animus_adapters::ToolRequest) -> Self {
-        let input = request.input();
+        let input = request.argument_summary();
         Self {
             tool_name: String::from(request.name()),
             input_summary: input.chars().take(120).collect(),

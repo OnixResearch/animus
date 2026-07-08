@@ -2,36 +2,39 @@ use super::super::*;
 use super::support::*;
 
 #[test]
-fn request_accepts_empty_input() {
-    let request = Request::new(NAME, "").expect("empty input should be allowed");
+fn request_accepts_current_shape_contract() {
+    // r[verify agent_harness_runtime.tool_calling_breaking.current_shape]
+    let request = request();
 
     assert_eq!(request.name(), NAME);
-    assert_eq!(request.input(), "");
-}
-
-#[test]
-fn request_accepts_valid_input() {
-    // r[verify agent_harness_runtime.boundary_versions.normalized_text.validation]
-    let request = Request::new(PADDED_NAME, INPUT).expect("tool request should parse");
-
-    assert_eq!(request.name(), NAME);
-    assert_eq!(request.input(), INPUT);
+    assert_eq!(request.schema_identity(), SCHEMA_ID);
+    assert_eq!(request.correlation_id(), CORRELATION_ID);
+    assert_eq!(request.output_policy().visible_char_budget, VISIBLE_BUDGET);
+    assert_eq!(request.arguments()[FIRST_INDEX].name(), CURRENT_ARGUMENT);
+    assert_eq!(request.arguments()[FIRST_INDEX].value(), ARGUMENT_VALUE);
+    assert_eq!(request.mutation_targets()[FIRST_INDEX], TARGET_FILE);
+    assert_eq!(
+        request.required_capability_labels()[FIRST_INDEX],
+        CAPABILITY_READ
+    );
+    assert_eq!(request.approval_posture(), ApprovalPosture::PreApproved);
+    assert_eq!(request.argument_summary(), "query=adapter contracts");
     assert_eq!(Request::contract_identity(), TOOL_REQUEST_CONTRACT_IDENTITY);
 }
 
 #[test]
-fn response_accepts_empty_output() {
-    let response = Response::new("").expect("empty output should be allowed");
-
-    assert_eq!(response.output(), "");
-}
-
-#[test]
-fn response_accepts_valid_output() {
-    // r[verify agent_harness_runtime.boundary_versions.contract_identities.validation]
-    let response = Response::new(OUTPUT).expect("tool output should parse");
+fn response_accepts_bounded_result_contract() {
+    // r[verify agent_harness_runtime.tool_calling_breaking.bounded_result]
+    let response = response();
 
     assert_eq!(response.output(), OUTPUT);
+    assert_eq!(response.model_visible_text(), OUTPUT);
+    assert_eq!(response.status(), OutputStatus::Complete);
+    assert_eq!(response.byte_count(), OUTPUT.len() as u64);
+    assert_eq!(response.char_count(), OUTPUT.chars().count() as u64);
+    assert_eq!(response.line_count(), crate::MIN_ADAPTER_FIELD_CHARS as u64);
+    assert_eq!(response.redaction_class(), OutputRedactionClass::Safe);
+    assert!(response.content_hash().is_some());
     assert_eq!(
         Response::contract_identity(),
         TOOL_RESPONSE_CONTRACT_IDENTITY
@@ -42,7 +45,8 @@ fn response_accepts_valid_output() {
 fn definition_metadata_builds_attributed_prompt_context_for_active_tools() {
     let active = definition(DefinitionStatus::Active, NAME);
     let inactive = definition(DefinitionStatus::Inactive, INACTIVE_NAME);
-    let context = build_prompt_context(&[active, inactive]);
+    let untrusted = definition(DefinitionStatus::Untrusted, "unsafe_tool");
+    let context = build_prompt_context(&[active, inactive, untrusted]);
 
     assert_eq!(context.len(), PROMPT_CONTEXT_ENTRY_COUNT);
     assert_eq!(context[FIRST_INDEX].tool_name(), NAME);
@@ -54,22 +58,8 @@ fn definition_metadata_builds_attributed_prompt_context_for_active_tools() {
 }
 
 #[test]
-fn legacy_arguments_prepare_before_strict_validation() {
-    let fields = [ArgumentFieldDraft {
-        name: Some(LEGACY_ARGUMENT),
-        value: Some(ARGUMENT_VALUE),
-    }];
-    let rules = [ArgumentCompatibilityRule {
-        legacy_name: LEGACY_ARGUMENT,
-        current_name: CURRENT_ARGUMENT,
-    }];
-    let prepared = PreparedArguments::prepare(&ArgumentPreparationRequest {
-        current_schema_identity: SCHEMA_ID,
-        allowed_field_names: &[CURRENT_ARGUMENT],
-        compatibility_rules: &rules,
-        fields: &fields,
-    })
-    .expect("legacy argument should normalize");
+fn current_arguments_prepare_without_compatibility_rules() {
+    let prepared = prepared_arguments();
 
     assert_eq!(prepared.schema_identity(), SCHEMA_ID);
     assert_eq!(prepared.fields()[FIRST_INDEX].name(), CURRENT_ARGUMENT);

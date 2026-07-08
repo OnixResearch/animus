@@ -117,7 +117,7 @@ impl ConversationRenderModel {
                 self.flush_pending();
                 self.push_entry(TranscriptEntry::ToolUse {
                     tool_name: bounded_content(request.name()),
-                    input: bounded_content(request.input()),
+                    input: bounded_content(request.argument_summary().as_str()),
                 });
             }
             animus_runtime::RuntimeEvent::ToolResponded { response } => {

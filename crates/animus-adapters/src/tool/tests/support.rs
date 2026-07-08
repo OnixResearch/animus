@@ -1,10 +1,8 @@
 use super::super::*;
 
 pub const NAME: &str = "search";
-pub const PADDED_NAME: &str = "  search  ";
 pub const INACTIVE_NAME: &str = "write_file";
 pub const LABEL: &str = "Search";
-pub const INPUT: &str = "query";
 pub const OUTPUT: &str = "result";
 pub const DESCRIPTION: &str = "Search indexed project context";
 pub const SCHEMA_ID: &str = "schema.search.v1";
@@ -28,6 +26,7 @@ pub const LONG_OUTPUT_LINE_COUNT: u64 = 3;
 pub const CALL_FIRST: &str = "call-1";
 pub const CALL_SECOND: &str = "call-2";
 pub const CALL_THIRD: &str = "call-3";
+pub const CORRELATION_ID: &str = "tool-call-1";
 pub const TARGET_FILE: &str = "resource:file:README";
 pub const TARGET_OTHER: &str = "resource:file:docs";
 pub const PROMPT_CONTEXT_ENTRY_COUNT: usize = 2;
@@ -82,6 +81,51 @@ pub fn definition_draft(status: DefinitionStatus, name: &str) -> DefinitionDraft
         result_metadata_shape: Some(RESULT_SHAPE),
         status,
     }
+}
+
+pub fn prepared_arguments() -> PreparedArguments {
+    let fields = [ArgumentFieldDraft {
+        name: Some(CURRENT_ARGUMENT),
+        value: Some(ARGUMENT_VALUE),
+    }];
+    PreparedArguments::prepare(&ArgumentPreparationRequest {
+        current_schema_identity: SCHEMA_ID,
+        allowed_field_names: &[CURRENT_ARGUMENT],
+        compatibility_rules: &[],
+        fields: &fields,
+    })
+    .expect("current arguments should validate")
+}
+
+pub fn request() -> Request {
+    let arguments = prepared_arguments();
+    Request::from_draft(&RequestDraft {
+        name: Some(NAME),
+        arguments: Some(&arguments),
+        correlation_id: Some(CORRELATION_ID),
+        output_policy: OutputPolicy {
+            visible_char_budget: VISIBLE_BUDGET,
+        },
+        mutation_targets: &[TARGET_FILE],
+        required_capability_labels: &[CAPABILITY_READ],
+        approval_posture: APPROVAL_PRE_APPROVED,
+    })
+    .expect("current-shape request should validate")
+}
+
+pub fn response() -> Response {
+    let bounded = BoundedOutput::new(
+        &OutputDraft {
+            body: OUTPUT,
+            full_output_reference: None,
+            hash_requirement: HashRequirement::Required,
+        },
+        OutputPolicy {
+            visible_char_budget: VISIBLE_BUDGET,
+        },
+    )
+    .expect("bounded output should validate");
+    Response::from_bounded(bounded, OutputRedactionClass::Safe)
 }
 
 #[derive(Clone, Copy)]

@@ -223,6 +223,12 @@ pub use crate::telemetry::{
     AdapterComponent, LoopDecisionKind, RuntimeEvent, RuntimeEventKind, RuntimeTerminalKind,
     project_model_stream_events,
 };
+pub use crate::tool_admission::{
+    TOOL_DISPATCH_NEUTRAL_CONTRACT_IDENTITY, ToolDispatchCancellationPosture,
+    ToolDispatchFallbackPolicy, ToolDispatchOutputBoundary, ToolDispatchPlan,
+    ToolDispatchPlanIssue, ToolDispatchPlanRequest, ToolDispatchPlanStatus,
+    ToolDispatchPolicyDraft, ToolDispatchTimeoutPosture, plan_tool_dispatch,
+};
 #[cfg(feature = "steel")]
 pub use crate::transition::complete_with_steel_policy_denial;
 pub use crate::transition::{

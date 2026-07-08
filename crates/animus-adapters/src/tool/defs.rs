@@ -1,10 +1,12 @@
 /// Activation status for model-facing tool metadata.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum DefinitionStatus {
-    /// Tool metadata may be shown to the model.
+    /// Tool metadata may be shown to the model and considered for dispatch.
     Active,
-    /// Tool metadata is registered but not model-visible.
+    /// Tool metadata is registered but not model-visible or dispatch-admitted.
     Inactive,
+    /// Tool metadata is present but not trusted for prompt or dispatch admission.
+    Untrusted,
 }
 
 /// Borrowed tool definition data before validation.

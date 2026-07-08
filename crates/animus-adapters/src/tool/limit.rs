@@ -34,6 +34,25 @@ pub enum OutputStatus {
     Truncated,
 }
 
+/// Preserved bounded-output metadata without the raw full body.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct BoundedOutputMetadataDraft<'a> {
+    /// Bounded model-visible text.
+    pub visible_text: &'a str,
+    /// Completion/truncation status.
+    pub status: OutputStatus,
+    /// Original output byte count.
+    pub byte_count: u64,
+    /// Original output character count.
+    pub char_count: u64,
+    /// Original output line count.
+    pub line_count: u64,
+    /// Optional BLAKE3 content hash.
+    pub content_hash: Option<&'a str>,
+    /// Optional host-owned full-output reference.
+    pub full_output_reference: Option<&'a str>,
+}
+
 /// Bounded tool output safe for model-visible context and receipts.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct BoundedOutput {
@@ -74,6 +93,31 @@ impl BoundedOutput {
             byte_count: super::usize_to_u64(draft.body.len()),
             char_count: super::usize_to_u64(char_count),
             line_count: super::usize_to_u64(count_lines(draft.body)),
+            content_hash,
+            full_output_reference,
+        })
+    }
+
+    /// Reconstructs preserved bounded metadata without requiring the raw full body.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`super::ContractError`] when visible text contains a NUL,
+    /// optional hash/reference metadata is malformed, or counts contradict the
+    /// visible text.
+    pub fn from_metadata(
+        draft: &BoundedOutputMetadataDraft<'_>,
+    ) -> Result<Self, super::ContractError> {
+        super::validate_no_nul(super::OUTPUT_FIELD, draft.visible_text)?;
+        validate_preserved_counts(draft)?;
+        let content_hash = optional_content_hash(draft.content_hash)?;
+        let full_output_reference = optional_safe_reference(draft.full_output_reference)?;
+        Ok(Self {
+            visible_text: super::Text::from(draft.visible_text),
+            status: draft.status,
+            byte_count: draft.byte_count,
+            char_count: draft.char_count,
+            line_count: draft.line_count,
             content_hash,
             full_output_reference,
         })
@@ -168,6 +212,22 @@ fn content_hash_for(draft: &OutputDraft<'_>, status: OutputStatus) -> Option<sup
         return Some(super::hash_parts(&[super::HASH_SCHEMA, draft.body]));
     }
     None
+}
+
+fn validate_preserved_counts(
+    draft: &BoundedOutputMetadataDraft<'_>,
+) -> Result<(), super::ContractError> {
+    let visible_bytes = super::usize_to_u64(draft.visible_text.len());
+    let visible_chars = super::usize_to_u64(draft.visible_text.chars().count());
+    if draft.byte_count < visible_bytes || draft.char_count < visible_chars {
+        return Err(super::ContractError::InconsistentOutputMetadata);
+    }
+    Ok(())
+}
+
+fn optional_content_hash(hash: Option<&str>) -> Result<Option<super::Text>, super::ContractError> {
+    hash.map(|value| super::required_text_value(super::OUTPUT_HASH_FIELD, value))
+        .transpose()
 }
 
 fn optional_safe_reference(

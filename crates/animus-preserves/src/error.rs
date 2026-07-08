@@ -11,6 +11,11 @@ pub enum Failure {
         /// Runtime contract validation error.
         source: animus_runtime::RuntimeError,
     },
+    /// Tool DTO validation failed while converting a decoded boundary message.
+    ToolContract {
+        /// Tool contract validation error.
+        source: animus_adapters::tool::ContractError,
+    },
     /// A decoded runtime payload used an unsupported tag or field value.
     InvalidRuntimePayload {
         /// Payload field name.
@@ -100,6 +105,12 @@ impl From<animus_runtime::RuntimeError> for Failure {
     }
 }
 
+impl From<animus_adapters::tool::ContractError> for Failure {
+    fn from(source: animus_adapters::tool::ContractError) -> Self {
+        Self::ToolContract { source }
+    }
+}
+
 impl From<preserves::error::Error> for Failure {
     fn from(source: preserves::error::Error) -> Self {
         Self::Preserves { source }
@@ -120,6 +131,9 @@ impl std::fmt::Display for Failure {
             }
             Self::RuntimeContract { source } => {
                 write!(formatter, "runtime contract failed: {source}")
+            }
+            Self::ToolContract { source } => {
+                write!(formatter, "tool contract failed: {source:?}")
             }
             Self::InvalidRuntimePayload { field, reason } => {
                 write!(formatter, "invalid runtime payload field {field}: {reason}")

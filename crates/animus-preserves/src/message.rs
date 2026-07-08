@@ -69,6 +69,10 @@ const UNKNOWN_LIFECYCLE_SCOPE_REASON: &str = "unknown lifecycle trust scope";
 const UNKNOWN_LIFECYCLE_OUTCOME_REASON: &str = "unknown lifecycle outcome class";
 const UNKNOWN_LIFECYCLE_FAILURE_REASON: &str = "unknown lifecycle failure class";
 const UNKNOWN_LIFECYCLE_REDACTION_REASON: &str = "unknown lifecycle redaction";
+const UNKNOWN_TOOL_OUTPUT_STATUS_REASON: &str = "unknown tool output status";
+const UNKNOWN_TOOL_REDACTION_REASON: &str = "unknown tool redaction class";
+const COMPLETE_TOOL_OUTPUT: &str = "complete";
+const TRUNCATED_TOOL_OUTPUT: &str = "truncated";
 const INVALID_LIFECYCLE_SCOPE_REASON: &str = "lifecycle trust status requires matching scope";
 const INVALID_LIFECYCLE_HOOK_REASON: &str = "invalid lifecycle hook outcome";
 const INVALID_SANDBOX_CONTEXT_REASON: &str = "invalid sandbox escalation context";
@@ -202,6 +206,158 @@ impl RuntimeFailureEnvelope {
     }
 }
 
+/// One current-shape tool argument field.
+#[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+pub struct ToolArgumentEnvelope {
+    /// Current argument name.
+    name: String,
+    /// Validated argument value.
+    value: String,
+}
+
+/// Current-shape tool request payload.
+#[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+pub struct ToolRequestEnvelope {
+    /// Tool name selected by the harness.
+    name: String,
+    /// Current parameter schema identity.
+    schema_identity: String,
+    /// Validated current argument fields.
+    arguments: Vec<ToolArgumentEnvelope>,
+    /// Tool-call correlation identity.
+    correlation_id: String,
+    /// Model-visible output character budget.
+    visible_char_budget: u32,
+    /// Declared opaque mutation targets.
+    mutation_targets: Vec<String>,
+    /// Exact required capability labels.
+    required_capability_labels: Vec<String>,
+    /// Approval posture label.
+    approval_posture: String,
+}
+
+/// Bounded tool result payload without raw full output bodies.
+#[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+pub struct ToolResponseEnvelope {
+    /// Bounded model-visible text.
+    visible_text: String,
+    /// Complete/truncated status label.
+    status: String,
+    /// Original output byte count.
+    byte_count: u64,
+    /// Original output character count.
+    char_count: u64,
+    /// Original output line count.
+    line_count: u64,
+    /// Optional BLAKE3 content hash.
+    content_hash: Option<String>,
+    /// Optional host-owned full-output handle.
+    full_output_reference: Option<String>,
+    /// Redaction class label.
+    redaction_class: String,
+}
+
+impl ToolRequestEnvelope {
+    fn from_tool_request(request: &animus_adapters::ToolRequest) -> Self {
+        Self {
+            name: String::from(request.name()),
+            schema_identity: String::from(request.schema_identity()),
+            arguments: request
+                .arguments()
+                .iter()
+                .map(|argument| ToolArgumentEnvelope {
+                    name: String::from(argument.name()),
+                    value: String::from(argument.value()),
+                })
+                .collect(),
+            correlation_id: String::from(request.correlation_id()),
+            visible_char_budget: request.output_policy().visible_char_budget,
+            mutation_targets: request.mutation_targets().to_vec(),
+            required_capability_labels: request.required_capability_labels().to_vec(),
+            approval_posture: String::from(request.approval_posture().as_str()),
+        }
+    }
+
+    fn into_tool_request(self) -> Result<animus_adapters::ToolRequest, crate::CodecError> {
+        let argument_names: Vec<&str> = self
+            .arguments
+            .iter()
+            .map(|argument| argument.name.as_str())
+            .collect();
+        let argument_fields: Vec<animus_adapters::tool::ArgumentFieldDraft<'_>> = self
+            .arguments
+            .iter()
+            .map(|argument| animus_adapters::tool::ArgumentFieldDraft {
+                name: Some(argument.name.as_str()),
+                value: Some(argument.value.as_str()),
+            })
+            .collect();
+        let prepared = animus_adapters::tool::PreparedArguments::prepare(
+            &animus_adapters::tool::ArgumentPreparationRequest {
+                current_schema_identity: self.schema_identity.as_str(),
+                allowed_field_names: argument_names.as_slice(),
+                compatibility_rules: &[],
+                fields: argument_fields.as_slice(),
+            },
+        )?;
+        let mutation_targets: Vec<&str> =
+            self.mutation_targets.iter().map(String::as_str).collect();
+        let capability_labels: Vec<&str> = self
+            .required_capability_labels
+            .iter()
+            .map(String::as_str)
+            .collect();
+        Ok(animus_adapters::ToolRequest::from_draft(
+            &animus_adapters::tool::RequestDraft {
+                name: Some(self.name.as_str()),
+                arguments: Some(&prepared),
+                correlation_id: Some(self.correlation_id.as_str()),
+                output_policy: animus_adapters::tool::OutputPolicy {
+                    visible_char_budget: self.visible_char_budget,
+                },
+                mutation_targets: mutation_targets.as_slice(),
+                required_capability_labels: capability_labels.as_slice(),
+                approval_posture: self.approval_posture.as_str(),
+            },
+        )?)
+    }
+}
+
+impl ToolResponseEnvelope {
+    fn from_tool_response(response: &animus_adapters::ToolResponse) -> Self {
+        Self {
+            visible_text: String::from(response.model_visible_text()),
+            status: output_status_to_string(response.status()),
+            byte_count: response.byte_count(),
+            char_count: response.char_count(),
+            line_count: response.line_count(),
+            content_hash: response.content_hash().map(String::from),
+            full_output_reference: response.full_output_reference().map(String::from),
+            redaction_class: String::from(response.redaction_class().as_str()),
+        }
+    }
+
+    fn into_tool_response(self) -> Result<animus_adapters::ToolResponse, crate::CodecError> {
+        let status = output_status_from_string(self.status.as_str())?;
+        let redaction_class = output_redaction_from_string(self.redaction_class.as_str())?;
+        let bounded = animus_adapters::tool::BoundedOutput::from_metadata(
+            &animus_adapters::tool::BoundedOutputMetadataDraft {
+                visible_text: self.visible_text.as_str(),
+                status,
+                byte_count: self.byte_count,
+                char_count: self.char_count,
+                line_count: self.line_count,
+                content_hash: self.content_hash.as_deref(),
+                full_output_reference: self.full_output_reference.as_deref(),
+            },
+        )?;
+        Ok(animus_adapters::ToolResponse::from_bounded(
+            bounded,
+            redaction_class,
+        ))
+    }
+}
+
 /// Runtime report status payload.
 #[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 pub enum RuntimeReportStatus {
@@ -276,15 +432,13 @@ pub enum Envelope {
     },
     /// Tool request boundary payload.
     ToolRequest {
-        /// Tool name selected by the harness.
-        name: String,
-        /// Tool input payload.
-        input: String,
+        /// Structured current-shape tool request.
+        request: ToolRequestEnvelope,
     },
     /// Tool response boundary payload.
     ToolResponse {
-        /// Tool output payload.
-        output: String,
+        /// Bounded tool result metadata.
+        response: ToolResponseEnvelope,
     },
     /// Runtime-started event payload.
     RuntimeStarted {
@@ -370,22 +524,18 @@ pub enum Envelope {
     },
     /// Runtime tool-requested event payload.
     RuntimeToolRequested {
-        /// Tool name.
-        name: String,
-        /// Tool input.
-        input: String,
+        /// Structured current-shape tool request.
+        request: ToolRequestEnvelope,
     },
     /// Runtime tool-responded event payload.
     RuntimeToolResponded {
-        /// Tool output.
-        output: String,
+        /// Bounded tool result metadata.
+        response: ToolResponseEnvelope,
     },
     /// Runtime tool-denied event payload.
     RuntimeToolDenied {
-        /// Denied tool name.
-        name: String,
-        /// Denied tool input.
-        input: String,
+        /// Denied current-shape tool request.
+        request: ToolRequestEnvelope,
         /// Safe denial reason.
         reason: String,
     },
@@ -587,8 +737,7 @@ impl Envelope {
     #[must_use]
     pub fn from_tool_request(request: &animus_adapters::ToolRequest) -> Self {
         Self::ToolRequest {
-            name: String::from(request.name()),
-            input: String::from(request.input()),
+            request: ToolRequestEnvelope::from_tool_request(request),
         }
     }
 
@@ -596,7 +745,7 @@ impl Envelope {
     #[must_use]
     pub fn from_tool_response(response: &animus_adapters::ToolResponse) -> Self {
         Self::ToolResponse {
-            output: String::from(response.output()),
+            response: ToolResponseEnvelope::from_tool_response(response),
         }
     }
 
@@ -668,9 +817,7 @@ impl Envelope {
     /// payload text violates the adapter contract.
     pub fn try_into_tool_request(self) -> Result<animus_adapters::ToolRequest, crate::CodecError> {
         match self {
-            Self::ToolRequest { name, input } => {
-                Ok(animus_adapters::ToolRequest::new(&name, &input)?)
-            }
+            Self::ToolRequest { request } => request.into_tool_request(),
             other => Err(crate::CodecError::wrong_kind(
                 Kind::ToolRequest,
                 other.kind(),
@@ -688,7 +835,7 @@ impl Envelope {
         self,
     ) -> Result<animus_adapters::ToolResponse, crate::CodecError> {
         match self {
-            Self::ToolResponse { output } => Ok(animus_adapters::ToolResponse::new(&output)?),
+            Self::ToolResponse { response } => response.into_tool_response(),
             other => Err(crate::CodecError::wrong_kind(
                 Kind::ToolResponse,
                 other.kind(),
@@ -939,18 +1086,16 @@ fn encode_adapter_event(event: &animus_runtime::RuntimeEvent) -> Envelope {
             }
         }
         animus_runtime::RuntimeEvent::ToolRequested { request } => Envelope::RuntimeToolRequested {
-            name: String::from(request.name()),
-            input: String::from(request.input()),
+            request: ToolRequestEnvelope::from_tool_request(request),
         },
         animus_runtime::RuntimeEvent::ToolResponded { response } => {
             Envelope::RuntimeToolResponded {
-                output: String::from(response.output()),
+                response: ToolResponseEnvelope::from_tool_response(response),
             }
         }
         animus_runtime::RuntimeEvent::ToolDenied { request, reason } => {
             Envelope::RuntimeToolDenied {
-                name: String::from(request.name()),
-                input: String::from(request.input()),
+                request: ToolRequestEnvelope::from_tool_request(request),
                 reason: reason.clone(),
             }
         }
@@ -1248,24 +1393,22 @@ fn decode_adapter_event(
                 reason,
             })
         }
-        Envelope::RuntimeToolRequested { name, input } => {
+        Envelope::RuntimeToolRequested { request } => {
             Ok(animus_runtime::RuntimeEvent::ToolRequested {
-                request: animus_adapters::ToolRequest::new(&name, &input)?,
+                request: request.into_tool_request()?,
             })
         }
-        Envelope::RuntimeToolResponded { output } => {
+        Envelope::RuntimeToolResponded { response } => {
             Ok(animus_runtime::RuntimeEvent::ToolResponded {
-                response: animus_adapters::ToolResponse::new(&output)?,
+                response: response.into_tool_response()?,
             })
         }
-        Envelope::RuntimeToolDenied {
-            name,
-            input,
-            reason,
-        } => Ok(animus_runtime::RuntimeEvent::ToolDenied {
-            request: animus_adapters::ToolRequest::new(&name, &input)?,
-            reason,
-        }),
+        Envelope::RuntimeToolDenied { request, reason } => {
+            Ok(animus_runtime::RuntimeEvent::ToolDenied {
+                request: request.into_tool_request()?,
+                reason,
+            })
+        }
         Envelope::RuntimeSandboxEscalation {
             decision,
             rule_ids,
@@ -1412,15 +1555,61 @@ fn outcome_class_from_str(
 ) -> Result<animus_adapters::AdapterCallFailureClass, crate::CodecError> {
     match class {
         "absent" => Ok(animus_adapters::AdapterCallFailureClass::Absent),
+        "invalid_input" => Ok(animus_adapters::AdapterCallFailureClass::InvalidInput),
+        "missing_executor" => Ok(animus_adapters::AdapterCallFailureClass::MissingExecutor),
         "denied" => Ok(animus_adapters::AdapterCallFailureClass::Denied),
+        "denied_capability" => Ok(animus_adapters::AdapterCallFailureClass::DeniedCapability),
+        "approval_denied" => Ok(animus_adapters::AdapterCallFailureClass::ApprovalDenied),
         "unavailable" => Ok(animus_adapters::AdapterCallFailureClass::Unavailable),
         "malformed_output" => Ok(animus_adapters::AdapterCallFailureClass::MalformedOutput),
+        "unsafe_output_reference" => {
+            Ok(animus_adapters::AdapterCallFailureClass::UnsafeOutputReference)
+        }
+        "unbounded_oversized_output" => {
+            Ok(animus_adapters::AdapterCallFailureClass::UnboundedOversizedOutput)
+        }
+        "mutation_conflict" => Ok(animus_adapters::AdapterCallFailureClass::MutationConflict),
+        "fallback_denied" => Ok(animus_adapters::AdapterCallFailureClass::FallbackDenied),
         "cancelled" => Ok(animus_adapters::AdapterCallFailureClass::Cancelled),
         "timed_out" => Ok(animus_adapters::AdapterCallFailureClass::TimedOut),
         "execution_failure" => Ok(animus_adapters::AdapterCallFailureClass::ExecutionFailure),
         _other => Err(crate::CodecError::InvalidRuntimePayload {
             field: RUNTIME_OUTCOME_CLASS_FIELD,
             reason: UNKNOWN_OUTCOME_CLASS_REASON,
+        }),
+    }
+}
+
+fn output_status_to_string(status: animus_adapters::tool::OutputStatus) -> String {
+    match status {
+        animus_adapters::tool::OutputStatus::Complete => String::from(COMPLETE_TOOL_OUTPUT),
+        animus_adapters::tool::OutputStatus::Truncated => String::from(TRUNCATED_TOOL_OUTPUT),
+    }
+}
+
+fn output_status_from_string(
+    status: &str,
+) -> Result<animus_adapters::tool::OutputStatus, crate::CodecError> {
+    match status {
+        COMPLETE_TOOL_OUTPUT => Ok(animus_adapters::tool::OutputStatus::Complete),
+        TRUNCATED_TOOL_OUTPUT => Ok(animus_adapters::tool::OutputStatus::Truncated),
+        _other => Err(crate::CodecError::InvalidRuntimePayload {
+            field: RUNTIME_REDACTION_FIELD,
+            reason: UNKNOWN_TOOL_OUTPUT_STATUS_REASON,
+        }),
+    }
+}
+
+fn output_redaction_from_string(
+    redaction: &str,
+) -> Result<animus_adapters::tool::OutputRedactionClass, crate::CodecError> {
+    match redaction {
+        "safe" => Ok(animus_adapters::tool::OutputRedactionClass::Safe),
+        "redacted" => Ok(animus_adapters::tool::OutputRedactionClass::Redacted),
+        "secret_adjacent" => Ok(animus_adapters::tool::OutputRedactionClass::SecretAdjacent),
+        _other => Err(crate::CodecError::InvalidRuntimePayload {
+            field: RUNTIME_REDACTION_FIELD,
+            reason: UNKNOWN_TOOL_REDACTION_REASON,
         }),
     }
 }
@@ -1748,6 +1937,12 @@ mod tests {
     const MODEL_MESSAGE: &str = "model answer";
     const TOOL_NAME: &str = "search";
     const TOOL_INPUT: &str = "query";
+    const TOOL_ARGUMENT_NAME: &str = "query";
+    const TOOL_SCHEMA: &str = "schema.search.v1";
+    const TOOL_CALL_ID: &str = "tool-call-1";
+    const TOOL_VISIBLE_BUDGET: u32 = 64;
+    const TOOL_MUTATION_TARGET: &str = "resource:search";
+    const TOOL_CAPABILITY: &str = "tool.search";
     const TOOL_OUTPUT: &str = "result";
     const BLANK_TEXT: &str = "   ";
     const UNKNOWN_COMPONENT: &str = "memory";
@@ -1836,6 +2031,52 @@ mod tests {
         animus_runtime::RuntimeEvent::LifecycleHookOutcome { outcome }
     }
 
+    fn tool_request() -> animus_adapters::ToolRequest {
+        let fields = [animus_adapters::tool::ArgumentFieldDraft {
+            name: Some(TOOL_ARGUMENT_NAME),
+            value: Some(TOOL_INPUT),
+        }];
+        let arguments = animus_adapters::tool::PreparedArguments::prepare(
+            &animus_adapters::tool::ArgumentPreparationRequest {
+                current_schema_identity: TOOL_SCHEMA,
+                allowed_field_names: &[TOOL_ARGUMENT_NAME],
+                compatibility_rules: &[],
+                fields: &fields,
+            },
+        )
+        .expect("tool arguments should validate");
+        animus_adapters::ToolRequest::from_draft(&animus_adapters::tool::RequestDraft {
+            name: Some(TOOL_NAME),
+            arguments: Some(&arguments),
+            correlation_id: Some(TOOL_CALL_ID),
+            output_policy: animus_adapters::tool::OutputPolicy {
+                visible_char_budget: TOOL_VISIBLE_BUDGET,
+            },
+            mutation_targets: &[TOOL_MUTATION_TARGET],
+            required_capability_labels: &[TOOL_CAPABILITY],
+            approval_posture: animus_adapters::tool::ApprovalPosture::PreApproved.as_str(),
+        })
+        .expect("tool request should validate")
+    }
+
+    fn tool_response() -> animus_adapters::ToolResponse {
+        let bounded = animus_adapters::tool::BoundedOutput::new(
+            &animus_adapters::tool::OutputDraft {
+                body: TOOL_OUTPUT,
+                full_output_reference: None,
+                hash_requirement: animus_adapters::tool::HashRequirement::Required,
+            },
+            animus_adapters::tool::OutputPolicy {
+                visible_char_budget: TOOL_VISIBLE_BUDGET,
+            },
+        )
+        .expect("tool output should validate");
+        animus_adapters::ToolResponse::from_bounded(
+            bounded,
+            animus_adapters::tool::OutputRedactionClass::Safe,
+        )
+    }
+
     #[test]
     fn model_request_round_trips_through_contract() {
         let request =
@@ -1862,34 +2103,43 @@ mod tests {
 
     #[test]
     fn tool_request_round_trips_through_contract() {
-        let request = animus_adapters::ToolRequest::new(TOOL_NAME, TOOL_INPUT)
-            .expect("valid request should parse");
+        let request = tool_request();
         let message = Envelope::from_tool_request(&request);
         let decoded = message
             .try_into_tool_request()
             .expect("boundary message should convert");
 
         assert_eq!(decoded.name(), TOOL_NAME);
-        assert_eq!(decoded.input(), TOOL_INPUT);
+        assert_eq!(decoded.schema_identity(), TOOL_SCHEMA);
+        assert_eq!(
+            decoded
+                .arguments()
+                .first()
+                .expect("decoded argument is present")
+                .value(),
+            TOOL_INPUT
+        );
     }
 
     #[test]
     fn tool_response_round_trips_through_contract() {
-        let response =
-            animus_adapters::ToolResponse::new(TOOL_OUTPUT).expect("valid response should parse");
+        let response = tool_response();
         let message = Envelope::from_tool_response(&response);
         let decoded = message
             .try_into_tool_response()
             .expect("boundary message should convert");
 
         assert_eq!(decoded.output(), TOOL_OUTPUT);
+        assert_eq!(
+            decoded.redaction_class(),
+            animus_adapters::tool::OutputRedactionClass::Safe
+        );
     }
 
     #[test]
     fn runtime_event_round_trips_through_contract() {
         let event = animus_runtime::RuntimeEvent::ToolRequested {
-            request: animus_adapters::ToolRequest::new(TOOL_NAME, TOOL_INPUT)
-                .expect("valid request should parse"),
+            request: tool_request(),
         };
         let message = Envelope::from_runtime_event(&event);
         let decoded = message

@@ -272,7 +272,9 @@ fn entry_allowed(
 }
 
 #[cfg(test)]
-pub(crate) fn test_selected_plan(fixture: crate::test_support::SelectedPlanFixture<'_>) -> SelectedPlan {
+pub(crate) fn test_selected_plan(
+    fixture: crate::test_support::SelectedPlanFixture<'_>,
+) -> SelectedPlan {
     SelectedPlan {
         recipe_id: alloc::string::String::from(fixture.recipe_id),
         family: fixture.family,
@@ -287,5 +289,3 @@ pub(crate) fn test_selected_plan(fixture: crate::test_support::SelectedPlanFixtu
         fallback_eligibility: fixture.fallback_eligibility,
     }
 }
-
-

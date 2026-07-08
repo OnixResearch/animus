@@ -4,6 +4,11 @@ const APPROVAL_PROMPT: &str = crate::bridge::test_support::APPROVAL_PROMPT;
 const TOOL_NAME: &str = crate::bridge::test_support::TOOL_NAME;
 const TOOL_INPUT: &str = crate::bridge::test_support::TOOL_INPUT;
 const TOOL_OUTPUT: &str = crate::bridge::test_support::TOOL_OUTPUT;
+const TOOL_ARGUMENT_NAME: &str = "query";
+const TOOL_SCHEMA: &str = "schema.tui-tool.v1";
+const TOOL_CALL_ID: &str = "tool-call-tui";
+const TOOL_MUTATION_TARGET: &str = "resource:tui";
+const TOOL_CAPABILITY: &str = "tool.tui";
 const LONG_OUTPUT: &str = crate::bridge::test_support::LONG_OUTPUT;
 const BAD_NUL: &str = crate::bridge::test_support::BAD_NUL;
 const MISMATCHED_CORRELATION_ID: &str = crate::bridge::test_support::MISMATCHED_CORRELATION_ID;
@@ -20,9 +25,11 @@ const SNAPSHOT_PROGRESS: &str = "progress: 1/3";
 const SNAPSHOT_OUTPUT: &str = "output: alpha";
 const SNAPSHOT_APPROVAL: &str = "approval: allow guarded action";
 const SNAPSHOT_CHOICES: &str = "choices: approve,deny";
-const SNAPSHOT_FINAL: &str = "final: tool output";
+const SNAPSHOT_FINAL: &str = "final: tool ";
 const SNAPSHOT_FAILURE_DENIED: &str = "failure: denied:denied by policy";
 const DENIED_REASON: &str = "denied by policy";
+const VISIBLE_TOOL_OUTPUT: &str = "tool ";
+const TOOL_ARGUMENT_COUNT: usize = 1;
 const EXPECTED_CHOICE_COUNT: usize = 2;
 
 fn approval_request(choices: &[crate::ToolCommandChoice]) -> crate::ApprovalRequest {
@@ -36,11 +43,54 @@ fn approval_request(choices: &[crate::ToolCommandChoice]) -> crate::ApprovalRequ
 }
 
 fn tool_request() -> animus_adapters::ToolRequest {
-    animus_adapters::ToolRequest::new(TOOL_NAME, TOOL_INPUT).expect("tool request should validate")
+    let fields = [animus_adapters::tool::ArgumentFieldDraft {
+        name: Some(TOOL_ARGUMENT_NAME),
+        value: Some(TOOL_INPUT),
+    }];
+    let arguments = animus_adapters::tool::PreparedArguments::prepare(
+        &animus_adapters::tool::ArgumentPreparationRequest {
+            current_schema_identity: TOOL_SCHEMA,
+            allowed_field_names: &[TOOL_ARGUMENT_NAME],
+            compatibility_rules: &[],
+            fields: &fields,
+        },
+    )
+    .expect("tool arguments should validate");
+    assert_eq!(arguments.schema_identity(), TOOL_SCHEMA);
+    assert_eq!(arguments.fields().len(), TOOL_ARGUMENT_COUNT);
+    let request = animus_adapters::ToolRequest::from_draft(&animus_adapters::tool::RequestDraft {
+        name: Some(TOOL_NAME),
+        arguments: Some(&arguments),
+        correlation_id: Some(TOOL_CALL_ID),
+        output_policy: animus_adapters::tool::OutputPolicy {
+            visible_char_budget: OUTPUT_BUDGET,
+        },
+        mutation_targets: &[TOOL_MUTATION_TARGET],
+        required_capability_labels: &[TOOL_CAPABILITY],
+        approval_posture: animus_adapters::tool::ApprovalPosture::PreApproved.as_str(),
+    })
+    .expect("tool request should validate");
+    assert_eq!(request.name(), TOOL_NAME);
+    assert_eq!(request.correlation_id(), TOOL_CALL_ID);
+    request
 }
 
 fn tool_response() -> animus_adapters::ToolResponse {
-    animus_adapters::ToolResponse::new(TOOL_OUTPUT).expect("tool response should validate")
+    let bounded = animus_adapters::tool::BoundedOutput::new(
+        &animus_adapters::tool::OutputDraft {
+            body: TOOL_OUTPUT,
+            full_output_reference: None,
+            hash_requirement: animus_adapters::tool::HashRequirement::Required,
+        },
+        animus_adapters::tool::OutputPolicy {
+            visible_char_budget: OUTPUT_BUDGET,
+        },
+    )
+    .expect("tool output should validate");
+    animus_adapters::ToolResponse::from_bounded(
+        bounded,
+        animus_adapters::tool::OutputRedactionClass::Safe,
+    )
 }
 
 fn bounded_output() -> animus_adapters::tool::BoundedOutput {

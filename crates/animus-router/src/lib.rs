@@ -38,10 +38,9 @@ mod test_support;
 // ── Public re-exports ────────────────────────────────────────────────────────
 
 pub use boundary::AdapterContractError;
-pub use choose::{Budget, CatalogEntry, CatalogEntryDraft, SelectedPlan, SelectionDenial, select_recipe};
-pub use limit::{Bounds, BoundsDraft, BudgetLedger, DeadlineClass, FallbackPolicy};
-pub use outcome::{BudgetExhausted, BudgetKind, FallbackDecision, FallbackRouteReason, ResultDraft,
-    RouteResult, RouteResultStatus, StepFailure, evaluate_fallback};
+pub use choose::{
+    Budget, CatalogEntry, CatalogEntryDraft, SelectedPlan, SelectionDenial, select_recipe,
+};
 pub use evidence::{
     DurationBucket, ExecutionPlanError, FallbackChain, FallbackStep, QuorumClass, Receipt,
     ReceiptDraft, ReceiptLeak, Redaction, RoleStep, RouterExecutionPlan,
@@ -50,6 +49,11 @@ pub use evidence::{
 pub use input::{
     RequestMetadata, RequestMetadataDraft, RuleSignalSource, SignalProjectionError, SignalSource,
     project_signals,
+};
+pub use limit::{Bounds, BoundsDraft, BudgetLedger, DeadlineClass, FallbackPolicy};
+pub use outcome::{
+    BudgetExhausted, BudgetKind, FallbackDecision, FallbackRouteReason, ResultDraft, RouteResult,
+    RouteResultStatus, StepFailure, evaluate_fallback,
 };
 pub use policy::ROUTER_RECIPE_POLICY_JSON;
 pub use projection::{

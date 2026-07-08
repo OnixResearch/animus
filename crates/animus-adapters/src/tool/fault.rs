@@ -27,6 +27,13 @@ pub enum ContractError {
         /// Unknown argument name.
         name: super::Text,
     },
+    /// Runtime tool calls no longer apply legacy argument compatibility shims.
+    LegacyCompatibilityDisabled,
+    /// Approval posture was not one of the stable current-shape labels.
+    UnsupportedApprovalPosture {
+        /// Rejected approval posture.
+        posture: super::Text,
+    },
     /// A safe output reference looked like a raw path, URL, or host locator.
     UnsafeReference {
         /// Rejected reference text.
@@ -41,6 +48,8 @@ pub enum ContractError {
         /// Actual requested budget.
         actual_chars: u32,
     },
+    /// Preserved bounded-output counts contradicted visible text metadata.
+    InconsistentOutputMetadata,
 }
 
 impl From<crate::AdapterContractError> for ContractError {

@@ -25,8 +25,11 @@ pub use gate::{
     CapabilityStatus, DispatchDecision, DispatchRequest, DispatchStatus, ExecutorStatus,
     FailureClass, OutputBoundaryStatus, evaluate_dispatch,
 };
-pub use limit::{BoundedOutput, HashRequirement, OutputDraft, OutputPolicy, OutputStatus};
-pub use message::{Request, Response};
+pub use limit::{
+    BoundedOutput, BoundedOutputMetadataDraft, HashRequirement, OutputDraft, OutputPolicy,
+    OutputStatus,
+};
+pub use message::{ApprovalPosture, OutputRedactionClass, Request, RequestDraft, Response};
 pub use schedule::{
     MutationCallDraft, MutationWindow, MutationWindowStatus, plan_mutation_windows,
 };
@@ -35,7 +38,6 @@ type Text = alloc::string::String;
 type Collection<T> = alloc::vec::Vec<T>;
 
 const NAME_FIELD: crate::validation::FieldName = crate::validation::FieldName::new("tool_name");
-const INPUT_FIELD: crate::validation::FieldName = crate::validation::FieldName::new("tool_input");
 const OUTPUT_FIELD: crate::validation::FieldName = crate::validation::FieldName::new("tool_output");
 const LABEL_FIELD: crate::validation::FieldName = crate::validation::FieldName::new("tool_label");
 const DESCRIPTION_FIELD: crate::validation::FieldName =
@@ -64,10 +66,25 @@ const MUTATION_TARGET_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("tool_mutation_target");
 const OUTPUT_REFERENCE_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("tool_output_reference");
+const OUTPUT_HASH_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("tool_output_content_hash");
+const CORRELATION_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("tool_call_correlation_id");
+const APPROVAL_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("tool_approval_posture");
 
 const MAX_TOOL_METADATA_ITEMS: usize = 32;
 const MIN_VISIBLE_OUTPUT_CHARS: u32 = 1;
 const MAX_VISIBLE_OUTPUT_CHARS: u32 = 8_192;
+const FIRST_COLLECTION_INDEX: usize = 0;
+const ARGUMENT_SUMMARY_SEPARATOR: &str = ",";
+const ARGUMENT_SUMMARY_ASSIGNMENT: &str = "=";
+const APPROVAL_PRE_APPROVED: &str = "pre_approved";
+const APPROVAL_REQUIRES_APPROVAL: &str = "requires_approval";
+const APPROVAL_DENIED: &str = "denied";
+const REDACTION_SAFE: &str = "safe";
+const REDACTION_REDACTED: &str = "redacted";
+const REDACTION_SECRET_ADJACENT: &str = "secret_adjacent";
 // r[impl agent_harness_runtime.boundary_versions.contract_identities]
 /// Stable contract identity for public tool request DTOs.
 pub const TOOL_REQUEST_CONTRACT_IDENTITY: &str = "animus.tool-request.v1";

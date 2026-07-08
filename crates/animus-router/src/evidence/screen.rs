@@ -198,12 +198,8 @@ pub fn materialize_execution_plan(
     let roles = super::label::roles_for_family(selected.family());
     validate_plan_constraints(selected, roles.len())?;
     let (role_steps, route_labels) = build_role_steps(selected, catalog, budget, roles)?;
-    let fallback_chain = super::label::build_fallback_chain(
-        selected,
-        catalog,
-        budget,
-        &route_labels,
-    )?;
+    let fallback_chain =
+        super::label::build_fallback_chain(selected, catalog, budget, &route_labels)?;
 
     Ok(super::record::assemble_execution_plan(
         selected,
@@ -265,18 +261,13 @@ fn build_role_steps(
             Some(label) => label.as_str(),
             None => return Err(ExecutionPlanError::MissingRoleMapping),
         };
-        let candidate_labels = super::label::collect_role_candidates(
-            selected,
-            selected_label,
-            role,
-            catalog,
-            budget,
-        )?;
+        let candidate_labels =
+            super::label::collect_role_candidates(selected, selected_label, role, catalog, budget)?;
         let quorum = selected.bounds().min_success_quorum();
         let quorum_index = match usize::try_from(quorum) {
-        Ok(value) => value,
-        Err(_) => return Err(ExecutionPlanError::ImpossibleQuorum),
-    };
+            Ok(value) => value,
+            Err(_) => return Err(ExecutionPlanError::ImpossibleQuorum),
+        };
         if quorum_index > candidate_labels.len() {
             return Err(ExecutionPlanError::ImpossibleQuorum);
         }
@@ -291,4 +282,3 @@ fn build_role_steps(
 
     Ok((role_steps, route_labels))
 }
-

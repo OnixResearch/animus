@@ -187,6 +187,7 @@ fn unrelated_model_capability_fails_before_adapter_call() {
 #[test]
 fn unrelated_tool_capability_fails_before_adapter_call() {
     // r[verify agent_harness_runtime.scoped_capabilities.exact_resolution.fail_closed]
+    // r[verify agent_harness_runtime.tool_calling_breaking.catalog_admission.exact_capability]
     let mut model = super::support::ModelStub::ok();
     let mut tool = super::support::ToolStub::ok();
     let result = super::support::run_program_with_unrelated_tool_capability(
@@ -199,7 +200,7 @@ fn unrelated_tool_capability_fails_before_adapter_call() {
         result.status(),
         crate::RuntimeStatus::Failed {
             failure: crate::RuntimeFailure::ToolAdapter { message }
-        } if message == super::support::ABSENT_SERVICE
+        } if message == "denied_capability"
     ));
     assert_eq!(model.calls, super::support::NO_ADAPTER_CALLS);
     assert_eq!(tool.calls, super::support::NO_ADAPTER_CALLS);
@@ -207,7 +208,7 @@ fn unrelated_tool_capability_fails_before_adapter_call() {
         event,
         crate::RuntimeEvent::AdapterOutcomeClassified {
             component: crate::AdapterComponent::Tool,
-            class: animus_adapters::AdapterCallFailureClass::Absent,
+            class: animus_adapters::AdapterCallFailureClass::DeniedCapability,
             ..
         }
     )));

@@ -9,6 +9,7 @@ pub struct RuntimeAdapters<'a, Model, Tool> {
     tool: Option<&'a mut Tool>,
     middleware: crate::RuntimeMiddlewareStack<'a>,
     capabilities: crate::RuntimeCapabilityRegistry,
+    tool_definitions: Vec<animus_adapters::tool::Definition>,
 }
 
 impl<'a, Model, Tool> RuntimeAdapters<'a, Model, Tool> {
@@ -20,6 +21,7 @@ impl<'a, Model, Tool> RuntimeAdapters<'a, Model, Tool> {
             tool: Some(tool),
             middleware: crate::RuntimeMiddlewareStack::empty(),
             capabilities: crate::RuntimeCapabilityRegistry::model_tool_presence(true, true),
+            tool_definitions: Vec::new(),
         }
     }
 
@@ -36,6 +38,7 @@ impl<'a, Model, Tool> RuntimeAdapters<'a, Model, Tool> {
                 is_model_present,
                 is_tool_present,
             ),
+            tool_definitions: Vec::new(),
         }
     }
 
@@ -56,10 +59,26 @@ impl<'a, Model, Tool> RuntimeAdapters<'a, Model, Tool> {
         self
     }
 
+    /// Replaces the active trusted tool definitions used for dispatch admission.
+    #[must_use]
+    pub fn with_tool_definitions(
+        mut self,
+        tool_definitions: Vec<animus_adapters::tool::Definition>,
+    ) -> Self {
+        self.tool_definitions = tool_definitions;
+        self
+    }
+
     /// Returns the explicit capability registry used for dispatch admission.
     #[must_use]
     pub const fn capability_registry(&self) -> &crate::RuntimeCapabilityRegistry {
         &self.capabilities
+    }
+
+    /// Returns the active trusted tool definitions used for dispatch admission.
+    #[must_use]
+    pub fn tool_definitions(&self) -> &[animus_adapters::tool::Definition] {
+        self.tool_definitions.as_slice()
     }
 }
 

@@ -272,5 +272,3 @@ pub(super) fn assemble_execution_plan(
         fallback_chain,
     }
 }
-
-

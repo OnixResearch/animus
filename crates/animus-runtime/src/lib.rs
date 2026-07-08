@@ -64,6 +64,8 @@ mod shell;
 mod status;
 pub mod subagents;
 mod telemetry;
+#[path = "tooladmission.rs"]
+mod tool_admission;
 mod transition;
 mod trust_boundary;
 mod turns;

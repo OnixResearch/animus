@@ -8,9 +8,12 @@ pub mod loop_prelude {
         ModelDispatchTimeoutPosture, RunReport, RuntimeCapabilityFamily,
         RuntimeCapabilityFamilyMapError, RuntimeCapabilityFamilyRecord, RuntimeConfig,
         RuntimeError, RuntimeFailure, RuntimeInput, RuntimeLoopContractError, RuntimeLoopDecision,
-        RuntimeLoopDecisionDraft, RuntimeLoopTurn, RuntimeStatus, TurnPlan, TurnState,
+        RuntimeLoopDecisionDraft, RuntimeLoopTurn, RuntimeStatus, ToolDispatchCancellationPosture,
+        ToolDispatchFallbackPolicy, ToolDispatchOutputBoundary, ToolDispatchPlan,
+        ToolDispatchPlanIssue, ToolDispatchPlanRequest, ToolDispatchPlanStatus,
+        ToolDispatchPolicyDraft, ToolDispatchTimeoutPosture, TurnPlan, TurnState,
         apply_adapter_outcome, apply_decision, complete_with_fabric_error, plan_model_dispatch,
-        plan_next_turn, run_agent_loop, runtime_capability_family_map,
+        plan_next_turn, plan_tool_dispatch, run_agent_loop, runtime_capability_family_map,
         validate_runtime_capability_family_map,
     };
 }
@@ -21,7 +24,14 @@ pub mod tool_prelude {
         DEFAULT_MODEL_CAPABILITY_LABEL, DEFAULT_TOOL_CAPABILITY_LABEL, RuntimeAdapters,
         RuntimeCapabilityDescriptor, RuntimeCapabilityDescriptorDraft, RuntimeCapabilityError,
         RuntimeCapabilityErrorKind, RuntimeCapabilityOutcome, RuntimeCapabilityRegistry,
-        RuntimeCapabilityResolution, RuntimeCapabilityServiceKind,
+        RuntimeCapabilityResolution, RuntimeCapabilityServiceKind, ToolDispatchCancellationPosture,
+        ToolDispatchFallbackPolicy, ToolDispatchOutputBoundary, ToolDispatchPlan,
+        ToolDispatchPlanIssue, ToolDispatchPlanRequest, ToolDispatchPlanStatus,
+        ToolDispatchPolicyDraft, ToolDispatchTimeoutPosture, plan_tool_dispatch,
+    };
+    pub use animus_adapters::tool::{
+        ApprovalPosture, ArgumentFieldDraft, ArgumentPreparationRequest, OutputPolicy,
+        PreparedArguments, RequestDraft,
     };
     pub use animus_adapters::{
         AdapterCallFailureClass, AdapterCallFailureMetadata, AdapterCallFailureMetadataDraft,
@@ -147,6 +157,13 @@ mod tests {
     const SUMMARY: &str = "intent: compose runtime";
     const TOOL_LABEL: &str = "search";
     const TOOL_INPUT: &str = "query";
+    const TOOL_SCHEMA: &str = "schema.search.v1";
+    const TOOL_ARGUMENT_VALUE: &str = "adapter contracts";
+    const TOOL_CALL_ID: &str = "tool-call-1";
+    const TOOL_VISIBLE_BUDGET: u32 = 64;
+    const TOOL_ARGUMENT_COUNT: usize = 1;
+    const TOOL_MUTATION_TARGET: &str = "resource:file:README";
+    const TOOL_CAPABILITY: &str = "tool.read";
 
     #[test]
     fn domain_preludes_construct_representative_runtime_dtos() {
@@ -157,14 +174,14 @@ mod tests {
             super::loop_prelude::RuntimeLoopDecisionDraft::respond(SUMMARY),
         )
         .expect("decision should validate");
-        let tool = super::tool_prelude::ToolRequest::new(TOOL_LABEL, TOOL_INPUT)
-            .expect("tool request should validate");
+        let tool = tool_request();
         let registry = super::tool_prelude::RuntimeCapabilityRegistry::compatibility_model_tool()
             .expect("compat registry should validate");
 
         assert_eq!(turn.summary(), SUMMARY);
         assert_eq!(decision.kind(), "respond");
         assert_eq!(tool.name(), TOOL_LABEL);
+        assert_eq!(tool.schema_identity(), TOOL_SCHEMA);
         assert!(
             registry.contains_service(super::tool_prelude::RuntimeCapabilityServiceKind::Model)
         );
@@ -173,9 +190,9 @@ mod tests {
     #[test]
     fn domain_preludes_reject_invalid_boundary_values() {
         let decision = super::loop_prelude::RuntimeLoopDecision::from_draft(
-            super::loop_prelude::RuntimeLoopDecisionDraft::tool("   ", TOOL_INPUT),
+            super::loop_prelude::RuntimeLoopDecisionDraft::tool(TOOL_LABEL, TOOL_INPUT),
         )
-        .expect_err("blank tool name should fail");
+        .expect_err("legacy raw tool should fail");
         let registry = super::tool_prelude::RuntimeCapabilityRegistry::from_drafts(&[
             super::tool_prelude::RuntimeCapabilityDescriptorDraft::default_model(),
             super::tool_prelude::RuntimeCapabilityDescriptorDraft::default_model(),
@@ -187,8 +204,7 @@ mod tests {
 
         assert!(matches!(
             decision,
-            super::loop_prelude::RuntimeLoopContractError::EmptyField { .. }
-                | super::loop_prelude::RuntimeLoopContractError::AdapterContract { .. }
+            super::loop_prelude::RuntimeLoopContractError::CurrentShapeRequired { .. }
         ));
         assert_eq!(
             registry.kind(),
@@ -196,5 +212,39 @@ mod tests {
         );
         assert!(hook.is_empty());
         assert_eq!(status_request.target_id(), "agent");
+    }
+
+    fn tool_request() -> super::tool_prelude::ToolRequest {
+        let fields = [super::tool_prelude::ArgumentFieldDraft {
+            name: Some(TOOL_INPUT),
+            value: Some(TOOL_ARGUMENT_VALUE),
+        }];
+        let arguments = super::tool_prelude::PreparedArguments::prepare(
+            &super::tool_prelude::ArgumentPreparationRequest {
+                current_schema_identity: TOOL_SCHEMA,
+                allowed_field_names: &[TOOL_INPUT],
+                compatibility_rules: &[],
+                fields: &fields,
+            },
+        )
+        .expect("arguments should validate");
+        assert_eq!(arguments.schema_identity(), TOOL_SCHEMA);
+        assert_eq!(arguments.fields().len(), TOOL_ARGUMENT_COUNT);
+        let request =
+            super::tool_prelude::ToolRequest::from_draft(&super::tool_prelude::RequestDraft {
+                name: Some(TOOL_LABEL),
+                arguments: Some(&arguments),
+                correlation_id: Some(TOOL_CALL_ID),
+                output_policy: super::tool_prelude::OutputPolicy {
+                    visible_char_budget: TOOL_VISIBLE_BUDGET,
+                },
+                mutation_targets: &[TOOL_MUTATION_TARGET],
+                required_capability_labels: &[TOOL_CAPABILITY],
+                approval_posture: super::tool_prelude::ApprovalPosture::PreApproved.as_str(),
+            })
+            .expect("tool request should validate");
+        assert_eq!(request.name(), TOOL_LABEL);
+        assert_eq!(request.correlation_id(), TOOL_CALL_ID);
+        request
     }
 }

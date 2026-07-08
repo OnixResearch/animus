@@ -175,7 +175,10 @@ pub(super) fn collect_role_candidates(
     catalog: &[crate::CatalogEntry],
     budget: &crate::Budget,
 ) -> Result<alloc::vec::Vec<alloc::string::String>, crate::ExecutionPlanError> {
-    assert!(selected.bounds().max_candidates() > 0, "candidate cap must be positive");
+    assert!(
+        selected.bounds().max_candidates() > 0,
+        "candidate cap must be positive"
+    );
     assert!(budget.max_candidates() > 0, "budget cap must be positive");
     let mut eligible_labels = alloc::vec::Vec::with_capacity(catalog.len());
     for entry in catalog {
@@ -219,12 +222,17 @@ pub(super) fn build_fallback_chain(
     budget: &crate::Budget,
     route_labels: &[alloc::string::String],
 ) -> Result<crate::FallbackChain, crate::ExecutionPlanError> {
-    assert!(selected.bounds().max_candidates() > 0, "candidate cap must be positive");
+    assert!(
+        selected.bounds().max_candidates() > 0,
+        "candidate cap must be positive"
+    );
     assert!(budget.max_candidates() > 0, "budget cap must be positive");
     if selected.family() == crate::RouteFamily::Single
         || selected.bounds().fallback_policy() == crate::FallbackPolicy::Deny
     {
-        return Ok(crate::FallbackChain { steps: alloc::vec::Vec::new() });
+        return Ok(crate::FallbackChain {
+            steps: alloc::vec::Vec::new(),
+        });
     }
 
     if selected.fallback_eligibility() == crate::FallbackEligibility::Ineligible {

@@ -8,6 +8,13 @@ const PRIVATE_PATH_PAYLOAD: &str = "/home/example/private.txt";
 const MODEL_REQUEST_TEXT: &str = "intent: build reliable systems";
 const TOOL_NAME: &str = "fixture-tool";
 const TOOL_INPUT: &str = "fixture input";
+const TOOL_ARGUMENT_NAME: &str = "input";
+const TOOL_SCHEMA: &str = "schema.fixture-tool.v1";
+const TOOL_CALL_ID: &str = "fixture-tool-call";
+const TOOL_VISIBLE_BUDGET: u32 = 64;
+const TOOL_ARGUMENT_COUNT: usize = 1;
+const TOOL_MUTATION_TARGET: &str = "resource:fixture";
+const TOOL_CAPABILITY: &str = "tool.fixture";
 const CONCRETE_DEPENDENCY_MARKERS: &[&str] = &[
     "reqwest",
     "ureq",
@@ -101,14 +108,51 @@ fn fixture_model_and_tool_implement_injected_adapter_contracts() {
         super::deterministic::test_support::FIXTURE_MODEL_MESSAGE
     );
 
-    let request =
-        animus_adapters::ToolRequest::new(TOOL_NAME, TOOL_INPUT).expect("tool request parses");
+    let request = tool_request();
     let mut tool = FixtureToolAdapter;
     let response = tool.call(&request).expect("fixture tool should respond");
     assert_eq!(
         response.output(),
         super::deterministic::test_support::FIXTURE_TOOL_OUTPUT
     );
+}
+
+fn tool_arguments() -> animus_adapters::tool::PreparedArguments {
+    let fields = [animus_adapters::tool::ArgumentFieldDraft {
+        name: Some(TOOL_ARGUMENT_NAME),
+        value: Some(TOOL_INPUT),
+    }];
+    let arguments = animus_adapters::tool::PreparedArguments::prepare(
+        &animus_adapters::tool::ArgumentPreparationRequest {
+            current_schema_identity: TOOL_SCHEMA,
+            allowed_field_names: &[TOOL_ARGUMENT_NAME],
+            compatibility_rules: &[],
+            fields: &fields,
+        },
+    )
+    .expect("tool arguments parse");
+    assert_eq!(arguments.schema_identity(), TOOL_SCHEMA);
+    assert_eq!(arguments.fields().len(), TOOL_ARGUMENT_COUNT);
+    arguments
+}
+
+fn tool_request() -> animus_adapters::ToolRequest {
+    let arguments = tool_arguments();
+    let request = animus_adapters::ToolRequest::from_draft(&animus_adapters::tool::RequestDraft {
+        name: Some(TOOL_NAME),
+        arguments: Some(&arguments),
+        correlation_id: Some(TOOL_CALL_ID),
+        output_policy: animus_adapters::tool::OutputPolicy {
+            visible_char_budget: TOOL_VISIBLE_BUDGET,
+        },
+        mutation_targets: &[TOOL_MUTATION_TARGET],
+        required_capability_labels: &[TOOL_CAPABILITY],
+        approval_posture: animus_adapters::tool::ApprovalPosture::PreApproved.as_str(),
+    })
+    .expect("tool request parses");
+    assert_eq!(request.name(), TOOL_NAME);
+    assert_eq!(request.correlation_id(), TOOL_CALL_ID);
+    request
 }
 
 #[test]

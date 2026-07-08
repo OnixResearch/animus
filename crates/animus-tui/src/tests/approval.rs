@@ -47,6 +47,6 @@ fn simple_tool_runs_without_tui_services() {
 
     let response = crate::run_simple_tool(&mut tool, &request).expect("simple tool should run");
 
-    assert_eq!(response.output(), TOOL_OUTPUT);
+    assert_eq!(response.output(), VISIBLE_TOOL_OUTPUT);
     assert_eq!(tool.calls, expected_call_count());
 }

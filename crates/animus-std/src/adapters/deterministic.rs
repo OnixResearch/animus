@@ -6,6 +6,7 @@ const FIXTURE_CLOCK_LABEL: &str = "fixture_clock";
 const FIXTURE_CREDENTIAL_LABEL: &str = "fixture_credential";
 const FIXTURE_MODEL_MESSAGE: &str = "fixture model response";
 const FIXTURE_TOOL_OUTPUT: &str = "fixture tool output";
+const FIXTURE_TOOL_VISIBLE_BUDGET: u32 = 64;
 const FIXTURE_MODEL_OUTPUT_LABEL: &str = "fixture_model_ok";
 const FIXTURE_FILESYSTEM_OUTPUT_LABEL: &str = "fixture_filesystem_ok";
 const FIXTURE_PROCESS_OUTPUT_LABEL: &str = "fixture_process_ok";
@@ -172,13 +173,26 @@ pub struct FixtureToolAdapter;
 impl animus_adapters::ComponentAdapter<animus_adapters::ToolRequest, animus_adapters::ToolResponse>
     for FixtureToolAdapter
 {
-    type Error = animus_adapters::AdapterContractError;
+    type Error = animus_adapters::tool::ContractError;
 
     fn call(
         &mut self,
         _request: &animus_adapters::ToolRequest,
     ) -> Result<animus_adapters::ToolResponse, Self::Error> {
-        animus_adapters::ToolResponse::new(FIXTURE_TOOL_OUTPUT)
+        let bounded = animus_adapters::tool::BoundedOutput::new(
+            &animus_adapters::tool::OutputDraft {
+                body: FIXTURE_TOOL_OUTPUT,
+                full_output_reference: None,
+                hash_requirement: animus_adapters::tool::HashRequirement::Required,
+            },
+            animus_adapters::tool::OutputPolicy {
+                visible_char_budget: FIXTURE_TOOL_VISIBLE_BUDGET,
+            },
+        )?;
+        Ok(animus_adapters::ToolResponse::from_bounded(
+            bounded,
+            animus_adapters::tool::OutputRedactionClass::Safe,
+        ))
     }
 }
 

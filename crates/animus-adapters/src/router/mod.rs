@@ -13,6 +13,6 @@ pub use animus_router::{
     RecipeDraft, Redaction, RequestMetadata, RequestMetadataDraft, ResultDraft, Role, RoleStep,
     RouteFamily, RouteResult, RouteResultStatus, RouterExecutionPlan, RuleSignalSource,
     SelectedPlan, SelectionDenial, SignalBand, SignalDraft, SignalProjectionError, SignalSource,
-    Signals, StepFailure, TaskShape, ValidationError, evaluate_fallback, materialize_execution_plan,
-    project_signals, select_recipe, validate_receipt_text,
+    Signals, StepFailure, TaskShape, ValidationError, evaluate_fallback,
+    materialize_execution_plan, project_signals, select_recipe, validate_receipt_text,
 };

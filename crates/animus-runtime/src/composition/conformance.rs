@@ -45,6 +45,9 @@ const SAFE_ENDPOINT: &str = "https://provider.invalid/v1";
 const SAFE_EXTRA_BODY_ID: &str = "extra.reasoning";
 const TOOL_NAME: &str = "lookup";
 const TOOL_INPUT_SUMMARY: &str = "query-summary";
+const TOOL_ARGUMENT_NAME: &str = "query";
+const TOOL_CALL_ID: &str = "tool-call-lookup";
+const TOOL_MUTATION_TARGET: &str = "resource:fixture-record";
 const TOOL_OUTPUT_SUMMARY: &str = "lookup";
 const TOOL_LABEL: &str = "Lookup";
 const TOOL_DESCRIPTION: &str = "Read a deterministic in-memory fixture";
@@ -635,8 +638,7 @@ fn tool_provenance_positive(
     entry: &CompositionScenario,
 ) -> Result<ToolProvenancePositive, CompositionDiagnostic> {
     let definition = tool_definition(entry)?;
-    let request = animus_adapters::ToolRequest::new(TOOL_NAME, TOOL_INPUT_SUMMARY)
-        .map_err(|error| scenario_failure(entry, format!("tool request: {error:?}")))?;
+    let request = tool_request(entry)?;
     let mut adapter = FakeToolAdapter::new(TOOL_OUTPUT_SUMMARY);
     let response = animus_adapters::ComponentAdapter::call(&mut adapter, &request)
         .map_err(|error| scenario_failure(entry, error))?;
@@ -764,8 +766,7 @@ fn oversized_output_is_hashed(entry: &CompositionScenario) -> Result<bool, Compo
 fn headless_runtime_events(
     entry: &CompositionScenario,
 ) -> Result<Vec<CompositionEvidenceRecord>, CompositionDiagnostic> {
-    let request = animus_adapters::ToolRequest::new(TOOL_NAME, TOOL_INPUT_SUMMARY)
-        .map_err(|error| scenario_failure(entry, format!("tool request: {error:?}")))?;
+    let request = tool_request(entry)?;
     let events = crate::map_runtime_events_to_headless(&[
         crate::RuntimeEvent::TurnStarted { turn_index: 0 },
         crate::RuntimeEvent::ToolDenied {
@@ -819,8 +820,7 @@ fn headless_runtime_events(
 fn middleware_failure_report(
     entry: &CompositionScenario,
 ) -> Result<Vec<CompositionEvidenceRecord>, CompositionDiagnostic> {
-    let request = animus_adapters::ToolRequest::new(TOOL_NAME, TOOL_INPUT_SUMMARY)
-        .map_err(|error| scenario_failure(entry, format!("tool request: {error:?}")))?;
+    let request = tool_request(entry)?;
     let mut stack = crate::RuntimeMiddlewareStack::empty();
     let is_dispatch_accepted = matches!(
         stack.prepare_tool_dispatch(request.clone()),
@@ -982,6 +982,46 @@ fn tool_definition(
         status: animus_adapters::tool::DefinitionStatus::Active,
     })
     .map_err(|error| scenario_failure(entry, format!("tool definition: {error:?}")))
+}
+
+fn tool_request(
+    entry: &CompositionScenario,
+) -> Result<animus_adapters::ToolRequest, CompositionDiagnostic> {
+    let fields = [animus_adapters::tool::ArgumentFieldDraft {
+        name: Some(TOOL_ARGUMENT_NAME),
+        value: Some(TOOL_INPUT_SUMMARY),
+    }];
+    let arguments = animus_adapters::tool::PreparedArguments::prepare(
+        &animus_adapters::tool::ArgumentPreparationRequest {
+            current_schema_identity: TOOL_SCHEMA_ID,
+            allowed_field_names: &[TOOL_ARGUMENT_NAME],
+            compatibility_rules: &[],
+            fields: &fields,
+        },
+    )
+    .map_err(|error| scenario_failure(entry, format!("tool arguments: {error:?}")))?;
+    animus_adapters::ToolRequest::from_draft(&animus_adapters::tool::RequestDraft {
+        name: Some(TOOL_NAME),
+        arguments: Some(&arguments),
+        correlation_id: Some(TOOL_CALL_ID),
+        output_policy: animus_adapters::tool::OutputPolicy {
+            visible_char_budget: SMALL_OUTPUT_BUDGET_CHARS,
+        },
+        mutation_targets: &[TOOL_MUTATION_TARGET],
+        required_capability_labels: &[TOOL_CAPABILITY],
+        approval_posture: animus_adapters::tool::ApprovalPosture::PreApproved.as_str(),
+    })
+    .map_err(|error| scenario_failure(entry, format!("tool request: {error:?}")))
+}
+
+fn tool_response(
+    body: &str,
+) -> Result<animus_adapters::ToolResponse, animus_adapters::tool::ContractError> {
+    let bounded = bounded_tool_output(body, animus_adapters::tool::HashRequirement::Required)?;
+    Ok(animus_adapters::ToolResponse::from_bounded(
+        bounded,
+        animus_adapters::tool::OutputRedactionClass::Safe,
+    ))
 }
 
 fn bounded_tool_output(
@@ -1201,7 +1241,7 @@ impl animus_adapters::ComponentAdapter<animus_adapters::ToolRequest, animus_adap
             return Err(String::from("unknown_tool"));
         }
         self.calls += 1;
-        animus_adapters::ToolResponse::new(self.output).map_err(|error| format!("{error:?}"))
+        tool_response(self.output).map_err(|error| format!("{error:?}"))
     }
 }
 

@@ -79,13 +79,51 @@ pub fn idle_rail() -> StatusRailState {
     StatusRailState::idle()
 }
 
-/// Helper: build a valid tool request.
+const TEST_TOOL_SCHEMA: &str = "schema.tui-tool.v1";
+const TEST_TOOL_ARGUMENT: &str = "query";
+const TEST_TOOL_CALL_ID: &str = "tool-call-tui";
+const TEST_TOOL_VISIBLE_BUDGET: u32 = 64;
+const TEST_TOOL_MUTATION_TARGET: &str = "resource:tui";
+const TEST_TOOL_CAPABILITY: &str = "tool.tui";
+const TEST_TOOL_ARGUMENT_COUNT: usize = 1;
+
+/// Helper: build a valid current-shape tool request.
 #[allow(unknown_lints, ambiguous_params)]
 pub fn make_req(request_name: &str, request_text: &str) -> animus_adapters::ToolRequest {
-    unwrap_or_abort(
-        animus_adapters::ToolRequest::new(request_name, request_text),
+    let fields = [animus_adapters::tool::ArgumentFieldDraft {
+        name: Some(TEST_TOOL_ARGUMENT),
+        value: Some(request_text),
+    }];
+    let arguments = unwrap_or_abort(
+        animus_adapters::tool::PreparedArguments::prepare(
+            &animus_adapters::tool::ArgumentPreparationRequest {
+                current_schema_identity: TEST_TOOL_SCHEMA,
+                allowed_field_names: &[TEST_TOOL_ARGUMENT],
+                compatibility_rules: &[],
+                fields: &fields,
+            },
+        ),
+        "arguments should validate",
+    );
+    assert_eq!(arguments.schema_identity(), TEST_TOOL_SCHEMA);
+    assert_eq!(arguments.fields().len(), TEST_TOOL_ARGUMENT_COUNT);
+    let request = unwrap_or_abort(
+        animus_adapters::ToolRequest::from_draft(&animus_adapters::tool::RequestDraft {
+            name: Some(request_name),
+            arguments: Some(&arguments),
+            correlation_id: Some(TEST_TOOL_CALL_ID),
+            output_policy: animus_adapters::tool::OutputPolicy {
+                visible_char_budget: TEST_TOOL_VISIBLE_BUDGET,
+            },
+            mutation_targets: &[TEST_TOOL_MUTATION_TARGET],
+            required_capability_labels: &[TEST_TOOL_CAPABILITY],
+            approval_posture: animus_adapters::tool::ApprovalPosture::PreApproved.as_str(),
+        }),
         "request should validate",
-    )
+    );
+    assert_eq!(request.name(), request_name);
+    assert_eq!(request.correlation_id(), TEST_TOOL_CALL_ID);
+    request
 }
 
 /// Helper: build a tool call card from name+input.

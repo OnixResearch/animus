@@ -23,6 +23,8 @@ pub enum CapabilityStatus {
 pub enum OutputBoundaryStatus {
     /// Output handling is bounded.
     Bounded,
+    /// Executor output reference or handle is unsafe.
+    UnsafeReference,
     /// Executor output is oversized without a bounded contract.
     UnboundedOversized,
 }
@@ -38,12 +40,22 @@ pub enum FailureClass {
     UnavailableService,
     /// Capability policy denied the call.
     DeniedCapability,
+    /// Approval policy denied the call.
+    ApprovalDenied,
     /// The call was cancelled.
     Cancelled,
+    /// The call timed out.
+    TimedOut,
     /// The executor returned malformed output.
     MalformedOutput,
+    /// Output reference was unsafe.
+    UnsafeOutputReference,
     /// Output was oversized and not bounded.
     UnboundedOversizedOutput,
+    /// Declared mutation targets conflicted.
+    MutationConflict,
+    /// Fallback was requested and denied.
+    FallbackDenied,
     /// Execution failed after dispatch.
     ExecutionFailure,
 }
@@ -119,6 +131,7 @@ const fn dispatch_failure(request: DispatchRequest<'_>) -> Option<FailureClass> 
         (CapabilityStatus::Denied, _, _) => Some(FailureClass::DeniedCapability),
         (_, ExecutorStatus::Missing, _) => Some(FailureClass::MissingExecutor),
         (_, ExecutorStatus::Unavailable, _) => Some(FailureClass::UnavailableService),
+        (_, _, OutputBoundaryStatus::UnsafeReference) => Some(FailureClass::UnsafeOutputReference),
         (_, _, OutputBoundaryStatus::UnboundedOversized) => {
             Some(FailureClass::UnboundedOversizedOutput)
         }

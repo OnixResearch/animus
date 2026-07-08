@@ -30,11 +30,11 @@ fn model_response_produces_assistant_entry() {
 #[test]
 fn tool_request_and_response_produce_entries() {
     let mut model = ConversationRenderModel::new();
-    let req = animus_adapters::ToolRequest::new("read_file", "path: Cargo.toml").unwrap();
+    let req = tool_request("read_file", "path: Cargo.toml");
     model.apply_runtime_event(&animus_runtime::RuntimeEvent::ToolRequested {
         request: req.clone(),
     });
-    let resp = animus_adapters::ToolResponse::new("[package]\nname = \"animus\"").unwrap();
+    let resp = tool_response("[package]\nname = \"animus\"");
     model.apply_runtime_event(&animus_runtime::RuntimeEvent::ToolResponded { response: resp });
     let snapshot = render_conversation_snapshot(&model);
     assert!(snapshot.contains("tool_use: read_file"));
@@ -66,7 +66,7 @@ fn model_denied_produces_error_entry() {
 #[test]
 fn tool_denied_produces_error_entry() {
     let mut model = ConversationRenderModel::new();
-    let request = animus_adapters::ToolRequest::new("rm", "/").unwrap();
+    let request = tool_request("rm", "/");
     model.apply_runtime_event(&animus_runtime::RuntimeEvent::ToolDenied {
         request,
         reason: String::from("capability: denied"),
@@ -283,4 +283,64 @@ fn make_finish(
         },
     )
     .expect("finish frame should validate")
+}
+
+const TEST_TOOL_SCHEMA: &str = "schema.conversation-tool.v1";
+const TEST_TOOL_ARGUMENT: &str = "query";
+const TEST_TOOL_CALL_ID: &str = "tool-call-conversation";
+const TEST_TOOL_VISIBLE_BUDGET: u32 = 64;
+const TEST_TOOL_MUTATION_TARGET: &str = "resource:conversation";
+const TEST_TOOL_CAPABILITY: &str = "tool.conversation";
+const TEST_TOOL_ARGUMENT_COUNT: usize = 1;
+
+#[allow(unknown_lints, ambiguous_params)]
+fn tool_request(name: &str, argument_value: &str) -> animus_adapters::ToolRequest {
+    let fields = [animus_adapters::tool::ArgumentFieldDraft {
+        name: Some(TEST_TOOL_ARGUMENT),
+        value: Some(argument_value),
+    }];
+    let arguments = animus_adapters::tool::PreparedArguments::prepare(
+        &animus_adapters::tool::ArgumentPreparationRequest {
+            current_schema_identity: TEST_TOOL_SCHEMA,
+            allowed_field_names: &[TEST_TOOL_ARGUMENT],
+            compatibility_rules: &[],
+            fields: &fields,
+        },
+    )
+    .expect("arguments should validate");
+    assert_eq!(arguments.schema_identity(), TEST_TOOL_SCHEMA);
+    assert_eq!(arguments.fields().len(), TEST_TOOL_ARGUMENT_COUNT);
+    let request = animus_adapters::ToolRequest::from_draft(&animus_adapters::tool::RequestDraft {
+        name: Some(name),
+        arguments: Some(&arguments),
+        correlation_id: Some(TEST_TOOL_CALL_ID),
+        output_policy: animus_adapters::tool::OutputPolicy {
+            visible_char_budget: TEST_TOOL_VISIBLE_BUDGET,
+        },
+        mutation_targets: &[TEST_TOOL_MUTATION_TARGET],
+        required_capability_labels: &[TEST_TOOL_CAPABILITY],
+        approval_posture: animus_adapters::tool::ApprovalPosture::PreApproved.as_str(),
+    })
+    .expect("tool request should validate");
+    assert_eq!(request.name(), name);
+    assert_eq!(request.correlation_id(), TEST_TOOL_CALL_ID);
+    request
+}
+
+fn tool_response(body: &str) -> animus_adapters::ToolResponse {
+    let bounded = animus_adapters::tool::BoundedOutput::new(
+        &animus_adapters::tool::OutputDraft {
+            body,
+            full_output_reference: None,
+            hash_requirement: animus_adapters::tool::HashRequirement::Required,
+        },
+        animus_adapters::tool::OutputPolicy {
+            visible_char_budget: TEST_TOOL_VISIBLE_BUDGET,
+        },
+    )
+    .expect("tool output should validate");
+    animus_adapters::ToolResponse::from_bounded(
+        bounded,
+        animus_adapters::tool::OutputRedactionClass::Safe,
+    )
 }

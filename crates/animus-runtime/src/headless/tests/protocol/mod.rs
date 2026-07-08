@@ -5,7 +5,14 @@ const PROMPT_PAYLOAD: &str = "prompt-summary";
 const STEER_PAYLOAD: &str = "steer-summary";
 const TOOL_NAME: &str = "search";
 const TOOL_INPUT: &str = "hidden tool args";
+const TOOL_ARGUMENT_NAME: &str = "query";
+const TOOL_SCHEMA: &str = "schema.search.v1";
+const TOOL_CALL_ID: &str = "tool-call-1";
+const TOOL_VISIBLE_BUDGET: u32 = 64;
+const TOOL_MUTATION_TARGET: &str = "resource:file:README";
+const TOOL_CAPABILITY: &str = "tool.read";
 const TOOL_DENIAL: &str = "policy_denied";
+const TOOL_ARGUMENT_COUNT: usize = 1;
 const FIRST_TURN_INDEX: usize = 0;
 const FIRST_EVENT_INDEX: usize = 0;
 const SECOND_EVENT_INDEX: usize = 1;
@@ -75,8 +82,7 @@ fn active_turn_prompt_requires_explicit_steer_or_follow_up_semantics() {
 
 #[test]
 fn runtime_tool_events_carry_shared_safe_tool_correlation() {
-    let request = animus_adapters::ToolRequest::new(TOOL_NAME, TOOL_INPUT)
-        .expect("tool request should validate");
+    let request = tool_request();
     let events = map_runtime_events_to_headless(&[
         crate::RuntimeEvent::ToolRequested {
             request: request.clone(),
@@ -98,6 +104,39 @@ fn runtime_tool_events_carry_shared_safe_tool_correlation() {
     );
     assert!(!events[FIRST_EVENT_INDEX].summary().contains(TOOL_INPUT));
     assert_eq!(events[SECOND_EVENT_INDEX].summary(), TOOL_DENIAL);
+}
+
+fn tool_request() -> animus_adapters::ToolRequest {
+    let fields = [animus_adapters::tool::ArgumentFieldDraft {
+        name: Some(TOOL_ARGUMENT_NAME),
+        value: Some(TOOL_INPUT),
+    }];
+    let arguments = animus_adapters::tool::PreparedArguments::prepare(
+        &animus_adapters::tool::ArgumentPreparationRequest {
+            current_schema_identity: TOOL_SCHEMA,
+            allowed_field_names: &[TOOL_ARGUMENT_NAME],
+            compatibility_rules: &[],
+            fields: &fields,
+        },
+    )
+    .expect("arguments should validate");
+    assert_eq!(arguments.schema_identity(), TOOL_SCHEMA);
+    assert_eq!(arguments.fields().len(), TOOL_ARGUMENT_COUNT);
+    let request = animus_adapters::ToolRequest::from_draft(&animus_adapters::tool::RequestDraft {
+        name: Some(TOOL_NAME),
+        arguments: Some(&arguments),
+        correlation_id: Some(TOOL_CALL_ID),
+        output_policy: animus_adapters::tool::OutputPolicy {
+            visible_char_budget: TOOL_VISIBLE_BUDGET,
+        },
+        mutation_targets: &[TOOL_MUTATION_TARGET],
+        required_capability_labels: &[TOOL_CAPABILITY],
+        approval_posture: animus_adapters::tool::ApprovalPosture::PreApproved.as_str(),
+    })
+    .expect("tool request should validate");
+    assert_eq!(request.name(), TOOL_NAME);
+    assert_eq!(request.correlation_id(), TOOL_CALL_ID);
+    request
 }
 
 #[test]

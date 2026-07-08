@@ -255,17 +255,27 @@ where
     Tool: animus_adapters::ToolAdapter,
     Tool::Error: core::fmt::Display,
 {
-    // r[impl agent_harness_runtime.scoped_capabilities.exact_resolution]
+    // r[impl agent_harness_runtime.tool_calling_breaking.dispatch_plan.fail_closed]
+    // r[impl agent_harness_runtime.tool_calling_breaking.catalog_admission.exact_capability]
     debug_assert!(!request.name().is_empty());
-    let Some(required) = default_tool_capability() else {
-        return missing_service(crate::AdapterComponent::Tool);
-    };
-    debug_assert!(!required.label().is_empty());
-    if !matches!(
-        adapters.capabilities.resolve_exact(&required),
-        crate::RuntimeCapabilityResolution::Resolved { .. }
-    ) {
-        return missing_service(crate::AdapterComponent::Tool);
+    let plan = crate::plan_tool_dispatch(crate::ToolDispatchPlanRequest {
+        request,
+        definitions: adapters.tool_definitions(),
+        registry: &adapters.capabilities,
+        executor_present: adapters.tool.is_some(),
+        policy: crate::ToolDispatchPolicyDraft::current_defaults(),
+    });
+    debug_assert_eq!(
+        plan.request_contract_identity(),
+        animus_adapters::TOOL_REQUEST_CONTRACT_IDENTITY
+    );
+    if !plan.is_admitted() {
+        return crate::AdapterOutcome::ToolCall {
+            outcome: failed_outcome(
+                tool_plan_failure_class(plan.issue()),
+                tool_plan_failure_message(plan.issue()),
+            ),
+        };
     }
     match adapters.tool.as_deref_mut() {
         Some(tool) => tool.call(request).map_or_else(
@@ -283,13 +293,6 @@ where
     }
 }
 
-fn default_tool_capability() -> Option<crate::RuntimeCapabilityDescriptor> {
-    crate::RuntimeCapabilityDescriptor::from_draft(
-        crate::RuntimeCapabilityDescriptorDraft::default_tool(),
-    )
-    .ok()
-}
-
 fn missing_service(component: crate::AdapterComponent) -> crate::AdapterOutcome {
     match component {
         crate::AdapterComponent::Model => crate::AdapterOutcome::ModelCall {
@@ -304,6 +307,13 @@ fn missing_service(component: crate::AdapterComponent) -> crate::AdapterOutcome 
 fn model_plan_failure_message(issue: crate::ModelDispatchPlanIssue) -> &'static str {
     match issue {
         crate::ModelDispatchPlanIssue::MissingProvider => "absent",
+        other => other.as_str(),
+    }
+}
+
+fn tool_plan_failure_message(issue: crate::ToolDispatchPlanIssue) -> &'static str {
+    match issue {
+        crate::ToolDispatchPlanIssue::MissingExecutor => "absent",
         other => other.as_str(),
     }
 }
@@ -332,6 +342,52 @@ fn model_plan_failure_class(
         | crate::ModelDispatchPlanIssue::UnsupportedStreamPolicy
         | crate::ModelDispatchPlanIssue::MissingReceiptPolicy => {
             animus_adapters::AdapterCallFailureClass::MalformedOutput
+        }
+    }
+}
+
+fn tool_plan_failure_class(
+    issue: crate::ToolDispatchPlanIssue,
+) -> animus_adapters::AdapterCallFailureClass {
+    match issue {
+        crate::ToolDispatchPlanIssue::UnknownTool
+        | crate::ToolDispatchPlanIssue::MissingExecutor => {
+            animus_adapters::AdapterCallFailureClass::MissingExecutor
+        }
+        crate::ToolDispatchPlanIssue::UnavailableExecutor => {
+            animus_adapters::AdapterCallFailureClass::Unavailable
+        }
+        crate::ToolDispatchPlanIssue::DeniedCapability => {
+            animus_adapters::AdapterCallFailureClass::DeniedCapability
+        }
+        crate::ToolDispatchPlanIssue::ApprovalDenied => {
+            animus_adapters::AdapterCallFailureClass::ApprovalDenied
+        }
+        crate::ToolDispatchPlanIssue::Cancelled => {
+            animus_adapters::AdapterCallFailureClass::Cancelled
+        }
+        crate::ToolDispatchPlanIssue::TimedOut => {
+            animus_adapters::AdapterCallFailureClass::TimedOut
+        }
+        crate::ToolDispatchPlanIssue::UnsafeReference => {
+            animus_adapters::AdapterCallFailureClass::UnsafeOutputReference
+        }
+        crate::ToolDispatchPlanIssue::UnboundedOutput => {
+            animus_adapters::AdapterCallFailureClass::UnboundedOversizedOutput
+        }
+        crate::ToolDispatchPlanIssue::MutationConflict => {
+            animus_adapters::AdapterCallFailureClass::MutationConflict
+        }
+        crate::ToolDispatchPlanIssue::FallbackDenied => {
+            animus_adapters::AdapterCallFailureClass::FallbackDenied
+        }
+        crate::ToolDispatchPlanIssue::None
+        | crate::ToolDispatchPlanIssue::InvalidRequestShape
+        | crate::ToolDispatchPlanIssue::InactiveTool
+        | crate::ToolDispatchPlanIssue::UntrustedTool
+        | crate::ToolDispatchPlanIssue::SchemaIdentityMismatch
+        | crate::ToolDispatchPlanIssue::MalformedOutputPolicy => {
+            animus_adapters::AdapterCallFailureClass::InvalidInput
         }
     }
 }

@@ -8,11 +8,11 @@ This document is the maintained ownership map for request processing. It is a re
 2. **Deterministic core state** is owned by `animus-core::Intent` and `animus-core::AnimusState` (`crates/animus-core/src/lib.rs`). Core validation produces `animus-core::CoreError` and does not read ambient host state.
 3. **Reusable loop input/config** is owned by `animus-runtime::RuntimeInput` and `animus-runtime::RuntimeConfig` (`crates/animus-runtime/src/contract.rs`). Runtime config is explicit data such as max-turn budgets, not ambient process state. Optional **workflow command planning** is owned by `animus-runtime::WorkflowCommandManifest`, `WorkflowCommandRegistry`, `WorkflowInvocationBinding`, and `WorkflowCommandOutputContract`; hosts supply already-loaded manifests and already-parsed arguments.
 4. **Steel loop decision input** is owned by `animus-steel::LoopTurn` and `animus-steel::SteelLoopFabric` (`crates/animus-steel/src/turn.rs` and `fabric.rs`). `animus-runtime::TurnState` projects validated runtime state into this scriptable loop boundary for each turn.
-5. **Steel loop decisions** are owned by `animus-steel::LoopDecision` (`crates/animus-steel/src/action.rs`). Rust revalidates every `CallModel`, `CallTool`, `Respond`, and `Stop` decision before a host adapter receives it.
-6. **Adapter dispatch DTOs** are owned by `animus-adapters::ModelRequest`, `animus-adapters::ModelResponse`, `animus-adapters::ToolRequest`, `animus-adapters::ToolResponse`, `ModelAdapter`, and `ToolAdapter` (`crates/animus-adapters/src/`). These are implementation-free contracts.
+5. **Steel loop decisions** are owned by `animus-steel::LoopDecision` (`crates/animus-steel/src/action.rs`). Rust revalidates every `CallModel`, current-shape `CallTool`, `Respond`, and `Stop` decision before a host adapter receives it; legacy name-plus-raw-input tool decisions are rejected.
+6. **Adapter dispatch DTOs** are owned by `animus-adapters::ModelRequest`, `animus-adapters::ModelResponse`, current-shape `animus-adapters::ToolRequest`, bounded `animus-adapters::ToolResponse`, `ModelAdapter`, and `ToolAdapter` (`crates/animus-adapters/src/`). These are implementation-free contracts.
 7. **Host status-observation DTOs** are owned by `animus-adapters::AgentStatusObservation`, `HostStatusRequest`, `HostStatusObservationBatch`, and `HostStatusAdapter`. Hosts may detect agent status however they choose, but reusable crates receive only typed observations.
 8. **Reusable status authority selection** is owned by `animus-runtime::select_agent_status`, `AgentStatusSelection`, and `StatusDecisionExplanation`. The selector is pure over a validated target request, logical sequence, and in-memory observations; presentation metadata remains visual-only.
-9. **Reusable runtime dispatch and projection** are owned by `animus-runtime::run_agent_loop`, `LoopFabric`, `RuntimeEvent`, `RunReport`, and `RuntimeStatus` (`crates/animus-runtime/src/`). The runtime shell calls injected fabrics/adapters, records ordered events, handles stop/final/max-turn/failure statuses, and does not discover providers or credentials.
+9. **Reusable runtime dispatch and projection** are owned by `animus-runtime::run_agent_loop`, `LoopFabric`, `ToolDispatchPlan`, `RuntimeEvent`, `RunReport`, and `RuntimeStatus` (`crates/animus-runtime/src/`). The runtime shell admits tool calls through active trusted catalog definitions, exact capability labels, approval posture, output policy, and mutation-window planning before calling injected fabrics/adapters. It records ordered bounded events, handles stop/final/max-turn/failure statuses, and does not discover providers or credentials.
 10. **Std-shell adapter dispatch** is owned by `animus-std::run_with_model`, `run`, and `SummaryModelAdapter` (`crates/animus-std/src/execution.rs`). The shell wires typed config, core state, and caller-provided adapters without discovering providers or credentials. The legacy **Runtime event/report projection** remains represented by `animus-std::RunReport` and `animus-std::RunError` for this shell path.
 11. **Safe receipt construction** is future host-owned behavior. Until a receipt DTO lands, evidence summaries must follow `docs/cairn-lifecycle.md`, `docs/status-authority.md`, and `docs/safety-contract.md`: bounded status, issue codes, counts, safe relative labels, BLAKE3 hashes where content identity is needed, and explicit redaction markers.
 12. **Host ledger persistence seam** is future host-owned behavior. The source-of-truth placeholder is a future host-owned `LedgerService` trait or DTO set; reusable core, adapter, Steel, and runtime crates must not persist sessions directly.
@@ -27,11 +27,11 @@ This document is the maintained ownership map for request processing. It is a re
 | Workflow command planning | `animus-runtime` | `WorkflowCommandManifest`, `WorkflowCommandRegistry`, `WorkflowInvocationBinding`, `WorkflowCommandOutputContract` | Manifests and parsed arguments are host-supplied; reusable planning only validates, binds, and policy-checks. |
 | Steel turn input | `animus-steel` / `animus-runtime` | `LoopTurn`, `TurnState`, `LoopFabric` | Fabric is injected; no concrete providers or tools are constructed. |
 | Steel decision | `animus-steel` | `LoopDecision`, `SteelLoopFabric`, `LoopError` | No adapter dispatch until Rust revalidation passes. |
-| Model/tool DTOs | `animus-adapters` | `ModelRequest`, `ModelResponse`, `ToolRequest`, `ToolResponse` | No implementation authority. |
+| Model/tool DTOs | `animus-adapters` | `ModelRequest`, `ModelResponse`, current-shape `ToolRequest`, bounded `ToolResponse` | No implementation authority; no legacy raw tool payloads. |
 | Status observation DTOs | `animus-adapters` | `AgentStatusObservation`, `HostStatusRequest`, `HostStatusObservationBatch` | Typed observations only. |
 | Adapter ports | `animus-adapters` | `ComponentAdapter`, `ModelAdapter`, `ToolAdapter`, `HostStatusAdapter` | Concrete host implementation is injected by callers. |
 | Status authority selection | `animus-runtime` | `select_agent_status`, `AgentStatusSelection`, `StatusDecisionExplanation` | Pure selection over typed inputs only. |
-| Runtime dispatch | `animus-runtime` | `run_agent_loop`, `run_with_steel_program`, `RuntimeEvent`, `RunReport`, `RuntimeStatus` | Calls injected fabric/model/tool boundaries only. |
+| Runtime dispatch | `animus-runtime` | `run_agent_loop`, `run_with_steel_program`, `ToolDispatchPlan`, `RuntimeEvent`, `RunReport`, `RuntimeStatus` | Calls injected fabric/model/tool boundaries only after exact catalog/capability admission. |
 | Std dispatch | `animus-std` | `run_with_model`, `run`, `SummaryModelAdapter` | Shell orchestration only; no provider discovery. |
 | Receipts | host-owned future surface | Future receipt DTO | Must be redacted and bounded before persistence. |
 | Ledger persistence | host-owned future surface | Future host-owned `LedgerService` trait | Host-owned persistence only. |
@@ -44,7 +44,7 @@ This document is the maintained ownership map for request processing. It is a re
 
 ### Adapter contract boundary
 
-`animus-adapters` must not implement providers, discover tools, read credentials, open network connections, execute processes, read files, or persist sessions. It owns DTO validation and implementation-free traits only, including host status-observation DTOs and the `HostStatusAdapter` port. Validate with `cargo test -p animus-adapters` and dependency rails.
+`animus-adapters` must not implement providers, discover tools, read credentials, open network connections, execute processes, read files, or persist sessions. It owns DTO validation and implementation-free traits only, including current-shape tool request validation, bounded tool response validation, typed tool failure classes, host status-observation DTOs, and the `HostStatusAdapter` port. Validate with `cargo test -p animus-adapters` and dependency rails.
 
 ### Status authority boundary
 
@@ -52,11 +52,11 @@ This document is the maintained ownership map for request processing. It is a re
 
 ### Steel boundary
 
-`animus-steel` may evaluate Steel scripts, but every script-produced action must re-enter Rust validation through `LoopDecision`, `ModelRequest`, `ToolRequest`, or `ModelResponse` before dispatch. It must not silently bypass adapter contracts, weaken policy, or persist host state. Validate with `cargo test -p animus-steel`.
+`animus-steel` may evaluate Steel scripts, but every script-produced action must re-enter Rust validation through `LoopDecision`, `ModelRequest`, current-shape `ToolRequest`, bounded `ToolResponse`, or `ModelResponse` before dispatch. Tool calls must use the structured `(animus-tool name schema args correlation budget targets caps approval)` shape. It must not silently bypass adapter contracts, weaken policy, or persist host state. Validate with `cargo test -p animus-steel`.
 
 ### Reusable runtime boundary
 
-`animus-runtime` owns pure turn-state transitions, workflow command manifest/registry/argument/output validation, worker task/context/report validation, deterministic worker report merge logic, and thin dispatch shells over injected loop fabrics, worker services, and model/tool adapters. It must not construct provider clients, discover tools, read provider credentials, open network connections, execute processes, read files, inspect environment variables, use clocks, or perform concrete persistence. Validate with `cargo test -p animus-runtime` and `cargo test -p animus-runtime workflow_command --locked` for command contracts.
+`animus-runtime` owns pure turn-state transitions, workflow command manifest/registry/argument/output validation, worker task/context/report validation, deterministic worker report merge logic, pure `ToolDispatchPlan` admission, and thin dispatch shells over injected loop fabrics, worker services, and model/tool adapters. Tool dispatch must fail closed for unknown, inactive, untrusted, executor-less, capability-denied, approval-denied, malformed-output, unsafe-output, unbounded-output, mutation-conflict, cancelled, timed-out, or fallback-denied plans before executor effects. It must not construct provider clients, discover tools, read provider credentials, open network connections, execute processes, read files, inspect environment variables, use clocks, or perform concrete persistence. Validate with `cargo test -p animus-runtime` and `cargo test -p animus-runtime workflow_command --locked` for command contracts.
 
 ### Std-shell boundary
 
@@ -80,6 +80,7 @@ cargo test -p animus-adapters
 cargo test -p animus-steel
 cargo test -p animus-runtime
 cargo test -p animus-std
+scripts/cairn/check-tool-catalog --root .
 scripts/cairn/check-request-lifecycle --root .
 scripts/cairn/check-evidence-safety --root .
 scripts/cairn/check-wasm-surface --root .

@@ -2,6 +2,16 @@ pub(super) const SUMMARY: &str = "intent: build reliable systems";
 pub(super) const MODEL_MESSAGE: &str = "model answer";
 pub(super) const TOOL_NAME: &str = "search";
 pub(super) const TOOL_INPUT: &str = "query";
+pub(super) const TOOL_SCHEMA: &str = "schema.search.v1";
+pub(super) const TOOL_ARGUMENT_VALUE: &str = "adapter contracts";
+pub(super) const TOOL_CALL_ID: &str = "tool-call-1";
+pub(super) const TOOL_VISIBLE_BUDGET: u32 = 64;
+pub(super) const TOOL_CAPABILITY: &str = "tool.read";
+pub(super) const TOOL_RESULT_SHAPE: &str = "text-summary";
+pub(super) const TOOL_PROMPT_SNIPPET: &str = "Use search for indexed project facts.";
+pub(super) const TOOL_PROMPT_GUIDELINE: &str = "Do not infer missing search results.";
+pub(super) const TOOL_SOURCE_IDENTITY: &str = "host.registry";
+pub(super) const TOOL_PROVENANCE: &str = "builtin";
 pub(super) const TOOL_OUTPUT: &str = "tool result";
 pub(super) const ADAPTER_FAILURE: &str = "adapter failed";
 pub(super) const UNRELATED_MODEL_LABEL: &str = "unrelated-model";
@@ -11,6 +21,7 @@ pub(super) const DENIED_SERVICE: &str = "denied";
 pub(super) const INVALID_CONFIG_TURNS: usize = 0;
 pub(super) const NO_ADAPTER_CALLS: usize = 0;
 pub(super) const EXPECTED_ADAPTER_CALLS: usize = 1;
+pub(super) const CUSTOM_REGISTRY_DESCRIPTOR_COUNT: usize = 2;
 pub(super) const INITIAL_TURN_BUDGET: usize = 1;
 pub(super) const FOLLOWUP_TURN_BUDGET: usize = 2;
 const FOLLOWUP_TURN_BUDGET_U32: u32 = 2;
@@ -35,7 +46,15 @@ pub(super) const TOOL_THEN_RESPOND_PROGRAM: &str = r#"
 (define (animus-decide)
   (if animus-last-tool-output
       (animus-respond animus-last-tool-output)
-      (animus-tool "search" "query")))
+      (animus-tool
+        "search"
+        "schema.search.v1"
+        (list (list "query" "adapter contracts"))
+        "tool-call-1"
+        64
+        (list "resource:file:README")
+        (list "tool.read")
+        "pre_approved")))
 "#;
 pub(super) const INVALID_DECISION_PROGRAM: &str = r#"
 (define (animus-decide)
@@ -128,13 +147,23 @@ impl animus_adapters::ComponentAdapter<animus_adapters::ToolRequest, animus_adap
         request: &animus_adapters::ToolRequest,
     ) -> Result<animus_adapters::ToolResponse, Self::Error> {
         assert_eq!(request.name(), TOOL_NAME);
-        assert_eq!(request.input(), TOOL_INPUT);
+        assert_eq!(request.schema_identity(), TOOL_SCHEMA);
+        assert_eq!(request.arguments()[NO_ADAPTER_CALLS].name(), TOOL_INPUT);
+        assert_eq!(
+            request.arguments()[NO_ADAPTER_CALLS].value(),
+            TOOL_ARGUMENT_VALUE
+        );
+        assert_eq!(request.correlation_id(), TOOL_CALL_ID);
+        assert_eq!(
+            request.output_policy().visible_char_budget,
+            TOOL_VISIBLE_BUDGET
+        );
         self.calls = self.calls.saturating_add(EXPECTED_ADAPTER_CALLS);
         if self.fail {
             return Err(AdapterFailure);
         }
 
-        animus_adapters::ToolResponse::new(TOOL_OUTPUT).map_err(|_error| AdapterFailure)
+        Ok(tool_response())
     }
 }
 
@@ -147,7 +176,7 @@ pub(super) fn run_program_with_initial_turn_budget(
         program,
         &runtime_input(),
         runtime_config_with_initial_turn_budget(),
-        super::super::RuntimeAdapters::new(model, tool),
+        runtime_adapters(Some(model), Some(tool)),
     )
 }
 
@@ -160,7 +189,7 @@ pub(super) fn run_program_with_followup_turn_budget(
         program,
         &runtime_input(),
         runtime_config_with_followup_turn_budget(),
-        super::super::RuntimeAdapters::new(model, tool),
+        runtime_adapters(Some(model), Some(tool)),
     )
 }
 
@@ -176,7 +205,7 @@ pub(super) fn run_policy_program_with_followup_turn_budget(
         &policy,
         &runtime_input(),
         runtime_config_with_followup_turn_budget(),
-        super::super::RuntimeAdapters::new(model, tool),
+        runtime_adapters(Some(model), Some(tool)),
     )
 }
 
@@ -192,7 +221,7 @@ pub(super) fn run_policy_program_with_bad_profile(
         &policy,
         &runtime_input(),
         runtime_config_with_followup_turn_budget(),
-        super::super::RuntimeAdapters::new(model, tool),
+        runtime_adapters(Some(model), Some(tool)),
     )
 }
 
@@ -204,7 +233,7 @@ pub(super) fn run_program_with_missing_model_service(
         program,
         &runtime_input(),
         runtime_config_with_followup_turn_budget(),
-        super::super::RuntimeAdapters::<ModelStub, ToolStub>::new_optional(None, Some(tool)),
+        runtime_adapters(None, Some(tool)),
     )
 }
 
@@ -216,7 +245,7 @@ pub(super) fn run_program_with_missing_tool_service(
         program,
         &runtime_input(),
         runtime_config_with_followup_turn_budget(),
-        super::super::RuntimeAdapters::<ModelStub, ToolStub>::new_optional(Some(model), None),
+        runtime_adapters(Some(model), None),
     )
 }
 
@@ -231,14 +260,24 @@ pub(super) fn run_program_with_unrelated_model_capability(
             service_kind: crate::RuntimeCapabilityServiceKind::Model.as_str(),
             scope: None,
         },
-        crate::RuntimeCapabilityDescriptorDraft::default_tool(),
+        crate::RuntimeCapabilityDescriptorDraft {
+            label: TOOL_CAPABILITY,
+            service_kind: crate::RuntimeCapabilityServiceKind::Tool.as_str(),
+            scope: None,
+        },
     ])
     .expect("registry should validate");
+    assert_eq!(
+        registry.descriptors().len(),
+        CUSTOM_REGISTRY_DESCRIPTOR_COUNT
+    );
+    assert!(registry.contains_service(crate::RuntimeCapabilityServiceKind::Model));
+    assert!(registry.contains_service(crate::RuntimeCapabilityServiceKind::Tool));
     super::super::run_with_steel_program(
         program,
         &runtime_input(),
         runtime_config_with_followup_turn_budget(),
-        super::super::RuntimeAdapters::new(model, tool).with_capability_registry(registry),
+        runtime_adapters(Some(model), Some(tool)).with_capability_registry(registry),
     )
 }
 
@@ -256,16 +295,75 @@ pub(super) fn run_program_with_unrelated_tool_capability(
         },
     ])
     .expect("registry should validate");
+    assert_eq!(
+        registry.descriptors().len(),
+        CUSTOM_REGISTRY_DESCRIPTOR_COUNT
+    );
+    assert!(registry.contains_service(crate::RuntimeCapabilityServiceKind::Model));
+    assert!(registry.contains_service(crate::RuntimeCapabilityServiceKind::Tool));
     super::super::run_with_steel_program(
         program,
         &runtime_input(),
         runtime_config_with_followup_turn_budget(),
-        super::super::RuntimeAdapters::new(model, tool).with_capability_registry(registry),
+        runtime_adapters(Some(model), Some(tool)).with_capability_registry(registry),
     )
 }
 
 pub(super) fn runtime_input() -> crate::RuntimeInput {
     crate::RuntimeInput::new(SUMMARY).expect("summary should be valid")
+}
+
+pub(super) fn tool_response() -> animus_adapters::ToolResponse {
+    let bounded = animus_adapters::tool::BoundedOutput::new(
+        &animus_adapters::tool::OutputDraft {
+            body: TOOL_OUTPUT,
+            full_output_reference: None,
+            hash_requirement: animus_adapters::tool::HashRequirement::Required,
+        },
+        animus_adapters::tool::OutputPolicy {
+            visible_char_budget: TOOL_VISIBLE_BUDGET,
+        },
+    )
+    .expect("tool output should bound");
+    animus_adapters::ToolResponse::from_bounded(
+        bounded,
+        animus_adapters::tool::OutputRedactionClass::Safe,
+    )
+}
+
+fn runtime_adapters<'a>(
+    model: Option<&'a mut ModelStub>,
+    tool: Option<&'a mut ToolStub>,
+) -> super::super::RuntimeAdapters<'a, ModelStub, ToolStub> {
+    let registry = crate::RuntimeCapabilityRegistry::from_drafts(&[
+        crate::RuntimeCapabilityDescriptorDraft::default_model(),
+        crate::RuntimeCapabilityDescriptorDraft {
+            label: TOOL_CAPABILITY,
+            service_kind: crate::RuntimeCapabilityServiceKind::Tool.as_str(),
+            scope: None,
+        },
+    ])
+    .expect("registry should validate");
+    super::super::RuntimeAdapters::<ModelStub, ToolStub>::new_optional(model, tool)
+        .with_capability_registry(registry)
+        .with_tool_definitions(vec![tool_definition()])
+}
+
+fn tool_definition() -> animus_adapters::tool::Definition {
+    animus_adapters::tool::Definition::validate(&animus_adapters::tool::DefinitionDraft {
+        name: Some(TOOL_NAME),
+        label: Some(TOOL_NAME),
+        description: Some(TOOL_PROMPT_SNIPPET),
+        parameter_schema_identity: Some(TOOL_SCHEMA),
+        prompt_snippet: Some(TOOL_PROMPT_SNIPPET),
+        prompt_guidelines: &[TOOL_PROMPT_GUIDELINE],
+        source_identity: Some(TOOL_SOURCE_IDENTITY),
+        provenance: Some(TOOL_PROVENANCE),
+        capability_labels: &[TOOL_CAPABILITY],
+        result_metadata_shape: Some(TOOL_RESULT_SHAPE),
+        status: animus_adapters::tool::DefinitionStatus::Active,
+    })
+    .expect("tool definition should validate")
 }
 
 fn policy_profile_for_program(program: &str, max_turns: u32) -> animus_steel::SteelPolicyProfile {

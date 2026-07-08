@@ -251,6 +251,11 @@ pub enum RuntimeLoopContractError {
         /// Unsupported normalized value.
         value: String,
     },
+    /// Legacy raw tool-call payload was supplied where current shape is required.
+    CurrentShapeRequired {
+        /// Field name.
+        field: &'static str,
+    },
     /// Adapter DTO validation rejected the decision payload.
     AdapterContract {
         /// Field name.
@@ -284,6 +289,12 @@ impl core::fmt::Display for RuntimeLoopContractError {
                     "{field} contains unsupported decision kind {value}"
                 )
             }
+            Self::CurrentShapeRequired { field } => {
+                write!(
+                    formatter,
+                    "{field} requires current structured tool-call payload"
+                )
+            }
             Self::AdapterContract { field, message } => {
                 write!(formatter, "{field} failed adapter validation: {message}")
             }
@@ -305,11 +316,11 @@ fn from_model_draft(
 fn from_tool_draft(
     draft: RuntimeLoopDecisionDraft<'_>,
 ) -> Result<RuntimeLoopDecision, RuntimeLoopContractError> {
-    let name = required_payload(TOOL_NAME_FIELD, draft.tool_name)?;
-    let input = required_payload(TOOL_INPUT_FIELD, draft.tool_input)?;
-    animus_adapters::ToolRequest::new(name, input)
-        .map(|request| RuntimeLoopDecision::CallTool { request })
-        .map_err(|error| adapter_error(TOOL_INPUT_FIELD, &error))
+    let _name = required_payload(TOOL_NAME_FIELD, draft.tool_name)?;
+    let _input = required_payload(TOOL_INPUT_FIELD, draft.tool_input)?;
+    Err(RuntimeLoopContractError::CurrentShapeRequired {
+        field: TOOL_INPUT_FIELD.as_str(),
+    })
 }
 
 fn from_respond_draft(
@@ -416,12 +427,10 @@ mod tests {
     }
 
     #[test]
-    fn neutral_decision_accepts_dispatch_and_terminal_variants() {
+    fn neutral_decision_accepts_model_response_and_stop_variants() {
         let decisions = [
             RuntimeLoopDecision::from_draft(RuntimeLoopDecisionDraft::model(SUMMARY))
                 .expect("model decision should build"),
-            RuntimeLoopDecision::from_draft(RuntimeLoopDecisionDraft::tool(TOOL_NAME, TOOL_INPUT))
-                .expect("tool decision should build"),
             RuntimeLoopDecision::from_draft(RuntimeLoopDecisionDraft::respond(MODEL_MESSAGE))
                 .expect("response decision should build"),
             RuntimeLoopDecision::from_draft(RuntimeLoopDecisionDraft::stop())
@@ -429,9 +438,21 @@ mod tests {
         ];
 
         assert_eq!(decisions[0].kind(), MODEL_KIND);
-        assert_eq!(decisions[1].kind(), TOOL_KIND);
-        assert_eq!(decisions[2].kind(), RESPOND_KIND);
-        assert_eq!(decisions[3].kind(), STOP_KIND);
+        assert_eq!(decisions[1].kind(), RESPOND_KIND);
+        assert_eq!(decisions[2].kind(), STOP_KIND);
+    }
+
+    #[test]
+    fn neutral_decision_rejects_legacy_raw_tool_payload() {
+        // r[verify agent_harness_runtime.tool_calling_breaking.current_shape.rejects_legacy]
+        let error =
+            RuntimeLoopDecision::from_draft(RuntimeLoopDecisionDraft::tool(TOOL_NAME, TOOL_INPUT))
+                .expect_err("legacy raw tool payload should fail");
+
+        assert!(matches!(
+            error,
+            RuntimeLoopContractError::CurrentShapeRequired { .. }
+        ));
     }
 
     #[test]

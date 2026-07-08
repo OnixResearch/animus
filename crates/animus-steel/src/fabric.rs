@@ -3,7 +3,8 @@ const FABRIC_PRELUDE: &str = "\
 (define animus-last-model-message #f)\n\
 (define animus-last-tool-output #f)\n\
 (define (animus-model prompt) (list 'model prompt))\n\
-(define (animus-tool name input) (list 'tool name input))\n\
+(define (animus-tool name schema arguments correlation-id visible-budget mutation-targets capabilities approval)\n\
+  (list 'tool name schema arguments correlation-id visible-budget mutation-targets capabilities approval))\n\
 (define (animus-respond message) (list 'respond message))\n\
 (define (animus-stop) (list 'stop))\n";
 const DECIDE_CALL: &str = "(animus-decide)";
@@ -100,7 +101,15 @@ mod tests {
 ";
     const TOOL_PROGRAM: &str = r#"
 (define (animus-decide)
-  (animus-tool "search" "query"))
+  (animus-tool
+    "search"
+    "schema.search.v1"
+    (list (list "query" "adapter contracts"))
+    "tool-call-1"
+    10
+    (list "resource:file:README")
+    (list "tool.read")
+    "pre_approved"))
 "#;
     const RESPOND_PROGRAM: &str = r"
 (define (animus-decide)

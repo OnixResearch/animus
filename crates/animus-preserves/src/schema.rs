@@ -487,6 +487,12 @@ mod tests {
     const MODEL_PROMPT: &str = "intent: build reliable systems";
     const TOOL_NAME: &str = "search";
     const TOOL_INPUT: &str = "query";
+    const TOOL_ARGUMENT_NAME: &str = "query";
+    const TOOL_SCHEMA: &str = "schema.search.v1";
+    const TOOL_CALL_ID: &str = "tool-call-1";
+    const TOOL_VISIBLE_BUDGET: u32 = 64;
+    const TOOL_MUTATION_TARGET: &str = "resource:search";
+    const TOOL_CAPABILITY: &str = "tool.search";
     const TOOL_OUTPUT: &str = "result";
     const RUNTIME_SUMMARY: &str = "runtime started";
     const UNSUPPORTED_SCHEMA_VERSION: u16 = INITIAL_SCHEMA_VERSION + 1;
@@ -506,15 +512,60 @@ mod tests {
             crate::BoundaryMessage::ModelRequest {
                 prompt: String::from(MODEL_PROMPT),
             },
-            crate::BoundaryMessage::ToolResponse {
-                output: String::from(TOOL_OUTPUT),
-            },
-            crate::BoundaryMessage::RuntimeToolRequested {
-                name: String::from(TOOL_NAME),
-                input: String::from(TOOL_INPUT),
-            },
+            crate::BoundaryMessage::from_tool_response(&tool_response()),
+            crate::BoundaryMessage::from_runtime_event(
+                &animus_runtime::RuntimeEvent::ToolRequested {
+                    request: tool_request(),
+                },
+            ),
             crate::BoundaryMessage::from_runtime_report(&report),
         ]
+    }
+
+    fn tool_request() -> animus_adapters::ToolRequest {
+        let fields = [animus_adapters::tool::ArgumentFieldDraft {
+            name: Some(TOOL_ARGUMENT_NAME),
+            value: Some(TOOL_INPUT),
+        }];
+        let arguments = animus_adapters::tool::PreparedArguments::prepare(
+            &animus_adapters::tool::ArgumentPreparationRequest {
+                current_schema_identity: TOOL_SCHEMA,
+                allowed_field_names: &[TOOL_ARGUMENT_NAME],
+                compatibility_rules: &[],
+                fields: &fields,
+            },
+        )
+        .expect("tool arguments should validate");
+        animus_adapters::ToolRequest::from_draft(&animus_adapters::tool::RequestDraft {
+            name: Some(TOOL_NAME),
+            arguments: Some(&arguments),
+            correlation_id: Some(TOOL_CALL_ID),
+            output_policy: animus_adapters::tool::OutputPolicy {
+                visible_char_budget: TOOL_VISIBLE_BUDGET,
+            },
+            mutation_targets: &[TOOL_MUTATION_TARGET],
+            required_capability_labels: &[TOOL_CAPABILITY],
+            approval_posture: animus_adapters::tool::ApprovalPosture::PreApproved.as_str(),
+        })
+        .expect("tool request should validate")
+    }
+
+    fn tool_response() -> animus_adapters::ToolResponse {
+        let bounded = animus_adapters::tool::BoundedOutput::new(
+            &animus_adapters::tool::OutputDraft {
+                body: TOOL_OUTPUT,
+                full_output_reference: None,
+                hash_requirement: animus_adapters::tool::HashRequirement::Required,
+            },
+            animus_adapters::tool::OutputPolicy {
+                visible_char_budget: TOOL_VISIBLE_BUDGET,
+            },
+        )
+        .expect("tool output should validate");
+        animus_adapters::ToolResponse::from_bounded(
+            bounded,
+            animus_adapters::tool::OutputRedactionClass::Safe,
+        )
     }
 
     fn runtime_event_record_with_schema(schema: SchemaIdentity) -> BoundaryRecord {
