@@ -7,8 +7,6 @@
 
 #![allow(unknown_lints, excessive_file_length)]
 
-use std::collections::{BTreeMap, BTreeSet};
-
 const BLAKE3_ALGORITHM: &str = "BLAKE3";
 const HASH_PART_SEPARATOR: &str = "\u{1f}";
 const HASH_HEX_CHARS: usize = 64;
@@ -17,6 +15,9 @@ const MAX_TEXT_CHARS: usize = 4_096;
 const MAX_PACKET_ITEMS: u16 = 32;
 const MAX_PACKET_TOKENS: u32 = 8_192;
 const MAX_EVIDENCE_REFS: usize = 16;
+const MAX_CAPABILITY_CATALOG_ENTRIES: usize = 128;
+const CAPABILITY_CEILING_COUNT: usize = 4;
+const CONTEXT_PACKET_HASH_PREFIX_PARTS: usize = 2;
 const MAX_FANOUT_CHILDREN: u16 = 16;
 const MAX_FANOUT_CONCURRENCY: u16 = 8;
 const MAX_DETAIL_IMPORT_CHARS: u32 = 16_384;
@@ -52,6 +53,48 @@ const UNSAFE_TEXT_MARKERS: &[&str] = &[
     "sk-",
     "/home/",
 ];
+
+#[derive(Clone, Copy)]
+struct TextValidationInput<'a> {
+    field: &'static str,
+    value: &'a str,
+}
+
+macro_rules! validate_label {
+    ($field:expr, $value:expr) => {
+        validate_label_input(TextValidationInput {
+            field: $field,
+            value: $value,
+        })
+    };
+}
+
+macro_rules! normalize_label {
+    ($field:expr, $value:expr) => {
+        normalize_label_input(TextValidationInput {
+            field: $field,
+            value: $value,
+        })
+    };
+}
+
+macro_rules! validate_safe_text {
+    ($field:expr, $value:expr) => {
+        validate_safe_text_input(TextValidationInput {
+            field: $field,
+            value: $value,
+        })
+    };
+}
+
+macro_rules! reject_unsafe_text {
+    ($field:expr, $value:expr) => {
+        reject_unsafe_text_input(TextValidationInput {
+            field: $field,
+            value: $value,
+        })
+    };
+}
 
 /// High-level diagnostic emitted by pure subagent validation and reducers.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -375,10 +418,10 @@ pub fn convert_subagent_capability_labels(
 ) -> Result<SubagentCapabilityConversion, SubagentDiagnostic> {
     let catalog_by_label = validate_capability_catalog(catalog)?;
     ensure_non_empty(labels, FIELD_CAPABILITY)?;
-    let mut seen = BTreeSet::new();
+    let mut seen = std::collections::BTreeSet::new();
     let mut capabilities = Vec::with_capacity(labels.len());
     for label in labels {
-        let normalized = normalize_label(FIELD_CAPABILITY, label)?;
+        let normalized = normalize_label!(FIELD_CAPABILITY, label)?;
         reject_wildcard_label(normalized.as_str())?;
         if !seen.insert(normalized.clone()) {
             return Err(SubagentDiagnostic::new(
@@ -396,6 +439,8 @@ pub fn convert_subagent_capability_labels(
         })?;
         capabilities.push(capability_from_entry(entry)?);
     }
+    debug_assert_eq!(capabilities.len(), seen.len());
+    debug_assert!(capabilities.len() <= labels.len());
     Ok(SubagentCapabilityConversion { capabilities })
 }
 
@@ -413,21 +458,24 @@ pub fn resolve_typed_subagent_capabilities(
     ensure_unique_capabilities(&input.request, "request")?;
     ensure_unique_capabilities(&input.workspace_scope, "workspace_scope")?;
     ensure_unique_capabilities(&input.host_admission, "host_admission")?;
+    let denial_slots = input.request.len().saturating_mul(CAPABILITY_CEILING_COUNT);
     let mut effective = Vec::with_capacity(input.request.len());
-    let mut denied = Vec::new();
+    let mut denied = Vec::with_capacity(denial_slots);
     for capability in &input.request {
-        let mut denied_here = false;
+        let mut is_denied_here = false;
         for source in missing_capability_sources(input, capability) {
-            denied_here = true;
+            is_denied_here = true;
             denied.push(SubagentCapabilityDenial {
                 capability: capability.clone(),
                 source,
             });
         }
-        if !denied_here {
+        if !is_denied_here {
             effective.push(capability.clone());
         }
     }
+    debug_assert!(effective.len() <= input.request.len());
+    debug_assert!(denied.len() <= denial_slots);
     Ok(SubagentCapabilityResolution { effective, denied })
 }
 
@@ -590,7 +638,7 @@ pub struct SubagentContextPacket {
 pub fn validate_subagent_context_packet(
     draft: &SubagentContextPacketDraft,
 ) -> Result<SubagentContextPacket, SubagentDiagnostic> {
-    let packet_id = validate_label(FIELD_CONTEXT, draft.packet_id.as_str())?;
+    let packet_id = validate_label!(FIELD_CONTEXT, draft.packet_id.as_str())?;
     ensure_non_empty(draft.items.as_slice(), FIELD_CONTEXT)?;
     if draft.items.len() > usize::from(draft.admission.max_items) {
         return Err(SubagentDiagnostic::new(
@@ -599,11 +647,17 @@ pub fn validate_subagent_context_packet(
             "context packet item count exceeds policy",
         ));
     }
-    let mut seen = BTreeSet::new();
+    let mut seen = std::collections::BTreeSet::new();
     let mut token_estimate = 0_u32;
-    let mut safe_parts = vec![packet_id.as_str(), child_kind_label(draft.child_kind)];
+    let safe_part_slots = draft
+        .items
+        .len()
+        .saturating_add(CONTEXT_PACKET_HASH_PREFIX_PARTS);
+    let mut safe_parts = Vec::with_capacity(safe_part_slots);
+    safe_parts.push(packet_id.as_str());
+    safe_parts.push(child_kind_label(draft.child_kind));
     for item in &draft.items {
-        let label = validate_label(FIELD_CONTEXT, item.label.as_str())?;
+        let label = validate_label!(FIELD_CONTEXT, item.label.as_str())?;
         if !seen.insert(label.clone()) {
             return Err(SubagentDiagnostic::new(
                 SubagentDiagnosticKind::DuplicateNormalizedLabel,
@@ -628,6 +682,8 @@ pub fn validate_subagent_context_packet(
         )
     })?;
     let packet_hash = hash_parts(SAFE_HASH_DOMAIN_CONTEXT, &safe_parts);
+    debug_assert_eq!(usize::from(item_count), draft.items.len());
+    debug_assert!(token_estimate <= draft.admission.max_tokens);
     Ok(SubagentContextPacket {
         packet_id,
         child_kind: draft.child_kind,
@@ -801,8 +857,8 @@ pub fn validate_subagent_child_run(
             "facade validation must not execute child runs",
         ));
     }
-    let child_id = validate_label(FIELD_CHILD, draft.child_id.as_str())?;
-    let parent_id = validate_label(FIELD_CHILD, draft.parent_id.as_str())?;
+    let child_id = validate_label!(FIELD_CHILD, draft.child_id.as_str())?;
+    let parent_id = validate_label!(FIELD_CHILD, draft.parent_id.as_str())?;
     if matches!(draft.kind, SubagentChildRunKind::Unsupported) {
         return Err(SubagentDiagnostic::new(
             SubagentDiagnosticKind::UnsupportedKind,
@@ -821,6 +877,8 @@ pub fn validate_subagent_child_run(
     let packet = validate_subagent_context_packet(packet_draft)?;
     let packet = project_context_packet_for_child_kind(&packet, draft.kind)?;
     let kind_metadata_label = validate_kind_fields(draft)?;
+    debug_assert_eq!(packet.child_kind, draft.kind);
+    debug_assert!(!kind_metadata_label.is_empty());
     Ok(SubagentChildRun {
         child_id,
         parent_id,
@@ -856,6 +914,8 @@ pub fn admit_subagent_child_run(child: &SubagentChildRun) -> SubagentAdmission {
             child.context_packet.packet_hash.as_str(),
         ],
     );
+    debug_assert_eq!(capability_labels.len(), child.capabilities.len());
+    debug_assert!(!child.context_packet.packet_hash.is_empty());
     SubagentAdmission {
         child_id: child.child_id.clone(),
         parent_id: child.parent_id.clone(),
@@ -926,7 +986,7 @@ impl SubagentHandle {
     /// Returns [`SubagentDiagnostic`] when the handle is empty, unsafe, or too long.
     pub fn new(handle_id: impl AsRef<str>) -> Result<Self, SubagentDiagnostic> {
         Ok(Self {
-            handle_id: validate_label(FIELD_SERVICE, handle_id.as_ref())?,
+            handle_id: validate_label!(FIELD_SERVICE, handle_id.as_ref())?,
         })
     }
 }
@@ -1125,6 +1185,8 @@ pub fn transition_subagent_state(
             next.failure_class = Some(kind);
         }
     }
+    debug_assert_eq!(next.admission.child_id, state.admission.child_id);
+    debug_assert!(next.status.is_terminal() || next.report.is_none());
     Ok(next)
 }
 
@@ -1199,10 +1261,10 @@ pub fn subagent_collect(
         .as_ref()
         .ok_or_else(|| stale_handle("collect requires an active handle"))?;
     let service = injected_subagent_service(service)?;
-    let report = service
+    let collected_child = service
         .collect(handle)
         .map_err(service_failure_to_diagnostic)?;
-    transition_subagent_state(state, SubagentCoordinatorEvent::Collect(report))
+    transition_subagent_state(state, SubagentCoordinatorEvent::Collect(collected_child))
 }
 
 /// Safe lifecycle event projection for child-run states.
@@ -1326,8 +1388,8 @@ pub struct SubagentFanOutPlan {
 pub fn validate_subagent_fanout_plan(
     draft: &SubagentFanOutPlanDraft,
 ) -> Result<SubagentFanOutPlan, SubagentDiagnostic> {
-    let plan_id = validate_label(FIELD_PLAN, draft.plan_id.as_str())?;
-    let aggregation_schema = validate_label(FIELD_PLAN, draft.aggregation_schema.as_str())?;
+    let plan_id = validate_label!(FIELD_PLAN, draft.plan_id.as_str())?;
+    let aggregation_schema = validate_label!(FIELD_PLAN, draft.aggregation_schema.as_str())?;
     ensure_non_empty(draft.children.as_slice(), FIELD_PLAN)?;
     if draft.children.len() > usize::from(draft.budget.max_children)
         || draft.children.len() > usize::from(MAX_FANOUT_CHILDREN)
@@ -1355,7 +1417,7 @@ pub fn validate_subagent_fanout_plan(
             "fan-out shared budget must be positive",
         ));
     }
-    let mut seen = BTreeSet::new();
+    let mut seen = std::collections::BTreeSet::new();
     for child in &draft.children {
         if !seen.insert(child.child_id.clone()) {
             return Err(SubagentDiagnostic::new(
@@ -1365,6 +1427,8 @@ pub fn validate_subagent_fanout_plan(
             ));
         }
     }
+    debug_assert_eq!(seen.len(), draft.children.len());
+    debug_assert!(draft.max_concurrency <= MAX_FANOUT_CONCURRENCY);
     Ok(SubagentFanOutPlan {
         plan_id,
         children: draft.children.clone(),
@@ -1449,10 +1513,13 @@ pub fn aggregate_subagent_fan_in(
     outcomes: &[SubagentFanInOutcome],
 ) -> Result<SubagentFanInAggregate, SubagentDiagnostic> {
     let outcomes_by_child = indexed_outcomes(outcomes)?;
-    let mut successful_children = Vec::new();
-    let mut non_success_children = Vec::new();
+    let mutation_intent_slots = outcomes.iter().fold(0_usize, |slots, outcome| {
+        slots.saturating_add(outcome.mutation_intents.len())
+    });
+    let mut successful_children = Vec::with_capacity(plan.children.len());
+    let mut non_success_children = Vec::with_capacity(plan.children.len());
     let mut statuses = Vec::with_capacity(plan.children.len());
-    let mut mutation_intents = Vec::new();
+    let mut mutation_intents = Vec::with_capacity(mutation_intent_slots);
     let mut total_budget = 0_u32;
     for child in &plan.children {
         let outcome = outcomes_by_child
@@ -1488,6 +1555,13 @@ pub fn aggregate_subagent_fan_in(
         &mutation_arbitration,
         !successful_children.is_empty(),
     );
+    debug_assert_eq!(
+        successful_children
+            .len()
+            .saturating_add(non_success_children.len()),
+        plan.children.len()
+    );
+    debug_assert!(statuses.len() >= plan.children.len());
     Ok(SubagentFanInAggregate {
         status,
         successful_children,
@@ -1569,9 +1643,9 @@ pub struct SubagentLineageRecord {
 pub fn validate_subagent_lineage_record(
     draft: &SubagentLineageRecordDraft,
 ) -> Result<SubagentLineageRecord, SubagentDiagnostic> {
-    let parent_id = validate_label(FIELD_LINEAGE, draft.parent_id.as_str())?;
-    let child_id = validate_label(FIELD_LINEAGE, draft.child_id.as_str())?;
-    let delegation_source = validate_label(FIELD_LINEAGE, draft.delegation_source.as_str())?;
+    let parent_id = validate_label!(FIELD_LINEAGE, draft.parent_id.as_str())?;
+    let child_id = validate_label!(FIELD_LINEAGE, draft.child_id.as_str())?;
+    let delegation_source = validate_label!(FIELD_LINEAGE, draft.delegation_source.as_str())?;
     validate_hash(draft.admission_identity.as_str())?;
     validate_hash(draft.capability_identity.as_str())?;
     validate_hash(draft.context_packet_identity.as_str())?;
@@ -1584,11 +1658,11 @@ pub fn validate_subagent_lineage_record(
         ));
     }
     validate_evidence_refs(draft.evidence_refs.as_slice(), FIELD_LINEAGE)?;
-    let safe_summary = validate_safe_text(FIELD_LINEAGE, draft.safe_summary.as_str())?;
+    let safe_summary = validate_safe_text!(FIELD_LINEAGE, draft.safe_summary.as_str())?;
     let failure_class = draft
         .failure_class
         .as_ref()
-        .map(|value| validate_label(FIELD_LINEAGE, value.as_str()))
+        .map(|value| validate_label!(FIELD_LINEAGE, value.as_str()))
         .transpose()?;
     let record_parts = [
         parent_id.as_str(),
@@ -1602,6 +1676,8 @@ pub fn validate_subagent_lineage_record(
         safe_summary.as_str(),
     ];
     let record_hash = hash_parts(SAFE_HASH_DOMAIN_LINEAGE, &record_parts);
+    debug_assert!(draft.terminal_status.is_terminal());
+    debug_assert_eq!(record_hash.len(), HASH_HEX_CHARS);
     Ok(SubagentLineageRecord {
         parent_id,
         child_id,
@@ -1705,6 +1781,14 @@ pub fn validate_subagent_replay_influence(
             ));
         }
     }
+    debug_assert!(imports.iter().all(|import| records.iter().any(|record| {
+        record.child_id == import.child_id && record.parent_id == import.parent_id
+    })));
+    debug_assert!(
+        imports
+            .iter()
+            .all(|import| import.output_hash.len() == HASH_HEX_CHARS)
+    );
     Ok(())
 }
 
@@ -1771,26 +1855,28 @@ pub fn validate_subagent_status_projection(
             "status projections must not include raw child logs",
         ));
     }
-    let child_id = validate_label(FIELD_UX, draft.child_id.as_str())?;
-    let parent_id = validate_label(FIELD_UX, draft.parent_id.as_str())?;
+    let child_id = validate_label!(FIELD_UX, draft.child_id.as_str())?;
+    let parent_id = validate_label!(FIELD_UX, draft.parent_id.as_str())?;
     let denial_reason = draft
         .denial_reason
         .as_ref()
-        .map(|value| validate_safe_text(FIELD_UX, value.as_str()))
+        .map(|value| validate_safe_text!(FIELD_UX, value.as_str()))
         .transpose()?;
     let handoff_summary_ref = draft
         .handoff_summary_ref
         .as_ref()
-        .map(|value| validate_label(FIELD_UX, value.as_str()))
+        .map(|value| validate_label!(FIELD_UX, value.as_str()))
         .transpose()?;
     let evidence_ref = draft
         .evidence_ref
         .as_ref()
-        .map(|value| validate_label(FIELD_UX, value.as_str()))
+        .map(|value| validate_label!(FIELD_UX, value.as_str()))
         .transpose()?;
     for mutation in &draft.pending_mutations {
         validate_mutation_intent(mutation)?;
     }
+    debug_assert!(draft.raw_log.is_none());
+    debug_assert!(!child_id.is_empty());
     Ok(SubagentStatusProjection {
         child_id,
         parent_id,
@@ -1860,77 +1946,112 @@ pub fn route_subagent_ux_command(
     state: &SubagentRunState,
     descriptor: &SubagentCommandDescriptor,
 ) -> Result<SubagentCommandDecision, SubagentDiagnostic> {
-    validate_label(FIELD_UX, descriptor.command_id.as_str())?;
-    let child_id = validate_label(FIELD_UX, descriptor.child_id.as_str())?;
-    validate_safe_text(FIELD_UX, descriptor.reason.as_str())?;
-    if child_id != state.admission.child_id {
-        return Ok(denied_command(stale_handle(
-            "command target does not match active child",
-        )));
+    let command_id = validate_label!(FIELD_UX, descriptor.command_id.as_str())?;
+    let child_id = validate_label!(FIELD_UX, descriptor.child_id.as_str())?;
+    validate_safe_text!(FIELD_UX, descriptor.reason.as_str())?;
+    debug_assert!(!command_id.is_empty());
+    debug_assert!(!child_id.is_empty());
+    if let Some(decision) = command_binding_denial(state, descriptor, child_id.as_str()) {
+        return Ok(decision);
     }
-    if !descriptor.handle_fresh {
-        return Ok(denied_command(SubagentDiagnostic::new(
-            SubagentDiagnosticKind::StaleCommand,
-            FIELD_UX,
-            "UX command handle binding is stale",
-        )));
-    }
-    if !descriptor.authorized {
-        return Ok(denied_command(SubagentDiagnostic::new(
-            SubagentDiagnosticKind::UnauthorizedAction,
-            FIELD_UX,
-            "UX command requires normal authority admission",
-        )));
-    }
-    match descriptor.kind {
-        SubagentCommandKind::Cancel => {
-            if !state.status.is_active() {
-                return Ok(denied_command(stale_handle(
-                    "cancel requires an active child state",
-                )));
-            }
-        }
-        SubagentCommandKind::DetailImportRequest => {
-            let bound = descriptor.requested_detail_bound.ok_or_else(|| {
-                SubagentDiagnostic::new(
-                    SubagentDiagnosticKind::MissingField,
-                    FIELD_UX,
-                    "detail import requests require an explicit bound",
-                )
-            })?;
-            if bound > MAX_DETAIL_IMPORT_CHARS || descriptor.handoff_mode.is_none() {
-                return Ok(denied_command(SubagentDiagnostic::new(
-                    SubagentDiagnosticKind::OverBudget,
-                    FIELD_UX,
-                    "detail import request must be bounded and tied to a handoff mode",
-                )));
-            }
-        }
-        SubagentCommandKind::Acknowledge => {
-            if !state.status.is_terminal() {
-                return Ok(denied_command(SubagentDiagnostic::new(
-                    SubagentDiagnosticKind::StaleCommand,
-                    FIELD_UX,
-                    "acknowledgement requires a terminal child state",
-                )));
-            }
-        }
-        SubagentCommandKind::MutationArbitrationRequest => {
-            let target = descriptor.mutation_target.as_ref().ok_or_else(|| {
-                SubagentDiagnostic::new(
-                    SubagentDiagnosticKind::MissingField,
-                    FIELD_UX,
-                    "mutation arbitration requires a mutation target",
-                )
-            })?;
-            validate_label(FIELD_UX, target.as_str())?;
-        }
+    if let Some(decision) = command_kind_denial(state, descriptor)? {
+        return Ok(decision);
     }
     Ok(SubagentCommandDecision {
         accepted: true,
         routed_to_policy: true,
         diagnostic: None,
     })
+}
+
+fn command_binding_denial(
+    state: &SubagentRunState,
+    descriptor: &SubagentCommandDescriptor,
+    child_id: &str,
+) -> Option<SubagentCommandDecision> {
+    debug_assert!(!child_id.is_empty());
+    debug_assert!(!state.admission.child_id.is_empty());
+    if child_id != state.admission.child_id {
+        return Some(denied_command(stale_handle(
+            "command target does not match active child",
+        )));
+    }
+    if !descriptor.handle_fresh {
+        return Some(denied_command(SubagentDiagnostic::new(
+            SubagentDiagnosticKind::StaleCommand,
+            FIELD_UX,
+            "UX command handle binding is stale",
+        )));
+    }
+    if !descriptor.authorized {
+        return Some(denied_command(SubagentDiagnostic::new(
+            SubagentDiagnosticKind::UnauthorizedAction,
+            FIELD_UX,
+            "UX command requires normal authority admission",
+        )));
+    }
+    None
+}
+
+fn command_kind_denial(
+    state: &SubagentRunState,
+    descriptor: &SubagentCommandDescriptor,
+) -> Result<Option<SubagentCommandDecision>, SubagentDiagnostic> {
+    debug_assert!(descriptor.handle_fresh);
+    debug_assert!(descriptor.authorized);
+    match descriptor.kind {
+        SubagentCommandKind::Cancel if !state.status.is_active() => Ok(Some(denied_command(
+            stale_handle("cancel requires an active child state"),
+        ))),
+        SubagentCommandKind::DetailImportRequest => detail_import_denial(descriptor),
+        SubagentCommandKind::Acknowledge if !state.status.is_terminal() => {
+            Ok(Some(denied_command(SubagentDiagnostic::new(
+                SubagentDiagnosticKind::StaleCommand,
+                FIELD_UX,
+                "acknowledgement requires a terminal child state",
+            ))))
+        }
+        SubagentCommandKind::MutationArbitrationRequest => mutation_arbitration_denial(descriptor),
+        SubagentCommandKind::Cancel | SubagentCommandKind::Acknowledge => Ok(None),
+    }
+}
+
+fn detail_import_denial(
+    descriptor: &SubagentCommandDescriptor,
+) -> Result<Option<SubagentCommandDecision>, SubagentDiagnostic> {
+    let bound = descriptor.requested_detail_bound.ok_or_else(|| {
+        SubagentDiagnostic::new(
+            SubagentDiagnosticKind::MissingField,
+            FIELD_UX,
+            "detail import requests require an explicit bound",
+        )
+    })?;
+    debug_assert!(descriptor.handle_fresh);
+    debug_assert!(descriptor.authorized);
+    if bound > MAX_DETAIL_IMPORT_CHARS || descriptor.handoff_mode.is_none() {
+        return Ok(Some(denied_command(SubagentDiagnostic::new(
+            SubagentDiagnosticKind::OverBudget,
+            FIELD_UX,
+            "detail import request must be bounded and tied to a handoff mode",
+        ))));
+    }
+    Ok(None)
+}
+
+fn mutation_arbitration_denial(
+    descriptor: &SubagentCommandDescriptor,
+) -> Result<Option<SubagentCommandDecision>, SubagentDiagnostic> {
+    let target = descriptor.mutation_target.as_ref().ok_or_else(|| {
+        SubagentDiagnostic::new(
+            SubagentDiagnosticKind::MissingField,
+            FIELD_UX,
+            "mutation arbitration requires a mutation target",
+        )
+    })?;
+    let target = validate_label!(FIELD_UX, target.as_str())?;
+    debug_assert!(!target.is_empty());
+    debug_assert!(descriptor.authorized);
+    Ok(None)
 }
 
 /// External subagent protocol fixture kind.
@@ -2024,7 +2145,7 @@ pub struct ExternalSubagentConformanceReport {
 pub fn validate_external_subagent_fixture(
     fixture: &ExternalSubagentFixture,
 ) -> Result<ExternalSubagentFixtureResult, SubagentDiagnostic> {
-    let fixture_id = validate_label(FIELD_EXTERNAL, fixture.fixture_id.as_str())?;
+    let fixture_id = validate_label!(FIELD_EXTERNAL, fixture.fixture_id.as_str())?;
     if matches!(
         fixture.expected_status,
         ExternalSubagentFixtureStatus::Denied
@@ -2056,6 +2177,8 @@ pub fn validate_external_subagent_fixture(
             "external fixture observed status did not match expected conformance index",
         ));
     }
+    debug_assert_eq!(observed_status, fixture.expected_status);
+    debug_assert_eq!(observed_failure, fixture.expected_failure);
     Ok(ExternalSubagentFixtureResult {
         fixture_id,
         status: observed_status,
@@ -2074,11 +2197,11 @@ pub fn validate_external_subagent_conformance_index(
     index: &ExternalSubagentConformanceIndex,
 ) -> Result<ExternalSubagentConformanceReport, SubagentDiagnostic> {
     ensure_non_empty(index.fixtures.as_slice(), FIELD_EXTERNAL)?;
-    let mut seen = BTreeSet::new();
+    let mut seen = std::collections::BTreeSet::new();
     let mut results = Vec::with_capacity(index.fixtures.len());
-    let mut covered = BTreeSet::new();
+    let mut covered = std::collections::BTreeSet::new();
     for fixture in &index.fixtures {
-        let fixture_id = validate_label(FIELD_EXTERNAL, fixture.fixture_id.as_str())?;
+        let fixture_id = validate_label!(FIELD_EXTERNAL, fixture.fixture_id.as_str())?;
         if !seen.insert(fixture_id) {
             return Err(SubagentDiagnostic::new(
                 SubagentDiagnosticKind::DuplicateNormalizedLabel,
@@ -2087,10 +2210,12 @@ pub fn validate_external_subagent_conformance_index(
             ));
         }
         for requirement in &fixture.covered_requirements {
-            covered.insert(validate_safe_text(FIELD_EXTERNAL, requirement.as_str())?);
+            covered.insert(validate_safe_text!(FIELD_EXTERNAL, requirement.as_str())?);
         }
         results.push(validate_external_subagent_fixture(fixture)?);
     }
+    debug_assert_eq!(seen.len(), index.fixtures.len());
+    debug_assert_eq!(results.len(), index.fixtures.len());
     Ok(ExternalSubagentConformanceReport {
         results,
         covered_requirements: covered.into_iter().collect(),
@@ -2099,14 +2224,23 @@ pub fn validate_external_subagent_conformance_index(
 
 fn validate_capability_catalog(
     catalog: &[SubagentCapabilityCatalogEntry],
-) -> Result<BTreeMap<String, SubagentCapabilityCatalogEntry>, SubagentDiagnostic> {
+) -> Result<std::collections::BTreeMap<String, SubagentCapabilityCatalogEntry>, SubagentDiagnostic>
+{
     ensure_non_empty(catalog, FIELD_CATALOG)?;
-    let mut by_label = BTreeMap::new();
-    let mut by_identity = BTreeMap::new();
-    for entry in catalog {
-        let label = normalize_label(FIELD_CATALOG, entry.stable_label.as_str())?;
+    if catalog.len() > MAX_CAPABILITY_CATALOG_ENTRIES {
+        return Err(SubagentDiagnostic::new(
+            SubagentDiagnosticKind::TooLong,
+            FIELD_CATALOG,
+            "capability catalog exceeds safe entry bound",
+        ));
+    }
+    let mut seen_labels = std::collections::BTreeSet::new();
+    let mut seen_identities = std::collections::BTreeSet::new();
+    let mut normalized_entries = Vec::with_capacity(catalog.len());
+    for entry in catalog.iter().take(MAX_CAPABILITY_CATALOG_ENTRIES) {
+        let label = normalize_label!(FIELD_CATALOG, entry.stable_label.as_str())?;
         reject_wildcard_label(label.as_str())?;
-        let target = normalize_label(FIELD_CATALOG, entry.target_label.as_str())?;
+        let target = normalize_label!(FIELD_CATALOG, entry.target_label.as_str())?;
         reject_wildcard_label(target.as_str())?;
         if matches!(entry.class, SubagentCapabilityClass::Unsupported) {
             return Err(SubagentDiagnostic::new(
@@ -2131,7 +2265,7 @@ fn validate_capability_catalog(
                 "workspace capability entries require an access mode",
             ));
         }
-        if by_label.contains_key(label.as_str()) {
+        if !seen_labels.insert(label.clone()) {
             return Err(SubagentDiagnostic::new(
                 SubagentDiagnosticKind::DuplicateNormalizedLabel,
                 FIELD_CATALOG,
@@ -2142,19 +2276,18 @@ fn validate_capability_catalog(
         normalized_entry.stable_label.clone_from(&label);
         normalized_entry.target_label = target;
         let capability = capability_from_entry(&normalized_entry)?;
-        let identity = capability.identity_key();
-        if let Some(existing_label) = by_identity.insert(identity, label.clone()) {
-            if existing_label != label {
-                return Err(SubagentDiagnostic::new(
-                    SubagentDiagnosticKind::LabelCollision,
-                    FIELD_CATALOG,
-                    "multiple labels collapse to the same typed capability",
-                ));
-            }
+        if !seen_identities.insert(capability.identity_key()) {
+            return Err(SubagentDiagnostic::new(
+                SubagentDiagnosticKind::LabelCollision,
+                FIELD_CATALOG,
+                "multiple labels collapse to the same typed capability",
+            ));
         }
-        by_label.insert(label, normalized_entry);
+        normalized_entries.push((label, normalized_entry));
     }
-    Ok(by_label)
+    debug_assert_eq!(normalized_entries.len(), catalog.len());
+    debug_assert!(seen_identities.len() <= normalized_entries.len());
+    Ok(normalized_entries.into_iter().collect())
 }
 
 fn capability_from_entry(
@@ -2162,24 +2295,24 @@ fn capability_from_entry(
 ) -> Result<TypedSubagentCapability, SubagentDiagnostic> {
     let stable_label = entry.stable_label.clone();
     let target = entry.target_label.clone();
-    match entry.class {
-        SubagentCapabilityClass::ContextRead => Ok(TypedSubagentCapability::ContextRead {
+    let capability = match entry.class {
+        SubagentCapabilityClass::ContextRead => TypedSubagentCapability::ContextRead {
             stable_label,
             context_label: target,
-        }),
-        SubagentCapabilityClass::Search => Ok(TypedSubagentCapability::Search {
+        },
+        SubagentCapabilityClass::Search => TypedSubagentCapability::Search {
             stable_label,
             index_label: target,
-        }),
-        SubagentCapabilityClass::ToolUse => Ok(TypedSubagentCapability::ToolUse {
+        },
+        SubagentCapabilityClass::ToolUse => TypedSubagentCapability::ToolUse {
             stable_label,
             tool_label: target,
-        }),
-        SubagentCapabilityClass::MutationIntent => Ok(TypedSubagentCapability::MutationIntent {
+        },
+        SubagentCapabilityClass::MutationIntent => TypedSubagentCapability::MutationIntent {
             stable_label,
             mutation_kind: target,
-        }),
-        SubagentCapabilityClass::WorkspaceAccess => Ok(TypedSubagentCapability::WorkspaceAccess {
+        },
+        SubagentCapabilityClass::WorkspaceAccess => TypedSubagentCapability::WorkspaceAccess {
             stable_label,
             scope_label: target,
             mode: entry.workspace_mode.ok_or_else(|| {
@@ -2189,21 +2322,26 @@ fn capability_from_entry(
                     "workspace capability entries require an access mode",
                 )
             })?,
-        }),
-        SubagentCapabilityClass::ModelUse => Ok(TypedSubagentCapability::ModelUse {
+        },
+        SubagentCapabilityClass::ModelUse => TypedSubagentCapability::ModelUse {
             stable_label,
             model_label: target,
-        }),
-        SubagentCapabilityClass::ExternalService => Ok(TypedSubagentCapability::ExternalService {
+        },
+        SubagentCapabilityClass::ExternalService => TypedSubagentCapability::ExternalService {
             stable_label,
             service_label: target,
-        }),
-        SubagentCapabilityClass::Unsupported => Err(SubagentDiagnostic::new(
-            SubagentDiagnosticKind::UnsupportedCapabilityClass,
-            FIELD_CATALOG,
-            "unsupported capability class cannot be converted",
-        )),
-    }
+        },
+        SubagentCapabilityClass::Unsupported => {
+            return Err(SubagentDiagnostic::new(
+                SubagentDiagnosticKind::UnsupportedCapabilityClass,
+                FIELD_CATALOG,
+                "unsupported capability class cannot be converted",
+            ));
+        }
+    };
+    debug_assert_eq!(capability.stable_label(), entry.stable_label.as_str());
+    debug_assert_eq!(capability.class(), entry.class);
+    Ok(capability)
 }
 
 fn missing_capability_sources(
@@ -2231,7 +2369,7 @@ fn ensure_unique_capabilities(
     field: &'static str,
 ) -> Result<(), SubagentDiagnostic> {
     ensure_non_empty(capabilities, field)?;
-    let mut seen = BTreeSet::new();
+    let mut seen = std::collections::BTreeSet::new();
     for capability in capabilities {
         if !seen.insert(capability.identity_key()) {
             return Err(SubagentDiagnostic::new(
@@ -2248,8 +2386,8 @@ fn validate_context_item(
     policy: SubagentContextAdmissionPolicy,
     item: &SubagentContextItemDraft,
 ) -> Result<(), SubagentDiagnostic> {
-    validate_label(FIELD_CONTEXT, item.label.as_str())?;
-    validate_safe_text(FIELD_CONTEXT, item.safe_body.as_str())?;
+    validate_label!(FIELD_CONTEXT, item.label.as_str())?;
+    validate_safe_text!(FIELD_CONTEXT, item.safe_body.as_str())?;
     if item.token_estimate < MIN_POSITIVE_U32 {
         return Err(over_budget("context item token estimate must be positive"));
     }
@@ -2267,6 +2405,8 @@ fn validate_context_item(
             "raw unsafe context cannot enter shared packets",
         ));
     }
+    debug_assert!(item.token_estimate >= MIN_POSITIVE_U32);
+    debug_assert!(item.kind.is_safe_by_default() || policy.admit_unsafe_classes);
     Ok(())
 }
 
@@ -2274,8 +2414,8 @@ fn validate_kind_fields(draft: &SubagentChildRunDraft) -> Result<String, Subagen
     match draft.kind {
         SubagentChildRunKind::RecipeBacked => {
             let recipe = draft.recipe.as_ref().ok_or_else(missing_kind_field)?;
-            let recipe_id = validate_label(FIELD_CHILD, recipe.recipe_id.as_str())?;
-            validate_label(FIELD_CHILD, recipe.trust_receipt_label.as_str())?;
+            let recipe_id = validate_label!(FIELD_CHILD, recipe.recipe_id.as_str())?;
+            validate_label!(FIELD_CHILD, recipe.trust_receipt_label.as_str())?;
             Ok(recipe_id)
         }
         SubagentChildRunKind::FreshContextInvestigation => {
@@ -2283,8 +2423,8 @@ fn validate_kind_fields(draft: &SubagentChildRunDraft) -> Result<String, Subagen
                 .fresh_context
                 .as_ref()
                 .ok_or_else(missing_kind_field)?;
-            validate_safe_text(FIELD_CHILD, fresh.objective.as_str())?;
-            validate_label(FIELD_CHILD, fresh.scheduler_label.as_str())
+            validate_safe_text!(FIELD_CHILD, fresh.objective.as_str())?;
+            validate_label!(FIELD_CHILD, fresh.scheduler_label.as_str())
         }
         SubagentChildRunKind::ReadOnlySideQuestion => {
             let fresh = draft
@@ -2298,13 +2438,13 @@ fn validate_kind_fields(draft: &SubagentChildRunDraft) -> Result<String, Subagen
                     "side-question child runs must preserve read-only posture",
                 ));
             }
-            validate_safe_text(FIELD_CHILD, fresh.objective.as_str())?;
-            validate_label(FIELD_CHILD, fresh.scheduler_label.as_str())
+            validate_safe_text!(FIELD_CHILD, fresh.objective.as_str())?;
+            validate_label!(FIELD_CHILD, fresh.scheduler_label.as_str())
         }
         SubagentChildRunKind::WorkerTeamTask => {
             let worker = draft.worker_team.as_ref().ok_or_else(missing_kind_field)?;
-            validate_label(FIELD_CHILD, worker.output_schema_label.as_str())?;
-            validate_label(FIELD_CHILD, worker.service_label.as_str())
+            validate_label!(FIELD_CHILD, worker.output_schema_label.as_str())?;
+            validate_label!(FIELD_CHILD, worker.service_label.as_str())
         }
         SubagentChildRunKind::Unsupported => Err(SubagentDiagnostic::new(
             SubagentDiagnosticKind::UnsupportedKind,
@@ -2326,7 +2466,7 @@ fn validate_subagent_report(
     admission: &SubagentAdmission,
     report: &SubagentReport,
 ) -> Result<(), SubagentDiagnostic> {
-    let child_id = validate_label(FIELD_REPORT, report.child_id.as_str())?;
+    let child_id = validate_label!(FIELD_REPORT, report.child_id.as_str())?;
     if child_id != admission.child_id {
         return Err(SubagentDiagnostic::new(
             SubagentDiagnosticKind::MalformedReport,
@@ -2355,16 +2495,18 @@ fn validate_subagent_report(
     for mutation in &report.mutation_intents {
         validate_mutation_intent(mutation)?;
     }
+    debug_assert_eq!(child_id, admission.child_id);
+    debug_assert!(report.status.is_terminal());
     Ok(())
 }
 
 fn indexed_outcomes(
     outcomes: &[SubagentFanInOutcome],
-) -> Result<BTreeMap<String, &SubagentFanInOutcome>, SubagentDiagnostic> {
+) -> Result<std::collections::BTreeMap<String, &SubagentFanInOutcome>, SubagentDiagnostic> {
     ensure_non_empty(outcomes, FIELD_PLAN)?;
-    let mut by_child = BTreeMap::new();
+    let mut by_child = std::collections::BTreeMap::new();
     for outcome in outcomes {
-        let child_id = validate_label(FIELD_PLAN, outcome.child_id.as_str())?;
+        let child_id = validate_label!(FIELD_PLAN, outcome.child_id.as_str())?;
         if by_child.insert(child_id, outcome).is_some() {
             return Err(SubagentDiagnostic::new(
                 SubagentDiagnosticKind::DuplicateChild,
@@ -2416,9 +2558,10 @@ fn arbitrate_mutations(
     policy: SubagentMutationPolicy,
     intents: Vec<SubagentMutationIntentSummary>,
 ) -> Result<SubagentMutationArbitration, SubagentDiagnostic> {
-    let mut denied = Vec::new();
-    let mut unresolved = Vec::new();
-    let mut conflicts = Vec::new();
+    let intent_bound = intents.len();
+    let mut denied = Vec::with_capacity(intent_bound);
+    let mut unresolved = Vec::with_capacity(intent_bound);
+    let mut conflicts = Vec::with_capacity(intent_bound);
     match policy {
         SubagentMutationPolicy::DenyAll => {
             if !intents.is_empty() {
@@ -2431,7 +2574,7 @@ fn arbitrate_mutations(
         }
         SubagentMutationPolicy::CollectUnresolved => unresolved = intents,
         SubagentMutationPolicy::AllowNonConflicting => {
-            let mut by_target = BTreeMap::new();
+            let mut by_target = std::collections::BTreeMap::new();
             for intent in intents {
                 if let Some(existing_kind) =
                     by_target.insert(intent.target.clone(), intent.mutation_kind.clone())
@@ -2450,6 +2593,8 @@ fn arbitrate_mutations(
     denied.sort();
     unresolved.sort();
     conflicts.sort();
+    debug_assert!(denied.len() <= intent_bound);
+    debug_assert!(unresolved.len().saturating_add(conflicts.len()) <= intent_bound);
     Ok(SubagentMutationArbitration {
         denied,
         unresolved,
@@ -2462,6 +2607,8 @@ fn aggregate_status(
     arbitration: &SubagentMutationArbitration,
     has_success: bool,
 ) -> SubagentFanInStatus {
+    debug_assert!(!statuses.is_empty());
+    debug_assert!(!has_success || statuses.contains(&SubagentFanInStatus::Success));
     if !arbitration.conflicts.is_empty() {
         return SubagentFanInStatus::WriteConflict;
     }
@@ -2495,7 +2642,7 @@ fn aggregate_status(
 fn classify_external_fixture_failure(
     fixture: &ExternalSubagentFixture,
 ) -> Result<Option<SubagentDiagnosticKind>, SubagentDiagnostic> {
-    validate_label(FIELD_EXTERNAL, fixture.identity.as_str())?;
+    validate_label!(FIELD_EXTERNAL, fixture.identity.as_str())?;
     if matches!(fixture.protocol, ExternalSubagentProtocolKind::Unsupported) {
         return Ok(Some(SubagentDiagnosticKind::MalformedProtocol));
     }
@@ -2508,13 +2655,13 @@ fn classify_external_fixture_failure(
     if fixture.service_label.trim().is_empty() {
         return Ok(Some(SubagentDiagnosticKind::MissingService));
     }
-    validate_label(FIELD_EXTERNAL, fixture.service_label.as_str())?;
+    validate_label!(FIELD_EXTERNAL, fixture.service_label.as_str())?;
     let declared = labels_set(&fixture.declared_tools)?;
     if declared.is_empty() {
         return Ok(Some(SubagentDiagnosticKind::MissingField));
     }
     for tool in &fixture.requested_tools {
-        let normalized = normalize_label(FIELD_EXTERNAL, tool.as_str())?;
+        let normalized = normalize_label!(FIELD_EXTERNAL, tool.as_str())?;
         if !declared.contains(normalized.as_str()) {
             return Ok(Some(SubagentDiagnosticKind::UndeclaredTool));
         }
@@ -2523,21 +2670,23 @@ fn classify_external_fixture_failure(
         return Ok(Some(SubagentDiagnosticKind::UnsafeOutputImport));
     }
     for claim in &fixture.capability_claims {
-        let normalized = normalize_label(FIELD_EXTERNAL, claim.as_str())?;
+        let normalized = normalize_label!(FIELD_EXTERNAL, claim.as_str())?;
         if matches!(normalized.as_str(), WILDCARD_STAR | WILDCARD_ALL) {
             return Ok(Some(SubagentDiagnosticKind::OverbroadAuthority));
         }
     }
     if let Some(credential_label) = &fixture.credential_label {
-        validate_label(FIELD_EXTERNAL, credential_label.as_str())?;
+        validate_label!(FIELD_EXTERNAL, credential_label.as_str())?;
     }
+    debug_assert!(!fixture.identity.trim().is_empty());
+    debug_assert!(!fixture.service_label.trim().is_empty());
     Ok(None)
 }
 
-fn labels_set(labels: &[String]) -> Result<BTreeSet<String>, SubagentDiagnostic> {
-    let mut set = BTreeSet::new();
+fn labels_set(labels: &[String]) -> Result<std::collections::BTreeSet<String>, SubagentDiagnostic> {
+    let mut set = std::collections::BTreeSet::new();
     for label in labels {
-        let normalized = normalize_label(FIELD_EXTERNAL, label.as_str())?;
+        let normalized = normalize_label!(FIELD_EXTERNAL, label.as_str())?;
         if !set.insert(normalized) {
             return Err(SubagentDiagnostic::new(
                 SubagentDiagnosticKind::DuplicateNormalizedLabel,
@@ -2592,9 +2741,9 @@ fn status_for_failure(kind: SubagentServiceFailureKind) -> SubagentRunStatus {
 fn validate_mutation_intent(
     intent: &SubagentMutationIntentSummary,
 ) -> Result<(), SubagentDiagnostic> {
-    validate_label(FIELD_REPORT, intent.target.as_str())?;
-    validate_label(FIELD_REPORT, intent.mutation_kind.as_str())?;
-    validate_label(FIELD_REPORT, intent.evidence_ref.as_str())?;
+    validate_label!(FIELD_REPORT, intent.target.as_str())?;
+    validate_label!(FIELD_REPORT, intent.mutation_kind.as_str())?;
+    validate_label!(FIELD_REPORT, intent.evidence_ref.as_str())?;
     Ok(())
 }
 
@@ -2607,7 +2756,7 @@ fn validate_evidence_refs(refs: &[String], field: &'static str) -> Result<(), Su
         ));
     }
     for evidence_ref in refs {
-        validate_label(field, evidence_ref.as_str())?;
+        validate_label!(field, evidence_ref.as_str())?;
     }
     Ok(())
 }
@@ -2623,59 +2772,59 @@ fn validate_hash(value: &str) -> Result<(), SubagentDiagnostic> {
     Ok(())
 }
 
-fn validate_label(field: &'static str, value: &str) -> Result<String, SubagentDiagnostic> {
-    let normalized = normalize_label(field, value)?;
-    reject_unsafe_text(field, normalized.as_str())?;
+fn validate_label_input(input: TextValidationInput<'_>) -> Result<String, SubagentDiagnostic> {
+    let normalized = normalize_label!(input.field, input.value)?;
+    reject_unsafe_text!(input.field, normalized.as_str())?;
     Ok(normalized)
 }
 
-fn normalize_label(field: &'static str, value: &str) -> Result<String, SubagentDiagnostic> {
-    let trimmed = value.trim();
+fn normalize_label_input(input: TextValidationInput<'_>) -> Result<String, SubagentDiagnostic> {
+    let trimmed = input.value.trim();
     if trimmed.is_empty() {
         return Err(SubagentDiagnostic::new(
             SubagentDiagnosticKind::EmptyField,
-            field,
+            input.field,
             "label must be non-empty",
         ));
     }
     if trimmed.len() > MAX_LABEL_CHARS {
         return Err(SubagentDiagnostic::new(
             SubagentDiagnosticKind::TooLong,
-            field,
+            input.field,
             "label exceeds safe length bound",
         ));
     }
     Ok(trimmed.to_ascii_lowercase())
 }
 
-fn validate_safe_text(field: &'static str, value: &str) -> Result<String, SubagentDiagnostic> {
-    let trimmed = value.trim();
+fn validate_safe_text_input(input: TextValidationInput<'_>) -> Result<String, SubagentDiagnostic> {
+    let trimmed = input.value.trim();
     if trimmed.is_empty() {
         return Err(SubagentDiagnostic::new(
             SubagentDiagnosticKind::EmptyField,
-            field,
+            input.field,
             "safe text must be non-empty",
         ));
     }
     if trimmed.len() > MAX_TEXT_CHARS {
         return Err(SubagentDiagnostic::new(
             SubagentDiagnosticKind::TooLong,
-            field,
+            input.field,
             "safe text exceeds length bound",
         ));
     }
-    reject_unsafe_text(field, trimmed)?;
+    reject_unsafe_text!(input.field, trimmed)?;
     Ok(trimmed.to_owned())
 }
 
-fn reject_unsafe_text(field: &'static str, value: &str) -> Result<(), SubagentDiagnostic> {
+fn reject_unsafe_text_input(input: TextValidationInput<'_>) -> Result<(), SubagentDiagnostic> {
     if UNSAFE_TEXT_MARKERS
         .iter()
-        .any(|marker| value.contains(marker))
+        .any(|marker| input.value.contains(marker))
     {
         return Err(SubagentDiagnostic::new(
             SubagentDiagnosticKind::UnsafeText,
-            field,
+            input.field,
             "text contains raw, credential-like, provider, path, or unbounded output marker",
         ));
     }
@@ -2966,7 +3115,7 @@ mod tests {
                 .kind,
             SubagentDiagnosticKind::StaleHandle
         );
-        let report = SubagentReport {
+        let malformed_child_result = SubagentReport {
             child_id: String::from("other-child"),
             status: SubagentRunStatus::Completed,
             output_hash: Some(hash_parts(SAFE_HASH_DOMAIN_RECEIPT, &["output"])),
@@ -2980,7 +3129,7 @@ mod tests {
         assert_eq!(
             transition_subagent_state(
                 &state_with_handle,
-                SubagentCoordinatorEvent::Collect(report)
+                SubagentCoordinatorEvent::Collect(malformed_child_result)
             )
             .expect_err("mismatched reports must fail")
             .kind,
@@ -3085,6 +3234,8 @@ mod tests {
             safe_summary: SAFE_SUMMARY_REF,
         });
         let record = validate_subagent_lineage_record(&draft).expect("lineage should validate");
+        assert_eq!(record.parent_id, event.parent_id);
+        assert_eq!(record.child_id, event.child_id);
         validate_subagent_replay_influence(
             &[record],
             &[SubagentInfluenceImport {
@@ -3197,15 +3348,20 @@ mod tests {
         // r[verify agent_harness_runtime.subagent_external_conformance.negative_fixtures]
         // r[verify agent_harness_runtime.subagent_external_conformance.index]
         // r[verify agent_harness_runtime.subagent_external_conformance.no_live_dependency]
-        let report =
+        let conformance_result =
             validate_external_subagent_conformance_index(&ExternalSubagentConformanceIndex {
                 fixtures: vec![valid_external_fixture(), ambient_external_fixture()],
             })
             .expect("external conformance index should validate offline");
-        assert_eq!(report.results.len(), usize::from(TWO_CHILDREN));
-        assert!(report.results.iter().all(|result| result.offline_only));
+        assert_eq!(conformance_result.results.len(), usize::from(TWO_CHILDREN));
         assert!(
-            report.results.iter().any(
+            conformance_result
+                .results
+                .iter()
+                .all(|result| result.offline_only)
+        );
+        assert!(
+            conformance_result.results.iter().any(
                 |result| result.failure == Some(SubagentDiagnosticKind::AmbientDiscoveryDenied)
             )
         );

@@ -275,7 +275,10 @@ fn budget_ledger_rejects_exhausted_consumption() {
     let cases = [
         (ledger.consume_candidate(), crate::BudgetKind::Candidate),
         (ledger.consume_parallelism(), crate::BudgetKind::Parallelism),
-        (ledger.consume_synthesis_attempt(), crate::BudgetKind::Synthesis),
+        (
+            ledger.consume_synthesis_attempt(),
+            crate::BudgetKind::Synthesis,
+        ),
         (ledger.consume_repair_attempt(), crate::BudgetKind::Repair),
     ];
 
@@ -283,4 +286,3 @@ fn budget_ledger_rejects_exhausted_consumption() {
         assert_eq!(result, Err(crate::BudgetExhausted::new(kind, ZERO_COUNT)));
     }
 }
-

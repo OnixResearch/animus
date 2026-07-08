@@ -10,7 +10,6 @@ struct SelectCase<'a> {
     expected: crate::RouteFamily,
 }
 
-
 #[test]
 fn recipe_contracts_accept_supported_families() {
     let cases = [
@@ -181,17 +180,21 @@ fn budget_ledger_tracks_and_fallback_decides() {
         fallback_policy: crate::limit::FallbackPolicy::BestValidEvidence,
     });
     let ledger = crate::BudgetLedger::from(&bounds);
-    let chain = crate::evidence::test_fallback_chain(alloc::vec![
-        crate::evidence::test_fallback_step(crate::evidence::FallbackStepFixture {
-            role: crate::Role::Fallback,
-            model_label: MODEL_FALLBACK_LOCAL,
-            backend_label: BACKEND_LOCAL,
-            is_local: true,
-        }),
-    ]);
+    let chain =
+        crate::evidence::test_fallback_chain(alloc::vec![crate::evidence::test_fallback_step(
+            crate::evidence::FallbackStepFixture {
+                role: crate::Role::Fallback,
+                model_label: MODEL_FALLBACK_LOCAL,
+                backend_label: BACKEND_LOCAL,
+                is_local: true,
+            }
+        ),]);
 
     assert_eq!(ledger.remaining_candidates(), MAX_CANDIDATES_THREE);
-    assert_eq!(ledger.consume_candidate().unwrap().remaining_candidates(), MAX_CANDIDATES_TWO);
+    assert_eq!(
+        ledger.consume_candidate().unwrap().remaining_candidates(),
+        MAX_CANDIDATES_TWO
+    );
     assert_eq!(
         crate::evaluate_fallback(
             &crate::StepFailure::new(MODEL_PRIMARY, true),
@@ -281,4 +284,3 @@ fn result(final_output_valid: bool, fallback_policy: &str, evidence: bool) -> cr
     })
     .expect("route result should classify")
 }
-
