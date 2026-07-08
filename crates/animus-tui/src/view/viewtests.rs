@@ -111,6 +111,25 @@ mod layout_tests {
     }
 
     #[test]
+    fn focused_pane_is_detected_inside_split_tree() {
+        let sel_left = build_selector("host-main", "pane-left", 1);
+        let sel_focused = build_selector("host-main", "pane-focused", 1);
+        let topology = make_topology(&[sel_left, sel_focused]);
+        let left = make_pane("pane-left");
+        let focused = make_focused_pane("pane-focused");
+        let nested = LayoutNode::split("nested", "horizontal", vec![focused])
+            .expect("valid nested split");
+        let split = LayoutNode::split("root", "vertical", vec![left, nested])
+            .expect("valid root split");
+        let request = LayoutApplyRequest::new(split, false)
+            .expect("valid request");
+        let tree = resolve_layout(&request, &topology)
+            .expect("layout should resolve");
+
+        assert_eq!(tree.focused_pane_id(), Some("pane-focused"));
+    }
+
+    #[test]
     fn no_focus_in_tree_returns_none() {
         let sel = build_selector("host-main", "pane-plain", 1);
         let topology = make_topology(&[sel]);

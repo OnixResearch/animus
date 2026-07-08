@@ -67,6 +67,13 @@ impl Runtime {
 ///
 /// Returns [`Error::MissingIntent`] when [`INTENT_ENV_KEY`] is absent. Returns
 /// [`Error::InvalidIntent`] when the environment value fails core validation.
+#[cfg_attr(
+    animus_octet,
+    allow(
+        ambient_env,
+        reason = "load_runtime is the imperative shell boundary that captures process environment"
+    )
+)]
 pub fn load_runtime() -> Result<Runtime, Error> {
     Runtime::from_env_pairs(std::env::vars())
 }

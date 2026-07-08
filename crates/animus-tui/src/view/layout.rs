@@ -116,23 +116,22 @@ impl LayoutTree {
     /// Returns the focused pane node id when one exists in the tree.
     #[must_use]
     pub fn focused_pane_id(&self) -> Option<&str> {
-        match self {
-            Self::Pane(pane) => {
-                if pane.is_focused() {
-                    Some(pane.node_id())
-                } else {
-                    None
-                }
-            }
-            Self::Split { children, .. } => {
-                for child in children {
-                    if let Some(id) = child.focused_pane_id() {
-                        return Some(id);
+        let mut pending_nodes = vec![self];
+
+        while let Some(node) = pending_nodes.pop() {
+            match node {
+                Self::Pane(pane) => {
+                    if pane.is_focused() {
+                        return Some(pane.node_id());
                     }
                 }
-                None
+                Self::Split { children, .. } => {
+                    pending_nodes.extend(children.iter().rev());
+                }
             }
         }
+
+        None
     }
 }
 

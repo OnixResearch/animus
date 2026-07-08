@@ -14,7 +14,7 @@
       flake = false;
     };
     cairn = {
-      url = "git+ssh://git@github.com/OnixResearch/cairn.git?rev=24381f77987b7e519ebbf05a62b959290d89c582";
+      url = "git+ssh://git@github.com/OnixResearch/cairn.git?rev=fb1a7403a7897f7fa161e0b3c5d86b4cf19e52f8";
       flake = false;
     };
     trellis = {
