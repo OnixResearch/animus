@@ -1,0 +1,15 @@
+# Tasks
+
+- [x] [serial] Define adapter-neutral memory control DTOs for list, show, search, why, approve, reject, forget, update/supersede, and safe export-summary operations. r[agent_harness_runtime.memory_controls.commands]
+- [x] [depends:commands] Add validation tests proving list/show/search responses expose safe descriptors and bounded summaries rather than raw hidden bodies. r[agent_harness_runtime.memory_controls.commands.safe_listing]
+- [x] [serial] Add pure pre-mutation validation for scope, capability, admission, freshness, evidence, and safe output posture. r[agent_harness_runtime.memory_controls.validation]
+- [x] [depends:validation] Add unauthorized and stale-command tests proving no adapter mutation or remote call occurs after validation failure. r[agent_harness_runtime.memory_controls.validation.denied]
+- [x] [serial] Define extracted-candidate review states and transitions for pending, approved, rejected, expired, superseded, unavailable, and persisted outcomes. r[agent_harness_runtime.memory_controls.review]
+- [x] [depends:review] Add approve/reject tests proving rejected candidates do not persist and approved candidates require scope and evidence. r[agent_harness_runtime.memory_controls.review.approval]
+- [x] [serial] Define forget, update, tombstone, and supersession operation outcomes with complete, partial, denied, stale, unavailable, and unsupported statuses. r[agent_harness_runtime.memory_controls.forget_update]
+- [x] [depends:forget_update] Add unavailable and partial-forget tests proving receipts do not claim successful deletion when the adapter cannot complete the operation. r[agent_harness_runtime.memory_controls.forget_update.unavailable]
+- [x] [serial] Define influence explanation from injection ledgers with safe IDs, rank, match reasons, scope, confidence, policy decision, consumed budget, and BLAKE3 hashes. r[agent_harness_runtime.memory_controls.influence_explain]
+- [x] [depends:influence_explain] Add `why` tests proving explanations include included/skipped reasons without raw memory bodies, credentials, provider payloads, or full paths. r[agent_harness_runtime.memory_controls.influence_explain.safe]
+- [x] [serial] Add remote/headless memory-control admission checks before prompt-visible use, approval, update, delete, or export operations. r[agent_harness_runtime.memory_controls.remote_admission]
+- [x] [depends:remote_admission] Add remote denial tests proving memory mutations fail before adapter dispatch when admission is missing or denied. r[agent_harness_runtime.memory_controls.remote_admission.denied]
+- [x] [depends:commands.safe_listing,validation.denied,review.approval,forget_update.unavailable,influence_explain.safe,remote_admission.denied] Update docs and run focused memory-control tests, workspace checks, Cairn validation, and Cairn gates with reviewable evidence. r[agent_harness_runtime.memory_controls.verification]
