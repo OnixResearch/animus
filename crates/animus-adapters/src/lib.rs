@@ -39,6 +39,8 @@ mod manifest;
 mod mcpapp;
 mod model;
 mod multimodal;
+/// Optional OpenClaw-inspired node capability-host DTOs.
+pub mod node;
 mod observability;
 mod port;
 mod profile;

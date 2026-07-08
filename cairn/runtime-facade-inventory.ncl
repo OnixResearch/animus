@@ -183,6 +183,7 @@ let entry_values = [
   entry "animus-adapters::normalized_adapter_field" "animus-adapters" adapters reusable none stable "pure adapter boundary field normalizer",
   entry "animus-adapters::validation" "animus-adapters" adapters reusable none stable "adapter boundary validation helper module",
   entry "animus-adapters::gateway" "animus-adapters" adapters reusable none stable "optional product-host control-plane DTO validation module",
+  entry "animus-adapters::node" "animus-adapters" adapters reusable none stable "optional host-owned node capability DTO validation module",
   entry "animus-adapters::AgentSessionReference" "animus-adapters" adapters reusable none stable "status session reference DTO",
   entry "animus-adapters::AgentSessionReferenceDraft" "animus-adapters" adapters reusable none stable "status session reference draft DTO",
   entry "animus-adapters::AgentSessionReferenceKind" "animus-adapters" adapters reusable none stable "status session reference kind DTO",
