@@ -36,6 +36,14 @@ Done-review lifecycle contracts are optional SDK DTOs. `validate_review_lifecycl
 
 Non-claims: Animus does not provide a built-in `done-review` command, require Hermes, choose default reviewer models, execute completion rails, inspect files or VCS, persist metrics, mutate tasks/specs, retry automatically, or approve completion without host policy.
 
+## Host asset reconciliation boundary
+
+Host asset reconciliation contracts are optional SDK DTOs. `validate_host_asset_inventory` accepts host-supplied manifest entries and installed observations for skills, resources, plugins, tool catalogs, policy profiles, prompt profiles, and other optional assets. Inputs are limited to safe asset IDs, store labels, trust/enablement state, observation epochs, provenance labels, and BLAKE3 content identities.
+
+`classify_host_asset_drift` compares validated manifests and observations into store-neutral classes such as installed-matches-manifest, installed-disabled, identity-mismatch, manifest-only, host-only, stale-observation, unsupported-store, duplicate-asset, and untrusted-asset. `plan_host_asset_reconciliation` emits dry-run advisory actions only. `admit_host_asset_mutation` requires a separate host service, matching dry-run action, capability label, and plan identity before a host may mutate anything. `validate_host_asset_receipt` keeps durable evidence to safe status labels, issue codes, and hashes.
+
+Non-claims: Animus does not scan `~/.hermes`, `~/.pi`, home directories, repositories, or global stores; it does not resolve symlinks, copy/link/unlink files, enable/disable assets, install plugins, write manifests, or decide which host store is canonical.
+
 ## Validation
 
 Focused validation:

@@ -26,6 +26,7 @@ mod actor;
 mod agent_comms;
 mod aliases;
 mod artifact;
+mod asset;
 mod bridge;
 mod child;
 mod codex;
@@ -99,6 +100,17 @@ pub use aliases::{
     SelectedModelInputCapabilities, SelectedModelInputCapabilitiesDraft,
     assemble_model_content_parts, prepare_model_multimodal_dispatch,
     serialize_model_provider_native_fixture,
+};
+pub use asset::{
+    HostAssetAction, HostAssetActionKind, HostAssetDiagnostic, HostAssetDiagnosticCode,
+    HostAssetDriftClass, HostAssetDriftReport, HostAssetEnablement, HostAssetInventory,
+    HostAssetInventoryDraft, HostAssetKind, HostAssetManifestEntry, HostAssetManifestEntryDraft,
+    HostAssetMutationAdmission, HostAssetMutationRequest, HostAssetMutationRequestDraft,
+    HostAssetMutationStatus, HostAssetObservation, HostAssetObservationDraft, HostAssetPlanStatus,
+    HostAssetReconciliationPlan, HostAssetReconciliationReceipt,
+    HostAssetReconciliationReceiptDraft, HostAssetServiceStatus, HostAssetTrust,
+    PROHIBITED_ASSET_RECONCILIATION_EFFECTS, admit_host_asset_mutation, classify_host_asset_drift,
+    plan_host_asset_reconciliation, validate_host_asset_inventory, validate_host_asset_receipt,
 };
 pub use bridge::{
     AcpDescriptor, AcpDescriptorDraft, AcpPermissionMode, AcpSessionCorrelation,
