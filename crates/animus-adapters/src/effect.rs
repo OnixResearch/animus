@@ -1,4 +1,4 @@
-#![allow(module_file_count)]
+#![cfg_attr(animus_octet, allow(tigerstyle::module_file_count))]
 
 mod approval;
 mod audit;

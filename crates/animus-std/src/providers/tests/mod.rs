@@ -1,5 +1,7 @@
 use super::*;
 
+mod streaming;
+
 const PROVIDER_ID: &str = "openai";
 const MODEL_ID: &str = "gpt-5-mini";
 const ENDPOINT_IDENTITY: &str = "openai-responses";
@@ -42,7 +44,12 @@ fn capabilities() -> ModelCapabilities {
             ThinkingLevel::Low,
             ThinkingLevel::Medium,
         ],
-        streaming: ModelStreamingCapabilities::none(),
+        streaming: ModelStreamingCapabilities::new(
+            StreamSupport::Supported,
+            StreamSupport::Supported,
+            StreamSupport::Supported,
+            StreamSupport::Supported,
+        ),
         cost: Some(TokenCost::new(INPUT_COST_MICRO_USD, OUTPUT_COST_MICRO_USD)),
     })
     .expect("capabilities should validate")

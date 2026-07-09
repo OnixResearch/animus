@@ -2,7 +2,7 @@
 
 Animus dogfoodability means evidence that a specific non-default host shell can run a bounded prompt path through accepted Animus contracts. It does not mean Clankers parity, production readiness, or default adoption of Clankers product surfaces.
 
-Current status: roadmap defined, claim-hygiene fixtures added, and no executable dogfood shell is claimed yet. Live providers, daemon/attach, plugin runtime, persistent sessions, TUI dogfood, global state, Matrix/P2P, OAuth, release tagging, and Clankers-compatible behavior remain explicit non-claims until successor Cairns add host-owned implementations and evidence.
+Current status: roadmap defined, claim-hygiene fixtures added, fixture-backed provider stream parsers and model-router execution contracts exist, and no executable dogfood shell is claimed yet. Live providers, daemon/attach, plugin runtime, persistent sessions, TUI dogfood, global state, Matrix/P2P, OAuth, release tagging, and Clankers-compatible behavior remain explicit non-claims until successor Cairns add host-owned implementations and evidence.
 
 ## Gap inventory
 
@@ -16,7 +16,7 @@ Classifications are intentionally precise:
 | Compared surface | Classification | Current blocker or reason | Successor/evidence gate |
 | --- | --- | --- | --- |
 | Runnable CLI/headless entrypoint | actionable blocker | No maintained non-default shell proves a prompt can run end to end. | Successor host-shell Cairn with fake-backed smoke and safe receipt evidence. |
-| Provider execution | actionable blocker | Reusable crates have injected-service contracts, but no live-provider host shell claim is indexed. | Provider adapter Cairn after `agent_harness_runtime.clankers_injected_services.provider_boundary` and provider registry contracts; live-provider smoke is optional evidence. |
+| Provider execution | actionable blocker | Reusable crates have injected-service contracts, model-router execution envelopes, provider registry metadata, and fixture-backed stream parsers, but no live-provider host shell claim is indexed. | Provider adapter Cairn after `agent_harness_runtime.clankers_injected_services.provider_boundary`, provider registry contracts, concrete dispatch gates, and safe provider receipts; live-provider smoke is optional evidence. |
 | Tool execution | actionable blocker | Tool DTOs and metadata exist, but default product tools are intentionally absent. | Tool host/executor Cairn after `agent_harness_runtime.pi_tool_contracts.definition_metadata` and fail-closed tool dispatch evidence. |
 | Session persistence | actionable blocker | Neutral ledger/provenance contracts exist, but durable host storage is not claimed. | Host persistence Cairn after provenance ledger requirements and safe receipt redaction rails. |
 | Receipts and evidence | actionable blocker | Safe receipt DTOs exist; dogfood receipts need a bounded shell-specific index. | Fake-backed integration receipt first, then current-head release evidence index if packaged evidence is claimed. |
@@ -54,7 +54,7 @@ A minimum dogfood smoke covers this path:
 | Surface | Minimum prerequisites | Successor Cairn expectation | Evidence required before claim |
 | --- | --- | --- | --- |
 | Fake-backed headless/CLI | `agent_harness_runtime.claude_code_headless.request`, `agent_harness_runtime.claude_code_headless.events`, `agent_harness_runtime.clankers_injected_services.contracts`, `agent_harness_runtime.clankers_safe_receipts.dto` | Add a non-default host-shell smoke with deterministic fake adapters. | deterministic fixture checks and fake-backed integration. |
-| Live provider execution | Injected provider boundary, canonical model contracts, provider registry hardening, permission policy, safe provider receipts. | Add a concrete provider host adapter without ambient credentials or network fallback. | optional live-provider smoke plus non-claim entries for omitted providers. |
+| Live provider execution | Injected provider boundary, canonical model contracts, provider registry hardening, fixture-backed stream parsers, model-router execution envelopes, permission policy, safe provider receipts. | Add a concrete provider host adapter without ambient credentials, ambient model discovery, provider-side fallback, or network fallback. | optional live-provider smoke plus non-claim entries for omitted providers. |
 | Built-in or packaged tools | Tool definition metadata, argument validation, failure classes, mutation serialization, permission/authorization receipts. | Add host-owned tool executors or capability packs; reusable crates expose contracts only. | deterministic tool fixtures, fake executor integration, then packaged headless smoke. |
 | Session persistence | Provenance ledger DTOs, neutral replay, safe receipt redaction, host-owned storage descriptors. | Add explicit storage adapter; no global session store default. | fake persistence fixture, restore/replay checks, and safe receipt leak rejection. |
 | TUI dogfood | Ratatui boundary, UI-neutral host bridge, pure render model, failure isolation, headless/runtime event contracts. | Add optional TUI shell after headless path and concrete adapters. | optional TUI dogfood rung; otherwise TUI remains a non-claim. |

@@ -6,6 +6,15 @@
 //! schedulers, process supervision, filesystem authority, VCS commands, clocks,
 //! networks, and persistence remain host-owned.
 
+#![cfg_attr(
+    animus_octet,
+    allow(
+        tigerstyle::non_trait_imports,
+        tigerstyle::path_segment_repetition,
+        tigerstyle::usize_in_public_api
+    )
+)]
+
 use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -430,11 +439,21 @@ pub enum OrchestrationWorkspaceAdmission {
 ///
 /// Returns [`OrchestrationError::OutOfScopeMutation`] when the target is not
 /// declared in the scope, or validation errors when labels are unsafe.
+///
+/// # Panics
+///
+/// Panics if validated target or scope-count post-conditions are violated.
 pub fn validate_orchestration_workspace_mutation(
     scope: &OrchestrationWorkspaceScope,
     mutation: &OrchestrationMutationIntent,
 ) -> Result<OrchestrationWorkspaceAdmission, OrchestrationError> {
     let target = safe_text(TARGET_FIELD, mutation.target_label())?;
+    assert!(!target.is_empty());
+    let scope_target_count = scope
+        .writable_targets()
+        .len()
+        .saturating_add(scope.approval_required_targets().len());
+    assert!(scope_target_count > 0);
     if scope
         .writable_targets()
         .iter()
@@ -1911,6 +1930,8 @@ fn validate_unique_task_ids(tasks: &[OrchestrationTaskDraft]) -> Result<(), Orch
 }
 
 fn validate_graph_links(tasks: &[OrchestrationTaskDraft]) -> Result<(), OrchestrationError> {
+    assert!(!tasks.is_empty());
+    assert!(tasks.len() <= MAX_ORCHESTRATION_TASKS);
     for task in tasks {
         validate_unique_links(task.parent_ids())?;
         validate_unique_links(task.child_ids())?;
@@ -2009,6 +2030,7 @@ fn safe_text_list(
     values.iter().map(|value| safe_text(field, value)).collect()
 }
 
+#[cfg_attr(animus_octet, allow(tigerstyle::unbounded_collection_growth))]
 fn safe_metadata(
     metadata: &BTreeMap<String, String>,
 ) -> Result<BTreeMap<String, String>, OrchestrationError> {
@@ -2041,6 +2063,7 @@ fn reject_unsafe_text(
     Ok(())
 }
 
+#[cfg_attr(animus_octet, allow(tigerstyle::ambiguous_params))]
 fn contains_unsafe_marker(value: &str, marker: &'static str) -> bool {
     if marker == UNSAFE_OPENAI_KEY_PREFIX {
         return value.starts_with(marker) || value.contains(" sk-");
@@ -2048,6 +2071,7 @@ fn contains_unsafe_marker(value: &str, marker: &'static str) -> bool {
     value.contains(marker)
 }
 
+#[cfg_attr(animus_octet, allow(tigerstyle::ambiguous_params))]
 fn validate_collection_count(
     field: crate::validation::FieldName,
     actual_items: usize,
@@ -2063,6 +2087,7 @@ fn validate_collection_count(
     Ok(())
 }
 
+#[cfg_attr(animus_octet, allow(tigerstyle::ambiguous_params))]
 fn validate_minimum(
     field: &'static str,
     actual_value: u64,
@@ -2081,6 +2106,7 @@ fn validate_minimum(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg_attr(animus_octet, allow(tigerstyle::non_trait_imports))]
     use alloc::vec;
 
     const BOARD: &str = "board-main";
@@ -2265,9 +2291,8 @@ mod tests {
     }
 
     #[test]
-    fn fail_closed_for_missing_denied_unavailable_invalid_unsafe_scope_unsupported_and_leaks() {
+    fn fail_closed_for_missing_denied_unavailable_and_rejected_services() {
         // r[verify agent_harness_runtime.orchestration_adapters.fail_closed]
-        // r[verify agent_harness_runtime.orchestration_adapters.safe_evidence]
         // r[verify agent_harness_runtime.orchestration_adapters.verification]
         let missing = load_orchestration_task_graph(None, &load_request())
             .expect_err("missing service must fail closed");
@@ -2288,7 +2313,7 @@ mod tests {
                 .expect_err("unavailable service must fail closed");
         assert_eq!(unavailable_error, OrchestrationError::BackendUnavailable);
 
-        let mut unsupported = FailingHost {
+        let mut rejected_host = FailingHost {
             error: OrchestrationError::UnsupportedOperation,
         };
         let scheduling_request = OrchestrationSchedulingAdmissionRequest::new(
@@ -2298,45 +2323,44 @@ mod tests {
             metadata(),
         )
         .expect("scheduling request should validate");
-        let unsupported_error =
-            admit_orchestration_scheduling(Some(&mut unsupported), &scheduling_request)
+        let rejected_error =
+            admit_orchestration_scheduling(Some(&mut rejected_host), &scheduling_request)
                 .expect_err("unsupported operation must fail closed");
-        assert_eq!(unsupported_error, OrchestrationError::UnsupportedOperation);
+        assert_eq!(rejected_error, OrchestrationError::UnsupportedOperation);
+    }
 
+    #[test]
+    fn invalid_graph_scope_and_redaction_bounds_fail_closed() {
+        // r[verify agent_harness_runtime.orchestration_adapters.fail_closed]
+        // r[verify agent_harness_runtime.orchestration_adapters.safe_evidence]
+        // r[verify agent_harness_runtime.orchestration_adapters.verification]
         let invalid_link = invalid_graph().expect_err("one-sided task link should fail");
         assert_eq!(invalid_link, OrchestrationError::InvalidGraph);
 
         let duplicate = duplicate_graph().expect_err("duplicate task identity should fail");
         assert_eq!(duplicate, OrchestrationError::InvalidGraph);
 
-        let oversized_redactions = [REDACTION; MAX_ORCHESTRATION_REDACTIONS + 1];
-        let oversized = OrchestrationLifecycleEvidence::new(&OrchestrationLifecycleEvidenceInput {
-            kind: OrchestrationLifecycleEvidenceKind::Heartbeat,
-            actor_label: ACTOR,
-            sequence: FIRST_SEQUENCE,
-            summary: "worker heartbeat redacted",
-            evidence_hash: blake3_orchestration_hash(&["heartbeat", TASK]).as_str(),
-            redaction_markers: &oversized_redactions,
-        })
-        .expect_err("oversized redaction list should fail");
-        assert!(matches!(oversized, OrchestrationError::TooManyItems { .. }));
+        let redaction_marker_overflow_count = MAX_ORCHESTRATION_REDACTIONS
+            .checked_add(1)
+            .expect("redaction overflow fixture count remains bounded");
+        let redaction_marker_overflow = alloc::vec![REDACTION; redaction_marker_overflow_count];
+        let redaction_overflow_error =
+            OrchestrationLifecycleEvidence::new(&OrchestrationLifecycleEvidenceInput {
+                kind: OrchestrationLifecycleEvidenceKind::Heartbeat,
+                actor_label: ACTOR,
+                sequence: FIRST_SEQUENCE,
+                summary: "worker heartbeat redacted",
+                evidence_hash: blake3_orchestration_hash(&["heartbeat", TASK]).as_str(),
+                redaction_markers: &redaction_marker_overflow,
+            })
+            .expect_err("oversized redaction list should fail");
+        assert!(matches!(
+            redaction_overflow_error,
+            OrchestrationError::TooManyItems { .. }
+        ));
 
         let cross_tenant = cross_tenant_graph().expect_err("cross tenant dependency should fail");
         assert_eq!(cross_tenant, OrchestrationError::CrossTenantLeak);
-
-        let unsafe_handoff = OrchestrationContextHandoff::new(&OrchestrationContextHandoffDraft {
-            handoff_id: HANDOFF,
-            task_id: TASK,
-            tenant_label: Some(TENANT_ALPHA),
-            body: "RAW_PROMPT: hidden",
-            sequence: FIRST_SEQUENCE,
-            metadata: &empty_metadata(),
-        })
-        .expect_err("raw prompt marker should fail");
-        assert!(matches!(
-            unsafe_handoff,
-            OrchestrationError::UnsafeEvidence { .. }
-        ));
 
         let scope = workspace_scope();
         let out_of_scope = OrchestrationMutationIntent::new("target-secret", None)
@@ -2355,6 +2379,25 @@ mod tests {
             .and_then(|mutation| validate_orchestration_workspace_mutation(&scope, &mutation))
             .expect("approved guarded target should pass");
         assert_eq!(approved, OrchestrationWorkspaceAdmission::Allowed);
+    }
+
+    #[test]
+    fn unsafe_handoff_receipt_leak_and_schema_mismatch_fail_closed() {
+        // r[verify agent_harness_runtime.orchestration_adapters.safe_evidence]
+        // r[verify agent_harness_runtime.orchestration_adapters.verification]
+        let unsafe_handoff = OrchestrationContextHandoff::new(&OrchestrationContextHandoffDraft {
+            handoff_id: HANDOFF,
+            task_id: TASK,
+            tenant_label: Some(TENANT_ALPHA),
+            body: "RAW_PROMPT: hidden",
+            sequence: FIRST_SEQUENCE,
+            metadata: &empty_metadata(),
+        })
+        .expect_err("raw prompt marker should fail");
+        assert!(matches!(
+            unsafe_handoff,
+            OrchestrationError::UnsafeEvidence { .. }
+        ));
 
         let leak = validate_orchestration_receipt_text("HOST_DATABASE_ROW: private row")
             .expect_err("host database evidence should fail");
@@ -2463,6 +2506,8 @@ mod tests {
     fn safe_receipt(
         operation: OrchestrationOperationKind,
     ) -> Result<OrchestrationReceipt, OrchestrationError> {
+        assert!(!BOARD.is_empty());
+        assert!(!TASK.is_empty());
         let dto_hash = blake3_orchestration_hash(&[operation.as_str(), BOARD, TASK]);
         let status = if operation == OrchestrationOperationKind::RecordLifecycleEvidence {
             OrchestrationStatusClass::Recorded

@@ -58,9 +58,12 @@ pub use providers::{
     ApiKind, CredentialHandle, CredentialRequirement, CredentialSource, EndpointIdentity,
     InputModality, MissingCredentialDiagnostic, ModelCapabilities, ModelCapabilitiesDraft,
     ModelEntry, ModelId, ModelSelection, ModelStreamingCapabilities, ModelStreamingRequest,
-    ProviderEntry, ProviderId, ProviderRegistry, ReasoningSupport, RegistryError,
-    ResolvedStreamingModes, SelectedModel, StreamFeature, StreamRequestMode, StreamSupport,
-    ThinkingLevel, ThinkingPolicy, TokenCost, UnsupportedStreamPolicy,
+    ProviderEntry, ProviderId, ProviderRegistry, ProviderStreamParserInput,
+    ProviderStreamingCredentialState, ProviderStreamingDispatchInput,
+    ProviderStreamingDispatchPlan, ProviderStreamingError, ProviderStreamingServiceState,
+    ReasoningSupport, RegistryError, ResolvedStreamingModes, SelectedModel, StreamFeature,
+    StreamRequestMode, StreamSupport, ThinkingLevel, ThinkingPolicy, TokenCost,
+    UnsupportedStreamPolicy, parse_provider_stream_chunks, plan_provider_streaming_dispatch,
     resolve_credential_from_env_pairs,
 };
 

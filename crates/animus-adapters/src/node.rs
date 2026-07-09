@@ -5,6 +5,8 @@
 //! apps, platform APIs, transports, pairing stores, approval persistence, and
 //! command execution.
 
+#![cfg_attr(animus_octet, allow(tigerstyle::path_segment_repetition))]
+
 const NODE_ID_FIELD: crate::validation::FieldName = crate::validation::FieldName::new("node_id");
 const GATEWAY_PROFILE_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("gateway_profile_id");
@@ -579,6 +581,11 @@ impl PairingDescriptor {
 ///
 /// Returns [`Error::UnpairedNode`] for absent or mismatched pairings and
 /// [`Error::MetadataDrift`] for missing, changed, or widened metadata.
+///
+/// # Panics
+///
+/// Panics if node/pairing identity or metadata-pin post-conditions are violated
+/// after validation.
 pub fn validate_node_pairing(
     node: &NodeAdvertisement,
     pairing: Option<&PairingDescriptor>,
@@ -589,12 +596,14 @@ pub fn validate_node_pairing(
     if node.node_id() != pairing.node_id() {
         return Err(Error::UnpairedNode);
     }
+    assert_eq!(node.node_id(), pairing.node_id());
     let Some(metadata_pin) = node.metadata_pin() else {
         return Err(Error::MetadataDrift);
     };
     if metadata_pin != pairing.pinned_metadata() {
         return Err(Error::MetadataDrift);
     }
+    assert_eq!(metadata_pin, pairing.pinned_metadata());
     for command in node.commands() {
         if !pairing.command_ceiling().contains(command) {
             return Err(Error::MetadataDrift);
@@ -996,14 +1005,21 @@ impl NodeInvocationPlan {
 ///
 /// Returns [`Error`] when pairing, service availability, command allowlists,
 /// permissions, idempotency, canonical exec metadata, or approval evidence fail.
+///
+/// # Panics
+///
+/// Panics if post-validation invariants for injected service state or command
+/// allowlisting are violated.
 pub fn plan_node_invocation(
     draft: &NodeInvocationPlanDraft<'_>,
 ) -> Result<NodeInvocationPlan, Error> {
     validate_node_pairing(draft.node, draft.pairing)?;
     validate_service_state(draft.service_state)?;
+    assert_eq!(draft.service_state, NodeServiceState::Injected);
     if !draft.node.commands().contains(&draft.command) {
         return Err(Error::UnsupportedCommand);
     }
+    assert!(draft.node.commands().contains(&draft.command));
     if let Some(permission) = draft.required_permission {
         if !draft.node.permissions().contains(&permission) {
             return Err(Error::PermissionMismatch);
@@ -1330,14 +1346,14 @@ mod tests {
         // r[verify agent_harness_runtime.openclaw_nodes.verification]
         let node = advertisement();
         let pairing = pairing();
-        let timeout = TimeoutPolicy::new(TIMEOUT_MILLIS).expect("timeout should validate");
+        let deadline_policy = TimeoutPolicy::new(TIMEOUT_MILLIS).expect("timeout should validate");
         let plan = plan_node_invocation(&NodeInvocationPlanDraft {
             node: &node,
             pairing: Some(&pairing),
             command: Command::SystemRun,
             required_permission: Some(PermissionClaim::Shell),
             params_hash: HASH_C,
-            timeout,
+            timeout: deadline_policy,
             idempotency: idempotency(Command::SystemRun, HASH_C),
             service_state: NodeServiceState::Injected,
             cancellation: CancellationPosture::Available,
@@ -1406,8 +1422,7 @@ mod tests {
                 &node,
                 &pairing,
                 Command::ScreenRecord,
-                Some(PermissionClaim::Screen),
-                NodeServiceState::Injected,
+                BasePlanOptions::new(Some(PermissionClaim::Screen), NodeServiceState::Injected),
             )),
             Err(Error::UnsupportedCommand)
         );
@@ -1416,15 +1431,14 @@ mod tests {
                 &node,
                 &pairing,
                 Command::MetadataRead,
-                Some(PermissionClaim::Network),
-                NodeServiceState::Injected,
+                BasePlanOptions::new(Some(PermissionClaim::Network), NodeServiceState::Injected),
             )),
             Err(Error::PermissionMismatch)
         );
     }
 
     #[test]
-    fn service_approval_malformed_result_and_ambient_fallback_fail_closed() {
+    fn service_approval_and_ambient_fallback_fail_closed() {
         // r[verify agent_harness_runtime.openclaw_nodes.scope]
         // r[verify agent_harness_runtime.openclaw_nodes.invoke]
         // r[verify agent_harness_runtime.openclaw_nodes.approvals]
@@ -1435,8 +1449,7 @@ mod tests {
             &node,
             &pairing,
             Command::MetadataRead,
-            None,
-            NodeServiceState::Missing,
+            BasePlanOptions::new(None, NodeServiceState::Missing),
         ))
         .expect_err("missing host service should fail closed");
         let missing_exec = plan_node_invocation(&NodeInvocationPlanDraft {
@@ -1446,8 +1459,7 @@ mod tests {
                 &node,
                 &pairing,
                 Command::SystemRun,
-                Some(PermissionClaim::Shell),
-                NodeServiceState::Injected,
+                BasePlanOptions::new(Some(PermissionClaim::Shell), NodeServiceState::Injected),
             )
         })
         .expect_err("system.run without exec plan should fail");
@@ -1457,8 +1469,7 @@ mod tests {
                 &node,
                 &pairing,
                 Command::SystemRun,
-                Some(PermissionClaim::Shell),
-                NodeServiceState::Injected,
+                BasePlanOptions::new(Some(PermissionClaim::Shell), NodeServiceState::Injected),
             )
         })
         .expect_err("system.run without approval should fail");
@@ -1467,12 +1478,24 @@ mod tests {
             ..advertisement_draft()
         })
         .expect_err("ambient execution fallback should fail");
+
+        assert_eq!(missing_service, Error::MissingService);
+        assert_eq!(missing_exec, Error::MissingExecPlan);
+        assert_eq!(missing_approval, Error::MissingApproval);
+        assert_eq!(ambient_descriptor, Error::AmbientExecutionFallback);
+    }
+
+    #[test]
+    fn malformed_result_and_receipt_leak_fail_closed() {
+        // r[verify agent_harness_runtime.openclaw_nodes.invoke]
+        // r[verify agent_harness_runtime.openclaw_nodes.verification]
+        let node = advertisement();
+        let pairing = pairing();
         let safe_plan = plan_node_invocation(&base_plan(
             &node,
             &pairing,
             Command::SystemRun,
-            Some(PermissionClaim::Shell),
-            NodeServiceState::Injected,
+            BasePlanOptions::new(Some(PermissionClaim::Shell), NodeServiceState::Injected),
         ))
         .expect("system.run should plan");
         let malformed_result = NodeResultEnvelope::new(
@@ -1495,10 +1518,6 @@ mod tests {
         })
         .expect_err("receipt leak should fail");
 
-        assert_eq!(missing_service, Error::MissingService);
-        assert_eq!(missing_exec, Error::MissingExecPlan);
-        assert_eq!(missing_approval, Error::MissingApproval);
-        assert_eq!(ambient_descriptor, Error::AmbientExecutionFallback);
         assert_eq!(malformed_result, Error::MalformedResult);
         assert!(matches!(unsafe_receipt, Error::UnsafePayload { .. }));
     }
@@ -1574,22 +1593,39 @@ mod tests {
         }
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    struct BasePlanOptions {
+        required_permission: Option<PermissionClaim>,
+        service_state: NodeServiceState,
+    }
+
+    impl BasePlanOptions {
+        const fn new(
+            required_permission: Option<PermissionClaim>,
+            service_state: NodeServiceState,
+        ) -> Self {
+            Self {
+                required_permission,
+                service_state,
+            }
+        }
+    }
+
     fn base_plan<'a>(
         node: &'a NodeAdvertisement,
         pairing: &'a PairingDescriptor,
         command: Command,
-        required_permission: Option<PermissionClaim>,
-        service_state: NodeServiceState,
+        options: BasePlanOptions,
     ) -> NodeInvocationPlanDraft<'a> {
         NodeInvocationPlanDraft {
             node,
             pairing: Some(pairing),
             command,
-            required_permission,
+            required_permission: options.required_permission,
             params_hash: HASH_C,
             timeout: TimeoutPolicy::new(TIMEOUT_MILLIS).expect("timeout should validate"),
             idempotency: idempotency(command, HASH_C),
-            service_state,
+            service_state: options.service_state,
             cancellation: CancellationPosture::Available,
             exec_plan: Some(exec_plan()),
             approval: Some(approval(command)),

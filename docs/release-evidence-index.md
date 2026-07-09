@@ -4,11 +4,11 @@ Animus evaluates Clankers' release evidence index as a bounded future pattern: c
 
 ## Scope
 
-A future Animus evidence index should be a summary over existing evidence, not a hidden test runner. It may compose focused rail receipts, workspace tests, Clippy, flake checks, Nickel/config drift checks, Cairn validation, and Cairn gates. Missing modes stay missing unless a caller explicitly runs them and supplies fresh receipts.
+A future Animus evidence index should be a summary over existing evidence, not a hidden test runner. It may compose focused rail receipts, workspace tests, Clippy, flake checks, Nickel/config drift checks, Cairn validation, Cairn gates, fixture-backed provider stream parser checks, and model-router execution service checks. Missing modes stay missing unless a caller explicitly runs them and supplies fresh receipts.
 
 Out of scope for this evaluation:
 
-- live model/provider behavior;
+- live model/provider behavior beyond fixture-backed parser and service-contract checks;
 - daemon or terminal UI dogfood;
 - VM/package checks;
 - remote services and credentials;

@@ -43,8 +43,10 @@ mod multimodal;
 pub mod node;
 mod observability;
 /// OpenClaw-inspired security audit and plugin guardrail DTOs.
+#[path = "openclaw/guardrails.rs"]
 pub mod openclaw_guardrails;
 /// OpenClaw-inspired session isolation and session-tool planning DTOs.
+#[path = "openclaw/session.rs"]
 pub mod openclaw_session;
 /// Public orchestration adapter-family DTOs and service contracts.
 pub mod orchestration;

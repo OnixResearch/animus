@@ -6,6 +6,7 @@ mod choice;
 mod identity;
 mod reason;
 mod secret;
+mod stream;
 
 #[cfg(test)]
 mod tests;
@@ -22,6 +23,11 @@ pub use reason::{ReasoningSupport, ThinkingLevel, ThinkingPolicy};
 pub use secret::{
     CredentialHandle, CredentialRequirement, CredentialSource, MissingCredentialDiagnostic,
     resolve_credential_from_env_pairs,
+};
+pub use stream::{
+    ProviderStreamParserInput, ProviderStreamingCredentialState, ProviderStreamingDispatchInput,
+    ProviderStreamingDispatchPlan, ProviderStreamingError, ProviderStreamingServiceState,
+    parse_provider_stream_chunks, plan_provider_streaming_dispatch,
 };
 
 const INVALID_ID_EMPTY_REASON: &str = "identifier must be non-empty";

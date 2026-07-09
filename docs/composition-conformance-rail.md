@@ -7,6 +7,8 @@ The composition conformance rail proves representative Animus surfaces compose s
 The maintained matrix covers:
 
 - provider hardening plus model dispatch;
+- fixture-backed provider streaming plus runtime stream projection;
+- model-router execution envelopes plus injected-service fail-closed behavior;
 - tool contracts plus provenance receipts;
 - headless protocol projection plus runtime events;
 - middleware denials plus runtime failure reports;

@@ -402,23 +402,29 @@ impl AuditSnapshot {
 /// # Errors
 ///
 /// Returns [`Error`] only when safe labels or hashes fail validation.
+///
+/// # Panics
+///
+/// Panics if a previously validated snapshot loses its identity or evidence hash.
 pub fn classify_audit(
     snapshot: &AuditSnapshot,
 ) -> Result<alloc::vec::Vec<GuardrailFinding>, Error> {
+    assert!(!snapshot.snapshot_id().is_empty());
+    assert!(!snapshot.evidence_hash.as_str().is_empty());
     let mut findings = alloc::vec::Vec::new();
     if matches!(
         snapshot.bind_posture,
         BindPosture::RemoteBound | BindPosture::PublicInternet
     ) && snapshot.admission_posture != AdmissionPosture::Required
     {
-        findings.push(finding(
-            FindingId::RemoteExposureWithoutAdmission,
-            Severity::Critical,
+        findings.push(finding(&FindingDraft {
+            id: FindingId::RemoteExposureWithoutAdmission,
+            severity: Severity::Critical,
             snapshot,
-            "remote_bind",
-            "require_admission",
-            Some("disable_remote_or_require_auth"),
-        )?);
+            affected_label: "remote_bind",
+            remediation_label: "require_admission",
+            autofix_label: Some("disable_remote_or_require_auth"),
+        })?);
     }
     if matches!(
         snapshot.channel_posture,
@@ -426,44 +432,44 @@ pub fn classify_audit(
     ) && snapshot.tool_profile.is_broad()
         && !snapshot.sandbox_posture.is_enforced()
     {
-        findings.push(finding(
-            FindingId::OpenMessagingWithBroadTools,
-            Severity::High,
+        findings.push(finding(&FindingDraft {
+            id: FindingId::OpenMessagingWithBroadTools,
+            severity: Severity::High,
             snapshot,
-            "open_messaging_tools",
-            "restrict_tools_or_enforce_sandbox",
-            None,
-        )?);
+            affected_label: "open_messaging_tools",
+            remediation_label: "restrict_tools_or_enforce_sandbox",
+            autofix_label: None,
+        })?);
     }
     if snapshot.sandbox_posture == SandboxPosture::ConfiguredNotEnforced {
-        findings.push(finding(
-            FindingId::SandboxDrift,
-            Severity::High,
+        findings.push(finding(&FindingDraft {
+            id: FindingId::SandboxDrift,
+            severity: Severity::High,
             snapshot,
-            "sandbox_drift",
-            "repair_sandbox_enforcement",
-            None,
-        )?);
+            affected_label: "sandbox_drift",
+            remediation_label: "repair_sandbox_enforcement",
+            autofix_label: None,
+        })?);
     }
     if snapshot.plugin_policy == PluginPolicyPosture::Permissive {
-        findings.push(finding(
-            FindingId::PermissivePluginPolicy,
-            Severity::Warning,
+        findings.push(finding(&FindingDraft {
+            id: FindingId::PermissivePluginPolicy,
+            severity: Severity::Warning,
             snapshot,
-            "plugin_policy",
-            "require_plugin_allowlist",
-            None,
-        )?);
+            affected_label: "plugin_policy",
+            remediation_label: "require_plugin_allowlist",
+            autofix_label: None,
+        })?);
     }
     if snapshot.model_risk == ModelRiskPosture::Elevated && snapshot.tool_profile.is_broad() {
-        findings.push(finding(
-            FindingId::ModelToolRiskMismatch,
-            Severity::High,
+        findings.push(finding(&FindingDraft {
+            id: FindingId::ModelToolRiskMismatch,
+            severity: Severity::High,
             snapshot,
-            "model_tool_risk",
-            "downgrade_tools_or_route_model",
-            None,
-        )?);
+            affected_label: "model_tool_risk",
+            remediation_label: "downgrade_tools_or_route_model",
+            autofix_label: None,
+        })?);
     }
     Ok(findings)
 }
@@ -476,6 +482,7 @@ pub enum PluginDiagnostic {
 }
 
 /// Borrowed plugin manifest guardrail input.
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct PluginManifestDraft<'a> {
     /// Plugin identity.
@@ -540,6 +547,10 @@ impl PluginManifestValidation {
 /// # Errors
 ///
 /// Returns [`Error`] when manifest data is missing, unknown, unsafe, or tries to execute plugin code.
+///
+/// # Panics
+///
+/// Panics if plugin execution or config-schema post-conditions are violated after validation.
 pub fn validate_plugin_manifest(
     draft: &PluginManifestDraft<'_>,
 ) -> Result<PluginManifestValidation, Error> {
@@ -552,6 +563,8 @@ pub fn validate_plugin_manifest(
     if !draft.has_config_schema {
         return Err(Error::MissingConfigSchema);
     }
+    assert!(!draft.execution_requested);
+    assert!(draft.has_config_schema);
     let plugin_id = safe_text(PLUGIN_ID_FIELD, draft.plugin_id)?;
     validate_labels(CHANNEL_FIELD, draft.declared_channels)?;
     validate_labels(PROVIDER_FIELD, draft.declared_providers)?;
@@ -562,19 +575,19 @@ pub fn validate_plugin_manifest(
         CHANNEL_FIELD,
         draft.config_channels,
         draft.declared_channels,
-        Error::UnknownChannel,
+        &Error::UnknownChannel,
     )?;
     reject_unknown(
         PROVIDER_FIELD,
         draft.config_providers,
         draft.declared_providers,
-        Error::UnknownProvider,
+        &Error::UnknownProvider,
     )?;
     reject_unknown(
         SLOT_FIELD,
         draft.config_slots,
         draft.slots,
-        Error::UnknownSlot,
+        &Error::UnknownSlot,
     )?;
     let mut diagnostics = alloc::vec::Vec::new();
     if !draft.enabled {
@@ -693,6 +706,10 @@ impl PluginTrustValidation {
 /// # Errors
 ///
 /// Returns [`Error`] for denied policy, unsafe path, writability, ownership, registry-only, or lifecycle risk.
+///
+/// # Panics
+///
+/// Panics if allow/path-safety post-conditions are violated after validation.
 pub fn validate_plugin_trust(draft: &PluginTrustDraft<'_>) -> Result<PluginTrustValidation, Error> {
     if draft.policy == PluginTrustPolicy::Deny {
         return Err(Error::PluginDenied);
@@ -712,6 +729,8 @@ pub fn validate_plugin_trust(draft: &PluginTrustDraft<'_>) -> Result<PluginTrust
     if draft.lifecycle_script_risk == LifecycleScriptRisk::Present {
         return Err(Error::LifecycleScriptRisk);
     }
+    assert_eq!(draft.policy, PluginTrustPolicy::Allow);
+    assert_ne!(draft.path_safety, PathSafetyClass::SymlinkEscape);
     Ok(PluginTrustValidation {
         plugin_id: safe_text(PLUGIN_ID_FIELD, draft.plugin_id)?,
         provenance_hash: crate::ArtifactHash::new(draft.provenance_hash)?,
@@ -854,21 +873,26 @@ impl GuardrailReceipt {
     }
 }
 
-fn finding(
+struct FindingDraft<'a> {
     id: FindingId,
     severity: Severity,
-    snapshot: &AuditSnapshot,
-    affected_label: &str,
-    remediation_label: &str,
-    autofix_label: Option<&str>,
-) -> Result<GuardrailFinding, Error> {
+    snapshot: &'a AuditSnapshot,
+    affected_label: &'a str,
+    remediation_label: &'a str,
+    autofix_label: Option<&'a str>,
+}
+
+fn finding(draft: &FindingDraft<'_>) -> Result<GuardrailFinding, Error> {
     Ok(GuardrailFinding {
-        id,
-        severity,
-        affected_labels: alloc::vec![safe_text(SAFE_LABEL_FIELD, affected_label)?],
-        remediation_labels: alloc::vec![safe_text(REMEDIATION_FIELD, remediation_label)?],
-        evidence_hash: snapshot.evidence_hash.clone(),
-        autofix: autofix_label.map(AutofixDescriptor::new).transpose()?,
+        id: draft.id,
+        severity: draft.severity,
+        affected_labels: alloc::vec![safe_text(SAFE_LABEL_FIELD, draft.affected_label)?],
+        remediation_labels: alloc::vec![safe_text(REMEDIATION_FIELD, draft.remediation_label)?],
+        evidence_hash: draft.snapshot.evidence_hash.clone(),
+        autofix: draft
+            .autofix_label
+            .map(AutofixDescriptor::new)
+            .transpose()?,
     })
 }
 
@@ -883,7 +907,7 @@ fn reject_unknown(
     field_name: crate::validation::FieldName,
     requested: &[&str],
     declared: &[&str],
-    error: Error,
+    error: &Error,
 ) -> Result<(), Error> {
     for value in requested {
         safe_text(field_name, value)?;

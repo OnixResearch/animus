@@ -35,7 +35,7 @@ const ERROR_MESSAGE_FIELD: crate::validation::FieldName =
 const ERROR_DETAIL_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("gateway_error_detail");
 
-/// Active Animus gateway protocol version for the bounded OpenClaw profile.
+/// Active Animus gateway protocol version for the bounded `OpenClaw` profile.
 pub const OPENCLAW_PROTOCOL_VERSION: u16 = 1;
 /// Lowest accepted gateway protocol version.
 pub const MIN_PROTOCOL_VERSION: u16 = OPENCLAW_PROTOCOL_VERSION;
@@ -82,13 +82,14 @@ const REJECTED_OPENCLAW_SURFACES: &[RejectedSurface] = &[
 ];
 
 /// Gateway validation error raised before host dispatch.
+#[allow(clippy::enum_variant_names)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Error {
     /// Generic adapter field validation failed.
     Contract(crate::AdapterContractError),
     /// A BLAKE3 identity failed validation.
     Artifact(crate::ArtifactValidationError),
-    /// The profile did not use the bounded OpenClaw reference.
+    /// The profile did not use the bounded `OpenClaw` reference.
     InvalidReference,
     /// The profile attempted to enable ambient transport fallback.
     AmbientTransportFallback,
@@ -148,7 +149,7 @@ impl From<crate::ArtifactValidationError> for Error {
 /// Bounded reference source for the gateway profile.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Reference {
-    /// OpenClaw is used only as an architectural reference.
+    /// `OpenClaw` is used only as an architectural reference.
     OpenClaw,
 }
 
@@ -162,12 +163,12 @@ impl Reference {
     }
 }
 
-/// OpenClaw product surfaces that reusable Animus crates reject.
+/// `OpenClaw` product surfaces that reusable Animus crates reject.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum RejectedSurface {
-    /// WebSocket server implementation.
+    /// `WebSocket` server implementation.
     WebSocketServer,
-    /// HTTP route implementation.
+    /// `HTTP` route implementation.
     HttpRoutes,
     /// Channel connector implementation.
     ChannelConnector,
@@ -244,6 +245,7 @@ pub struct ProfileDraft<'a> {
 
 /// Validated optional gateway protocol profile.
 // r[impl agent_harness_runtime.openclaw_gateway.scope]
+#[allow(clippy::struct_field_names)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Profile {
     profile_id: alloc::string::String,
@@ -257,7 +259,7 @@ impl Profile {
     ///
     /// # Errors
     ///
-    /// Returns [`Error`] when the profile lacks the OpenClaw reference,
+    /// Returns [`Error`] when the profile lacks the `OpenClaw` reference,
     /// required features, safe identity, or rejects ambient transport fallback.
     pub fn new(draft: &ProfileDraft<'_>) -> Result<Self, Error> {
         if draft.reference != Reference::OpenClaw {
@@ -304,7 +306,8 @@ impl Profile {
         self.features.as_slice()
     }
 
-    /// Returns OpenClaw product surfaces rejected by reusable Animus crates.
+    /// Returns `OpenClaw` product surfaces rejected by reusable Animus crates.
+    #[allow(clippy::unused_self)]
     #[must_use]
     pub const fn rejected_surfaces(&self) -> &'static [RejectedSurface] {
         REJECTED_OPENCLAW_SURFACES
@@ -345,13 +348,13 @@ impl ProtocolRange {
 
     /// Returns the lowest accepted version.
     #[must_use]
-    pub const fn minimum(&self) -> u16 {
+    pub const fn minimum(self) -> u16 {
         self.minimum
     }
 
     /// Returns the highest accepted version.
     #[must_use]
-    pub const fn maximum(&self) -> u16 {
+    pub const fn maximum(self) -> u16 {
         self.maximum
     }
 
@@ -490,6 +493,7 @@ pub struct SnapshotDraft<'a> {
 }
 
 /// Safe gateway snapshot metadata.
+#[allow(clippy::struct_field_names)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Snapshot {
     state_version: StateVersion,

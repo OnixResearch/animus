@@ -5,6 +5,8 @@
 //! not discover stores, read transcript files, use clocks, run cleanup jobs, or
 //! deliver cross-session messages.
 
+#![cfg_attr(animus_octet, allow(tigerstyle::path_segment_repetition))]
+
 const AGENT_ID_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("session_agent_id");
 const ACCOUNT_ID_FIELD: crate::validation::FieldName =
@@ -289,11 +291,18 @@ impl SessionKeyPlan {
 ///
 /// Returns [`Error`] for ambient discovery requests, missing required metadata,
 /// or ambiguous direct-message inputs.
+///
+/// # Panics
+///
+/// Panics if ambient-discovery or normalized-agent post-conditions are violated
+/// after validation.
 pub fn plan_session_key(draft: &SessionKeyDraft<'_>) -> Result<SessionKeyPlan, Error> {
     if draft.ambient_store_discovery {
         return Err(Error::AmbientStoreDiscovery);
     }
+    assert!(!draft.ambient_store_discovery);
     let agent = safe_text(AGENT_ID_FIELD, draft.agent_id)?;
+    assert!(!agent.is_empty());
     let mut diagnostics = alloc::vec::Vec::new();
     let key = match draft.source_kind {
         SessionSourceKind::Main => key_from_segments(&[KEY_PREFIX, agent.as_str(), "main"]),
@@ -434,11 +443,20 @@ impl MaintenancePolicy {
     ///
     /// Returns [`Error::InvalidMaintenancePolicy`] when any bound is below the accepted minimum.
     pub const fn new(draft: MaintenancePolicyDraft) -> Result<Self, Error> {
-        if draft.max_entries < MIN_SESSION_BOUND
-            || draft.rotation_threshold_bytes < MIN_SESSION_BOUND_U64
-            || draft.archive_retention_count < MIN_SESSION_BOUND
-            || draft.disk_budget_bytes < MIN_SESSION_BOUND_U64
-        {
+        let is_max_entries_too_low = draft.max_entries < MIN_SESSION_BOUND;
+        let is_rotation_threshold_too_low = draft.rotation_threshold_bytes < MIN_SESSION_BOUND_U64;
+        let is_archive_retention_too_low = draft.archive_retention_count < MIN_SESSION_BOUND;
+        let is_disk_budget_too_low = draft.disk_budget_bytes < MIN_SESSION_BOUND_U64;
+        if is_max_entries_too_low {
+            return Err(Error::InvalidMaintenancePolicy);
+        }
+        if is_rotation_threshold_too_low {
+            return Err(Error::InvalidMaintenancePolicy);
+        }
+        if is_archive_retention_too_low {
+            return Err(Error::InvalidMaintenancePolicy);
+        }
+        if is_disk_budget_too_low {
             return Err(Error::InvalidMaintenancePolicy);
         }
         Ok(Self {
@@ -636,6 +654,11 @@ impl SessionVisibilityPlan {
 ///
 /// Returns [`Error`] when the request widens beyond host policy, crosses agents,
 /// or lacks bounded history preview limits.
+///
+/// # Panics
+///
+/// Panics if bounded-history or effective-ceiling post-conditions are violated
+/// after validation.
 pub fn plan_session_tool_visibility(
     draft: &SessionVisibilityRequestDraft<'_>,
 ) -> Result<SessionVisibilityPlan, Error> {
@@ -648,10 +671,12 @@ pub fn plan_session_tool_visibility(
     if history_preview_entries < MIN_SESSION_BOUND {
         return Err(Error::UnboundedHistory);
     }
+    assert!(history_preview_entries >= MIN_SESSION_BOUND);
     let effective_ceiling = boundary_ceiling(draft.boundary, draft.host_ceiling);
     if draft.requested > effective_ceiling {
         return Err(Error::VisibilityDenied);
     }
+    assert!(draft.requested <= effective_ceiling);
     if current_agent_id != target_agent_id && draft.requested < SessionVisibilityMode::All {
         return Err(Error::CrossAgentAccess);
     }
@@ -806,6 +831,7 @@ impl InterSessionProvenance {
     }
 }
 
+#[cfg_attr(animus_octet, allow(tigerstyle::borrowed_argument_types))]
 fn plan_direct_message_key(
     draft: &SessionKeyDraft<'_>,
     agent: &str,
@@ -840,6 +866,7 @@ fn plan_direct_message_key(
     }
 }
 
+#[cfg_attr(animus_octet, allow(tigerstyle::ambiguous_params))]
 fn origin_key(
     agent: &str,
     source_label: &'static str,
@@ -854,6 +881,7 @@ fn origin_key(
     ]))
 }
 
+#[cfg_attr(animus_octet, allow(tigerstyle::borrowed_argument_types))]
 fn normalized_peer(
     draft: &SessionKeyDraft<'_>,
     diagnostics: &mut alloc::vec::Vec<PrivacyDiagnostic>,
@@ -874,11 +902,14 @@ fn normalized_peer(
     }
 }
 
+#[cfg_attr(animus_octet, allow(tigerstyle::borrowed_argument_types))]
 fn push_maintenance_actions(
     policy: MaintenancePolicy,
     session: &SessionMetadata,
     actions: &mut alloc::vec::Vec<MaintenanceAction>,
 ) {
+    assert!(policy.max_entries >= MIN_SESSION_BOUND);
+    assert!(policy.rotation_threshold_bytes >= MIN_SESSION_BOUND_U64);
     if session.age_class == AgeClass::Stale {
         actions.push(maintenance_action(
             session,

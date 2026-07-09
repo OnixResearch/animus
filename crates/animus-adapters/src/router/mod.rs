@@ -5,6 +5,9 @@
 //! compile without churn. The shim will be removed once direct consumers
 //! migrate to `animus-router` directly.
 
+/// Host-owned model-router execution service DTOs and contracts.
+pub mod execution;
+
 pub use animus_router::{
     Bounds, BoundsDraft, Budget, BudgetExhausted, BudgetKind, BudgetLedger, CatalogEntry,
     CatalogEntryDraft, DeadlineClass, DurationBucket, ExecutionPlanError, FallbackChain,
