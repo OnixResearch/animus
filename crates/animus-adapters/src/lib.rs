@@ -39,6 +39,7 @@ pub mod gateway;
 mod hostcontrol;
 mod invocation;
 mod ledger;
+mod lens;
 mod manifest;
 mod mcpapp;
 mod model;
@@ -152,6 +153,16 @@ pub use invocation::{
     ADAPTER_CALL_OUTCOME_CONTRACT_IDENTITY, AdapterCallFailureClass, AdapterCallFailureMetadata,
     AdapterCallFailureMetadataDraft, AdapterCallOutcome, ComponentOutcomeAdapter,
     ModelOutcomeAdapter, ToolOutcomeAdapter,
+};
+pub use lens::{
+    FocusDeck, FocusDeckDraft, FocusItem, FocusItemDraft, LensConfidence, LensContextRef,
+    LensContextRefDraft, LensContradiction, LensContradictionDraft, LensContradictionStatus,
+    LensDiagnostic, LensDiagnosticCode, LensExecutionMode, LensExecutionPlan,
+    LensExecutionPlanStatus, LensReport, LensReportDraft, LensReportStatus, LensReviewCriterion,
+    LensReviewCriterionDraft, LensSynthesisDraft, LensSynthesisReport, LensTaskPacket,
+    LensTaskPacketDraft, LensWorkerServiceStatus, PROHIBITED_MULTI_LENS_EFFECTS,
+    plan_lens_execution, validate_focus_deck, validate_lens_report, validate_lens_synthesis,
+    validate_lens_task_packet,
 };
 pub use recover::{
     CheckpointBackendKind, CheckpointDraft, CheckpointError, CheckpointFailureClass,

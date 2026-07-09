@@ -44,6 +44,14 @@ Host asset reconciliation contracts are optional SDK DTOs. `validate_host_asset_
 
 Non-claims: Animus does not scan `~/.hermes`, `~/.pi`, home directories, repositories, or global stores; it does not resolve symlinks, copy/link/unlink files, enable/disable assets, install plugins, write manifests, or decide which host store is canonical.
 
+## Multi-lens focus deck boundary
+
+Multi-lens contracts are optional SDK DTOs. `validate_focus_deck` accepts host-defined deck families, focus items, retrieval budget references, evidence expectations, output contracts, and review criteria. `validate_lens_task_packet` admits only bounded context labels and BLAKE3 evidence references for a focus item.
+
+`plan_lens_execution` returns typed task packets for host-owned worker, external-service, or sequential-checklist modes, and missing worker services fail closed for modes that require them. `validate_lens_report` and `validate_lens_synthesis` preserve lens IDs, evidence hashes, assumptions, skipped lenses, contradictions, confidence, and unresolved gaps. Unresolved contradictions cannot be collapsed into a high-confidence final claim.
+
+Non-claims: Animus does not ship Hermes `multi-lens`, spawn subagents, call models, open networks, read repositories, create threads/processes, require property-discovery decks, enforce parallelism, or provide a live analysis service by default.
+
 ## Validation
 
 Focused validation:
