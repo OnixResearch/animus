@@ -60,6 +60,7 @@ mod provider_hardening;
 mod quality_records;
 mod researchspec;
 mod scaffold;
+mod session_branching;
 mod shell;
 mod status;
 pub mod subagents;

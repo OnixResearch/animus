@@ -217,6 +217,15 @@ pub use crate::scaffold::{
     apply_scaffold_admission, blake3_scaffold_fingerprint, select_scaffold_profile,
     validate_scaffold_influence_receipt, validate_scaffold_profile,
 };
+pub use crate::session_branching::{
+    SessionBranchCheckpointStatus, SessionBranchContinuationTarget, SessionBranchDiagnostic,
+    SessionBranchDiagnosticKind, SessionBranchError, SessionBranchErrorKind,
+    SessionBranchOperation, SessionBranchPlan, SessionBranchPlanStatus, SessionBranchPlannerInput,
+    SessionBranchPolicy, SessionBranchPolicyAdmission, SessionBranchPolicyDraft,
+    SessionBranchReceipt, SessionBranchRequest, SessionBranchRequestDraft, SessionCopyDescriptor,
+    SessionCopyDescriptorClass, SessionCopyDescriptorDraft, SessionLedgerEntry,
+    SessionLedgerEntryDraft, plan_session_branch, validate_session_branch_receipt_text,
+};
 pub use crate::shell::{RuntimeAdapters, run_agent_loop};
 #[cfg(feature = "steel")]
 pub use crate::shell::{SteelPolicyRuntime, run_with_steel_policy, run_with_steel_program};
