@@ -84,6 +84,14 @@ VCS snapshot ledger contracts are optional SDK DTOs. `validate_snapshot_record` 
 
 Non-claims: Animus does not run Git or jj commands, create shadow branches, manage stash refs, write worktrees, schedule background snapshots, autocommit, open restore UI, clean up backend storage, or mutate VCS state by default.
 
+## Intent validation boundary
+
+Intent validation contracts are optional SDK DTOs. `validate_intent_verdict` accepts call IDs, batch IDs, safe summary labels, risk/recommendation classes, confidence, detector tier, evidence labels, evidence hashes, latency buckets, reviewer labels, and freshness epochs. `validate_intent_heuristic_rule` keeps deterministic rules typed with action classes, match classes, risk, recommendation, rationale labels, and positive/negative fixtures.
+
+`evaluate_intent_heuristics` classifies host-supplied pending call summaries without model, filesystem, network, clock, provider, or executor access. `merge_intent_reviewer_verdict` is tighten-only: reviewers can deny, require review, or annotate, but cannot approve deterministic denials, lower critical risk, grant missing authority, suppress confirmation, bypass sandbox, or add capabilities. `evaluate_intent_batch` can require review for risky cross-call interactions before any partial dispatch. `validate_intent_receipt` stores only safe labels, counts, hashes, redaction markers, recommendation classes, and issue codes.
+
+Non-claims: Animus does not provide smart approvals, live LLM judge execution, approval bypass, raw command/tool bodies in durable evidence, or any executor grant. Normal capability, policy, confirmation, sandbox, mutation, and executor gates remain required before dispatch.
+
 ## Validation
 
 Focused validation:

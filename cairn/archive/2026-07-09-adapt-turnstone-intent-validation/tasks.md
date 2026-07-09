@@ -1,0 +1,10 @@
+# Tasks
+
+- [x] [serial] Define intent verdict DTOs for call identity, batch identity, intent summary labels, risk level, confidence, recommendation, detector tier, safe evidence references, latency bucket, and reviewer labels. r[agent_harness_runtime.turnstone_intent_validation.dto]
+- [x] [depends:dto] Add typed deterministic heuristic rule descriptors with stable IDs, action classes, match classes, risk levels, recommendations, safe rationale labels, and positive/negative examples. r[agent_harness_runtime.turnstone_intent_validation.heuristics]
+- [x] [depends:heuristics] Add pure heuristic evaluation that returns deterministic verdicts for read-only, mutation, process, network, secret-adjacent, and persistent control-plane tool classes. r[agent_harness_runtime.turnstone_intent_validation.evaluate]
+- [x] [depends:evaluate] Add optional reviewer merge semantics that can deny, require review, or annotate, but cannot approve denied calls, lower deterministic critical findings, or grant missing authority. r[agent_harness_runtime.turnstone_intent_validation.reviewer]
+- [x] [depends:reviewer] Bind verdicts to tool batch admission so cross-call interactions can require review before any effect. r[agent_harness_runtime.turnstone_intent_validation.batch]
+- [x] [depends:batch] Add safe verdict receipts and runtime events using safe labels, counts, policy hashes, redaction markers, and BLAKE3 evidence identities only. r[agent_harness_runtime.turnstone_intent_validation.receipts]
+- [x] [depends:receipts] Document no smart approvals, no live judge requirement, no approval bypass, and no raw command/tool bodies in durable evidence. r[agent_harness_runtime.turnstone_intent_validation.docs]
+- [x] [depends:docs] Add positive low-risk/read-only and review-required mutation tests plus negative critical-command, secret-adjacent, stale-verdict, classifier-downgrade, malformed-confidence, missing-evidence, and receipt-leak tests. r[agent_harness_runtime.turnstone_intent_validation.verification]

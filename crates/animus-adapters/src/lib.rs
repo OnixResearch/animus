@@ -37,6 +37,7 @@ mod front;
 /// Optional OpenClaw-inspired gateway control-plane DTOs.
 pub mod gateway;
 mod hostcontrol;
+mod intent;
 mod invocation;
 mod ledger;
 mod lens;
@@ -152,6 +153,15 @@ pub use hostcontrol::{
     HostWaitRequest, LayoutApplyRequest, LayoutApplyResponse, LayoutAxis, LayoutCommandDescriptor,
     LayoutCommandDescriptorDraft, LayoutNode, LayoutPaneDraft, SelectorLifetime, TopologyCommand,
     TopologyCommandDraft, filter_host_events, resolve_host_wait,
+};
+pub use intent::{
+    IntentActionClass, IntentBatchAdmission, IntentBatchAdmissionStatus, IntentDetectorTier,
+    IntentDiagnostic, IntentDiagnosticCode, IntentHeuristicRule, IntentHeuristicRuleDraft,
+    IntentLatencyBucket, IntentMatchClass, IntentReceipt, IntentReceiptDraft, IntentRecommendation,
+    IntentRiskLevel, IntentVerdict, IntentVerdictDraft, PROHIBITED_INTENT_VALIDATION_EFFECTS,
+    PendingIntentCall, PendingIntentCallDraft, evaluate_intent_batch, evaluate_intent_heuristics,
+    merge_intent_reviewer_verdict, validate_intent_heuristic_rule, validate_intent_receipt,
+    validate_intent_verdict, validate_pending_intent_call,
 };
 pub use invocation::{
     ADAPTER_CALL_OUTCOME_CONTRACT_IDENTITY, AdapterCallFailureClass, AdapterCallFailureMetadata,
