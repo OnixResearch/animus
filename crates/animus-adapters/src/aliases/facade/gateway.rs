@@ -2,6 +2,7 @@ mod auth;
 mod input;
 mod policy;
 mod record;
+mod server;
 mod taxonomy;
 #[cfg(test)]
 mod tests;
@@ -47,6 +48,19 @@ pub type RemoteAdmissionDecision = AdmissionDecision;
 pub type RemoteAdmissionReceipt = AdmissionReceipt;
 /// Admission validation error.
 pub type RemoteAdmissionError = AdmissionError;
+
+pub use server::{
+    REMOTE_SERVER_RECEIPT_LEAK_MARKERS, RemoteServerAdmissionDecision, RemoteServerAdmissionError,
+    RemoteServerAdmissionOutcome, RemoteServerAdmissionPolicy, RemoteServerAdmissionPolicyDraft,
+    RemoteServerAdmissionReason, RemoteServerAdmissionReceipt, RemoteServerAdmissionRequest,
+    RemoteServerAuthOutcome, RemoteServerCredentialSourceAvailability, RemoteServerDescriptor,
+    RemoteServerDescriptorDraft, RemoteServerEndpointIdentityClass, RemoteServerFailureClass,
+    RemoteServerFingerprintPolicy, RemoteServerFingerprintStatus, RemoteServerHandshakeSummary,
+    RemoteServerHandshakeSummaryDraft, RemoteServerObservedTls, RemoteServerPlatformRole,
+    RemoteServerProtocolRole, RemoteServerProtocolVersionStatus, RemoteServerSecretSourceClass,
+    RemoteServerTlsRequirement, RemoteServerTransportKind, evaluate_remote_server_admission,
+    validate_remote_server_admission_receipt_text,
+};
 
 pub(super) const AUDIENCE_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("remote_admission_audience");

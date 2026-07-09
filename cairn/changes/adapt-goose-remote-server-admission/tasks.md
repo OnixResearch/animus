@@ -1,8 +1,0 @@
-# Tasks
-
-- [ ] [serial] Define remote backend descriptors for endpoint identity, transport kind, protocol role, platform role, TLS requirement, fingerprint policy, secret source label, scopes, capability ceilings, and provenance. r[agent_harness_runtime.goose_remote_server_admission.descriptors]
-- [ ] [depends:descriptors] Define host-supplied handshake summary DTOs for observed TLS, certificate fingerprint status, auth outcome, protocol version, accepted features, audience, and safe failure class. r[agent_harness_runtime.goose_remote_server_admission.handshake]
-- [ ] [depends:handshake] Add pure admission validation over descriptors, handshake summaries, policy, credential-source availability, certificate pin state, scope, and capability ceilings. r[agent_harness_runtime.goose_remote_server_admission.admission]
-- [ ] [depends:admission] Add fail-closed outcomes for missing TLS, fingerprint mismatch, TOFU pending without approval, secret unavailable, unauthorized, unsupported protocol, stale pin, scope denial, and remote fallback denial. r[agent_harness_runtime.goose_remote_server_admission.fail_closed]
-- [ ] [depends:fail_closed] Add safe remote-admission receipts and leak checks for endpoints, secrets, headers, tokens, credentials, certificate bodies, provider payloads, prompts, and full paths. r[agent_harness_runtime.goose_remote_server_admission.receipts]
-- [ ] [depends:receipts] Update docs and run focused descriptor, handshake, admission, fail-closed, receipt leak, Cairn validation, and Cairn gate checks with reviewable evidence. r[agent_harness_runtime.goose_remote_server_admission.verification]
