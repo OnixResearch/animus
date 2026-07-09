@@ -201,6 +201,14 @@ let change_entries = [
     "agent_harness_runtime.subagent_facade.boundary",
     "agent_harness_runtime.subagent_coordinator.lifecycle",
   ] ["adapt-openclaw-gateway-control-plane", "adapt-openclaw-security-plugin-guardrails"],
+  change "add-nested-subagent-delegation-graphs" core_role "ui-headless" [
+    "agent_harness_runtime.subagent_facade.boundary",
+    "agent_harness_runtime.subagent_context_packets.identity",
+    "agent_harness_runtime.subagent_coordinator.service",
+    "agent_harness_runtime.subagent_coordinator.lifecycle",
+    "agent_harness_runtime.subagent_fanout_fanin.plan",
+    "agent_harness_runtime.subagent_fanout_fanin.aggregation",
+  ] ["adapt-openclaw-session-isolation-tools", "adapt-hermes-multi-lens-focus-decks", "adapt-hermes-plan-loop-mode-fsm"],
   change "adapt-openclaw-security-plugin-guardrails" host_role "policy-guidance" [
     "agent_harness_runtime.clash_ucan.capability_request",
     "agent_harness_runtime.zerostack_permission_kernel.receipts",
@@ -333,6 +341,7 @@ let overlap_entries = [
   overlap "openclaw-gateway-control-plane" "adapt-openclaw-gateway-control-plane" ["adapt-openclaw-node-capability-hosts", "adapt-openclaw-session-isolation-tools", "adapt-openclaw-security-plugin-guardrails"],
   overlap "openclaw-node-invocation" "adapt-openclaw-node-capability-hosts" ["adapt-openclaw-gateway-control-plane", "adapt-openclaw-security-plugin-guardrails"],
   overlap "openclaw-session-tool-visibility" "adapt-openclaw-session-isolation-tools" ["adapt-openclaw-security-plugin-guardrails"],
+  overlap "nested-subagent-delegation-graphs" "add-nested-subagent-delegation-graphs" ["adapt-openclaw-session-isolation-tools", "adapt-hermes-multi-lens-focus-decks", "adapt-hermes-plan-loop-mode-fsm"],
   overlap "openclaw-security-plugin-guardrails" "adapt-openclaw-security-plugin-guardrails" ["adapt-openclaw-gateway-control-plane", "adapt-openclaw-node-capability-hosts", "adapt-openclaw-session-isolation-tools"],
   overlap "memory-family-contracts" "surface-memory-family-contract-index" ["add-cognitive-memory-taxonomy", "add-memory-routing-contracts", "enrich-memory-retrieval-quality-policy", "add-production-memory-policy-descriptors", "add-memory-evaluation-rail"],
   overlap "memory-routing-quality" "add-memory-routing-contracts" ["add-cognitive-memory-taxonomy", "enrich-memory-retrieval-quality-policy", "add-production-memory-policy-descriptors", "add-memory-evaluation-rail"],
