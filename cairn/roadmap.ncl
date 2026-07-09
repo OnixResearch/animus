@@ -207,6 +207,68 @@ let change_entries = [
     "agent_harness_runtime.hermes_plugin_manifests.validation",
     "agent_harness_runtime.plugin_action_manifests.diagnostics",
   ] ["adapt-openclaw-gateway-control-plane", "adapt-openclaw-node-capability-hosts", "adapt-openclaw-session-isolation-tools"],
+  change "surface-memory-family-contract-index" core_role "policy-guidance" [
+    "agent_harness_runtime.memory_adapters.family",
+    "agent_harness_runtime.memory_adapters.verification",
+    "agent_harness_runtime.memory_conformance.matrix",
+  ] ["add-cognitive-memory-taxonomy", "add-memory-routing-contracts", "enrich-memory-retrieval-quality-policy", "add-production-memory-policy-descriptors", "add-memory-evaluation-rail"],
+  change "add-cognitive-memory-taxonomy" core_role "policy-guidance" [
+    "agent_harness_runtime.memory_adapters.record_envelope",
+    "agent_harness_runtime.memory_adapters.retrieval_plan",
+    "agent_harness_runtime.memory_adapters.receipts",
+  ] ["surface-memory-family-contract-index", "add-memory-routing-contracts", "enrich-memory-retrieval-quality-policy"],
+  change "add-memory-routing-contracts" core_role "policy-guidance" [
+    "agent_harness_runtime.memory_adapters.family",
+    "agent_harness_runtime.memory_adapters.retrieval_plan",
+    "agent_harness_runtime.memory_controls.validation",
+  ] ["add-cognitive-memory-taxonomy", "enrich-memory-retrieval-quality-policy", "add-production-memory-policy-descriptors"],
+  change "enrich-memory-retrieval-quality-policy" core_role "policy-guidance" [
+    "agent_harness_runtime.memory_adapters.retrieval_plan",
+    "agent_harness_runtime.memory_adapters.record_envelope",
+    "agent_harness_runtime.memory_controls.influence_explain",
+  ] ["add-cognitive-memory-taxonomy", "add-memory-routing-contracts", "add-memory-evaluation-rail"],
+  change "add-production-memory-policy-descriptors" core_role "policy-guidance" [
+    "agent_harness_runtime.memory_controls.forget_update",
+    "agent_harness_runtime.memory_conformance.failure_taxonomy",
+    "agent_harness_runtime.memory_adapters.receipts",
+  ] ["surface-memory-family-contract-index", "add-memory-routing-contracts", "add-memory-evaluation-rail"],
+  change "add-memory-evaluation-rail" evaluation_role "evaluation" [
+    "agent_harness_runtime.memory_adapters.verification",
+    "agent_harness_runtime.memory_conformance.verification",
+    "agent_harness_runtime.memory_controls.verification",
+  ] ["surface-memory-family-contract-index", "enrich-memory-retrieval-quality-policy", "add-production-memory-policy-descriptors"],
+  change "add-router-round-robin-selection" core_role "router-crate" [
+    "agent_harness_runtime.model_router.crate_barrier",
+    "agent_harness_runtime.model_router.execution_plan",
+    "agent_harness_runtime.model_router.budget_fallback.chain",
+    "agent_harness_runtime.model_router.policy_contracts",
+  ] ["define-router-execution-plan", "gate-router-budget-and-fallback", "wire-router-into-runtime-loop"],
+  change "adapt-goose-session-branching-controls" core_role "session-ledger" [
+    "agent_harness_runtime.pi_session_tree.ledger_contract",
+    "agent_harness_runtime.provenance_ledger.branch_queries",
+    "agent_harness_runtime.provenance_ledger.receipts",
+    "agent_harness_runtime.clankers_safe_receipts.closeout",
+  ] ["adapt-goose-message-queue-interrupts", "adapt-goose-remote-server-admission"],
+  change "adapt-goose-message-queue-interrupts" core_role "event-hooks" [
+    "agent_harness_runtime.clankers_continuation_policy.state",
+    "agent_harness_runtime.clankers_continuation_policy.receipts",
+    "agent_harness_runtime.pi_headless_protocol.queueing",
+    "agent_harness_runtime.host_control.events_waits",
+  ] ["adapt-goose-session-branching-controls", "adapt-goose-remote-server-admission"],
+  change "adapt-goose-code-mode-tool-planning" core_role "policy-guidance" [
+    "agent_harness_runtime.pi_tool_contracts.definition_metadata",
+    "agent_harness_runtime.pi_tool_contracts.argument_validation",
+    "agent_harness_runtime.pi_tool_contracts.output_bounds",
+    "agent_harness_runtime.clankers_steel_policy.enforced",
+    "agent_harness_runtime.hermes_plugin_manifests.executor_boundary",
+  ] ["adapt-goose-message-queue-interrupts"],
+  change "adapt-goose-remote-server-admission" host_role "ui-headless" [
+    "agent_harness_runtime.clankers_remote_admission.requests",
+    "agent_harness_runtime.clankers_remote_admission.host_owned",
+    "agent_harness_runtime.clankers_remote_admission.receipts",
+    "agent_harness_runtime.pi_headless_protocol.command_response",
+    "agent_harness_runtime.host_control.transport_neutral",
+  ] ["adapt-goose-session-branching-controls", "adapt-goose-message-queue-interrupts", "adapt-openclaw-gateway-control-plane"],
 ]
 in
 
@@ -223,6 +285,13 @@ let overlap_entries = [
   overlap "openclaw-node-invocation" "adapt-openclaw-node-capability-hosts" ["adapt-openclaw-gateway-control-plane", "adapt-openclaw-security-plugin-guardrails"],
   overlap "openclaw-session-tool-visibility" "adapt-openclaw-session-isolation-tools" ["adapt-openclaw-security-plugin-guardrails"],
   overlap "openclaw-security-plugin-guardrails" "adapt-openclaw-security-plugin-guardrails" ["adapt-openclaw-gateway-control-plane", "adapt-openclaw-node-capability-hosts", "adapt-openclaw-session-isolation-tools"],
+  overlap "memory-family-contracts" "surface-memory-family-contract-index" ["add-cognitive-memory-taxonomy", "add-memory-routing-contracts", "enrich-memory-retrieval-quality-policy", "add-production-memory-policy-descriptors", "add-memory-evaluation-rail"],
+  overlap "memory-routing-quality" "add-memory-routing-contracts" ["add-cognitive-memory-taxonomy", "enrich-memory-retrieval-quality-policy", "add-production-memory-policy-descriptors", "add-memory-evaluation-rail"],
+  overlap "router-round-robin-selection" "add-router-round-robin-selection" ["define-router-execution-plan", "gate-router-budget-and-fallback", "wire-router-into-runtime-loop"],
+  overlap "goose-session-branching-controls" "adapt-goose-session-branching-controls" ["adapt-goose-message-queue-interrupts", "adapt-goose-remote-server-admission"],
+  overlap "goose-queued-control-events" "adapt-goose-message-queue-interrupts" ["adapt-goose-session-branching-controls", "adapt-goose-remote-server-admission"],
+  overlap "goose-typed-code-mode-tool-planning" "adapt-goose-code-mode-tool-planning" ["adapt-goose-message-queue-interrupts"],
+  overlap "goose-remote-backend-admission" "adapt-goose-remote-server-admission" ["adapt-goose-session-branching-controls", "adapt-goose-message-queue-interrupts", "adapt-openclaw-gateway-control-plane"],
 ]
 in
 
