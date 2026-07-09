@@ -68,6 +68,14 @@ ROI recommendation contracts are optional SDK DTOs. `validate_roi_report` accept
 
 Non-claims: Animus does not ship `/roi`, inspect repositories, read diffs, collect evidence, score with a model, choose UI actions, create Cairn changes, mutate lifecycle tasks/specs, delegate work, or start implementation from a recommendation by itself.
 
+## Scoped validation planner boundary
+
+Scoped validation planner contracts are optional SDK DTOs. `plan_scoped_validation` consumes host-supplied changed-artifact summaries, trusted validation profile labels, policy-supported artifact kinds, freshness epochs, fallback profile labels, and host service availability. It emits deterministic profile/gate plan items with bounded reasons and budgets.
+
+Plans reference profile labels rather than shell commands. Raw command payloads such as `bash -c`, `cargo`, `npm`, or `pytest` are rejected unless they are encapsulated by a trusted host profile outside this reusable crate. `validate_validation_result_summary` accepts bounded result metadata and BLAKE3 output hashes. `reduce_validation_follow_up` turns failed results into advisory continuation intents only. `validate_validation_planner_receipt` keeps durable evidence to safe labels and hashes.
+
+Non-claims: Animus does not walk files, query VCS, inspect manifests, detect language workspaces, execute commands, schedule timers, call models, retry indefinitely, suppress failures, or start auto-fix loops. Hosts own execution and mutation policy.
+
 ## Validation
 
 Focused validation:

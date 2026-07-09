@@ -77,6 +77,7 @@ pub mod tool;
 /// Adapter field validation helpers shared by `animus-adapters` and
 /// downstream crates such as `animus-router`.
 pub mod validation;
+mod validationplanner;
 mod versioning;
 mod workspace;
 
@@ -365,6 +366,17 @@ pub use timed::{
 pub use validation::{
     AdapterContractError, FieldName, MAX_ADAPTER_FIELD_CHARS, MIN_ADAPTER_FIELD_CHARS,
     normalized_adapter_field,
+};
+pub use validationplanner::{
+    ChangedArtifactSummary, ChangedArtifactSummaryDraft, PROHIBITED_VALIDATION_PLANNER_EFFECTS,
+    ScopedValidationPlan, ValidationArtifactKind, ValidationFollowUpIntent,
+    ValidationFollowUpStatus, ValidationPlanItem, ValidationPlanStatus,
+    ValidationPlannerDiagnostic, ValidationPlannerDiagnosticCode, ValidationPlannerPolicyDraft,
+    ValidationPlannerReceipt, ValidationPlannerReceiptDraft, ValidationProfileCandidate,
+    ValidationProfileCandidateDraft, ValidationResultStatus, ValidationResultSummary,
+    ValidationResultSummaryDraft, ValidationServiceStatus, plan_scoped_validation,
+    reduce_validation_follow_up, validate_validation_planner_receipt,
+    validate_validation_result_summary,
 };
 
 #[cfg(test)]
