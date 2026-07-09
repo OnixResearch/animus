@@ -47,6 +47,9 @@ const UNSAFE_METADATA_MARKERS: &[&str] = &[
     "C:\\Users\\",
     "unbounded output",
     "raw tool output",
+    "raw diff",
+    "raw file body",
+    "unbounded transcript",
 ];
 
 /// Borrowed structured review report input.

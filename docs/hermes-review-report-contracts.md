@@ -28,6 +28,14 @@ Corrective records are optional host-supplied DTOs. `validate_corrective_record`
 
 Non-claims: Animus does not load `.agent/napkin.md`, create global corrective memory, persist records by default, edit Cairn tasks/specs/policy automatically, or make review metrics a scoring authority.
 
+## Done-review lifecycle boundary
+
+Done-review lifecycle contracts are optional SDK DTOs. `validate_review_lifecycle_request` accepts safe review subject metadata, bounded evidence hashes, declarative completion rail descriptors, host-supplied rail result summaries, reviewer attempt descriptors, and an output contract. It does not collect diffs, read VCS state, run shell commands, call reviewers, write metrics, or persist lifecycle state.
+
+`plan_review_lifecycle_dispatch` only decides whether a host may dispatch through an injected reviewer service; missing or unavailable services fail closed without selecting a default reviewer or provider. `reduce_review_lifecycle_outcome` maps parsed `PASS`, `WARN`, `FAIL`, missing-service, and malformed-output states to safe continuation intents. `validate_review_lifecycle_receipt` keeps durable review evidence to request/status labels, issue codes, and BLAKE3 hashes.
+
+Non-claims: Animus does not provide a built-in `done-review` command, require Hermes, choose default reviewer models, execute completion rails, inspect files or VCS, persist metrics, mutate tasks/specs, retry automatically, or approve completion without host policy.
+
 ## Validation
 
 Focused validation:
