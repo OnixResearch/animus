@@ -63,6 +63,7 @@ mod queue;
 mod recover;
 mod resource;
 mod review;
+mod roi;
 /// Transition shim for the dedicated `animus-router` crate.
 pub mod router;
 mod safe;
@@ -287,6 +288,15 @@ pub use review::{
     validate_corrective_host_action_receipt, validate_corrective_promote_request,
     validate_corrective_record, validate_review_lifecycle_receipt,
     validate_review_lifecycle_request,
+};
+pub use roi::{
+    PROHIBITED_ROI_EFFECTS, RoiActionAdmission, RoiActionAdmissionStatus, RoiActionDescriptor,
+    RoiDiagnostic, RoiDiagnosticCode, RoiHostServiceStatus, RoiLifecycleRouteKind,
+    RoiMissingContext, RoiMissingContextDraft, RoiReceipt, RoiReceiptDraft,
+    RoiRecommendationReport, RoiRecommendationReportDraft, RoiRecommendedAction, RoiRunnerUp,
+    RoiRunnerUpDraft, RoiScoreInput, RoiScoreInputDraft, RoiWorkflowPlan, RoiWorkflowStatus,
+    admit_roi_action, parse_roi_action_label, plan_roi_workflow, reduce_roi_action_descriptor,
+    validate_roi_receipt, validate_roi_report,
 };
 /// Plugin manifest toolset-kind descriptor label.
 pub type PluginToolsetKind = manifest::ToolsetKind;

@@ -60,6 +60,14 @@ Plan/loop mode contracts are optional SDK DTOs. `validate_mode_descriptor` accep
 
 Non-claims: Animus does not provide `/mode`, `/plan`, `/loop`, shortcuts, UI pickers, tool allowlists, automatic loop turns, provider probes, delegation strategy, session persistence, or read-only enforcement by prompt text. Hosts must enforce capabilities, sandbox policy, confirmation, and mutation serialization separately.
 
+## ROI recommendation boundary
+
+ROI recommendation contracts are optional SDK DTOs. `validate_roi_report` accepts structured focus, best-next-step, bounded score dimensions, first-action labels, runner-ups, lifecycle status, action labels, missing context, safe evidence labels, and BLAKE3 evidence hashes. `parse_roi_action_label` limits follow-ups to begin-now, lifecycle-first, investigate, delegate, dismiss, or no-op.
+
+`reduce_roi_action_descriptor` produces a safe descriptor and lifecycle route hint; lifecycle-first does not create Cairn or any other lifecycle artifact. `admit_roi_action` requires host service availability and host policy before any action can start. `plan_roi_workflow` reports missing ROI evidence/scoring services without registering a default command. `validate_roi_receipt` keeps durable evidence to safe labels and hashes.
+
+Non-claims: Animus does not ship `/roi`, inspect repositories, read diffs, collect evidence, score with a model, choose UI actions, create Cairn changes, mutate lifecycle tasks/specs, delegate work, or start implementation from a recommendation by itself.
+
 ## Validation
 
 Focused validation:
