@@ -76,6 +76,14 @@ Plans reference profile labels rather than shell commands. Raw command payloads 
 
 Non-claims: Animus does not walk files, query VCS, inspect manifests, detect language workspaces, execute commands, schedule timers, call models, retry indefinitely, suppress failures, or start auto-fix loops. Hosts own execution and mutation policy.
 
+## VCS snapshot ledger boundary
+
+VCS snapshot ledger contracts are optional SDK DTOs. `validate_snapshot_record` accepts backend-neutral snapshot records with intent, backend kind, opaque safe snapshot IDs, optional parent IDs, workspace labels and hashes, content identities, changed counts, actor/session labels, freshness epochs, and receipt hashes. `validate_snapshot_lineage` validates supplied parent links without querying a VCS.
+
+`plan_snapshot_operation` validates accept, restore, drop, squash, compare, and cleanup plans against supplied lineage, freshness proofs, service status, capability labels, protected-action class, and confirmation status. Stale proofs, missing services, unsupported operations, unsafe backend command labels, and missing/denied confirmation fail closed before host mutation. `plan_snapshot_policy` reports no snapshot claim when no host service or policy is injected. `validate_snapshot_receipt` keeps durable evidence to safe labels, counts, statuses, and BLAKE3 hashes.
+
+Non-claims: Animus does not run Git or jj commands, create shadow branches, manage stash refs, write worktrees, schedule background snapshots, autocommit, open restore UI, clean up backend storage, or mutate VCS state by default.
+
 ## Validation
 
 Focused validation:

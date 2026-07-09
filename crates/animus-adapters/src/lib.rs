@@ -78,6 +78,7 @@ pub mod tool;
 /// downstream crates such as `animus-router`.
 pub mod validation;
 mod validationplanner;
+mod vcssnapshot;
 mod versioning;
 mod workspace;
 
@@ -377,6 +378,16 @@ pub use validationplanner::{
     ValidationResultSummaryDraft, ValidationServiceStatus, plan_scoped_validation,
     reduce_validation_follow_up, validate_validation_planner_receipt,
     validate_validation_result_summary,
+};
+pub use vcssnapshot::{
+    PROHIBITED_VCS_SNAPSHOT_EFFECTS, SnapshotBackendKind, SnapshotConfirmationStatus,
+    SnapshotDiagnostic, SnapshotDiagnosticCode, SnapshotFreshnessProof,
+    SnapshotFreshnessProofDraft, SnapshotIntentKind, SnapshotLineage, SnapshotOperationKind,
+    SnapshotOperationPlan, SnapshotOperationPlanDraft, SnapshotPlanStatus, SnapshotPolicyPlan,
+    SnapshotPolicyPlanStatus, SnapshotProtectionClass, SnapshotReceipt, SnapshotReceiptDraft,
+    SnapshotRecord, SnapshotRecordDraft, SnapshotServiceStatus, plan_snapshot_operation,
+    plan_snapshot_policy, validate_snapshot_lineage, validate_snapshot_receipt,
+    validate_snapshot_record,
 };
 
 #[cfg(test)]
