@@ -42,6 +42,7 @@ mod ledger;
 mod lens;
 mod manifest;
 mod mcpapp;
+mod modefsm;
 mod model;
 mod multimodal;
 /// Optional OpenClaw-inspired node capability-host DTOs.
@@ -163,6 +164,16 @@ pub use lens::{
     LensTaskPacketDraft, LensWorkerServiceStatus, PROHIBITED_MULTI_LENS_EFFECTS,
     plan_lens_execution, validate_focus_deck, validate_lens_report, validate_lens_synthesis,
     validate_lens_task_packet,
+};
+pub use modefsm::{
+    BreakoutAckStatus, BreakoutAcknowledgement, BreakoutAcknowledgementDraft, LoopConditionDraft,
+    LoopWorkItem, ModeControllerPlan, ModeControllerPlanStatus, ModeControllerStatus,
+    ModeDescriptor, ModeDescriptorDraft, ModeDiagnostic, ModeDiagnosticCode, ModePosture,
+    ModeReceipt, ModeReceiptDraft, ModeRetryClass, ModeRuntimeState, ModeState,
+    PROHIBITED_PLAN_LOOP_EFFECTS, PlanExtraction, PlanExtractionStatus, PlanStep,
+    SelectedStepUpdateDraft, StepSelectionStatus, apply_selected_step_update, extract_plan_steps,
+    mode_state_from_extraction, plan_mode_controller, start_loop_work,
+    validate_breakout_acknowledgement, validate_mode_descriptor, validate_mode_receipt,
 };
 pub use recover::{
     CheckpointBackendKind, CheckpointDraft, CheckpointError, CheckpointFailureClass,

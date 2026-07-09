@@ -52,6 +52,14 @@ Multi-lens contracts are optional SDK DTOs. `validate_focus_deck` accepts host-d
 
 Non-claims: Animus does not ship Hermes `multi-lens`, spawn subagents, call models, open networks, read repositories, create threads/processes, require property-discovery decks, enforce parallelism, or provide a live analysis service by default.
 
+## Plan/loop mode FSM boundary
+
+Plan/loop mode contracts are optional SDK DTOs. `validate_mode_descriptor` accepts trusted host descriptors with mode identity, posture, capability ceiling labels, explicit plan markers, selected-step or loop output contracts, and bounded loop budgets. These descriptors are policy data, not permission enforcement.
+
+`extract_plan_steps` parses only configured marker-delimited step records such as `- [step-id] label`; ordinary numbered prose is not captured as a plan. `apply_selected_step_update`, `start_loop_work`, and `validate_breakout_acknowledgement` keep selected-step and loop-continuation state typed, epoch-checked, and tied to safe work IDs. `plan_mode_controller` reports missing host controllers without installing commands, shortcuts, tools, timers, or UI behavior. `validate_mode_receipt` keeps durable state to safe labels and BLAKE3 hashes.
+
+Non-claims: Animus does not provide `/mode`, `/plan`, `/loop`, shortcuts, UI pickers, tool allowlists, automatic loop turns, provider probes, delegation strategy, session persistence, or read-only enforcement by prompt text. Hosts must enforce capabilities, sandbox policy, confirmation, and mutation serialization separately.
+
 ## Validation
 
 Focused validation:
