@@ -1,0 +1,9 @@
+# Tasks
+
+- [ ] [serial] Define transport-neutral route, admission, frame-kind, frame, redaction, and receipt DTOs with safe labels, scope, BLAKE3 hashes, max frame bounds, and policy/admission metadata. r[agent_harness_runtime.agent_comms_transport.route_frame]
+- [ ] [depends:route_frame] Add pure admission and scope helpers that reject missing admission, missing policy evidence, tenant/workspace mismatch, unsupported transport families, raw transport material, invalid hashes, and unsafe labels before effects. r[agent_harness_runtime.agent_comms_transport.admission]
+- [ ] [depends:route_frame] Add projection helpers for dataspace assertions, orchestration events, headless command/event metadata, and subagent lifecycle metadata using only safe labels, hashes, counts, and redaction markers. r[agent_harness_runtime.agent_comms_transport.projection]
+- [ ] [depends:admission,projection] Define the host-injected transport port for publish, query/subscribe, and event delivery over validated routes and frames without constructing live network clients in reusable crates. r[agent_harness_runtime.agent_comms_transport.injected_port]
+- [ ] [depends:injected_port] Add safe receipts for route admission, frame projection, dispatch, query, cancellation, timeout, unavailable transport, and denial decisions. r[agent_harness_runtime.agent_comms_transport.receipts]
+- [ ] [depends:receipts] Refactor Iroh-named shared frame/admission logic behind compatibility aliases or direct neutral names before additional transports depend on it. r[agent_harness_runtime.agent_comms_transport.migration]
+- [ ] [depends:migration] Add positive and negative tests for valid route/frame/projection/transport-port flow, missing admission, scope mismatch, oversized frame, raw ticket/URL/credential/prompt/provider payload, missing redaction, invalid hash, unavailable transport, and receipt leaks. r[agent_harness_runtime.agent_comms_transport.verification]

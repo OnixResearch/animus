@@ -189,6 +189,16 @@ let change_entries = [
     "agent_harness_runtime.pi_headless_protocol.event_stream",
     "agent_harness_runtime.clankers_remote_admission.before_effects",
   ] ["adapt-openclaw-node-capability-hosts", "adapt-openclaw-session-isolation-tools", "adapt-openclaw-security-plugin-guardrails"],
+  change "extract-agent-comms-transport-contract" core_role "ui-headless" [
+    "agent_harness_runtime.pi_headless_protocol.event_stream",
+    "agent_harness_runtime.clankers_remote_admission.before_effects",
+    "agent_harness_runtime.subagent_facade.boundary",
+  ] ["adapt-iroh-agent-comms-host", "adapt-openclaw-gateway-control-plane", "adapt-goose-remote-server-admission"],
+  change "adapt-iroh-agent-comms-host" host_role "concrete-adapters" [
+    "extract-agent-comms-transport-contract",
+    "agent_harness_runtime.clankers_remote_admission.before_effects",
+    "agent_harness_runtime.pi_headless_protocol.event_stream",
+  ] ["extract-agent-comms-transport-contract"],
   change "adapt-openclaw-node-capability-hosts" host_role "concrete-adapters" [
     "adapt-openclaw-gateway-control-plane",
     "agent_harness_runtime.host_control.transport_neutral",
