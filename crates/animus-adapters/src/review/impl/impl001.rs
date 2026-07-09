@@ -117,6 +117,16 @@ pub enum ReviewDiagnosticCode {
     ReportHasDiagnostics,
     /// Too many sections or findings were supplied.
     TooManyItems,
+    /// A BLAKE3 hash field was malformed.
+    InvalidHash,
+    /// A corrective record could not be admitted for prompt influence.
+    PromptAdmissionDenied,
+    /// A host-owned corrective store was missing.
+    MissingStore,
+    /// A host-owned corrective store was unavailable.
+    UnavailableStore,
+    /// A repeated finding used an unsupported corrective-promotion target route.
+    UnsupportedPromotionTarget,
 }
 
 /// Structured review report error.

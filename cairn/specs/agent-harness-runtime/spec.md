@@ -3347,6 +3347,90 @@ r[agent_harness_runtime.hermes_policy_profiles.verification.closeout]
 - THEN evidence names focused policy composition tests, prompt-hygiene tests, trust-boundary tests, enforcement-boundary tests, workspace checks, Cairn validation, and Cairn gates
 - AND any skipped rail includes a concrete blocker and next-best validation.
 
+### Requirement: Progressive tool discovery DTOs
+
+r[agent_harness_runtime.goose_code_mode_tool_planning.discovery] Animus MUST define progressive tool discovery DTOs for tool-list queries, tool summaries, tool detail requests, schema identities, capability labels, result contracts, source provenance, discovery ceilings, and discovery receipts without exposing executable plugin code or host runtime handles.
+
+#### Scenario: Planner discovers one tool detail set
+
+r[agent_harness_runtime.goose_code_mode_tool_planning.discovery.detail]
+- GIVEN a planner needs a file-inspection tool from an admitted catalog containing many tools
+- WHEN it requests details for one safe tool identity
+- THEN discovery returns bounded metadata for that tool's description, schema identity, capability labels, result contract, and provenance
+- AND it does not execute the tool, import a plugin, inspect installation directories, or read credentials.
+
+### Requirement: Declarative tool plan DTOs
+
+r[agent_harness_runtime.goose_code_mode_tool_planning.plan_dtos] Code Mode-style execution MUST be represented as declarative tool plan DTOs for batch identity, ordered steps, dependencies, intermediate bindings, batch policy, cancellation posture, timeout posture, and step outcomes rather than arbitrary host code.
+
+#### Scenario: Batch plan chains bounded outputs
+
+r[agent_harness_runtime.goose_code_mode_tool_planning.plan_dtos.batch]
+- GIVEN a planner wants to list files and then read one selected file summary
+- WHEN it emits a tool plan
+- THEN the plan records two ordered steps and a bounded intermediate binding from the first step to the second
+- AND no JavaScript, shell script, Deno program, or host code body is embedded in the plan.
+
+### Requirement: Tool-plan fabric is policy-admitted
+
+r[agent_harness_runtime.goose_code_mode_tool_planning.fabric] Tool-plan producers MAY be Steel-backed or typed non-Steel fabrics, but the selected fabric MUST be admitted by policy, budget, script or profile identity, allowed host actions, and receipt posture before it can influence discovery or tool-plan output.
+
+#### Scenario: Denied Steel planner cannot produce a plan
+
+r[agent_harness_runtime.goose_code_mode_tool_planning.fabric.denied]
+- GIVEN a Steel planning profile has an invalid script hash or unsupported host-action allowlist
+- WHEN runtime prepares to evaluate the planner
+- THEN tool-plan production is denied with a typed policy diagnostic
+- AND no discovery request, tool plan, model dispatch, or tool dispatch occurs.
+
+### Requirement: Every planned step re-enters tool admission
+
+r[agent_harness_runtime.goose_code_mode_tool_planning.step_admission] Every tool-plan step MUST pass catalog trust, exact capability-label admission, authority and permission policy, argument-schema validation, mutation-window serialization, output-bound policy, timeout policy, cancellation policy, and receipt policy before a host adapter may dispatch it.
+
+#### Scenario: Undiscovered or denied tool cannot run
+
+r[agent_harness_runtime.goose_code_mode_tool_planning.step_admission.denied]
+- GIVEN a tool plan references a tool omitted from the admitted discovery set or lacking the required exact capability label
+- WHEN step admission validates the plan
+- THEN validation rejects the step with an undeclared-tool or capability-denied diagnostic
+- AND no fallback tool, ambient catalog lookup, or adapter dispatch occurs.
+
+### Requirement: Intermediate data is bounded and typed
+
+r[agent_harness_runtime.goose_code_mode_tool_planning.intermediates] Intermediate tool results used by later plan steps MUST be represented through bounded text, safe handles, hashes, counts, redaction classes, and admitted type labels; binary, image, secret, oversized, or unsupported results MUST NOT be silently converted into model-visible text or later tool arguments.
+
+#### Scenario: Binary result is not chained as text
+
+r[agent_harness_runtime.goose_code_mode_tool_planning.intermediates.binary]
+- GIVEN an early tool-plan step returns an image or binary result with a host-owned handle
+- WHEN a later step attempts to bind that result as text without explicit admitted conversion
+- THEN intermediate validation rejects the binding
+- AND the binary payload is not included in prompt context, receipts, or tool arguments.
+
+### Requirement: Safe tool-plan receipts
+
+r[agent_harness_runtime.goose_code_mode_tool_planning.receipts] Tool discovery, plan admission, step admission, step dispatch outcome, intermediate rejection, cancellation, timeout, and batch completion MUST produce safe receipts with plan hash, step identities, capability labels, decision classes, output-bound classes, policy hash, and BLAKE3 receipt hash.
+
+#### Scenario: Tool-plan receipt rejects raw script and output bodies
+
+r[agent_harness_runtime.goose_code_mode_tool_planning.receipts.rejects_leaks]
+- GIVEN a tool-plan receipt candidate contains raw prompts, planner script bodies, raw tool arguments, raw tool outputs, provider payloads, credentials, full paths, or unbounded intermediate data
+- WHEN receipt validation runs
+- THEN validation rejects the receipt with a leak diagnostic
+- AND durable Code Mode evidence does not echo the raw material.
+
+### Requirement: Typed tool-planning verification
+
+r[agent_harness_runtime.goose_code_mode_tool_planning.verification] Code Mode-style tool-planning adoption MUST include positive progressive-discovery, valid batch, admitted fabric, step admission, and bounded-intermediate tests plus negative arbitrary-code, denied fabric, undiscovered tool, capability denial, unsafe intermediate, unsupported binary, no ambient discovery, and receipt leak fixtures.
+
+#### Scenario: Closeout evidence covers typed Code Mode adaptation
+
+r[agent_harness_runtime.goose_code_mode_tool_planning.verification.closeout]
+- GIVEN maintainers intend to archive the Goose Code Mode typed tool-planning adaptation
+- WHEN closeout validation runs
+- THEN evidence names discovery, plan DTO, fabric, step admission, intermediate, receipt, docs, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
 ### Requirement: MCP Apps evaluation matrix is explicit
 
 r[agent_harness_runtime.goose_mcp_app_surfaces.evaluation_matrix] Animus MUST evaluate Goose MCP Apps patterns with an explicit matrix covering UI resource identity, MIME/profile tags, CSP domains, permission requests, host-context sync, callbacks, sizing, lifecycle bounds, and adoption risk.
@@ -6366,6 +6450,213 @@ r[agent_harness_runtime.claude_code_memory.receipts.redacted]
 - THEN the receipt includes redaction class and BLAKE3 body hash metadata
 - AND the raw body is absent from model-visible receipts and audit metadata.
 
+### Requirement: Category-aware memory records
+
+r[agent_harness_runtime.memory_taxonomy.record_categories] Memory records crossing reusable Animus boundaries MUST support explicit safe category metadata for episodic, semantic, procedural, reflection or pitfall, instruction, fact or preference, summary, candidate, and unsupported records without requiring a concrete memory store.
+
+#### Scenario: Episodic and procedural records remain distinct
+
+r[agent_harness_runtime.memory_taxonomy.record_categories.distinct]
+- GIVEN a host supplies one admitted timestamped episode record and one admitted reusable procedure record
+- WHEN reusable memory validation normalizes the records
+- THEN each record preserves its safe category label
+- AND the labels are available to planning and evidence without exposing raw memory bodies.
+
+### Requirement: Compatibility mapping for existing generic kinds
+
+r[agent_harness_runtime.memory_taxonomy.compatibility] Existing generic memory record kinds MUST map deterministically into the category-aware taxonomy, and unsupported or unknown category labels MUST fail closed when a policy requires explicit category admission.
+
+#### Scenario: Unknown category is not silently coerced
+
+r[agent_harness_runtime.memory_taxonomy.compatibility.unknown]
+- GIVEN a memory adapter returns a record with an unknown category label
+- WHEN category-aware validation runs under a policy that requires explicit categories
+- THEN validation rejects the record with a typed unsupported-category diagnostic
+- AND the record is ineligible for retrieval, prompt influence, or influence receipts.
+
+### Requirement: Taxonomy is non-authoritative metadata
+
+r[agent_harness_runtime.memory_taxonomy.non_authority] Memory category labels MAY influence routing, retrieval ordering, compaction, and evaluation, but MUST NOT grant prompt visibility, persistence, tool authority, policy authority, or capability access without existing admission, scope, freshness, redaction, and budget checks.
+
+#### Scenario: Procedural label does not bypass policy
+
+r[agent_harness_runtime.memory_taxonomy.non_authority.policy]
+- GIVEN a record is categorized as procedural
+- AND its scope is denied or its redaction class is secret
+- WHEN memory retrieval or prompt assembly evaluates the record
+- THEN the record is skipped before prompt influence
+- AND receipts record only safe skip metadata and BLAKE3 body identity.
+
+### Requirement: Memory taxonomy verification
+
+r[agent_harness_runtime.memory_taxonomy.verification] The taxonomy adaptation MUST include focused positive and negative tests for category validation, compatibility mapping, non-authority enforcement, stale or redacted records, unsupported categories, and receipt leak rejection.
+
+#### Scenario: Closeout evidence covers taxonomy fixtures
+
+r[agent_harness_runtime.memory_taxonomy.verification.closeout]
+- GIVEN maintainers intend to archive the memory taxonomy adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused positive and negative taxonomy fixtures, docs updates, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Memory route plan DTOs
+
+r[agent_harness_runtime.memory_routing.route_plan] Animus memory routing MUST be represented as typed DTOs for route requests, route candidates, route plans, and route receipts covering read/search, source/import, extraction, durable store, update/delete, and prompt-influence intents.
+
+#### Scenario: Query route names required adapter roles
+
+r[agent_harness_runtime.memory_routing.route_plan.read]
+- GIVEN a user request needs prior project facts and recent episodes
+- WHEN host-supplied route candidates are validated
+- THEN the route plan names the selected retrieval/search adapter roles and safe route reasons
+- AND no concrete vector, graph, file, or remote backend is constructed by reusable logic.
+
+### Requirement: Pure route planner
+
+r[agent_harness_runtime.memory_routing.pure_planner] Route planning MUST be pure deterministic logic over safe operation intent, category hints, allowed scopes, declared adapter roles, availability, confidence, freshness, budgets, and policy identity, and MUST NOT call providers, classifiers, storage, embedding services, clocks, filesystems, networks, or MCP servers.
+
+#### Scenario: Same safe signals produce same route plan
+
+r[agent_harness_runtime.memory_routing.pure_planner.deterministic]
+- GIVEN two hosts provide the same validated route candidates and policy inputs
+- WHEN reusable route planning runs
+- THEN selected routes, skipped routes, diagnostics, and route receipts are equivalent
+- AND backend labels do not affect model-visible ordering except as safe evidence metadata.
+
+### Requirement: Routing fails closed
+
+r[agent_harness_runtime.memory_routing.fail_closed] Memory routing MUST fail closed when policy denies a route, classifier or route-candidate output is malformed, required adapter roles are missing, selected adapters are unavailable, selected roles are unsupported, or route metadata contains unsafe material.
+
+#### Scenario: Malformed classifier output is rejected
+
+r[agent_harness_runtime.memory_routing.fail_closed.malformed]
+- GIVEN a host classifier proposes a route with an unsafe label, raw memory body, provider payload, credential, or unknown required role
+- WHEN route validation runs
+- THEN validation rejects the route candidate with a typed diagnostic
+- AND no adapter dispatch, retrieval, extraction, storage, or prompt influence is planned.
+
+### Requirement: Memory routing verification
+
+r[agent_harness_runtime.memory_routing.verification] The routing adaptation MUST include focused positive and negative tests for read and write route plans, deterministic planning, denied policy, malformed classifier outputs, unavailable or unsupported adapters, no ambient fallback, and route receipt leak rejection.
+
+#### Scenario: Closeout evidence covers routing fixtures
+
+r[agent_harness_runtime.memory_routing.verification.closeout]
+- GIVEN maintainers intend to archive the memory routing adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused route DTO, deterministic planner, fail-closed, receipt, docs, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Safe memory evaluation fixtures
+
+r[agent_harness_runtime.memory_evaluation.fixtures] Memory evaluation fixtures MUST represent memory-dependent queries, expected relevant record identities, scopes, categories, freshness expectations, contradiction markers, abstention expectations, and answer-use labels using safe IDs, labels, counts, and hashes rather than raw prompts, transcripts, memory bodies, provider payloads, or full paths.
+
+#### Scenario: Fixture omits raw memory bodies
+
+r[agent_harness_runtime.memory_evaluation.fixtures.safe]
+- GIVEN a memory evaluation fixture names expected records for a memory-dependent query
+- WHEN fixture validation runs
+- THEN validation accepts safe query labels, record IDs, scopes, categories, and BLAKE3 evidence hashes
+- AND rejects raw prompt text, hidden memory bodies, credentials, provider payloads, and full path dumps.
+
+### Requirement: Pure memory evaluation metrics
+
+r[agent_harness_runtime.memory_evaluation.metrics] Memory evaluation metrics MUST be pure deterministic reducers over safe expected-record fixtures and observed retrieval or injection ledgers, producing Precision@K, Recall@K, stale-hit rate, contradiction-hit rate, abstention correctness, and answer-use summaries without provider calls or storage access.
+
+#### Scenario: Metrics separate relevant, stale, and contradictory hits
+
+r[agent_harness_runtime.memory_evaluation.metrics.reducers]
+- GIVEN expected relevant records and observed retrieval outcomes contain relevant, stale, contradictory, and irrelevant safe record IDs
+- WHEN metric reduction runs
+- THEN precision, recall, stale-hit, contradiction-hit, and abstention metrics are computed deterministically
+- AND the metric report contains no raw memory or prompt bodies.
+
+### Requirement: Baseline-backed memory quality claims
+
+r[agent_harness_runtime.memory_evaluation.baselines] Any Animus-owned memory-quality claim MUST cite a validated baseline descriptor for no-memory behavior or a previous memory policy, and MUST report safe metric deltas rather than unsupported qualitative claims.
+
+#### Scenario: Missing baseline blocks quality claim
+
+r[agent_harness_runtime.memory_evaluation.baselines.required]
+- GIVEN a report claims a retrieval policy improves memory-dependent answers
+- AND no validated baseline descriptor is present
+- WHEN quality-claim validation runs
+- THEN validation rejects the claim with a missing-baseline diagnostic
+- AND no release evidence asserts the improvement.
+
+### Requirement: External benchmark imports are host-owned
+
+r[agent_harness_runtime.memory_evaluation.external_import] Hosts MAY import LoCoMO-like, LongMemEval-like, or private benchmark results into Animus evaluation DTOs, but reusable Animus logic MUST NOT download datasets, execute judges, call providers, or treat imported benchmark scores as raw memory evidence.
+
+#### Scenario: Imported benchmark result stays bounded
+
+r[agent_harness_runtime.memory_evaluation.external_import.safe]
+- GIVEN a host imports an external benchmark result summary
+- WHEN Animus validates the import descriptor
+- THEN the descriptor records benchmark family, run label, safe metric labels, counts, hashes, and policy identity
+- AND raw benchmark conversations, judge prompts, provider outputs, and credentials are rejected.
+
+### Requirement: Memory evaluation verification
+
+r[agent_harness_runtime.memory_evaluation.verification] The memory evaluation rail MUST include focused positive and negative tests for fixture validation, pure metric reduction, stale and contradictory hits, abstention, baseline enforcement, external import validation, malformed fixtures, unsafe bodies, and leak rejection.
+
+#### Scenario: Closeout evidence covers evaluation fixtures
+
+r[agent_harness_runtime.memory_evaluation.verification.closeout]
+- GIVEN maintainers intend to archive the memory evaluation rail
+- WHEN closeout validation runs
+- THEN evidence names focused fixture, metric, baseline, external-import, docs, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Memory family is indexed
+
+r[agent_harness_runtime.memory_contract_index.family_surface] The maintained contracts index MUST list `family:memory` with owner module, stability posture, authority boundary, safe receipt behavior, serialization posture, focused surface, and focused checks whenever memory DTOs are maintained as public adapter contracts.
+
+#### Scenario: Contracts index exposes memory surface
+
+r[agent_harness_runtime.memory_contract_index.family_surface.listed]
+- GIVEN memory DTOs and planners are exported from public adapter modules
+- WHEN maintainers render the maintained contracts index
+- THEN the index includes a `family:memory` row with safe owner and focused-check metadata
+- AND the row links to memory adapter contracts without claiming concrete host storage authority.
+
+### Requirement: Memory conformance manifest backs the index
+
+r[agent_harness_runtime.memory_contract_index.conformance_manifest] Memory contract-index claims MUST be backed by checked conformance metadata that records required matrix cases, positive and negative evidence labels, unsupported or not-applicable reasons, and safe evidence hashes.
+
+#### Scenario: Missing memory conformance row fails the rail
+
+r[agent_harness_runtime.memory_contract_index.conformance_manifest.required]
+- GIVEN `docs/contracts-index.md` lists `family:memory`
+- AND the checked conformance manifest omits the memory family or required case dispositions
+- WHEN the adapter conformance index check runs
+- THEN validation fails with a typed missing-family or missing-case diagnostic
+- AND no release evidence claims the memory family is fully indexed.
+
+### Requirement: External memory reference is bounded
+
+r[agent_harness_runtime.memory_contract_index.bounded_reference] Agent Memory Techniques MAY be recorded as a bounded reference for memory taxonomy, retrieval, evaluation, and production patterns, but Animus MUST NOT adopt its Python notebooks, framework dependencies, managed services, provider calls, benchmark datasets, prompt text, or storage implementations as canonical contracts.
+
+#### Scenario: Reference entry preserves non-adoption claims
+
+r[agent_harness_runtime.memory_contract_index.bounded_reference.non_adoption]
+- GIVEN README or docs mention Agent Memory Techniques as a reference
+- WHEN reference validation or review checks the entry
+- THEN the entry describes bounded pattern usage
+- AND it states that Animus-owned DTOs and adapter contracts remain canonical.
+
+### Requirement: Memory contract index verification
+
+r[agent_harness_runtime.memory_contract_index.verification] The contract-index surfacing change MUST include focused positive and negative checks for indexed memory family metadata, conformance manifest coverage, bounded reference wording, stale check labels, unsafe references, and leak rejection.
+
+#### Scenario: Closeout evidence covers contract index fixtures
+
+r[agent_harness_runtime.memory_contract_index.verification.closeout]
+- GIVEN maintainers intend to archive the memory contract-index surfacing change
+- WHEN closeout validation runs
+- THEN evidence names contract-index, conformance-manifest, bounded-reference, docs, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
 ### Requirement: Separate opt-in controls for memory use and generation
 
 r[agent_harness_runtime.openai_codex_opt_in_memories.policy_controls] Animus memories MUST have independent opt-in controls for using existing memories and generating new memories at user, project, and thread scopes.
@@ -6474,6 +6765,67 @@ r[agent_harness_runtime.memory_adapters.retrieval_plan.backend_equivalence]
 - WHEN retrieval planning runs with the same policy and budget
 - THEN selected memories, skipped memories, conflict diagnostics, budget use, and ledger entries are equivalent
 - AND backend-specific identifiers do not affect model-visible ordering.
+
+### Requirement: Declarative retrieval quality policy
+
+r[agent_harness_runtime.memory_retrieval_quality.policy] Memory retrieval quality MUST be controlled by validated declarative policy descriptors for relevance, confidence, freshness, match reason, category priority, manual pins, and diversity posture, rather than by concrete backend identity or hidden provider behavior.
+
+#### Scenario: Policy orders semantic and recent candidates deterministically
+
+r[agent_harness_runtime.memory_retrieval_quality.policy.ordering]
+- GIVEN admitted candidates with semantic match, recent match, different confidence scores, and category metadata
+- WHEN retrieval quality policy is validated and applied
+- THEN ordering follows the declared policy deterministically
+- AND the plan records safe order reasons without exposing raw memory bodies.
+
+### Requirement: Quality-aware retrieval planning remains pure
+
+r[agent_harness_runtime.memory_retrieval_quality.planning] Quality-aware retrieval planning MUST remain pure deterministic logic over normalized records, validated policy, safe match reasons, category metadata, freshness, confidence, optional rerank evidence, diversity groups, conflicts, and prompt budgets, and MUST NOT call storage, embedding, provider, filesystem, clock, or network services.
+
+#### Scenario: Equivalent records from different backends remain equivalent
+
+r[agent_harness_runtime.memory_retrieval_quality.planning.backend_neutral]
+- GIVEN two adapters return the same normalized candidates, scores, match reasons, and category metadata under the same policy
+- WHEN quality-aware retrieval planning runs
+- THEN selected records, skipped records, ranks, budget use, and ledgers are equivalent
+- AND backend labels remain safe metadata instead of ranking authority.
+
+### Requirement: Optional rerank evidence is safe
+
+r[agent_harness_runtime.memory_retrieval_quality.rerank_evidence] Host-owned rerankers MAY provide bounded rerank scores and reason labels, but reusable logic MUST validate score bounds, safe labels, source identity, policy identity, and leak posture before rerank evidence can influence ordering.
+
+#### Scenario: Unsafe rerank evidence is ignored or rejected
+
+r[agent_harness_runtime.memory_retrieval_quality.rerank_evidence.unsafe]
+- GIVEN a rerank adapter returns provider payloads, raw memory text, credentials, malformed scores, or mismatched policy identity
+- WHEN rerank evidence validation runs
+- THEN validation rejects the rerank evidence with a typed diagnostic
+- AND retrieval planning proceeds only with admitted safe inputs or fails closed under strict policy.
+
+### Requirement: Deterministic diversity handling
+
+r[agent_harness_runtime.memory_retrieval_quality.diversity] Retrieval planning MUST support deterministic diversity or duplicate-group handling that prevents repeated near-duplicate memories from exhausting the prompt budget while preserving safe skip reasons.
+
+#### Scenario: Duplicate group does not consume all budget
+
+r[agent_harness_runtime.memory_retrieval_quality.diversity.duplicates]
+- GIVEN multiple admitted candidates belong to the same diversity group
+- AND policy limits repeated evidence from that group
+- WHEN retrieval planning selects memory records
+- THEN at most the policy-admitted group members consume budget
+- AND skipped duplicates record safe duplicate or diversity reasons.
+
+### Requirement: Memory retrieval quality verification
+
+r[agent_harness_runtime.memory_retrieval_quality.verification] The retrieval-quality adaptation MUST include focused positive and negative tests for policy validation, deterministic ordering, backend neutrality, rerank evidence validation, diversity handling, stale records, conflicts, over-budget records, and receipt leak rejection.
+
+#### Scenario: Closeout evidence covers retrieval quality fixtures
+
+r[agent_harness_runtime.memory_retrieval_quality.verification.closeout]
+- GIVEN maintainers intend to archive the retrieval-quality adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused quality-policy, pure-planner, rerank, diversity, docs, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
 
 ### Requirement: Extraction and admission are separate
 
@@ -9892,6 +10244,77 @@ r[agent_harness_runtime.orchestration_adapters.verification] Orchestration adapt
 - THEN evidence names focused adapter service tests, runtime bridge tests, fail-closed negative tests, safe-evidence leak tests, fixture or no-op host adapter tests, contracts-index updates, facade-inventory updates, documentation, workspace checks, Cairn validation, and Cairn gate checks
 - AND concrete board databases, production schedulers, process supervisors, VCS automations, filesystem persistence layouts, network transports, and live multi-agent orchestration are listed as non-claims unless optional host implementations separately prove them.
 
+### Requirement: Queue and interrupt DTOs
+
+r[agent_harness_runtime.goose_message_queue.dtos] Animus MUST define typed DTOs for queued messages, queue operations, queue state, dispatch acknowledgements, interrupt signals, redirection payloads, cancellation requests, and user-control events.
+
+#### Scenario: Follow-up message is queued while active work runs
+
+r[agent_harness_runtime.goose_message_queue.dtos.follow_up]
+- GIVEN runtime is processing an active turn and a user submits a follow-up message with queue semantics
+- WHEN the queue operation is validated
+- THEN the queued message records source identity, sequence identity, active-work reference, safety class, budget class, and policy identity
+- AND it is not appended to model-visible context until a later dispatch decision admits it.
+
+### Requirement: Pure queue reducer
+
+r[agent_harness_runtime.goose_message_queue.reducer] Queue state changes MUST be pure deterministic reducer operations over in-memory queue state, operation DTOs, active-work references, acknowledgements, policy limits, and safe message metadata, and MUST NOT call models, dispatch tools, mutate ledgers, persist storage, read files, open network connections, spawn processes, or use clocks.
+
+#### Scenario: Reordering preserves stable queue identities
+
+r[agent_harness_runtime.goose_message_queue.reducer.reorder]
+- GIVEN a queue contains three admitted follow-up messages with stable item IDs
+- WHEN a reorder operation moves the third item before the second item
+- THEN the reducer returns a queue with the requested order and unchanged item identities
+- AND no model, tool, ledger, or host cancellation effect is dispatched.
+
+### Requirement: Interrupt signals are explicit control events
+
+r[agent_harness_runtime.goose_message_queue.interrupts] Interrupt handling MUST classify explicit send modes and policy-owned keyword matches into pause, cancel, redirect, queue, or immediate-dispatch control events before deciding whether any text becomes model-visible prompt content.
+
+#### Scenario: Stop keyword requests cancellation
+
+r[agent_harness_runtime.goose_message_queue.interrupts.stop]
+- GIVEN active work is running and the user sends a high-confidence stop keyword under an interrupt send mode
+- WHEN interrupt classification runs
+- THEN the result is a cancellation control event linked to the active-work identity
+- AND the stop text is not added to model-visible prompt history unless a later admitted redirection explicitly includes it.
+
+### Requirement: Queue and interrupt failures are fail-closed
+
+r[agent_harness_runtime.goose_message_queue.fail_closed] Queue and interrupt handling MUST fail closed for stale active-work IDs, duplicate queue item IDs, unauthorized queue mutation sources, max-queue overflow, unsafe queued bodies, denied policy, missing cancellation handles, unsupported active-work states, and malformed acknowledgements.
+
+#### Scenario: Missing cancellation handle prevents abort claim
+
+r[agent_harness_runtime.goose_message_queue.fail_closed.no_cancel]
+- GIVEN an interrupt requests cancellation for active work but the host supplied no cancellation handle or cancellation capability
+- WHEN control planning evaluates the interrupt
+- THEN the result is a missing-cancellation-handle failure
+- AND no receipt, event, or status claims that provider, tool, or process work was aborted.
+
+### Requirement: Safe queue and interrupt receipts
+
+r[agent_harness_runtime.goose_message_queue.receipts] Queue and interrupt operations MUST produce safe receipts with operation kind, actor or source label, active-work hash, queue item hash, decision class, cancellation handle class, budget class, policy hash, denial class, redaction state, and BLAKE3 receipt hash.
+
+#### Scenario: Queue receipt rejects raw queued prompt text
+
+r[agent_harness_runtime.goose_message_queue.receipts.rejects_leaks]
+- GIVEN a queue or interrupt receipt candidate contains raw prompt text, provider payloads, credentials, full paths, raw tool output, raw command output, or unbounded queue bodies
+- WHEN receipt validation runs
+- THEN validation rejects the receipt with a leak diagnostic
+- AND durable queue evidence does not echo the raw material.
+
+### Requirement: Message queue and interrupt verification
+
+r[agent_harness_runtime.goose_message_queue.verification] Message queue and interrupt adoption MUST include positive append, edit, reorder, delete, clear, dispatch, interrupt, pause, and redirection tests plus negative stale-work, unauthorized mutation, unsafe-body, missing-cancellation-handle, max-queue, malformed acknowledgement, no ambient effect, and receipt leak fixtures.
+
+#### Scenario: Closeout evidence covers queue controls
+
+r[agent_harness_runtime.goose_message_queue.verification.closeout]
+- GIVEN maintainers intend to archive the Goose message queue and interrupt adaptation
+- WHEN closeout validation runs
+- THEN evidence names queue DTO, reducer, interrupt, fail-closed, receipt, docs, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
 
 ### Requirement: Remote backend descriptors
 
@@ -9967,7 +10390,6 @@ r[agent_harness_runtime.goose_remote_server_admission.verification.closeout]
 - THEN evidence names descriptor, handshake, admission, fail-closed, receipt, docs, Cairn validation, and Cairn gate checks
 - AND any skipped rail includes a concrete blocker and next-best validation.
 
-
 ### Requirement: Session branch request DTOs
 
 r[agent_harness_runtime.goose_session_branching.requests] Animus MUST define UI-neutral session branch request DTOs for edit-in-place, fork-from-message, duplicate-session, label updates, continuation target selection, source session identity, source ledger head, cut-point identity, copy-settings policy, and provenance.
@@ -10039,3 +10461,137 @@ r[agent_harness_runtime.goose_session_branching.verification.closeout]
 - WHEN closeout validation runs
 - THEN evidence names branch DTO, pure planner, edit-in-place, fork/duplicate boundary, receipt, docs, Cairn validation, and Cairn gate checks
 - AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Runtime DAGs are reusable structure contracts
+
+r[agent_harness_runtime.runtime_dag_contracts.graph] Animus MUST define reusable DAG structure contracts for safe node IDs, directed edges, graph bounds, optional safe edge labels, validation reports, blocked-node explanations, topological batches, and graph receipt identities without embedding domain payloads.
+
+#### Scenario: Domain graph uses shared structure
+
+r[agent_harness_runtime.runtime_dag_contracts.graph.domain_payload]
+- GIVEN a domain module supplies task, recipe, artifact, workspace, roadmap, or experiment identifiers as safe node IDs
+- AND domain-specific payloads remain in that module
+- WHEN the shared DAG structure is built
+- THEN Animus accepts only the graph identity and edge structure into the reusable kit
+- AND no domain payload body, raw prompt, raw file body, provider payload, or raw output is copied into the generic graph contract.
+
+### Requirement: DAG validation is pure and fail-closed
+
+r[agent_harness_runtime.runtime_dag_contracts.validation] DAG validation MUST be deterministic pure logic over supplied in-memory DTOs and MUST reject duplicate node IDs, duplicate edges, unknown endpoints, self edges, cycles, unsafe labels, over-limit graphs, and malformed graph metadata before any host effect is requested.
+
+#### Scenario: Cycle is rejected before scheduling
+
+r[agent_harness_runtime.runtime_dag_contracts.validation.cycle]
+- GIVEN a graph contains a path from a node back to itself through one or more directed edges
+- WHEN DAG validation runs
+- THEN validation returns a cycle diagnostic with safe node identity evidence
+- AND no scheduler, provider call, tool call, process, workspace mutation, or persistence operation is invoked.
+
+### Requirement: Topological ordering is deterministic and explanatory
+
+r[agent_harness_runtime.runtime_dag_contracts.topological_order] Animus MUST provide deterministic topological batch planning and blocked-node explanation over accepted DAGs, sorting nodes and batches by stable safe identities when multiple nodes are independently ready.
+
+#### Scenario: Independent nodes form a stable batch
+
+r[agent_harness_runtime.runtime_dag_contracts.topological_order.batch]
+- GIVEN an accepted DAG has multiple nodes with no unmet incoming dependencies
+- WHEN topological batch planning runs
+- THEN the ready nodes appear in a deterministic sorted batch
+- AND downstream blocked-node explanations name only safe prerequisite node IDs and issue classes.
+
+### Requirement: Graph receipts are redacted and hash-backed
+
+r[agent_harness_runtime.runtime_dag_contracts.receipts] DAG receipt projection MUST use BLAKE3 identities over canonical graph structure and MUST include only schema labels, bounded counts, issue codes, safe graph labels, sorted node and edge identities, topological batch hashes, and redaction markers.
+
+#### Scenario: Receipt leak fixture is rejected
+
+r[agent_harness_runtime.runtime_dag_contracts.receipts.rejects_leaks]
+- GIVEN a graph receipt fixture contains a raw prompt, provider payload, credential-looking value, absolute path dump, raw diff, raw tool output, raw model output, raw file body, or unbounded event stream
+- WHEN DAG receipt validation runs
+- THEN validation rejects the receipt with a leak diagnostic
+- AND no durable evidence claims the graph is safe.
+
+### Requirement: Domain integration remains opt-in and host-effect free
+
+r[agent_harness_runtime.runtime_dag_contracts.integration] The DAG kit MAY be used by Kanban, recipe workflows, ResearchSpec promotions, nested subagent delegation, workspace planning, artifact lineage, and Cairn roadmap sequencing, but each domain MUST retain its own authorization, payload validation, host service boundaries, and non-claim documentation.
+
+#### Scenario: Domain keeps execution authority outside the kit
+
+r[agent_harness_runtime.runtime_dag_contracts.integration.no_execution]
+- GIVEN a recipe workflow or subagent module accepts a DAG structure through the reusable kit
+- WHEN the domain prepares an effect request for a ready node
+- THEN the domain still applies its own tool, model, workspace, policy, trust, and receipt gates
+- AND the generic DAG kit does not execute, enqueue, retry, cancel, persist, or observe that node.
+
+### Requirement: DAG kit verification covers positive and negative cases
+
+r[agent_harness_runtime.runtime_dag_contracts.verification] The DAG contract kit MUST include focused positive and negative tests for graph DTO validation, deterministic topological batching, blocked-node explanations, BLAKE3 receipt projection, duplicate node rejection, duplicate edge rejection, missing endpoint rejection, self-edge rejection, cycle rejection, over-limit rejection, unsafe label rejection, unstable-order prevention, and receipt leak rejection.
+
+#### Scenario: Closeout evidence names graph non-claims
+
+r[agent_harness_runtime.runtime_dag_contracts.verification.closeout]
+- GIVEN maintainers intend to archive the DAG contract kit
+- WHEN closeout validation runs
+- THEN evidence names DTOs, pure validation, topological ordering, receipt projection, domain integration guidance, positive tests, negative tests, Cairn validation, and Cairn gates
+- AND it records scheduling, persistence, provider calls, process execution, UI rendering, graph databases, and domain payload storage as non-claims.
+
+### Requirement: Corrective records and metrics are typed optional data
+
+r[agent_harness_runtime.hermes_corrective_memory.records] Animus MUST represent corrective memory and review metrics as optional typed records with kind, source, trust scope, subject, class/scope/route/promoted tags when applicable, freshness metadata, safe body identity, and redaction state.
+
+#### Scenario: Host supplies corrective records from a non-file store
+
+r[agent_harness_runtime.hermes_corrective_memory.records.host_store]
+- GIVEN a host loads corrective records from an application database, embedded bundle, repo file, or operator-supplied packet
+- WHEN Animus validates those records
+- THEN valid records normalize into safe typed descriptors
+- AND reusable logic does not require `.agent/napkin.md`, global memory directories, JSONL sidecars, or Hermes runtime state.
+
+### Requirement: Corrective prompt influence requires explicit admission
+
+r[agent_harness_runtime.hermes_corrective_memory.admission] Corrective records MUST NOT influence prompt assembly, tool activation, policy selection, review outcomes, or workflow routing unless host policy admits them by trust, scope, freshness, subject relevance, and prompt budget.
+
+#### Scenario: Untrusted napkin-like note is omitted
+
+r[agent_harness_runtime.hermes_corrective_memory.admission.untrusted]
+- GIVEN a project-local corrective note exists but no host trust decision admits its content identity
+- WHEN prompt context assembly requests corrective guidance
+- THEN the note is omitted or represented by a safe diagnostic
+- AND its body cannot silently override user requests, Cairn specs, tool policy, or runtime capability checks.
+
+### Requirement: Promotion candidates are advisory
+
+r[agent_harness_runtime.hermes_corrective_memory.promotions] Repeated-finding analysis SHOULD produce advisory promotion candidates that name safe repeated tags, counts, evidence hashes, and suggested target routes such as deterministic check, policy guidance, spec rule, memory guidance, or human checkpoint, but MUST NOT mutate tasks, specs, policy, memory stores, or code automatically.
+
+#### Scenario: Repeated findings do not edit tasks automatically
+
+r[agent_harness_runtime.hermes_corrective_memory.promotions.no_auto_edit]
+- GIVEN multiple review metric records contain the same unpromoted class/scope/route finding
+- WHEN promotion grouping runs
+- THEN it returns a candidate with count, reason, suggested target, and safe evidence identity
+- AND no Cairn task, spec, policy file, corrective store, or code file is written by reusable logic.
+
+### Requirement: Corrective persistence is an explicit host action
+
+r[agent_harness_runtime.hermes_corrective_memory.host_actions] Appending corrective records, marking promotions, superseding records, exporting summaries, or writing promotion stubs MUST be represented as explicit host-owned action requests with validation, authorization inputs, and safe receipts.
+
+#### Scenario: Missing store blocks append
+
+r[agent_harness_runtime.hermes_corrective_memory.host_actions.missing_store]
+- GIVEN a host asks to append a corrective record
+- AND no corrective-record store adapter is injected
+- WHEN append action validation runs
+- THEN Animus returns a missing-store failure
+- AND it does not create `.agent/napkin.md`, write JSONL, mutate memory, or persist metrics by fallback.
+
+### Requirement: Corrective memory verification
+
+r[agent_harness_runtime.hermes_corrective_memory.verification] The corrective-memory adaptation MUST include focused positive and negative tests for valid records, metrics records, trust admission, prompt-budget omission, repeated-finding grouping, explicit append/promote actions, missing-store failure, no default napkin behavior, stale or unsafe records, and receipt leak rejection.
+
+#### Scenario: Closeout evidence preserves framework non-claims
+
+r[agent_harness_runtime.hermes_corrective_memory.verification.closeout]
+- GIVEN maintainers intend to archive the corrective-memory adaptation
+- WHEN closeout validation runs
+- THEN evidence names record, admission, promotion, host-action, receipt, docs, Cairn validation, and Cairn gate checks
+- AND it lists mandatory napkin loading, global corrective memory, automatic writes, task/spec mutation, and scoring authority as non-claims.

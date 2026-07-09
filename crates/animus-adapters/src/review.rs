@@ -17,3 +17,4 @@ include!("review/impl/impl002.rs");
 include!("review/impl/impl003.rs");
 include!("review/impl/impl004.rs");
 include!("review/impl/impl005.rs");
+include!("review/impl/impl006.rs");

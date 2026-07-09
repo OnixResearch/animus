@@ -20,6 +20,14 @@ Parsing, summary, and promotion-candidate analysis are read-only. Durable writes
 
 Repeated-finding promotion candidates group unpromoted findings with the same `class`, `scope`, and `route`. The grouping suggests a durable prevention route; it does not mark records promoted, edit tasks, mutate specs, or create lifecycle changes automatically.
 
+## Corrective memory boundary
+
+Corrective records are optional host-supplied DTOs. `validate_corrective_record` accepts safe labels, trust scope, freshness, prompt budget, redaction state, and BLAKE3 body identity only; raw napkin or memory bodies stay in the host store. `admit_corrective_record` requires explicit host policy for trusted source labels, allowed scopes, freshness, and prompt budget before a record can influence prompt assembly. Always-read records, untrusted sources, expired records, secret records, and over-budget records fail closed or are omitted with safe reasons.
+
+`corrective_promotion_candidates` routes repeated review metrics into advisory targets such as deterministic checks, policy guidance, spec rules, memory guidance, or human checkpoints. Append and promote operations use explicit `validate_corrective_append_request` and `validate_corrective_promote_request` DTO validation against a host-owned store status. Safe receipts from `validate_corrective_host_action_receipt` contain labels, status, issue code, and BLAKE3 hashes only.
+
+Non-claims: Animus does not load `.agent/napkin.md`, create global corrective memory, persist records by default, edit Cairn tasks/specs/policy automatically, or make review metrics a scoring authority.
+
 ## Validation
 
 Focused validation:

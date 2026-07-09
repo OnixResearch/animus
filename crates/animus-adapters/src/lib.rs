@@ -21,6 +21,9 @@
 extern crate alloc;
 
 mod actor;
+/// Neutral agent-comms transport DTOs and projection helpers.
+#[path = "agentcomms.rs"]
+mod agent_comms;
 mod aliases;
 mod artifact;
 mod bridge;
@@ -73,6 +76,14 @@ pub mod validation;
 mod versioning;
 mod workspace;
 
+pub use agent_comms::{
+    AgentCommsAdmission, AgentCommsError, AgentCommsFrame, AgentCommsFrameDraft,
+    AgentCommsFrameKind, AgentCommsReceipt, AgentCommsReceiptDraft, AgentCommsReceiptStatus,
+    AgentCommsRedaction, AgentCommsRoute, AgentCommsRouteDraft, AgentCommsTransport,
+    AgentCommsTransportFamily, admit_agent_comms_scope, project_assertion_frame,
+    project_headless_command_frame, project_headless_event_frame,
+    project_orchestration_event_frame, project_subagent_lifecycle_frame,
+};
 pub use aliases::*;
 pub use aliases::{
     DEFAULT_MODEL_PROMPT_IMAGE_BYTE_BUDGET, MAX_MODEL_IMAGE_BYTE_COUNT, ModelContentPart,
@@ -219,11 +230,20 @@ pub fn evaluate_observability_delivery(
 }
 pub use port::{ComponentAdapter, HostStatusAdapter, ModelAdapter, ToolAdapter};
 pub use review::{
-    ReviewDiagnostic, ReviewDiagnosticCode, ReviewFinding, ReviewMetricFinding, ReviewMetricRecord,
+    CorrectiveAdmissionDecision, CorrectiveAdmissionPolicy, CorrectiveAdmissionReason,
+    CorrectiveAdmissionStatus, CorrectiveAppendRequest, CorrectiveAppendRequestDraft,
+    CorrectiveFreshness, CorrectiveHostActionKind, CorrectiveHostActionReceipt,
+    CorrectiveHostActionReceiptDraft, CorrectiveHostActionReceiptStatus, CorrectiveInclusionPolicy,
+    CorrectivePromoteRequest, CorrectivePromoteRequestDraft, CorrectivePromotionCandidate,
+    CorrectivePromotionTarget, CorrectiveRecord, CorrectiveRecordDraft, CorrectiveRecordKind,
+    CorrectiveRedactionState, CorrectiveStoreStatus, CorrectiveTrustScope, ReviewDiagnostic,
+    ReviewDiagnosticCode, ReviewFinding, ReviewMetricFinding, ReviewMetricRecord,
     ReviewMetricRecordDraft, ReviewMetricsSummary, ReviewPromotionCandidate, ReviewReport,
-    ReviewReportDraft, ReviewReportError, ReviewSection, ReviewVerdict,
-    append_review_metric_record, parse_review_report, review_promotion_candidates,
-    summarize_review_metrics,
+    ReviewReportDraft, ReviewReportError, ReviewSection, ReviewVerdict, admit_corrective_record,
+    append_review_metric_record, corrective_promotion_candidates, parse_review_report,
+    review_promotion_candidates, summarize_review_metrics, validate_corrective_append_request,
+    validate_corrective_host_action_receipt, validate_corrective_promote_request,
+    validate_corrective_record,
 };
 /// Plugin manifest toolset-kind descriptor label.
 pub type PluginToolsetKind = manifest::ToolsetKind;
