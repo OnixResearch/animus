@@ -269,6 +269,55 @@ let change_entries = [
     "agent_harness_runtime.pi_headless_protocol.command_response",
     "agent_harness_runtime.host_control.transport_neutral",
   ] ["adapt-goose-session-branching-controls", "adapt-goose-message-queue-interrupts", "adapt-openclaw-gateway-control-plane"],
+  change "adapt-hermes-done-review-lifecycle" core_role "ui-headless" [
+    "agent_harness_runtime.hermes_review_reports.report",
+    "agent_harness_runtime.hermes_review_reports.metrics_boundary",
+    "agent_harness_runtime.claude_code_headless.completion",
+    "agent_harness_runtime.clankers_injected_services.provider_boundary",
+    "agent_harness_runtime.clankers_safe_receipts.rejects_leaks",
+  ] ["adapt-hermes-corrective-memory-metrics", "adapt-hermes-scoped-validation-planner", "adapt-hermes-roi-recommendation-contracts"],
+  change "adapt-hermes-corrective-memory-metrics" core_role "policy-guidance" [
+    "agent_harness_runtime.hermes_review_reports.promotions",
+    "agent_harness_runtime.qualifier_quality.envelope",
+    "agent_harness_runtime.qualifier_quality.lifecycle",
+    "agent_harness_runtime.memory_controls.validation",
+  ] ["adapt-hermes-done-review-lifecycle", "adapt-hermes-roi-recommendation-contracts"],
+  change "adapt-hermes-multi-lens-focus-decks" core_role "policy-guidance" [
+    "agent_harness_runtime.claude_code_agents.task_contract",
+    "agent_harness_runtime.claude_code_agents.context_packet",
+    "agent_harness_runtime.hermes_skill_manifest.descriptor",
+    "agent_harness_runtime.hermes_retrieval_budgets.descriptor",
+  ] ["adapt-hermes-roi-recommendation-contracts"],
+  change "adapt-hermes-scoped-validation-planner" core_role "concrete-adapters" [
+    "agent_harness_runtime.clankers_process_job_profiles.resolution",
+    "agent_harness_runtime.clankers_continuation_policy.state",
+    "agent_harness_runtime.claude_code_headless.completion",
+    "agent_harness_runtime.pi_tool_contracts.failure_classes",
+  ] ["adapt-hermes-done-review-lifecycle", "adapt-hermes-plan-loop-mode-fsm"],
+  change "adapt-hermes-plan-loop-mode-fsm" core_role "policy-guidance" [
+    "agent_harness_runtime.zerostack_prompt_profiles.descriptors",
+    "agent_harness_runtime.zerostack_prompt_profiles.directives",
+    "agent_harness_runtime.clankers_continuation_policy.state",
+    "agent_harness_runtime.hermes_policy_profiles.enforcement_boundary",
+  ] ["adapt-hermes-scoped-validation-planner", "adapt-hermes-roi-recommendation-contracts"],
+  change "adapt-hermes-roi-recommendation-contracts" core_role "ui-headless" [
+    "agent_harness_runtime.claude_code_commands.outputs",
+    "agent_harness_runtime.hermes_policy_profiles.prompt_hygiene",
+    "agent_harness_runtime.hermes_review_reports.report",
+    "agent_harness_runtime.cairn_policy.default_validation",
+  ] ["adapt-hermes-done-review-lifecycle", "adapt-hermes-corrective-memory-metrics", "adapt-hermes-multi-lens-focus-decks"],
+  change "adapt-hermes-host-asset-reconciliation" host_role "concrete-adapters" [
+    "agent_harness_runtime.hermes_skill_manifest.layout_boundary",
+    "agent_harness_runtime.hermes_plugin_manifests.executor_boundary",
+    "agent_harness_runtime.pi_resources.host_discovery",
+    "agent_harness_runtime.pi_resources.project_trust",
+  ] ["adapt-hermes-multi-lens-focus-decks"],
+  change "adapt-hermes-vcs-snapshot-ledger" core_role "session-ledger" [
+    "agent_harness_runtime.clankers_checkpoint_rollback.dto",
+    "agent_harness_runtime.clankers_checkpoint_rollback.service",
+    "agent_harness_runtime.provenance_ledger.branch_queries",
+    "agent_harness_runtime.provenance_ledger.receipts",
+  ] ["adapt-hermes-scoped-validation-planner"],
 ]
 in
 
@@ -292,6 +341,14 @@ let overlap_entries = [
   overlap "goose-queued-control-events" "adapt-goose-message-queue-interrupts" ["adapt-goose-session-branching-controls", "adapt-goose-remote-server-admission"],
   overlap "goose-typed-code-mode-tool-planning" "adapt-goose-code-mode-tool-planning" ["adapt-goose-message-queue-interrupts"],
   overlap "goose-remote-backend-admission" "adapt-goose-remote-server-admission" ["adapt-goose-session-branching-controls", "adapt-goose-message-queue-interrupts", "adapt-openclaw-gateway-control-plane"],
+  overlap "hermes-review-quality-loop" "adapt-hermes-done-review-lifecycle" ["adapt-hermes-corrective-memory-metrics", "adapt-hermes-scoped-validation-planner", "adapt-hermes-roi-recommendation-contracts"],
+  overlap "hermes-corrective-memory-promotion" "adapt-hermes-corrective-memory-metrics" ["adapt-hermes-done-review-lifecycle", "adapt-hermes-roi-recommendation-contracts"],
+  overlap "hermes-analysis-focus-decks" "adapt-hermes-multi-lens-focus-decks" ["adapt-hermes-roi-recommendation-contracts"],
+  overlap "hermes-scoped-validation-followups" "adapt-hermes-scoped-validation-planner" ["adapt-hermes-done-review-lifecycle", "adapt-hermes-plan-loop-mode-fsm"],
+  overlap "hermes-plan-loop-continuations" "adapt-hermes-plan-loop-mode-fsm" ["adapt-hermes-scoped-validation-planner", "adapt-hermes-roi-recommendation-contracts"],
+  overlap "hermes-roi-action-routing" "adapt-hermes-roi-recommendation-contracts" ["adapt-hermes-done-review-lifecycle", "adapt-hermes-corrective-memory-metrics", "adapt-hermes-multi-lens-focus-decks"],
+  overlap "hermes-host-asset-reconciliation" "adapt-hermes-host-asset-reconciliation" ["adapt-hermes-multi-lens-focus-decks"],
+  overlap "hermes-vcs-snapshot-ledger" "adapt-hermes-vcs-snapshot-ledger" ["adapt-hermes-scoped-validation-planner"],
 ]
 in
 
