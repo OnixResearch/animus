@@ -1,0 +1,6 @@
+id: ambient-filesystem-call
+language: Rust
+message: inventory-only ambient filesystem call in a reusable boundary candidate
+severity: hint
+rule:
+  pattern: std::fs::$FUNC($$$ARGS)

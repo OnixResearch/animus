@@ -1,0 +1,6 @@
+id: unsafe-block
+language: Rust
+message: inventory-only unsafe block in a reusable boundary candidate
+severity: hint
+rule:
+  pattern: unsafe { $$$BODY }

@@ -1,0 +1,9 @@
+id: direct-provider-client
+language: Rust
+message: inventory-only direct provider client construction outside an adapter boundary
+severity: hint
+rule:
+  any:
+    - pattern: OpenAiClient::new($$$ARGS)
+    - pattern: AnthropicClient::new($$$ARGS)
+    - pattern: ProviderClient::new($$$ARGS)

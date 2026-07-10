@@ -1,0 +1,6 @@
+id: ambient-process-command
+language: Rust
+message: inventory-only ambient process command in a reusable boundary candidate
+severity: hint
+rule:
+  pattern: std::process::Command::new($$$ARGS)

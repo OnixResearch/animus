@@ -1,0 +1,88 @@
+#!/usr/bin/env sh
+set -eu
+
+ROOT="."
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --root)
+      shift
+      ROOT="$1"
+      ;;
+    *)
+      echo "AST_GREP_AUDIT_UNKNOWN_ARG: $1" >&2
+      exit 1
+      ;;
+  esac
+  shift
+done
+
+cd "$ROOT"
+
+TMPDIR_ROOT="${TMPDIR:-/tmp}/animus-ast-grep-agent-boundary-audits.$$"
+mkdir -p "$TMPDIR_ROOT"
+trap 'rm -rf "$TMPDIR_ROOT"' EXIT INT TERM
+
+rustc scripts/cairn/check-ast-grep-agent-boundary-audits.rs -o "$TMPDIR_ROOT/check-ast-grep-agent-boundary-audits"
+
+nickel export --format raw --field docs_markdown cairn/ast-grep-agent-boundary-audits.ncl > "$TMPDIR_ROOT/docs.md"
+if ! cmp -s "$TMPDIR_ROOT/docs.md" docs/ast-grep-agent-boundary-audits.md; then
+  echo "AST_GREP_AUDIT_DOCS_DRIFT: regenerate docs/ast-grep-agent-boundary-audits.md" >&2
+  exit 1
+fi
+
+AST_GREP_VERSION="$(ast-grep --version)"
+RULE_BUNDLE_HASH="$({ find cairn/ast-grep-agent-boundary-rules -type f -name '*.yml' -print | LC_ALL=C sort | while IFS= read -r rule_file; do b3sum "$rule_file"; done; } | b3sum | cut -d ' ' -f 1)"
+
+"$TMPDIR_ROOT/check-ast-grep-agent-boundary-audits" \
+  --root . \
+  --ast-grep-version "$AST_GREP_VERSION" \
+  --rule-bundle-hash "$RULE_BUNDLE_HASH"
+
+fixture_count() {
+  rule_file="$1"
+  fixture_file="$2"
+  ast-grep scan --json --rule "$rule_file" "$fixture_file" | grep -c '"text"' || true
+}
+
+check_rule_fixture() {
+  rule_id="$1"
+  positive_fixture="$2"
+  negative_fixture="$3"
+  rule_file="cairn/ast-grep-agent-boundary-rules/${rule_id}.yml"
+  positive_count="$(fixture_count "$rule_file" "$positive_fixture")"
+  negative_count="$(fixture_count "$rule_file" "$negative_fixture")"
+  if [ "$positive_count" -lt 1 ]; then
+    echo "AST_GREP_AUDIT_POSITIVE_SCAN_MISS: ${rule_id}" >&2
+    exit 1
+  fi
+  if [ "$negative_count" -ne 0 ]; then
+    echo "AST_GREP_AUDIT_NEGATIVE_SCAN_HIT: ${rule_id}" >&2
+    exit 1
+  fi
+  echo "fixture ok: ${rule_id} positive=${positive_count} negative=${negative_count}"
+}
+
+POSITIVE_FIXTURE="cairn/ast-grep-agent-boundary-fixtures/positive-boundary-violations.rs"
+check_rule_fixture ambient-filesystem-call "$POSITIVE_FIXTURE" "cairn/ast-grep-agent-boundary-fixtures/negative-host-shell-allowed.rs"
+check_rule_fixture ambient-process-command "$POSITIVE_FIXTURE" "cairn/ast-grep-agent-boundary-fixtures/negative-host-shell-allowed.rs"
+check_rule_fixture unsafe-block "$POSITIVE_FIXTURE" "cairn/ast-grep-agent-boundary-fixtures/negative-pure-reducer.rs"
+check_rule_fixture panic-macro "$POSITIVE_FIXTURE" "cairn/ast-grep-agent-boundary-fixtures/negative-pure-reducer.rs"
+check_rule_fixture direct-provider-client "$POSITIVE_FIXTURE" "cairn/ast-grep-agent-boundary-fixtures/negative-injected-provider.rs"
+
+scan_paths=""
+for scan_path in crates/animus-core/src crates/animus-adapters/src crates/animus-runtime/src; do
+  if [ -d "$scan_path" ]; then
+    scan_paths="${scan_paths} ${scan_path}"
+  fi
+done
+
+for rule_file in cairn/ast-grep-agent-boundary-rules/*.yml; do
+  if [ -n "$scan_paths" ]; then
+    finding_count="$(ast-grep scan --json --rule "$rule_file" $scan_paths | grep -c '"text"' || true)"
+  else
+    finding_count="0"
+  fi
+  echo "inventory $(basename "$rule_file" .yml) findings=${finding_count} posture=inventory-only"
+done
+
+echo "receipt ast-grep-version=${AST_GREP_VERSION} rule-bundle-blake3=${RULE_BUNDLE_HASH} findings=counts-only non-claims=preserved"

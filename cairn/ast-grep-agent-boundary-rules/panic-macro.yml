@@ -1,0 +1,10 @@
+id: panic-macro
+language: Rust
+message: inventory-only panic macro in a reusable boundary candidate
+severity: hint
+rule:
+  any:
+    - pattern: panic!($$$ARGS)
+    - pattern: unreachable!($$$ARGS)
+    - pattern: todo!($$$ARGS)
+    - pattern: unimplemented!($$$ARGS)

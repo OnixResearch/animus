@@ -181,6 +181,7 @@
                 || baseName == "check-clankers-product-surfaces"
                 || baseName == "check-dogfood-readiness"
                 || baseName == "check-adapter-conformance-index"
+                || baseName == "check-ast-grep-agent-boundary-audits"
                 || baseName == "check-component-catalog"
                 || baseName == "check-clash-ucan-authority"
                 || baseName == "check-composition-conformance"
@@ -208,6 +209,7 @@
                 || pkgs.lib.hasSuffix ".scm" baseName
                 || pkgs.lib.hasSuffix ".md" baseName
                 || pkgs.lib.hasSuffix ".txt" baseName
+                || pkgs.lib.hasSuffix ".yml" baseName
               );
           };
 
@@ -341,6 +343,14 @@
 
           runtime-kernel-split = cargoCheck "animus-runtime-kernel-split" [ ] ''
             sh scripts/cairn/check-runtime-kernel-split --root .
+          '';
+
+          ast-grep-agent-boundary-audits = cargoCheck "animus-ast-grep-agent-boundary-audits" [
+            pkgs.ast-grep
+            pkgs.b3sum
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-ast-grep-agent-boundary-audits --root .
           '';
 
           cargo-runtime-feature = cargoCheck "animus-cargo-runtime-feature" [ ] ''
