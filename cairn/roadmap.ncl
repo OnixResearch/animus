@@ -394,6 +394,12 @@ let change_entries = [
     "agent_harness_runtime.pi_headless_protocol.event_stream",
     "agent_harness_runtime.clankers_injected_services.provider_boundary",
     "agent_harness_runtime.clankers_safe_receipts.rejects_leaks",
+  ] ["add-concrete-provider-dispatch-adapter", "add-host-tool-executor-capability-packs", "add-host-session-persistence-adapter", "add-packaged-headless-dogfood-smoke"],
+  change "add-packaged-headless-dogfood-smoke" product_role "ui-headless" [
+    "add-fake-backed-headless-dogfood-shell",
+    "agent_harness_runtime.dogfood_headless_shell.entrypoint",
+    "agent_harness_runtime.dogfood_headless_shell.receipts",
+    "agent_harness_runtime.dogfood_readiness.evidence_ladder",
   ] ["add-concrete-provider-dispatch-adapter", "add-host-tool-executor-capability-packs", "add-host-session-persistence-adapter"],
   change "adapt-turnstone-intent-validation" core_role "policy-guidance" [
     "agent_harness_runtime.pi_tool_contracts.definition_metadata",
@@ -459,7 +465,8 @@ let overlap_entries = [
   overlap "concrete-provider-dispatch" "add-concrete-provider-dispatch-adapter" ["define-model-router-execution-service", "add-concrete-provider-streaming-adapters", "add-fake-backed-headless-dogfood-shell"],
   overlap "tool-executor-capability-packs" "add-host-tool-executor-capability-packs" ["adapt-goose-code-mode-tool-planning", "adapt-hermes-host-asset-reconciliation", "add-fake-backed-headless-dogfood-shell"],
   overlap "host-session-persistence-adapter" "add-host-session-persistence-adapter" ["adapt-goose-session-branching-controls", "adapt-hermes-vcs-snapshot-ledger", "add-fake-backed-headless-dogfood-shell"],
-  overlap "fake-backed-headless-dogfood-shell" "add-fake-backed-headless-dogfood-shell" ["add-concrete-provider-dispatch-adapter", "add-host-tool-executor-capability-packs", "add-host-session-persistence-adapter"],
+  overlap "fake-backed-headless-dogfood-shell" "add-fake-backed-headless-dogfood-shell" ["add-concrete-provider-dispatch-adapter", "add-host-tool-executor-capability-packs", "add-host-session-persistence-adapter", "add-packaged-headless-dogfood-smoke"],
+  overlap "packaged-headless-dogfood-smoke" "add-packaged-headless-dogfood-smoke" ["add-fake-backed-headless-dogfood-shell", "add-concrete-provider-dispatch-adapter", "add-host-tool-executor-capability-packs", "add-host-session-persistence-adapter"],
   overlap "turnstone-intent-validation" "adapt-turnstone-intent-validation" ["adapt-turnstone-output-guard", "add-turnstone-headless-eval-scorer", "add-host-tool-executor-capability-packs"],
   overlap "turnstone-output-guard" "adapt-turnstone-output-guard" ["adapt-turnstone-intent-validation", "add-turnstone-headless-eval-scorer", "add-host-tool-executor-capability-packs"],
   overlap "turnstone-headless-eval-scorer" "add-turnstone-headless-eval-scorer" ["adapt-turnstone-intent-validation", "adapt-turnstone-output-guard", "add-fake-backed-headless-dogfood-shell"],

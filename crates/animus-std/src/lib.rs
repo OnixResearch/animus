@@ -20,6 +20,8 @@ mod config;
 mod context;
 #[cfg(feature = "syndicate-host")]
 mod dataspace;
+#[cfg(feature = "dogfood-smoke")]
+mod dogfood_smoke;
 mod execution;
 #[cfg(feature = "iroh-host")]
 mod iroh;
@@ -38,6 +40,8 @@ pub use context::{
     CapabilityRoot, CapabilityRootKind, STD_CONTEXT_DEFAULT_MAX_BYTES,
     STD_CONTEXT_DEFAULT_MAX_DIRECTORY_ENTRIES,
 };
+#[cfg(feature = "dogfood-smoke")]
+pub use dogfood_smoke::run_packaged_headless_dogfood_smoke;
 /// Root public name for the std local diff context resolver.
 pub type LocalDiffContextResolver = context::LocalDiffResolver;
 /// Root public name for the std local directory context resolver.

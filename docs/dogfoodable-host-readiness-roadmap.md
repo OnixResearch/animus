@@ -2,25 +2,26 @@
 
 Animus dogfoodability means evidence that a specific non-default host shell can run a bounded prompt path through accepted Animus contracts. It does not mean Clankers parity, production readiness, or default adoption of Clankers product surfaces.
 
-Current status: roadmap defined, claim-hygiene fixtures added, fixture-backed provider stream parsers and model-router execution contracts exist, and no executable dogfood shell is claimed yet. Live providers, daemon/attach, plugin runtime, persistent sessions, TUI dogfood, global state, Matrix/P2P, OAuth, release tagging, and Clankers-compatible behavior remain explicit non-claims until successor Cairns add host-owned implementations and evidence.
+Current status: roadmap defined, claim-hygiene fixtures added, fixture-backed provider stream parsers and model-router execution contracts exist, fake-backed integration is implemented in the reusable runtime, and a non-default packaged headless smoke (`animus-dogfood-smoke`) runs that fake-backed path with safe receipt output. Live providers, daemon/attach, plugin runtime, persistent sessions, TUI dogfood, global state, Matrix/P2P, OAuth, release tagging, and Clankers-compatible behavior remain explicit non-claims until successor Cairns add host-owned implementations and evidence.
 
 ## Gap inventory
 
 Classifications are intentionally precise:
 
-- **actionable blocker**: required before the first bounded dogfood host can make a claim;
+- **completed evidence rung**: implemented and covered by deterministic smoke evidence for the current bounded claim;
+- **actionable blocker**: required before the next bounded dogfood host can make a stronger claim;
 - **intentional non-claim**: useful surface, but not part of the current dogfood claim;
 - **rejected default product surface**: forbidden as reusable Animus default behavior by [Clankers product-surface rejection](clankers-product-surface-rejection.md);
 - **optional future host adapter**: allowed only behind an explicit host-owned, non-default successor Cairn.
 
 | Compared surface | Classification | Current blocker or reason | Successor/evidence gate |
 | --- | --- | --- | --- |
-| Runnable CLI/headless entrypoint | actionable blocker | No maintained non-default shell proves a prompt can run end to end. | Successor host-shell Cairn with fake-backed smoke and safe receipt evidence. |
+| Runnable CLI/headless entrypoint | completed evidence rung | `animus-dogfood-smoke` is a non-default packaged std-shell binary gated by `dogfood-smoke`; it proves only the fake-backed prompt path and safe receipt projection. | Keep `scripts/cairn/check-packaged-headless-dogfood-smoke --root .` green; stronger claims require successor evidence. |
 | Provider execution | actionable blocker | Reusable crates have injected-service contracts, model-router execution envelopes, provider registry metadata, and fixture-backed stream parsers, but no live-provider host shell claim is indexed. | Provider adapter Cairn after `agent_harness_runtime.clankers_injected_services.provider_boundary`, provider registry contracts, concrete dispatch gates, and safe provider receipts; live-provider smoke is optional evidence. |
 | Tool execution | actionable blocker | Tool DTOs and metadata exist, but default product tools are intentionally absent. | Tool host/executor Cairn after `agent_harness_runtime.pi_tool_contracts.definition_metadata` and fail-closed tool dispatch evidence. |
 | Session persistence | actionable blocker | Neutral ledger/provenance contracts exist, but durable host storage is not claimed. | Host persistence Cairn after provenance ledger requirements and safe receipt redaction rails. |
-| Receipts and evidence | actionable blocker | Safe receipt DTOs exist; dogfood receipts need a bounded shell-specific index. | Fake-backed integration receipt first, then current-head release evidence index if packaged evidence is claimed. |
-| Documentation and examples | actionable blocker | Users need examples that show what is runnable and what remains a non-claim. | Example Cairn must name the highest evidence rung and run claim-hygiene validation. |
+| Receipts and evidence | completed evidence rung | The packaged smoke emits safe line-oriented receipt metadata with hashes, event counts, redaction status, and omitted-surface non-claims. | Current-head release evidence index remains separate if broader packaged evidence is claimed. |
+| Documentation and examples | completed evidence rung | Dogfood docs name the packaged headless smoke rung and non-claims. | Examples must continue to name the highest evidence rung and run claim-hygiene validation. |
 | Readiness harness | actionable blocker | No single rail yet ties dogfood readiness claims to indexed evidence. | `scripts/cairn/check-dogfood-readiness --root .` gates fixture-level claim hygiene. |
 | TUI | optional future host adapter and rejected default product surface | Ratatui host contracts exist, but terminal dogfood is not default readiness. | Optional TUI Cairn after headless shell, concrete adapters, and TUI-specific evidence. |
 | Daemon/attach | optional future host adapter and rejected default product surface | Long-lived daemon ownership is outside reusable crates. | Optional daemon Cairn with admission, persistence, cancellation, and attach receipts. |
@@ -35,7 +36,7 @@ Classifications are intentionally precise:
 
 The first dogfood target is a non-default headless/CLI host shell. It is owned by the host shell, not by reusable core crates. It uses deterministic fake adapters before live providers and proves that the request lifecycle can run without ambient credentials, provider discovery, network access, process execution, daemon ownership, global session storage, plugin loading, router/OAuth flows, Matrix/P2P coordination, terminal UI ownership, self-evolution, or release tagging.
 
-The target must remain feature-gated or separately packaged so `animus-core`, `animus-adapters`, `animus-preserves`, `animus-steel`, `animus-runtime`, and default `animus-std` contracts do not require product behavior.
+That target is now represented by the `animus-dogfood-smoke` binary behind the non-default `animus-std/dogfood-smoke` feature. The target remains feature-gated so `animus-core`, `animus-adapters`, `animus-preserves`, `animus-steel`, `animus-runtime`, and default `animus-std` contracts do not require product behavior.
 
 ## Minimum dogfood prompt path
 
@@ -53,7 +54,7 @@ A minimum dogfood smoke covers this path:
 
 | Surface | Minimum prerequisites | Successor Cairn expectation | Evidence required before claim |
 | --- | --- | --- | --- |
-| Fake-backed headless/CLI | `agent_harness_runtime.claude_code_headless.request`, `agent_harness_runtime.claude_code_headless.events`, `agent_harness_runtime.clankers_injected_services.contracts`, `agent_harness_runtime.clankers_safe_receipts.dto` | Add a non-default host-shell smoke with deterministic fake adapters. | deterministic fixture checks and fake-backed integration. |
+| Fake-backed headless/CLI | `agent_harness_runtime.claude_code_headless.request`, `agent_harness_runtime.claude_code_headless.events`, `agent_harness_runtime.clankers_injected_services.contracts`, `agent_harness_runtime.clankers_safe_receipts.dto` | Maintain the non-default `animus-dogfood-smoke` host-shell smoke with deterministic fake adapters. | deterministic fixture checks, fake-backed integration, and packaged headless smoke. |
 | Live provider execution | Injected provider boundary, canonical model contracts, provider registry hardening, fixture-backed stream parsers, model-router execution envelopes, permission policy, safe provider receipts. | Add a concrete provider host adapter without ambient credentials, ambient model discovery, provider-side fallback, or network fallback. | optional live-provider smoke plus non-claim entries for omitted providers. |
 | Built-in or packaged tools | Tool definition metadata, argument validation, failure classes, mutation serialization, permission/authorization receipts. | Add host-owned tool executors or capability packs; reusable crates expose contracts only. | deterministic tool fixtures, fake executor integration, then packaged headless smoke. |
 | Session persistence | Provenance ledger DTOs, neutral replay, safe receipt redaction, host-owned storage descriptors. | Add explicit storage adapter; no global session store default. | fake persistence fixture, restore/replay checks, and safe receipt leak rejection. |

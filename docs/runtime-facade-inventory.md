@@ -21,7 +21,7 @@ Each inventory record carries composition metadata: `feature_gate`, `required_au
 - `animus-preserves` exports are optional reusable bridge contracts.
 - `animus-steel` exports are optional reusable loop-fabric boundary contracts; Steel decisions still revalidate through adapter DTOs before dispatch.
 - `animus-runtime` exports reusable event/report/config DTOs, pure transition helpers, exact capability-registry descriptors, model dispatch planning, pure tool dispatch planning, capability-negotiation DTOs, pure status-authority selection/explanation helpers, typed workflow command manifest/registry/binding/output DTOs, the runtime DAG contract kit for pure graph validation/ordering/receipts, the `subagents` facade module for pure child-run validation/coordination reducers, the orchestration adapter-family compatibility bridge, and host-injection dispatch surfaces over caller-supplied fabrics and adapters.
-- `animus-std` exports are shell adapters because they own process-facing runtime loading, shell orchestration, provider registry selection, credential-source diagnostics, and optional concrete provider-streaming parser/dispatch seams.
+- `animus-std` exports are shell adapters because they own process-facing runtime loading, shell orchestration, provider registry selection, credential-source diagnostics, optional concrete provider-streaming parser/dispatch seams, and the feature-gated packaged headless dogfood smoke runner.
 - `animus-tui` exports are shell adapters because terminal UI authority belongs outside reusable contracts.
 - The root `animus` crate mirrors these classes through feature-gated reexports.
 

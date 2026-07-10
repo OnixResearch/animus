@@ -108,6 +108,7 @@ version = "0.1.0"
 dependencies = [
  "animus-adapters",
  "animus-core",
+ "animus-runtime",
  "blake3",
  "cap-std",
  "redb",

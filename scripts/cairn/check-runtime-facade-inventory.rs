@@ -52,7 +52,10 @@ const PUBLIC_EXPORT_SOURCES: &[(&str, &str)] = &[
     ("animus", "src/lib.rs"),
     ("animus-core", "crates/animus-core/src/lib.rs"),
     ("animus-adapters", "crates/animus-adapters/src/lib.rs"),
-    ("animus-adapters", "crates/animus-adapters/src/aliases/wire.rs"),
+    (
+        "animus-adapters",
+        "crates/animus-adapters/src/aliases/wire.rs",
+    ),
     (
         "animus-adapters",
         "crates/animus-adapters/src/aliases/wire/conformance.rs",
@@ -65,7 +68,10 @@ const PUBLIC_EXPORT_SOURCES: &[(&str, &str)] = &[
         "animus-adapters",
         "crates/animus-adapters/src/aliases/facade/lifecycle.rs",
     ),
-    ("animus-adapters", "crates/animus-adapters/src/front/guidance.rs"),
+    (
+        "animus-adapters",
+        "crates/animus-adapters/src/front/guidance.rs",
+    ),
     ("animus-router", "crates/animus-router/src/lib.rs"),
     ("animus-preserves", "crates/animus-preserves/src/lib.rs"),
     ("animus-runtime", "crates/animus-runtime/src/lib.rs"),
@@ -93,6 +99,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "batch",
     "compaction",
     "dataset-export",
+    "dogfood-smoke",
     "headless",
     "loop",
     "policy",
@@ -400,7 +407,10 @@ fn validate_entry(
         issues.push(issue(
             ISSUE_UNKNOWN_AUTHORITY,
             &entry.export_path,
-            &format!("unsupported required authority: {}", entry.required_authority),
+            &format!(
+                "unsupported required authority: {}",
+                entry.required_authority
+            ),
         ));
     }
 
@@ -456,7 +466,9 @@ fn validate_links(
     }
 
     for composition_link in &entry.composes_with {
-        if entry_by_path.contains_key(composition_link) || contains(ALLOWED_FAMILIES, composition_link) {
+        if entry_by_path.contains_key(composition_link)
+            || contains(ALLOWED_FAMILIES, composition_link)
+        {
             continue;
         }
         issues.push(issue(
@@ -677,7 +689,9 @@ fn print_report(entries: &[InventoryEntry], public_exports: &BTreeSet<String>, i
     );
     print_counts(
         "authority",
-        entries.iter().map(|entry| entry.required_authority.as_str()),
+        entries
+            .iter()
+            .map(|entry| entry.required_authority.as_str()),
     );
     print_counts(
         "family",

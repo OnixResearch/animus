@@ -184,6 +184,7 @@
                 || baseName == "check-clash-ucan-authority"
                 || baseName == "check-composition-conformance"
                 || baseName == "check-exec-policy"
+                || baseName == "check-packaged-headless-dogfood-smoke"
                 || baseName == "check-plugin-manifest-runtime-neutral"
                 || baseName == "check-request-lifecycle"
                 || baseName == "check-router-policy"
@@ -460,6 +461,10 @@
                 sh scripts/cairn/check-dogfood-readiness --root .
                 touch "$out"
               '';
+
+          packaged-headless-dogfood-smoke = cargoCheck "animus-packaged-headless-dogfood-smoke" [ ] ''
+            sh scripts/cairn/check-packaged-headless-dogfood-smoke --root .
+          '';
 
           plugin-manifest-runtime-neutral =
             pkgs.runCommand "animus-plugin-manifest-runtime-neutral"

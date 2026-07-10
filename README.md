@@ -92,6 +92,7 @@ cargo tigerstyle check
 check-nickel-configs
 scripts/cairn/check-clankers-product-surfaces --root .
 scripts/cairn/check-dogfood-readiness --root .
+scripts/cairn/check-packaged-headless-dogfood-smoke --root .
 scripts/cairn/check-clash-ucan-authority --root .
 scripts/cairn/check-plugin-manifest-runtime-neutral --root .
 scripts/cairn/check-request-lifecycle --root .
@@ -110,6 +111,7 @@ nix run .#cargo-tigerstyle -- check
 nix run .#check-nickel-configs
 nix build .#checks.x86_64-linux.adapter-conformance-index --no-link -L
 nix build .#checks.x86_64-linux.dogfood-readiness --no-link -L
+nix build .#checks.x86_64-linux.packaged-headless-dogfood-smoke --no-link -L
 nix build .#checks.x86_64-linux.clash-ucan-authority --no-link -L
 nix build .#checks.x86_64-linux.neutral-ledger --no-link -L
 nix build .#checks.x86_64-linux.safe-receipts-artifacts --no-link -L
