@@ -9,6 +9,8 @@ scripts/cairn/check-adapter-conformance-index --root .
 nix build .#checks.x86_64-linux.adapter-conformance-index --no-link -L
 ```
 
+The high-level component map is generated from `cairn/component-catalog.ncl` into [component-catalog.md](component-catalog.md). Use that catalog to choose the smallest reusable contract, host-injection surface, shell adapter, optional bridge, runtime prelude, or feature facade before consulting the family details below.
+
 ## Maintained families
 
 | Family | Owner module | Stability/version posture | Authority boundary | Safe receipt behavior | Serialization bridge | Focused surface | Focused checks |

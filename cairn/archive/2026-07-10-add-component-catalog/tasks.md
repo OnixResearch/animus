@@ -1,0 +1,8 @@
+# Tasks
+
+- [x] [serial] Define the typed Nickel component catalog schema and seed entries for existing crates, runtime preludes, adapter families, host-injection surfaces, shell adapters, and optional bridges. r[agent_harness_runtime.component_catalog.source]
+- [x] [depends:agent_harness_runtime.component_catalog.source] Add pure catalog validation for component ids, owner labels, feature gates, authority classes, dependency links, composition links, capability families, focused checks, and safe evidence labels. r[agent_harness_runtime.component_catalog.metadata]
+- [x] [depends:agent_harness_runtime.component_catalog.metadata] Add positive fixtures for valid reusable-contract, host-injection-surface, shell-adapter, and optional-bridge entries. r[agent_harness_runtime.component_catalog.verification]
+- [x] [depends:agent_harness_runtime.component_catalog.metadata] Add negative fixtures for unknown dependencies, invalid authority classes, missing focused checks, unsafe evidence labels, and dependency cycles. r[agent_harness_runtime.component_catalog.verification]
+- [x] [depends:agent_harness_runtime.component_catalog.metadata] Generate or check `docs/component-catalog.md` and update `README.md`, `docs/contracts-index.md`, and `docs/runtime-facade-inventory.md` pointers without duplicating raw catalog data. r[agent_harness_runtime.component_catalog.generated_docs]
+- [x] [depends:agent_harness_runtime.component_catalog.generated_docs] Wire a focused Cairn rail and record closeout evidence with catalog fixtures, docs drift checks, Cairn validate, and Cairn gates. r[agent_harness_runtime.component_catalog.verification]

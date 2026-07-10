@@ -4,6 +4,8 @@ Animus keeps a maintained inventory of runtime-facing public exports so embedder
 
 The source of truth is `cairn/runtime-facade-inventory.ncl`. The focused rail is `scripts/cairn/check-runtime-facade-inventory --root .`.
 
+The high-level component catalog lives in `cairn/component-catalog.ncl` and projects to [component-catalog.md](component-catalog.md). Use the catalog for block-level owner, authority, dependency, feature-gate, and focused-check selection; use this inventory for runtime-facing public export classification.
+
 Each inventory record carries composition metadata: `feature_gate`, `required_authority`, `depends_on`, `composes_with`, and `capability_family`. The checker validates controlled feature/authority/family labels, known dependency targets, known composition links, reusable-to-shell dependency direction, and safe evidence fields.
 
 ## Classes

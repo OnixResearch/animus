@@ -181,6 +181,7 @@
                 || baseName == "check-clankers-product-surfaces"
                 || baseName == "check-dogfood-readiness"
                 || baseName == "check-adapter-conformance-index"
+                || baseName == "check-component-catalog"
                 || baseName == "check-clash-ucan-authority"
                 || baseName == "check-composition-conformance"
                 || baseName == "check-current-head-release-evidence-index"
@@ -408,6 +409,24 @@
                 chmod -R u+w source
                 cd source
                 sh scripts/cairn/check-adapter-conformance-index --root .
+                touch "$out"
+              '';
+
+          component-catalog =
+            pkgs.runCommand "animus-component-catalog"
+              {
+                nativeBuildInputs = [
+                  pkgs.rustc
+                  pkgs.gcc
+                  pkgs.nickel
+                  pkgs.b3sum
+                ];
+              }
+              ''
+                cp -r ${source} source
+                chmod -R u+w source
+                cd source
+                sh scripts/cairn/check-component-catalog --root .
                 touch "$out"
               '';
 

@@ -1,0 +1,35 @@
+# Component catalog
+
+This projection is generated from `cairn/component-catalog.ncl`. Do not edit catalog rows by hand; update the Nickel source and run `scripts/cairn/check-component-catalog --root .`.
+
+The catalog names Lego-style Animus components, the smallest public import surface, authority posture, dependency links, capability family, and focused validation rail. It is metadata evidence only: it does not claim provider, filesystem, process, network, terminal, credential, persistence, production, or live-service readiness unless a row explicitly classifies that authority as shell-owned or injected.
+
+| Component | Class | Owner | Feature gate | Authority | Family | Focused checks | Smallest import |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `core.intent-state` | `reusable-contract` | `animus-core` | `always` | `none` | `core` | `cargo test -p animus-core --locked<br>scripts/cairn/check-wasm-surface --root .` | `animus_core::{Intent, AnimusState, CoreError}` |
+| `adapters.dto-boundary` | `reusable-contract` | `animus-adapters` | `always` | `none` | `adapter-contracts` | `cargo test -p animus-adapters --locked<br>scripts/cairn/check-runtime-facade-inventory --root .` | `animus_adapters::{ModelRequest, ToolRequest, ToolResponse}` |
+| `adapters.model-port` | `host-injection-surface` | `animus-adapters` | `always` | `injected-only` | `model` | `cargo test -p animus-adapters model --locked<br>scripts/cairn/check-adapter-conformance-index --root .` | `animus_adapters::ModelAdapter` |
+| `adapters.tool-port` | `host-injection-surface` | `animus-adapters` | `always` | `injected-only` | `tool` | `cargo test -p animus-adapters tool::tests --locked<br>scripts/cairn/check-tool-catalog --root .` | `animus_adapters::ToolAdapter` |
+| `adapters.status-observations` | `host-injection-surface` | `animus-adapters` | `status` | `injected-only` | `status` | `cargo test -p animus-adapters status::tests --locked<br>scripts/cairn/check-runtime-facade-inventory --root .` | `animus_adapters::HostStatusAdapter` |
+| `adapters.safe-receipts` | `reusable-contract` | `animus-adapters` | `always` | `none` | `safe-receipt` | `cargo test -p animus-adapters effect::tests --locked<br>scripts/cairn/check-safe-receipts-artifacts --root .` | `animus_adapters::{Receipt, ReceiptDraft, SafeHash}` |
+| `adapters.observability` | `reusable-contract` | `animus-adapters` | `always` | `none` | `observability` | `cargo test -p animus-adapters observability --locked<br>scripts/cairn/check-composition-conformance --root .` | `animus_adapters::{MetricSample, LogRecord, MetricsAdapter}` |
+| `adapters.context-references` | `reusable-contract` | `animus-adapters` | `always` | `none` | `context` | `cargo test -p animus-adapters context --locked<br>scripts/cairn/check-request-lifecycle --root .` | `animus_adapters::{ContextReference, ContextResolverSet}` |
+| `adapters.document-ingest` | `reusable-contract` | `animus-adapters` | `always` | `none` | `document-ingest` | `cargo test -p animus-adapters document --locked<br>scripts/cairn/check-adapter-conformance-index --root .` | `animus_adapters::{DocumentIngestReport, validate_document_ingest_report}` |
+| `adapters.model-evidence` | `reusable-contract` | `animus-adapters` | `always` | `none` | `model-evidence` | `cargo test -p animus-adapters modelevidence --locked<br>scripts/cairn/check-adapter-conformance-index --root .` | `animus_adapters::{ModelEvidenceReport, validate_model_evidence_report}` |
+| `adapters.orchestration` | `host-injection-surface` | `animus-adapters` | `orchestration` | `injected-only` | `orchestration` | `cargo test -p animus-adapters orchestration --locked<br>scripts/cairn/check-composition-conformance --root .` | `animus_adapters::orchestration::OrchestrationService` |
+| `router.recipe-selection` | `reusable-contract` | `animus-router` | `router` | `none` | `router` | `cargo test -p animus-router --locked<br>scripts/cairn/check-router-policy --root .` | `animus_router::{Recipe, Signals, select_recipe}` |
+| `runtime.loop-kernel` | `runtime-prelude` | `animus-runtime` | `runtime` | `injected-only` | `runtime` | `cargo test -p animus-runtime --locked<br>scripts/cairn/check-request-lifecycle --root .` | `animus_runtime::{run_agent_loop, RuntimeInput, RuntimeConfig}` |
+| `runtime.tool-dispatch-planning` | `reusable-contract` | `animus-runtime` | `runtime` | `none` | `tool` | `cargo test -p animus-runtime shell::tests --locked<br>scripts/cairn/check-tool-catalog --root .` | `animus_runtime::ToolDispatchPlan` |
+| `runtime.status-prelude` | `runtime-prelude` | `animus-runtime` | `status` | `none` | `status` | `cargo test -p animus-runtime status::tests --locked<br>scripts/cairn/check-runtime-facade-inventory --root .` | `animus_runtime::status_prelude` |
+| `runtime.observability-projection` | `reusable-contract` | `animus-runtime` | `runtime` | `none` | `observability` | `cargo test -p animus-runtime observability --locked<br>scripts/cairn/check-composition-conformance --root .` | `animus_runtime::{project_runtime_event_observability, project_run_report_observability}` |
+| `steel.loop-fabric` | `runtime-prelude` | `animus-steel` | `steel` | `none` | `steel` | `cargo test -p animus-steel --locked<br>scripts/cairn/check-steel-runtime-policy --root .` | `animus_steel::{LoopTurn, LoopDecision, SteelLoopFabric}` |
+| `preserves.adapter-bridge` | `optional-bridge` | `animus-preserves` | `preserves` | `none` | `preserves` | `cargo test -p animus-preserves --locked<br>cargo check -p animus --features preserves --locked` | `animus_preserves` |
+| `std.context-shell` | `shell-adapter` | `animus-std` | `std` | `shell-owned` | `context` | `cargo test -p animus-std context --locked<br>scripts/cairn/check-request-lifecycle --root .` | `animus_std::{LocalFileContextResolver, LocalDirectoryContextResolver}` |
+| `std.observability-sinks` | `shell-adapter` | `animus-std` | `std` | `shell-owned` | `observability` | `cargo test -p animus-std observability --locked<br>scripts/cairn/check-composition-conformance --root .` | `animus_std::{NoopObservabilitySink, InMemoryObservabilitySink}` |
+| `std.runtime-shell` | `shell-adapter` | `animus-std` | `std` | `shell-owned` | `std-shell` | `cargo test -p animus-std --locked<br>scripts/cairn/check-request-lifecycle --root .` | `animus_std::{RuntimeConfig, run_with_model}` |
+| `tui.host-shell` | `shell-adapter` | `animus-tui` | `tui` | `shell-owned` | `tui` | `cargo check -p animus --features tui --locked<br>scripts/cairn/check-runtime-facade-inventory --root .` | `animus_tui` |
+| `root.compat-facade` | `crate-feature` | `animus` | `default` | `shell-owned` | `compatibility` | `cargo check -p animus --locked<br>scripts/cairn/check-runtime-facade-inventory --root .` | `animus` |
+
+## Validation
+
+Run `scripts/cairn/check-component-catalog --root .` to validate labels, dependency links, cycles, focused checks, safe evidence fields, fixtures, and this projection. The Nix check is `nix build .#checks.x86_64-linux.component-catalog --no-link -L`.
