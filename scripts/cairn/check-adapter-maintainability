@@ -1,0 +1,66 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+readonly FIXTURE_DIR=cairn/adapter-maintainability-fixtures
+readonly EXPECTED_FILE=expected_issue.txt
+readonly EXPECTED_OK=OK
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+
+if [ "${1:-}" = "--root" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  repo_root=$(CDPATH= cd -- "$2" && pwd)
+fi
+
+if ! command -v rustc >/dev/null 2>&1; then
+  printf '%s\n' 'error: rustc is required. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+
+rust_source=${script_dir}/check-adapter-maintainability.rs
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/animus-adapter-maintainability.XXXXXX")
+trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
+
+checker=${tmp_dir}/check-adapter-maintainability
+rustc --edition=2021 "${rust_source}" -o "${checker}"
+
+"${checker}" --root "${repo_root}"
+
+if [ -d "${repo_root}/${FIXTURE_DIR}" ]; then
+  for fixture in "${repo_root}/${FIXTURE_DIR}"/*; do
+    if [ ! -d "${fixture}" ]; then
+      continue
+    fi
+    expected_file=${fixture}/${EXPECTED_FILE}
+    if [ ! -f "${expected_file}" ]; then
+      printf 'error: fixture %s is missing %s\n' "${fixture}" "${EXPECTED_FILE}" >&2
+      exit "${FAILURE}"
+    fi
+    expected_issue=$(cat "${expected_file}")
+    fixture_name=$(basename "${fixture}")
+    fixture_output=${tmp_dir}/${fixture_name}.out
+
+    if [ "${expected_issue}" = "${EXPECTED_OK}" ]; then
+      "${checker}" --root "${fixture}" > "${fixture_output}" 2>&1
+      printf 'positive fixture ok: %s\n' "${fixture_name}"
+      continue
+    fi
+
+    if "${checker}" --root "${fixture}" > "${fixture_output}" 2>&1; then
+      printf 'error: fixture %s unexpectedly passed\n' "${fixture_name}" >&2
+      cat "${fixture_output}" >&2
+      exit "${FAILURE}"
+    fi
+    if ! grep -F "ERROR ${expected_issue}" "${fixture_output}" >/dev/null 2>&1; then
+      printf 'error: fixture %s did not report expected issue %s\n' "${fixture_name}" "${expected_issue}" >&2
+      cat "${fixture_output}" >&2
+      exit "${FAILURE}"
+    fi
+    printf 'negative fixture ok: %s -> %s\n' "${fixture_name}" "${expected_issue}"
+  done
+fi

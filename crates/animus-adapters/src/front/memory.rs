@@ -44,15 +44,15 @@ pub use optin_impl005::*;
 include!("memory/impl/optin/impl006.rs");
 include!("memory/impl/optin/impl007.rs");
 include!("memory/impl/optin/impl008.rs");
-#[path = "memory/impl/generic/impl009.rs"]
-mod generic_impl009;
-pub use generic_impl009::*;
-#[path = "memory/impl/generic/impl010.rs"]
-mod generic_impl010;
-pub use generic_impl010::*;
-#[path = "memory/impl/generic/impl011.rs"]
-mod generic_impl011;
-pub use generic_impl011::*;
+#[path = "memory/impl/generic/adapter_records.rs"]
+mod generic_adapter_records;
+pub use generic_adapter_records::*;
+#[path = "memory/impl/generic/operation_controls.rs"]
+mod generic_operation_controls;
+pub use generic_operation_controls::*;
+#[path = "memory/impl/generic/conformance_matrix.rs"]
+mod generic_conformance_matrix;
+pub use generic_conformance_matrix::*;
 
 #[cfg(test)]
 mod tests {

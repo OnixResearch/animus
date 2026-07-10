@@ -100,6 +100,7 @@ scripts/cairn/check-neutral-ledger --root .
 scripts/cairn/check-injected-services --root .
 scripts/cairn/check-composition-conformance --root .
 scripts/cairn/check-adapter-conformance-index --root .
+scripts/cairn/check-adapter-maintainability --root .
 scripts/cairn/check-release-evidence-index --root .
 scripts/cairn/check-runtime-facade-inventory --root .
 scripts/cairn/check-safe-receipts-artifacts --root .
