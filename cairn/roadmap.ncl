@@ -430,6 +430,16 @@ let change_entries = [
     "agent_harness_runtime.zerostack_context_layering.discovery",
     "agent_harness_runtime.zerostack_context_layering.admission",
   ] ["adapt-hermes-host-asset-reconciliation", "add-host-session-persistence-adapter"],
+  change "document-ingest-adapter-boundary" host_role "concrete-adapters" [
+    "agent_harness_runtime.clankers_context_references.resolvers",
+    "agent_harness_runtime.clankers_context_references.bounds",
+    "agent_harness_runtime.clankers_safe_receipts.closeout",
+  ] ["adopt-cap-std-context-boundary"],
+  change "ml-evidence-adapter-boundary" host_role "concrete-adapters" [
+    "agent_harness_runtime.model_router.execution_plan",
+    "agent_harness_runtime.model_router_execution.service_contract",
+    "agent_harness_runtime.clankers_safe_receipts.closeout",
+  ] ["define-model-router-execution-service", "add-concrete-provider-dispatch-adapter"],
 ]
 in
 
@@ -477,7 +487,9 @@ let overlap_entries = [
   overlap "turnstone-intent-validation" "adapt-turnstone-intent-validation" ["adapt-turnstone-output-guard", "add-turnstone-headless-eval-scorer", "add-host-tool-executor-capability-packs"],
   overlap "turnstone-output-guard" "adapt-turnstone-output-guard" ["adapt-turnstone-intent-validation", "add-turnstone-headless-eval-scorer", "add-host-tool-executor-capability-packs"],
   overlap "turnstone-headless-eval-scorer" "add-turnstone-headless-eval-scorer" ["adapt-turnstone-intent-validation", "adapt-turnstone-output-guard", "add-fake-backed-headless-dogfood-shell"],
-  overlap "cap-std-context-boundary" "adopt-cap-std-context-boundary" ["adapt-hermes-host-asset-reconciliation", "add-host-session-persistence-adapter"],
+  overlap "cap-std-context-boundary" "adopt-cap-std-context-boundary" ["adapt-hermes-host-asset-reconciliation", "add-host-session-persistence-adapter", "document-ingest-adapter-boundary"],
+  overlap "document-ingest-adapter-boundary" "document-ingest-adapter-boundary" ["adopt-cap-std-context-boundary"],
+  overlap "ml-evidence-adapter-boundary" "ml-evidence-adapter-boundary" ["define-model-router-execution-service", "add-concrete-provider-dispatch-adapter"],
 ]
 in
 

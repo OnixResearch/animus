@@ -226,8 +226,10 @@
 (define (animus-repo-guidance-lines config)
   (list
    (string-append "Use the repo-pinned Cairn command from the Animus root: `" (Config-cairn-command config) " ... --root " (Config-root config) "`; do not swap in a newer sibling Cairn binary unless the change requires it.")
-   "Read `README.md`, `docs/safety-contract.md`, `docs/request-lifecycle.md`, `docs/runtime-facade-inventory.md`, and relevant change specs before editing."
+   "Read `AGENTS.md`, `README.md`, `docs/safety-contract.md`, `docs/request-lifecycle.md`, `docs/runtime-facade-inventory.md`, and relevant change specs before editing."
    "Run `scripts/cairn/check-roadmap --root .` and avoid draining changes blocked by active prerequisites unless the dependency is completed in the same batch."
+   "Treat `cairn/changes/<slug>/tasks.md` as the durable implementation plan for Ralph work; do not create root `specs/` or `IMPLEMENTATION_PLAN.md` unless an accepted change adopts them."
+   "Use task acceptance criteria to choose the smallest focused backpressure check before marking work done; record blockers instead of weakening claims."
    "Keep runtime logic split into pure functional cores and thin imperative shells; reusable crates must not gain ambient filesystem, process, network, credential, clock, terminal, or persistence authority."
    "For focused rails, keep positive and negative fixtures together and wire deterministic, credential-free rails into named Nix checks when stable."
    "For Cairn evidence, prefer safe tracked evidence in the change/archive package; run `scripts/cairn/check-evidence-safety --root .` when adding `evidence.md`."
@@ -392,6 +394,7 @@
     (check "plan names repo pinned cairn command" (member (string-append "Cairn command: `" default-cairn-command "`") sample-plan))
     (check "prompt includes Animus guidance" (string-prefix? "Goal: drain Cairn change" sample-prompt))
     (check "prompt names evidence safety" (member "- For Cairn evidence, prefer safe tracked evidence in the change/archive package; run `scripts/cairn/check-evidence-safety --root .` when adding `evidence.md`." (ralph-prompt-lines sample-config first-change)))
+    (check "prompt names Cairn task plan" (member "- Treat `cairn/changes/<slug>/tasks.md` as the durable implementation plan for Ralph work; do not create root `specs/` or `IMPLEMENTATION_PLAN.md` unless an accepted change adopts them." (ralph-prompt-lines sample-config first-change)))
     (check "external command success" (= (external-command-status "." "true" '()) 0))
     (check "external command failure" (= (external-command-status "." "sh" (list "-c" (string-append "exit " (number->string failing-status-probe)))) failing-status-probe))
     (say "self-test complete")))
