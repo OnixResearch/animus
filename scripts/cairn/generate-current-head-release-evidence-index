@@ -1,0 +1,19 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
+if ! command -v rustc >/dev/null 2>&1; then
+  printf '%s\n' 'error: rustc is required. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+
+rust_source=${script_dir}/generate-current-head-release-evidence-index.rs
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/animus-current-head-release-evidence.XXXXXX")
+trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
+
+generator=${tmp_dir}/generate-current-head-release-evidence-index
+rustc --edition=2021 "${rust_source}" -o "${generator}"
+exec "${generator}" "$@"

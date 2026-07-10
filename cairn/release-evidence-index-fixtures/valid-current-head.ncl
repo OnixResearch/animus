@@ -10,6 +10,7 @@ let schema = import "../release-evidence-index-schema.ncl" in
     schema.check_line (schema.check "nickel-drift" schema.pure schema.pass true),
     schema.check_line (schema.check "cairn-validate" schema.pure schema.pass true),
     schema.check_line (schema.check "cairn-gates" schema.pure schema.pass true),
+    schema.check_line (schema.check schema.packaged_headless_dogfood_smoke schema.pure schema.pass true),
     schema.claim_line schema.current_head_pure_evidence,
     schema.non_claim_line schema.live_providers,
     schema.non_claim_line schema.tui_daemon_dogfood,

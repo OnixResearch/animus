@@ -41,6 +41,7 @@ A focused rail MAY print bounded stdout instead of writing a receipt when it is 
 | Dogfood readiness claims | `scripts/cairn/check-dogfood-readiness --root .` | Maintained readiness roadmap anchors plus positive and negative claim-index fixtures for fake-backed and packaged-headless claims, live-provider overclaims, Clankers parity overclaims, and missing non-claims | `checks.x86_64-linux.dogfood-readiness` |
 | Packaged headless dogfood smoke | `scripts/cairn/check-packaged-headless-dogfood-smoke --root .` | Non-default `animus-dogfood-smoke` binary, positive packaged smoke, negative missing prompt/service/capability/malformed/unsafe-label cases, safe output leak checks | `checks.x86_64-linux.packaged-headless-dogfood-smoke` |
 | Tool catalog descriptors | `scripts/cairn/check-tool-catalog --root .` | Nickel schema export plus positive and negative catalog fixtures for descriptor validation and runtime-neutrality markers | not wired |
+| Current-head release evidence index | `scripts/cairn/check-current-head-release-evidence-index --root .` | Generated synthetic current-head indexes for pass/dirty/missing/stale cases plus actual-head draft generation under `target/cairn/release-evidence/` when Git is available | `checks.x86_64-linux.current-head-release-evidence-index` |
 
 ## Closeout use
 

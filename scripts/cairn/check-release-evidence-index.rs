@@ -53,6 +53,7 @@ const MODE_FLAKE_CHECK: &str = "flake-check";
 const MODE_NICKEL_DRIFT: &str = "nickel-drift";
 const MODE_CAIRN_VALIDATE: &str = "cairn-validate";
 const MODE_CAIRN_GATES: &str = "cairn-gates";
+const MODE_PACKAGED_HEADLESS_DOGFOOD_SMOKE: &str = "packaged-headless-dogfood-smoke";
 
 const REQUIRED_PURE_MODES: &[&str] = &[
     MODE_FOCUSED_RAILS,
@@ -63,6 +64,8 @@ const REQUIRED_PURE_MODES: &[&str] = &[
     MODE_CAIRN_VALIDATE,
     MODE_CAIRN_GATES,
 ];
+
+const ADDITIONAL_PURE_MODES: &[&str] = &[MODE_PACKAGED_HEADLESS_DOGFOOD_SMOKE];
 
 const OPTIONAL_SURFACES: &[&str] = &[
     SURFACE_LIVE_PROVIDERS,
@@ -278,6 +281,13 @@ fn parse_check(fields: &[&str], line: &str, index: &mut EvidenceIndex, issues: &
             "check status must be pass, fail, skipped, or missing",
         ));
     }
+    if is_pure_mode(mode) && class != CLASS_PURE {
+        issues.push(issue(
+            ISSUE_WRONG_PURE_CLASS,
+            mode,
+            "pure evidence mode must be classified as pure",
+        ));
+    }
 
     let Some(head_match) = parse_bool(fields[CHECK_HEAD_MATCH_INDEX], line, "head_match", issues)
     else {
@@ -478,7 +488,11 @@ fn parse_bool(
 }
 
 fn is_known_mode(mode: &str) -> bool {
-    contains(REQUIRED_PURE_MODES, mode) || contains(OPTIONAL_SURFACES, mode)
+    is_pure_mode(mode) || contains(OPTIONAL_SURFACES, mode)
+}
+
+fn is_pure_mode(mode: &str) -> bool {
+    contains(REQUIRED_PURE_MODES, mode) || contains(ADDITIONAL_PURE_MODES, mode)
 }
 
 fn contains(values: &[&str], needle: &str) -> bool {

@@ -49,6 +49,7 @@ let pure_class = "pure" in
 let optional_class = "optional" in
 let pass_status = "pass" in
 let missing_status = "missing" in
+let mode_packaged_headless_dogfood_smoke = "packaged-headless-dogfood-smoke" in
 let surface_current_head_pure_evidence = "current-head-pure-evidence" in
 let surface_live_providers = "live-providers" in
 let surface_tui_daemon_dogfood = "tui-daemon-dogfood" in
@@ -74,6 +75,7 @@ let sample_head = mk_head "git" "0123456789abcdef" "main" false in
   optional_class = optional_class,
   pass = pass_status,
   missing = missing_status,
+  packaged_headless_dogfood_smoke = mode_packaged_headless_dogfood_smoke,
   current_head_pure_evidence = surface_current_head_pure_evidence,
   live_providers = surface_live_providers,
   tui_daemon_dogfood = surface_tui_daemon_dogfood,
@@ -90,6 +92,7 @@ let sample_head = mk_head "git" "0123456789abcdef" "main" false in
     render_check_line (mk_check "nickel-drift" pure_class pass_status true),
     render_check_line (mk_check "cairn-validate" pure_class pass_status true),
     render_check_line (mk_check "cairn-gates" pure_class pass_status true),
+    render_check_line (mk_check mode_packaged_headless_dogfood_smoke pure_class pass_status true),
     render_claim_line surface_current_head_pure_evidence,
     render_non_claim_line surface_live_providers,
     render_non_claim_line surface_tui_daemon_dogfood,

@@ -183,6 +183,7 @@
                 || baseName == "check-adapter-conformance-index"
                 || baseName == "check-clash-ucan-authority"
                 || baseName == "check-composition-conformance"
+                || baseName == "check-current-head-release-evidence-index"
                 || baseName == "check-exec-policy"
                 || baseName == "check-packaged-headless-dogfood-smoke"
                 || baseName == "check-plugin-manifest-runtime-neutral"
@@ -198,6 +199,7 @@
                 || baseName == "check-runtime-facade-inventory"
                 || baseName == "check-safe-receipts-artifacts"
                 || baseName == "check-wasm-surface"
+                || baseName == "generate-current-head-release-evidence-index"
                 || pkgs.lib.hasSuffix ".json" baseName
                 || pkgs.lib.hasSuffix ".ncl" baseName
                 || pkgs.lib.hasSuffix ".rs" baseName
@@ -531,6 +533,22 @@
                 chmod -R u+w source
                 cd source
                 sh scripts/cairn/check-release-evidence-index --root .
+                touch "$out"
+              '';
+
+          current-head-release-evidence-index =
+            pkgs.runCommand "animus-current-head-release-evidence-index"
+              {
+                nativeBuildInputs = [
+                  pkgs.rustc
+                  pkgs.gcc
+                ];
+              }
+              ''
+                cp -r ${source} source
+                chmod -R u+w source
+                cd source
+                sh scripts/cairn/check-current-head-release-evidence-index --root .
                 touch "$out"
               '';
 

@@ -103,6 +103,7 @@ scripts/cairn/check-composition-conformance --root .
 scripts/cairn/check-adapter-conformance-index --root .
 scripts/cairn/check-adapter-maintainability --root .
 scripts/cairn/check-release-evidence-index --root .
+scripts/cairn/check-current-head-release-evidence-index --root .
 scripts/cairn/check-runtime-facade-inventory --root .
 scripts/cairn/check-safe-receipts-artifacts --root .
 scripts/cairn/check-tool-catalog --root .
@@ -115,6 +116,7 @@ nix build .#checks.x86_64-linux.packaged-headless-dogfood-smoke --no-link -L
 nix build .#checks.x86_64-linux.clash-ucan-authority --no-link -L
 nix build .#checks.x86_64-linux.neutral-ledger --no-link -L
 nix build .#checks.x86_64-linux.safe-receipts-artifacts --no-link -L
+nix build .#checks.x86_64-linux.current-head-release-evidence-index --no-link -L
 nix flake check
 ```
 

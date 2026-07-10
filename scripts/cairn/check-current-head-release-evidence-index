@@ -1,0 +1,150 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+readonly SUCCESS=0
+readonly SYNTHETIC_COMMIT=0123456789abcdef
+readonly SYNTHETIC_BRANCH=main
+readonly CHECKER_SOURCE=scripts/cairn/check-release-evidence-index.rs
+readonly GENERATOR_SOURCE=scripts/cairn/generate-current-head-release-evidence-index.rs
+readonly TARGET_DIR=target/cairn/release-evidence
+readonly POSITIVE_INDEX=current-head-positive.lines
+readonly DIRTY_INDEX=current-head-dirty.lines
+readonly MISSING_INDEX=current-head-missing.lines
+readonly STALE_INDEX=current-head-stale.lines
+readonly ACTUAL_DRAFT=current-head-draft.lines
+readonly ISSUE_DIRTY=RELEASE_EVIDENCE_DIRTY_HEAD
+readonly ISSUE_MISSING=RELEASE_EVIDENCE_MISSING_MODE
+readonly ISSUE_STALE=RELEASE_EVIDENCE_STALE_RECEIPT
+readonly CLAIM_CURRENT_HEAD=--claim-current-head
+readonly PACKAGED_CHECK=packaged-headless-dogfood-smoke=pass
+readonly FOCUSED_CHECK=focused-rails=pass
+readonly WORKSPACE_CHECK=workspace-tests=pass
+readonly CLIPPY_CHECK=clippy=pass
+readonly FLAKE_CHECK=flake-check=pass
+readonly NICKEL_CHECK=nickel-drift=pass
+readonly CAIRN_VALIDATE_CHECK=cairn-validate=pass
+readonly CAIRN_GATES_CHECK=cairn-gates=pass
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+
+if [ "${1:-}" = "--root" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  repo_root=$(CDPATH= cd -- "$2" && pwd)
+fi
+
+cd "${repo_root}"
+
+if ! command -v rustc >/dev/null 2>&1; then
+  printf '%s\n' 'error: rustc is required. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/animus-current-head-index.XXXXXX")
+trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
+
+checker=${tmp_dir}/check-release-evidence-index
+generator=${tmp_dir}/generate-current-head-release-evidence-index
+rustc --edition=2021 "${CHECKER_SOURCE}" -o "${checker}"
+rustc --edition=2021 "${GENERATOR_SOURCE}" -o "${generator}"
+mkdir -p "${TARGET_DIR}"
+
+run_generator() {
+  "${generator}" \
+    --vcs git \
+    --commit "${SYNTHETIC_COMMIT}" \
+    --branch "${SYNTHETIC_BRANCH}" \
+    "$@"
+}
+
+all_pass_args() {
+  printf '%s\n' \
+    --check "${FOCUSED_CHECK}" \
+    --check "${WORKSPACE_CHECK}" \
+    --check "${CLIPPY_CHECK}" \
+    --check "${FLAKE_CHECK}" \
+    --check "${NICKEL_CHECK}" \
+    --check "${CAIRN_VALIDATE_CHECK}" \
+    --check "${CAIRN_GATES_CHECK}" \
+    --check "${PACKAGED_CHECK}"
+}
+
+expect_failure() {
+  expected=$1
+  index_path=$2
+  output_path=${tmp_dir}/$(basename "${index_path}").out
+  if "${checker}" --index "${index_path}" > "${output_path}" 2>&1; then
+    printf 'error: generated fixture unexpectedly passed: %s\n' "${index_path}" >&2
+    cat "${output_path}" >&2
+    exit "${FAILURE}"
+  fi
+  if ! grep -F "ERROR ${expected}" "${output_path}" >/dev/null 2>&1; then
+    printf 'error: generated fixture %s did not report %s\n' "${index_path}" "${expected}" >&2
+    cat "${output_path}" >&2
+    exit "${FAILURE}"
+  fi
+}
+
+run_generator \
+  --dirty false \
+  --out "${tmp_dir}/${POSITIVE_INDEX}" \
+  ${CLAIM_CURRENT_HEAD} \
+  $(all_pass_args)
+"${checker}" --index "${tmp_dir}/${POSITIVE_INDEX}" >/dev/null
+
+run_generator \
+  --dirty true \
+  --out "${tmp_dir}/${DIRTY_INDEX}" \
+  ${CLAIM_CURRENT_HEAD} \
+  $(all_pass_args)
+expect_failure "${ISSUE_DIRTY}" "${tmp_dir}/${DIRTY_INDEX}"
+
+run_generator \
+  --dirty false \
+  --out "${tmp_dir}/${MISSING_INDEX}" \
+  ${CLAIM_CURRENT_HEAD} \
+  --check "${FOCUSED_CHECK}" \
+  --check "${WORKSPACE_CHECK}" \
+  --check "${FLAKE_CHECK}" \
+  --check "${NICKEL_CHECK}" \
+  --check "${CAIRN_VALIDATE_CHECK}" \
+  --check "${CAIRN_GATES_CHECK}" \
+  --missing-mode clippy=not-run
+expect_failure "${ISSUE_MISSING}" "${tmp_dir}/${MISSING_INDEX}"
+
+run_generator \
+  --dirty false \
+  --out "${tmp_dir}/${STALE_INDEX}" \
+  ${CLAIM_CURRENT_HEAD} \
+  --check "${FOCUSED_CHECK}" \
+  --check "${WORKSPACE_CHECK}" \
+  --stale-check "${CLIPPY_CHECK}" \
+  --check "${FLAKE_CHECK}" \
+  --check "${NICKEL_CHECK}" \
+  --check "${CAIRN_VALIDATE_CHECK}" \
+  --check "${CAIRN_GATES_CHECK}"
+expect_failure "${ISSUE_STALE}" "${tmp_dir}/${STALE_INDEX}"
+
+if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  "${generator}" \
+    --out "${TARGET_DIR}/${ACTUAL_DRAFT}" \
+    --check "${FOCUSED_CHECK}" \
+    --check "${PACKAGED_CHECK}" \
+    --missing-mode workspace-tests=not-run \
+    --missing-mode clippy=not-run \
+    --missing-mode flake-check=not-run \
+    --missing-mode nickel-drift=not-run \
+    --missing-mode cairn-validate=not-run \
+    --missing-mode cairn-gates=not-run
+  "${checker}" --index "${TARGET_DIR}/${ACTUAL_DRAFT}" >/dev/null
+  printf 'actual head draft ok: %s\n' "${TARGET_DIR}/${ACTUAL_DRAFT}"
+else
+  printf '%s\n' 'actual head draft skipped: git worktree unavailable'
+fi
+
+printf '%s\n' 'current-head release evidence index rail: ok'
+exit "${SUCCESS}"
