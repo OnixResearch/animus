@@ -119,3 +119,66 @@ fn admitted_trust_allows_bounded_recipe_influence() {
     assert!(influence.memory_allowed());
     assert!(influence.workflow_permissions_allowed());
 }
+
+#[test]
+fn recipe_dag_accepts_parallel_fanin_subrecipe_and_retry_plan() {
+    let workflow = dag_workflow();
+    let plan = workflow.dag_plan().expect("DAG plan should be present");
+
+    assert_eq!(plan.steps().len(), dag_workflow_draft().dag_steps.len());
+    assert_eq!(plan.batches().len(), DAG_BATCH_COUNT);
+    assert_eq!(
+        plan.batches()[FIRST_ITEM_INDEX].step_ids().len(),
+        DAG_FIRST_BATCH_WIDTH
+    );
+    assert!(
+        plan.batches()[FIRST_ITEM_INDEX]
+            .step_ids()
+            .iter()
+            .any(|step| step == DAG_STEP_RESEARCH_A)
+    );
+    assert!(
+        plan.batches()[FIRST_ITEM_INDEX]
+            .step_ids()
+            .iter()
+            .any(|step| step == DAG_STEP_RESEARCH_B)
+    );
+    assert_eq!(
+        plan.batches()[DAG_SYNTHESIS_BATCH_INDEX].step_ids()[FIRST_ITEM_INDEX],
+        DAG_STEP_SYNTHESIZE
+    );
+    assert_eq!(plan.blocked_steps(), &[]);
+    assert_eq!(
+        plan.receipt().schema_label(),
+        "animus.recipe-dag.receipt.v1"
+    );
+    assert_eq!(plan.receipt().identity_hash().len(), DAG_RECEIPT_HASH_CHARS);
+    assert_eq!(plan.receipt().issue_codes()[FIRST_ITEM_INDEX], "none");
+}
+
+#[test]
+fn recipe_dag_admission_blocks_denied_subrecipes_without_execution() {
+    let workflow = dag_workflow();
+    let plan = plan_recipe_dag(
+        &workflow,
+        RecipeDagAdmission {
+            capabilities: &[],
+            validation_gates: &[],
+            subrecipes: &[SUBRECIPE],
+        },
+    )
+    .expect("admission labels should be safe")
+    .expect("DAG plan should be present");
+
+    assert!(plan.blocked_steps().iter().any(|blocked| {
+        blocked.step_id() == DAG_STEP_SUBRECIPE
+            && blocked.reason() == RecipeDagBlockReason::SubrecipeDenied
+            && blocked.detail() == SUBRECIPE
+    }));
+    assert!(
+        plan.receipt()
+            .issue_codes()
+            .iter()
+            .any(|code| code == "RECIPE_DAG_SUBRECIPE_DENIED")
+    );
+}

@@ -10,6 +10,88 @@
         "model.generate",
         "tool.read"
       ],
+      "dag_steps": [
+        {
+          "capability_ceilings": [
+            "model.generate"
+          ],
+          "depends_on": [],
+          "input_refs": [
+            "topic"
+          ],
+          "kind": "prompt",
+          "output_refs": [
+            "summary"
+          ],
+          "retry_refs": [],
+          "step_id": "research-a",
+          "subrecipe_refs": [],
+          "validation_gates": []
+        },
+        {
+          "capability_ceilings": [
+            "tool.read"
+          ],
+          "depends_on": [],
+          "input_refs": [
+            "context_file"
+          ],
+          "kind": "tool",
+          "output_refs": [
+            "summary"
+          ],
+          "retry_refs": [
+            "cargo-test"
+          ],
+          "step_id": "research-b",
+          "subrecipe_refs": [],
+          "validation_gates": []
+        },
+        {
+          "capability_ceilings": [
+            "model.generate"
+          ],
+          "depends_on": [
+            "research-a",
+            "research-b"
+          ],
+          "input_refs": [
+            "research-a.summary",
+            "research-b.summary"
+          ],
+          "kind": "validation_gate",
+          "output_refs": [
+            "status"
+          ],
+          "retry_refs": [],
+          "step_id": "synthesize",
+          "subrecipe_refs": [],
+          "validation_gates": [
+            "structured-output"
+          ]
+        },
+        {
+          "capability_ceilings": [
+            "model.generate"
+          ],
+          "depends_on": [
+            "synthesize"
+          ],
+          "input_refs": [
+            "synthesize.status"
+          ],
+          "kind": "subrecipe",
+          "output_refs": [
+            "warnings"
+          ],
+          "retry_refs": [],
+          "step_id": "child-run",
+          "subrecipe_refs": [
+            "goose.recipe.child"
+          ],
+          "validation_gates": []
+        }
+      ],
       "identity": "goose.recipe.workflow",
       "initial_prompt": "Investigate {{topic}} in {{mode}} using {{context_file}} for {{recipe.identity}}.",
       "instructions": "Run the bounded workflow and return structured output.",

@@ -34,6 +34,17 @@ pub const ZERO_RETRY_ATTEMPTS: u32 = 0;
 pub const FIRST_ITEM_INDEX: usize = 0;
 pub const ACTIVITY_COUNT: usize = 2;
 pub const PARAMETER_COUNT: usize = 3;
+pub const DAG_STEP_RESEARCH_A: &str = "research-a";
+pub const DAG_STEP_RESEARCH_B: &str = "research-b";
+pub const DAG_STEP_SYNTHESIZE: &str = "synthesize";
+pub const DAG_STEP_SUBRECIPE: &str = "child-run";
+pub const DAG_OUTPUT_SUMMARY: &str = "summary";
+pub const DAG_INPUT_RESEARCH_A_SUMMARY: &str = "research-a.summary";
+pub const DAG_INPUT_RESEARCH_B_SUMMARY: &str = "research-b.summary";
+pub const DAG_BATCH_COUNT: usize = 3;
+pub const DAG_FIRST_BATCH_WIDTH: usize = 2;
+pub const DAG_SYNTHESIS_BATCH_INDEX: usize = 1;
+pub const DAG_RECEIPT_HASH_CHARS: usize = 64;
 pub const RETRY_CHECK: RecipeRetryCheckDraft<'static> = RecipeRetryCheckDraft {
     label: CHECK_LABEL,
     effect_kind: "validation_check",
@@ -79,6 +90,7 @@ pub fn workflow_draft() -> RecipeWorkflowDraft<'static> {
         validation_gates: &[VALIDATION_GATE],
         retry_policy: retry_policy_draft(),
         subrecipes: &[SUBRECIPE],
+        dag_steps: &[],
         response_schema: response_schema_draft(),
         provenance: admitted_provenance(),
     }
@@ -86,6 +98,64 @@ pub fn workflow_draft() -> RecipeWorkflowDraft<'static> {
 
 pub fn minimal_workflow() -> RecipeWorkflow {
     RecipeWorkflow::validate(&workflow_draft()).expect("workflow fixture should validate")
+}
+
+pub fn dag_workflow_draft() -> RecipeWorkflowDraft<'static> {
+    RecipeWorkflowDraft {
+        dag_steps: &[
+            RecipeDagStepDraft {
+                step_id: DAG_STEP_RESEARCH_A,
+                kind: "prompt",
+                depends_on: &[],
+                input_refs: &[TOPIC_PARAM],
+                output_refs: &[DAG_OUTPUT_SUMMARY],
+                validation_gates: &[],
+                retry_refs: &[],
+                subrecipe_refs: &[],
+                capability_ceilings: &[CAPABILITY_MODEL],
+            },
+            RecipeDagStepDraft {
+                step_id: DAG_STEP_RESEARCH_B,
+                kind: "tool",
+                depends_on: &[],
+                input_refs: &[FILE_PARAM],
+                output_refs: &[DAG_OUTPUT_SUMMARY],
+                validation_gates: &[],
+                retry_refs: &[CHECK_LABEL],
+                subrecipe_refs: &[],
+                capability_ceilings: &[CAPABILITY_TOOL],
+            },
+            RecipeDagStepDraft {
+                step_id: DAG_STEP_SYNTHESIZE,
+                kind: "validation_gate",
+                depends_on: &[DAG_STEP_RESEARCH_A, DAG_STEP_RESEARCH_B],
+                input_refs: &[DAG_INPUT_RESEARCH_A_SUMMARY, DAG_INPUT_RESEARCH_B_SUMMARY],
+                output_refs: &[OUTPUT_STATUS],
+                validation_gates: &[VALIDATION_GATE],
+                retry_refs: &[],
+                subrecipe_refs: &[],
+                capability_ceilings: &[CAPABILITY_MODEL],
+            },
+            RecipeDagStepDraft {
+                step_id: DAG_STEP_SUBRECIPE,
+                kind: "subrecipe",
+                depends_on: &[DAG_STEP_SYNTHESIZE],
+                input_refs: &[DAG_STEP_SYNTHESIZE_OUTPUT_STATUS],
+                output_refs: &[OUTPUT_WARNINGS],
+                validation_gates: &[],
+                retry_refs: &[],
+                subrecipe_refs: &[SUBRECIPE],
+                capability_ceilings: &[CAPABILITY_MODEL],
+            },
+        ],
+        ..workflow_draft()
+    }
+}
+
+pub const DAG_STEP_SYNTHESIZE_OUTPUT_STATUS: &str = "synthesize.status";
+
+pub fn dag_workflow() -> RecipeWorkflow {
+    RecipeWorkflow::validate(&dag_workflow_draft()).expect("DAG workflow fixture should validate")
 }
 
 pub fn retry_policy_draft() -> RecipeRetryPolicyDraft<'static> {

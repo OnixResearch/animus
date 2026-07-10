@@ -43,6 +43,8 @@ pub struct RecipeWorkflowDraft<'a> {
     pub retry_policy: super::attempt::RecipeRetryPolicyDraft<'a>,
     /// Referenced subrecipe identities.
     pub subrecipes: &'a [&'a str],
+    /// Optional recipe DAG step descriptors.
+    pub dag_steps: &'a [super::dag::RecipeDagStepDraft<'a>],
     /// Structured final response schema.
     pub response_schema: super::shape::RecipeResponseSchemaDraft<'a>,
     /// Trust and provenance metadata.
@@ -62,6 +64,7 @@ pub struct RecipeWorkflow {
     validation_gates: Collection<Text>,
     retry_policy: super::attempt::RecipeRetryPolicy,
     subrecipes: Collection<Text>,
+    dag_plan: Option<super::dag::RecipeDagPlan>,
     response_schema: super::shape::RecipeResponseSchema,
     provenance: super::admit::RecipeTrustReceipt,
 }
@@ -90,6 +93,17 @@ impl RecipeWorkflow {
         let subrecipes = super::text_collection(SUBRECIPE_FIELD, draft.subrecipes, false)?;
         let response_schema = super::shape::RecipeResponseSchema::validate(&draft.response_schema)?;
         let provenance = super::admit::RecipeTrustReceipt::new(&draft.provenance)?;
+        let dag_plan = super::dag::validate_recipe_dag(
+            draft.dag_steps,
+            super::dag::RecipeDagContext {
+                workflow_id: identity.as_str(),
+                parameters: parameters.as_slice(),
+                capability_ceilings: capability_ceilings.as_slice(),
+                validation_gates: validation_gates.as_slice(),
+                retry_policy: &retry_policy,
+                subrecipes: subrecipes.as_slice(),
+            },
+        )?;
 
         Ok(Self {
             identity,
@@ -103,6 +117,7 @@ impl RecipeWorkflow {
             validation_gates,
             retry_policy,
             subrecipes,
+            dag_plan,
             response_schema,
             provenance,
         })
@@ -172,6 +187,12 @@ impl RecipeWorkflow {
     #[must_use]
     pub fn subrecipes(&self) -> &[Text] {
         self.subrecipes.as_slice()
+    }
+
+    /// Returns the optional validated recipe DAG plan.
+    #[must_use]
+    pub const fn dag_plan(&self) -> Option<&super::dag::RecipeDagPlan> {
+        self.dag_plan.as_ref()
     }
 
     /// Returns the structured final response schema.

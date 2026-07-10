@@ -57,6 +57,7 @@ pub mod openclaw_guardrails;
 pub mod openclaw_session;
 /// Public orchestration adapter-family DTOs and service contracts.
 pub mod orchestration;
+mod outputguard;
 mod port;
 mod profile;
 mod prompt;
@@ -257,6 +258,14 @@ pub use observability::{
     LogLevel, LogRecord, LogRecordDraft, LoggingAdapter, MetricKind, MetricLabel, MetricLabelDraft,
     MetricSample, MetricSampleDraft, MetricUnit, MetricsAdapter,
 };
+pub use outputguard::{
+    OutputAssessment, OutputAssessmentDraft, OutputDetectorFlag, OutputDetectorTier,
+    OutputGuardDiagnostic, OutputGuardDiagnosticCode, OutputGuardReceipt, OutputGuardReceiptDraft,
+    OutputProjectionPlan, OutputProjectionPolicy, OutputProjectionStatus, OutputRedactionState,
+    OutputRiskLevel, OutputScanInputDraft, PROHIBITED_OUTPUT_GUARD_EFFECTS,
+    merge_output_assessments, plan_output_projection, scan_output_summary,
+    validate_output_assessment, validate_output_guard_receipt,
+};
 /// Observability delivery policy for root-facade consumers.
 pub type ObservabilityDeliveryPolicy = observability::DeliveryPolicy;
 /// Observability validation error for root-facade consumers.
@@ -325,16 +334,18 @@ pub use child::{
 };
 pub use flow::{
     RecipeAutomationOutcome, RecipeAutomationStatus, RecipeBinding, RecipeBindingDraft,
-    RecipeHostEffectKind, RecipeInfluence, RecipeInfluenceStatus, RecipeOutputDraft,
-    RecipeOutputFailure, RecipeOutputFieldDraft, RecipeParameter, RecipeParameterDraft,
-    RecipeParameterInput, RecipeParameterInputDraft, RecipeParameterInputKind, RecipeParameterKind,
+    RecipeDagAdmission, RecipeDagBatch, RecipeDagBlockReason, RecipeDagBlockedStep, RecipeDagPlan,
+    RecipeDagReceipt, RecipeDagStep, RecipeDagStepDraft, RecipeDagStepKind, RecipeHostEffectKind,
+    RecipeInfluence, RecipeInfluenceStatus, RecipeOutputDraft, RecipeOutputFailure,
+    RecipeOutputFieldDraft, RecipeParameter, RecipeParameterDraft, RecipeParameterInput,
+    RecipeParameterInputDraft, RecipeParameterInputKind, RecipeParameterKind,
     RecipeProvenanceDraft, RecipeResponseField, RecipeResponseFieldDraft, RecipeResponseFieldKind,
     RecipeResponseSchema, RecipeResponseSchemaDraft, RecipeRetryCheck, RecipeRetryCheckDraft,
     RecipeRetryDenialReason, RecipeRetryPlan, RecipeRetryPlanDraft, RecipeRetryPolicy,
     RecipeRetryPolicyDraft, RecipeRetryRequest, RecipeRetryRequestStatus, RecipeSourceKind,
     RecipeTrustReceipt, RecipeTrustStatus, RecipeWorkflow, RecipeWorkflowDraft,
-    RecipeWorkflowError, SAFE_TEMPLATE_BUILTINS, bind_recipe_parameters, plan_recipe_retry,
-    validate_recipe_output,
+    RecipeWorkflowError, SAFE_TEMPLATE_BUILTINS, bind_recipe_parameters, plan_recipe_dag,
+    plan_recipe_retry, validate_recipe_output,
 };
 pub use prompt::{
     ContextAdapterAvailability, ContextAdapterFamilyManifest, ContextAdapterOutcomeClass,

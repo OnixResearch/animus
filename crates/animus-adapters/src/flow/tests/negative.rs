@@ -278,3 +278,224 @@ fn untrusted_or_invalid_provenance_has_no_runtime_influence() {
         Err(RecipeWorkflowError::InvalidHash { .. })
     ));
 }
+
+#[test]
+fn recipe_dag_rejects_duplicate_steps_before_planning_effects() {
+    let duplicate_steps = [
+        RecipeDagStepDraft {
+            step_id: DAG_STEP_RESEARCH_A,
+            kind: "prompt",
+            depends_on: &[],
+            input_refs: &[TOPIC_PARAM],
+            output_refs: &[DAG_OUTPUT_SUMMARY],
+            validation_gates: &[],
+            retry_refs: &[],
+            subrecipe_refs: &[],
+            capability_ceilings: &[CAPABILITY_MODEL],
+        },
+        RecipeDagStepDraft {
+            step_id: DAG_STEP_RESEARCH_A,
+            kind: "tool",
+            depends_on: &[],
+            input_refs: &[FILE_PARAM],
+            output_refs: &[DAG_OUTPUT_SUMMARY],
+            validation_gates: &[],
+            retry_refs: &[],
+            subrecipe_refs: &[],
+            capability_ceilings: &[CAPABILITY_TOOL],
+        },
+    ];
+
+    assert!(matches!(
+        RecipeWorkflow::validate(&RecipeWorkflowDraft {
+            dag_steps: &duplicate_steps,
+            ..workflow_draft()
+        }),
+        Err(RecipeWorkflowError::DuplicateDagStep { .. })
+    ));
+}
+
+#[test]
+fn recipe_dag_rejects_unknown_self_and_unsafe_edges() {
+    let unknown_dependency = [RecipeDagStepDraft {
+        step_id: DAG_STEP_SYNTHESIZE,
+        kind: "prompt",
+        depends_on: &["missing-step"],
+        input_refs: &[TOPIC_PARAM],
+        output_refs: &[DAG_OUTPUT_SUMMARY],
+        validation_gates: &[],
+        retry_refs: &[],
+        subrecipe_refs: &[],
+        capability_ceilings: &[CAPABILITY_MODEL],
+    }];
+    let self_edge = [RecipeDagStepDraft {
+        step_id: DAG_STEP_RESEARCH_A,
+        kind: "prompt",
+        depends_on: &[DAG_STEP_RESEARCH_A],
+        input_refs: &[TOPIC_PARAM],
+        output_refs: &[DAG_OUTPUT_SUMMARY],
+        validation_gates: &[],
+        retry_refs: &[],
+        subrecipe_refs: &[],
+        capability_ceilings: &[CAPABILITY_MODEL],
+    }];
+    let unsafe_label = [RecipeDagStepDraft {
+        step_id: "/home/private/raw-output",
+        kind: "prompt",
+        depends_on: &[],
+        input_refs: &[TOPIC_PARAM],
+        output_refs: &[DAG_OUTPUT_SUMMARY],
+        validation_gates: &[],
+        retry_refs: &[],
+        subrecipe_refs: &[],
+        capability_ceilings: &[CAPABILITY_MODEL],
+    }];
+
+    assert!(matches!(
+        RecipeWorkflow::validate(&RecipeWorkflowDraft {
+            dag_steps: &unknown_dependency,
+            ..workflow_draft()
+        }),
+        Err(RecipeWorkflowError::UnknownDagDependency { .. })
+    ));
+    assert!(matches!(
+        RecipeWorkflow::validate(&RecipeWorkflowDraft {
+            dag_steps: &self_edge,
+            ..workflow_draft()
+        }),
+        Err(RecipeWorkflowError::SelfDagEdge { .. })
+    ));
+    assert!(matches!(
+        RecipeWorkflow::validate(&RecipeWorkflowDraft {
+            dag_steps: &unsafe_label,
+            ..workflow_draft()
+        }),
+        Err(RecipeWorkflowError::UnsafeDagLabel { .. })
+    ));
+}
+
+#[test]
+fn recipe_dag_rejects_cycles_before_planning_effects() {
+    let cyclic_steps = [
+        RecipeDagStepDraft {
+            step_id: DAG_STEP_RESEARCH_A,
+            kind: "prompt",
+            depends_on: &[DAG_STEP_RESEARCH_B],
+            input_refs: &[TOPIC_PARAM],
+            output_refs: &[DAG_OUTPUT_SUMMARY],
+            validation_gates: &[],
+            retry_refs: &[],
+            subrecipe_refs: &[],
+            capability_ceilings: &[CAPABILITY_MODEL],
+        },
+        RecipeDagStepDraft {
+            step_id: DAG_STEP_RESEARCH_B,
+            kind: "tool",
+            depends_on: &[DAG_STEP_RESEARCH_A],
+            input_refs: &[FILE_PARAM],
+            output_refs: &[DAG_OUTPUT_SUMMARY],
+            validation_gates: &[],
+            retry_refs: &[],
+            subrecipe_refs: &[],
+            capability_ceilings: &[CAPABILITY_TOOL],
+        },
+    ];
+
+    assert!(matches!(
+        RecipeWorkflow::validate(&RecipeWorkflowDraft {
+            dag_steps: &cyclic_steps,
+            ..workflow_draft()
+        }),
+        Err(RecipeWorkflowError::DagCycle { .. })
+    ));
+}
+
+#[test]
+fn recipe_dag_rejects_recipe_gate_bypasses_and_receipt_leaks() {
+    let undeclared_output = [
+        RecipeDagStepDraft {
+            step_id: DAG_STEP_RESEARCH_A,
+            kind: "prompt",
+            depends_on: &[],
+            input_refs: &[TOPIC_PARAM],
+            output_refs: &[DAG_OUTPUT_SUMMARY],
+            validation_gates: &[],
+            retry_refs: &[],
+            subrecipe_refs: &[],
+            capability_ceilings: &[CAPABILITY_MODEL],
+        },
+        RecipeDagStepDraft {
+            step_id: DAG_STEP_SYNTHESIZE,
+            kind: "validation_gate",
+            depends_on: &[DAG_STEP_RESEARCH_A],
+            input_refs: &["research-a.missing"],
+            output_refs: &[OUTPUT_STATUS],
+            validation_gates: &[VALIDATION_GATE],
+            retry_refs: &[],
+            subrecipe_refs: &[],
+            capability_ceilings: &[CAPABILITY_MODEL],
+        },
+    ];
+    let untrusted_subrecipe = [RecipeDagStepDraft {
+        step_id: DAG_STEP_SUBRECIPE,
+        kind: "subrecipe",
+        depends_on: &[],
+        input_refs: &[TOPIC_PARAM],
+        output_refs: &[DAG_OUTPUT_SUMMARY],
+        validation_gates: &[],
+        retry_refs: &[],
+        subrecipe_refs: &["goose.recipe.ghost"],
+        capability_ceilings: &[CAPABILITY_MODEL],
+    }];
+    let capability_widening = [RecipeDagStepDraft {
+        step_id: DAG_STEP_RESEARCH_A,
+        kind: "tool",
+        depends_on: &[],
+        input_refs: &[FILE_PARAM],
+        output_refs: &[DAG_OUTPUT_SUMMARY],
+        validation_gates: &[],
+        retry_refs: &[],
+        subrecipe_refs: &[],
+        capability_ceilings: &["network.fetch"],
+    }];
+    let retry_bypass = [RecipeDagStepDraft {
+        step_id: DAG_STEP_RESEARCH_B,
+        kind: "retry",
+        depends_on: &[],
+        input_refs: &[TOPIC_PARAM],
+        output_refs: &[DAG_OUTPUT_SUMMARY],
+        validation_gates: &[],
+        retry_refs: &["shell-bypass"],
+        subrecipe_refs: &[],
+        capability_ceilings: &[CAPABILITY_TOOL],
+    }];
+
+    assert!(matches!(
+        RecipeWorkflow::validate(&RecipeWorkflowDraft {
+            dag_steps: &undeclared_output,
+            ..workflow_draft()
+        }),
+        Err(RecipeWorkflowError::UndeclaredDagOutput { .. })
+    ));
+    assert!(matches!(
+        RecipeWorkflow::validate(&RecipeWorkflowDraft {
+            dag_steps: &untrusted_subrecipe,
+            ..workflow_draft()
+        }),
+        Err(RecipeWorkflowError::UntrustedDagSubrecipe { .. })
+    ));
+    assert!(matches!(
+        RecipeWorkflow::validate(&RecipeWorkflowDraft {
+            dag_steps: &capability_widening,
+            ..workflow_draft()
+        }),
+        Err(RecipeWorkflowError::CapabilityWidening { .. })
+    ));
+    assert!(matches!(
+        RecipeWorkflow::validate(&RecipeWorkflowDraft {
+            dag_steps: &retry_bypass,
+            ..workflow_draft()
+        }),
+        Err(RecipeWorkflowError::RetryBypass { .. })
+    ));
+}

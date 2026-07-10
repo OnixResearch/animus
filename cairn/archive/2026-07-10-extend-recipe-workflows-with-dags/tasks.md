@@ -1,0 +1,8 @@
+# Tasks
+
+- [x] [serial] Extend recipe manifest DTOs and Nickel contracts with optional DAG step descriptors for safe step IDs, kinds, dependency edges, input references, output references, validation gates, retry references, and subrecipe calls. r[agent_harness_runtime.goose_recipe_workflows.dag]
+- [x] [depends:dag] Validate recipe DAG structure with duplicate-step, unknown dependency, cycle, self-edge, unsafe-label, and over-limit denial before any workflow effect is planned. r[agent_harness_runtime.goose_recipe_workflows.dag.validation]
+- [x] [depends:dag.validation] Add recipe-specific admission for parameter bindings, declared output references, trusted subrecipes, capability ceilings, model profile eligibility, toolset admission, sandbox requirements, and retry policy safety. r[agent_harness_runtime.goose_recipe_workflows.dag.recipe_gates]
+- [x] [depends:dag.recipe_gates] Produce deterministic topological execution batches and blocked-step explanations as host-effect plans only. r[agent_harness_runtime.goose_recipe_workflows.dag.execution_plan]
+- [x] [depends:dag.execution_plan] Add per-step and whole-graph safe receipt projection using BLAKE3 identities, bounded counts, schema labels, issue codes, and redaction markers. r[agent_harness_runtime.goose_recipe_workflows.dag.receipts]
+- [x] [depends:dag.receipts] Add positive and negative tests for linear DAGs, parallel batches, fan-in, subrecipes, validation gates, retry plans, cycles, unknown steps, undeclared outputs, untrusted subrecipes, capability widening, retry bypass, unsafe labels, and receipt leaks. r[agent_harness_runtime.goose_recipe_workflows.dag.verification]

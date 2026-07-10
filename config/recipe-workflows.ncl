@@ -6,6 +6,7 @@ let PositiveNumber = std.contract.from_predicate (fun value => value > 0) in
 let ParameterKind = [| 'text, 'select, 'file |] in
 let SourceKind = [| 'first_run, 'changed, 'imported, 'project |] in
 let HostEffectKind = [| 'validation_check, 'cleanup_request |] in
+let RecipeDagStepKind = [| 'prompt, 'tool, 'validation_gate, 'subrecipe, 'retry, 'cleanup |] in
 let ResponseFieldKind = [| 'string, 'number, 'bool, 'object, 'array |] in
 let Parameter = {
   name | NonEmptyString,
@@ -35,6 +36,17 @@ let ResponseSchema = {
   name | NonEmptyString,
   required_fields | Array ResponseField,
 } in
+let RecipeDagStep = {
+  step_id | NonEmptyString,
+  kind | RecipeDagStepKind,
+  depends_on | Array String,
+  input_refs | Array String,
+  output_refs | Array String,
+  validation_gates | Array String,
+  retry_refs | Array String,
+  subrecipe_refs | Array String,
+  capability_ceilings | Array String,
+} in
 let Provenance = {
   source_kind | SourceKind,
   source_label | NonEmptyString,
@@ -53,6 +65,7 @@ let Workflow = {
   validation_gates | Array String,
   retry_policy | RetryPolicy,
   subrecipes | Array String,
+  dag_steps | Array RecipeDagStep,
   response_schema | ResponseSchema,
   provenance | Provenance,
 } in
@@ -93,6 +106,18 @@ let retry_receipt = "retry-receipt" in
 let response_schema_name = "workflow-result" in
 let output_status = "status" in
 let output_warnings = "warnings" in
+let dag_step_research_a = "research-a" in
+let dag_step_research_b = "research-b" in
+let dag_step_synthesize = "synthesize" in
+let dag_step_child_run = "child-run" in
+let dag_output_summary = "summary" in
+let dag_research_a_summary = "research-a.summary" in
+let dag_research_b_summary = "research-b.summary" in
+let dag_synthesize_status = "synthesize.status" in
+let dag_kind_prompt = 'prompt in
+let dag_kind_tool = 'tool in
+let dag_kind_validation_gate = 'validation_gate in
+let dag_kind_subrecipe = 'subrecipe in
 let recipe_source = "config/recipe-workflows.ncl" in
 let recipe_content_hash = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" in
 {
@@ -147,6 +172,52 @@ let recipe_content_hash = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
           ],
         },
         subrecipes = [child_recipe],
+        dag_steps = [
+          {
+            step_id = dag_step_research_a,
+            kind = dag_kind_prompt,
+            depends_on = [],
+            input_refs = [topic_parameter],
+            output_refs = [dag_output_summary],
+            validation_gates = [],
+            retry_refs = [],
+            subrecipe_refs = [],
+            capability_ceilings = [model_capability],
+          },
+          {
+            step_id = dag_step_research_b,
+            kind = dag_kind_tool,
+            depends_on = [],
+            input_refs = [context_file_parameter],
+            output_refs = [dag_output_summary],
+            validation_gates = [],
+            retry_refs = [retry_check],
+            subrecipe_refs = [],
+            capability_ceilings = [tool_capability],
+          },
+          {
+            step_id = dag_step_synthesize,
+            kind = dag_kind_validation_gate,
+            depends_on = [dag_step_research_a, dag_step_research_b],
+            input_refs = [dag_research_a_summary, dag_research_b_summary],
+            output_refs = [output_status],
+            validation_gates = [output_gate],
+            retry_refs = [],
+            subrecipe_refs = [],
+            capability_ceilings = [model_capability],
+          },
+          {
+            step_id = dag_step_child_run,
+            kind = dag_kind_subrecipe,
+            depends_on = [dag_step_synthesize],
+            input_refs = [dag_synthesize_status],
+            output_refs = [output_warnings],
+            validation_gates = [],
+            retry_refs = [],
+            subrecipe_refs = [child_recipe],
+            capability_ceilings = [model_capability],
+          },
+        ],
         response_schema = {
           name = response_schema_name,
           required_fields = [
