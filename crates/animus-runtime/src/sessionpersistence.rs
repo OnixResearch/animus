@@ -702,7 +702,7 @@ fn validate_ledger_store(
             match descriptor.status {
                 LedgerSessionServiceStatus::Available => {}
                 LedgerSessionServiceStatus::Missing => {
-                    issues.push(LedgerSessionIssue::MissingService)
+                    issues.push(LedgerSessionIssue::MissingService);
                 }
                 LedgerSessionServiceStatus::Unavailable => {
                     issues.push(LedgerSessionIssue::UnavailableService);
@@ -1269,69 +1269,72 @@ mod tests {
 
     fn ledger_entries() -> Vec<LedgerEntry> {
         vec![
-            ledger_entry(
-                FIRST_SEQUENCE,
-                LedgerEntryKind::UserMessage,
-                "safe user summary",
-                LedgerFreshnessClass::Current,
-                false,
-                None,
-            ),
-            ledger_entry(
-                SECOND_SEQUENCE,
-                LedgerEntryKind::Snapshot,
-                "safe snapshot summary",
-                LedgerFreshnessClass::Current,
-                false,
-                None,
-            ),
-            ledger_entry(
-                THIRD_SEQUENCE,
-                LedgerEntryKind::Summary,
-                "stale summary",
-                LedgerFreshnessClass::Stale,
-                false,
-                None,
-            ),
-            ledger_entry(
-                FOURTH_SEQUENCE,
-                LedgerEntryKind::ToolSummary,
-                "private reference omitted",
-                LedgerFreshnessClass::Current,
-                true,
-                None,
-            ),
-            ledger_entry(
-                FIFTH_SEQUENCE,
-                LedgerEntryKind::AssistantMessage,
-                "unsafe material omitted",
-                LedgerFreshnessClass::Current,
-                false,
-                Some("RAW_TOOL_BODY: unsafe"),
-            ),
+            ledger_entry(LedgerEntryFixture {
+                sequence: FIRST_SEQUENCE,
+                kind: LedgerEntryKind::UserMessage,
+                summary: "safe user summary",
+                freshness: LedgerFreshnessClass::Current,
+                private_reference: false,
+                unsafe_material: None,
+            }),
+            ledger_entry(LedgerEntryFixture {
+                sequence: SECOND_SEQUENCE,
+                kind: LedgerEntryKind::Snapshot,
+                summary: "safe snapshot summary",
+                freshness: LedgerFreshnessClass::Current,
+                private_reference: false,
+                unsafe_material: None,
+            }),
+            ledger_entry(LedgerEntryFixture {
+                sequence: THIRD_SEQUENCE,
+                kind: LedgerEntryKind::Summary,
+                summary: "stale summary",
+                freshness: LedgerFreshnessClass::Stale,
+                private_reference: false,
+                unsafe_material: None,
+            }),
+            ledger_entry(LedgerEntryFixture {
+                sequence: FOURTH_SEQUENCE,
+                kind: LedgerEntryKind::ToolSummary,
+                summary: "private reference omitted",
+                freshness: LedgerFreshnessClass::Current,
+                private_reference: true,
+                unsafe_material: None,
+            }),
+            ledger_entry(LedgerEntryFixture {
+                sequence: FIFTH_SEQUENCE,
+                kind: LedgerEntryKind::AssistantMessage,
+                summary: "unsafe material omitted",
+                freshness: LedgerFreshnessClass::Current,
+                private_reference: false,
+                unsafe_material: Some("RAW_TOOL_BODY: unsafe"),
+            }),
         ]
     }
 
-    fn ledger_entry(
+    #[derive(Clone, Copy)]
+    struct LedgerEntryFixture<'a> {
         sequence: u64,
         kind: LedgerEntryKind,
-        summary: &str,
+        summary: &'a str,
         freshness: LedgerFreshnessClass,
         private_reference: bool,
-        unsafe_material: Option<&str>,
-    ) -> LedgerEntry {
+        unsafe_material: Option<&'a str>,
+    }
+
+    fn ledger_entry(fixture: LedgerEntryFixture<'_>) -> LedgerEntry {
         LedgerEntry {
             session_label: SESSION_ID.to_owned(),
             branch_label: BRANCH_ID.to_owned(),
-            sequence,
-            kind,
-            safe_summary: summary.to_owned(),
+            sequence: fixture.sequence,
+            kind: fixture.kind,
+            safe_summary: fixture.summary.to_owned(),
             summary_units: MIN_REPLAY_UNIT_BUDGET,
             redaction_class: REDACTION.to_owned(),
-            freshness,
-            safe_hash: ledger_session_hash("entry", summary.as_bytes()),
-            private_reference,
-            unsafe_material: unsafe_material.map(str::to_owned),
+            freshness: fixture.freshness,
+            safe_hash: ledger_session_hash("entry", fixture.summary.as_bytes()),
+            private_reference: fixture.private_reference,
+            unsafe_material: fixture.unsafe_material.map(str::to_owned),
         }
     }
 

@@ -16,7 +16,7 @@
     unbounded_collection_growth
 )]
 
-const TOOL_NEGATIVE_CHECK_COUNT: usize = 5;
+const TOOL_NEGATIVE_CHECK_COUNT: usize = 6;
 const CAPABILITY_CHECK_COUNT: usize = 4;
 
 const HASH_DOMAIN: &str = "animus.composition-conformance.v1";
@@ -59,6 +59,8 @@ const TOOL_PROVENANCE: &str = "fixture.provenance";
 const TOOL_CAPABILITY: &str = "tool.lookup";
 const TOOL_RESULT_SHAPE: &str = "shape.summary";
 const TOOL_SERVICE_LABEL: &str = "in-memory-tool-service";
+const TOOL_EXECUTOR_BINDING: &str = "in-memory-tool-executor";
+const TOOL_EXECUTOR_MAX_OUTPUT_BYTES: u64 = 64;
 const TOOL_EFFECT_ABILITY: &str = "read-summary";
 const TOOL_EFFECT_RESOURCE: &str = "fixture-record";
 const TOOL_RECEIPT_ID: &str = "receipt-tool-lookup";
@@ -653,6 +655,13 @@ fn tool_provenance_positive(
             "fake tool adapter did not return bounded output",
         ));
     }
+    let kit_receipt = tool_executor_kit_receipt(entry, definition.clone(), &request)?;
+    if kit_receipt.status() != crate::tool_executor_kit::ToolExecutionReceiptStatus::Completed {
+        return Err(scenario_failure(
+            entry,
+            "tool executor kit did not produce a completed safe receipt",
+        ));
+    }
     let effect =
         completed_tool_effect(entry, Some(output.byte_count()), Some(output.byte_count()))?;
     let (_fact, receipt) = effect
@@ -698,12 +707,14 @@ fn tool_provenance_negative(
     let is_unsafe_receipt_rejected = unsafe_receipt_is_rejected(output_byte_count);
     let is_denied_effect_completion_rejected = denied_effect_refuses_completion(entry)?;
     let is_truncation_hashed = oversized_output_is_hashed(entry)?;
+    let is_missing_kit_executor_denied = tool_executor_kit_missing_fails_closed(entry, definition)?;
     if all_checks_pass::<TOOL_NEGATIVE_CHECK_COUNT>([
         is_denial_failed_closed,
         is_boundary_rejection_recorded,
         is_unsafe_receipt_rejected,
         is_denied_effect_completion_rejected,
         is_truncation_hashed,
+        is_missing_kit_executor_denied,
     ]) {
         return Ok(());
     }
@@ -1014,6 +1025,98 @@ fn tool_request(
     .map_err(|error| scenario_failure(entry, format!("tool request: {error:?}")))
 }
 
+fn tool_executor_kit_receipt(
+    entry: &CompositionScenario,
+    definition: animus_adapters::tool::Definition,
+    request: &animus_adapters::ToolRequest,
+) -> Result<crate::tool_executor_kit::ToolExecutionReceipt, CompositionDiagnostic> {
+    let catalog = tool_executor_kit_catalog(entry, definition)?;
+    let registry = tool_executor_kit_registry(entry)?;
+    let executor_binding = crate::tool_executor_kit::ToolExecutorBinding::new(
+        TOOL_EXECUTOR_BINDING,
+        crate::tool_executor_kit::ToolExecutorReadiness::Ready,
+    )
+    .map_err(|error| scenario_failure(entry, format!("executor binding: {error:?}")))?;
+    let plan = crate::tool_executor_kit::plan_tool_execution(
+        crate::tool_executor_kit::ToolExecutionPlanRequest {
+            request,
+            catalog: &catalog,
+            capabilities: &registry,
+            executors: &[executor_binding],
+            admission: crate::tool_executor_kit::ToolExecutorAdmission::admitted(),
+        },
+    );
+    let mut executor = FakeKitExecutor::new();
+    let receipt = crate::tool_executor_kit::execute_admitted_tool(&mut executor, &plan)
+        .map_err(|error| scenario_failure(entry, format!("kit execution: {error:?}")))?;
+    if executor.calls != EXPECTED_FAKE_CALL_COUNT {
+        return Err(scenario_failure(
+            entry,
+            "tool executor kit fake service was not called exactly once",
+        ));
+    }
+    Ok(receipt)
+}
+
+fn tool_executor_kit_missing_fails_closed(
+    entry: &CompositionScenario,
+    definition: &animus_adapters::tool::Definition,
+) -> Result<bool, CompositionDiagnostic> {
+    let request = tool_request(entry)?;
+    let catalog = tool_executor_kit_catalog(entry, definition.clone())?;
+    let registry = tool_executor_kit_registry(entry)?;
+    let plan = crate::tool_executor_kit::plan_tool_execution(
+        crate::tool_executor_kit::ToolExecutionPlanRequest {
+            request: &request,
+            catalog: &catalog,
+            capabilities: &registry,
+            executors: &[],
+            admission: crate::tool_executor_kit::ToolExecutorAdmission::admitted(),
+        },
+    );
+    let receipt = crate::tool_executor_kit::denied_tool_receipt(&plan)
+        .map_err(|error| scenario_failure(entry, format!("kit denial receipt: {error:?}")))?;
+    Ok(plan.failure_class()
+        == Some(crate::tool_executor_kit::ToolExecutionFailureClass::MissingExecutor)
+        && receipt.status() == crate::tool_executor_kit::ToolExecutionReceiptStatus::Denied)
+}
+
+fn tool_executor_kit_catalog(
+    entry: &CompositionScenario,
+    definition: animus_adapters::tool::Definition,
+) -> Result<crate::tool_executor_kit::ToolCatalog, CompositionDiagnostic> {
+    let output_policy = crate::tool_executor_kit::ToolExecutorOutputPolicy::new(
+        SMALL_OUTPUT_BUDGET_CHARS,
+        TOOL_EXECUTOR_MAX_OUTPUT_BYTES,
+        false,
+    )
+    .map_err(|error| scenario_failure(entry, format!("kit output policy: {error:?}")))?;
+    let definition = crate::tool_executor_kit::ToolDefinition::from_draft(
+        crate::tool_executor_kit::ToolDefinitionDraft {
+            metadata: definition,
+            executor_binding: TOOL_EXECUTOR_BINDING,
+            argument_names: &[TOOL_ARGUMENT_NAME],
+            mutation_posture: crate::tool_executor_kit::ToolMutationPosture::DeclaredTargets,
+            output_policy,
+            approval_posture: animus_adapters::tool::ApprovalPosture::PreApproved,
+        },
+    )
+    .map_err(|error| scenario_failure(entry, format!("kit definition: {error:?}")))?;
+    crate::tool_executor_kit::ToolCatalog::new(vec![definition])
+        .map_err(|error| scenario_failure(entry, format!("kit catalog: {error:?}")))
+}
+
+fn tool_executor_kit_registry(
+    entry: &CompositionScenario,
+) -> Result<crate::RuntimeCapabilityRegistry, CompositionDiagnostic> {
+    crate::RuntimeCapabilityRegistry::from_drafts(&[crate::RuntimeCapabilityDescriptorDraft {
+        label: TOOL_CAPABILITY,
+        service_kind: crate::RuntimeCapabilityServiceKind::Tool.as_str(),
+        scope: None,
+    }])
+    .map_err(|error| scenario_failure(entry, format!("kit capability registry: {error:?}")))
+}
+
 fn tool_response(
     body: &str,
 ) -> Result<animus_adapters::ToolResponse, animus_adapters::tool::ContractError> {
@@ -1214,6 +1317,37 @@ impl
         self.calls += 1;
         animus_adapters::ModelResponse::new(self.response_message)
             .map_err(|error| format!("{error:?}"))
+    }
+}
+
+struct FakeKitExecutor {
+    calls: usize,
+}
+
+impl FakeKitExecutor {
+    const fn new() -> Self {
+        Self { calls: 0 }
+    }
+}
+
+impl crate::tool_executor_kit::ToolExecutorService for FakeKitExecutor {
+    fn binding_label(&self) -> &str {
+        TOOL_EXECUTOR_BINDING
+    }
+
+    fn execute(
+        &mut self,
+        _plan: &crate::tool_executor_kit::ToolExecutionPlan,
+    ) -> Result<
+        crate::tool_executor_kit::ToolExecutorOutput,
+        crate::tool_executor_kit::ToolExecutorServiceFailure,
+    > {
+        self.calls += EXPECTED_FAKE_CALL_COUNT;
+        Ok(crate::tool_executor_kit::ToolExecutorOutput::new(
+            TOOL_OUTPUT_SUMMARY,
+            None,
+            animus_adapters::tool::OutputRedactionClass::Safe,
+        ))
     }
 }
 

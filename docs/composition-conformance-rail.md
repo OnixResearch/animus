@@ -9,12 +9,12 @@ The maintained matrix covers:
 - provider hardening plus model dispatch;
 - fixture-backed provider streaming plus runtime stream projection;
 - model-router execution envelopes plus injected-service fail-closed behavior;
-- tool contracts plus provenance receipts;
+- tool contracts plus the coherent fake executor kit and provenance receipts;
 - headless protocol projection plus runtime events;
 - middleware denials plus runtime failure reports;
 - capability absence plus no ambient fallback.
 
-Each matrix entry has an owner, feature requirements, one positive case, one negative case, and a safe evidence label. Positive scenarios use in-memory DTOs and fake adapters. Negative scenarios cover malformed model responses, disabled model surfaces, unauthorized tools, missing executors, oversized output, unsafe receipts, unsafe headless records, middleware failures, and ambient fallback attempts.
+Each matrix entry has an owner, feature requirements, one positive case, one negative case, and a safe evidence label. Positive scenarios use in-memory DTOs and fake adapters. Negative scenarios cover malformed model responses, disabled model surfaces, unauthorized tools, missing executor-kit bindings, oversized output, unsafe receipts, unsafe headless records, middleware failures, and ambient fallback attempts.
 
 ## Command
 

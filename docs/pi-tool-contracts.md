@@ -17,6 +17,12 @@ Tool definitions carry validated name, label, description, parameter schema iden
 - Mutating tools declare opaque target keys so a host-owned coordinator can serialize conflicting mutation windows while admitting read-only or non-overlapping work independently.
 - Dispatch failures are typed: invalid input, missing executor, unavailable service, denied capability, approval denial, cancellation, timeout, malformed output, unsafe output reference, unbounded oversized output, mutation conflict, fallback denial, or execution failure.
 
+## Executor kit
+
+`animus_runtime::tool_executor_kit` composes these DTOs into one metadata-only `ToolCatalog`, exact executor binding, pure final admission plan, injected `ToolExecutorService`, bounded transient-output normalizer, and safe `ToolExecutionReceipt`. Missing or unavailable executors, denied capabilities, schema or argument mismatches, approval denial, mutation conflicts, cancellation, timeout, unsafe or oversized output, binding mismatch, and fallback requests fail closed before or at the explicit host boundary. Durable receipts omit raw output and reject credential, private-path, raw-file, provider-payload, and unbounded stdout/stderr material.
+
+See [tool executor kit](tool-executor-kit.md) for the full boundary and focused checks.
+
 ## Non-claims
 
 This contract does not adopt Pi's built-in tools, TypeBox schemas, npm extension runtime, terminal renderers, or filesystem mutation implementation. It only preserves the safety shape needed for swappable Animus host tools.

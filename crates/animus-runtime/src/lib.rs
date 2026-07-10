@@ -81,6 +81,8 @@ pub mod subagents;
 mod telemetry;
 #[path = "tooladmission.rs"]
 mod tool_admission;
+#[path = "toolexecutorkit.rs"]
+pub mod tool_executor_kit;
 #[path = "toolexecutorpacks.rs"]
 pub mod tool_executor_packs;
 mod transition;
