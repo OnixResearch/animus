@@ -44,7 +44,7 @@ pub struct RecipeWorkflowDraft<'a> {
     /// Referenced subrecipe identities.
     pub subrecipes: &'a [&'a str],
     /// Optional recipe DAG step descriptors.
-    pub dag_steps: &'a [super::dag::RecipeDagStepDraft<'a>],
+    pub dag_steps: &'a [super::graph::RecipeDagStepDraft<'a>],
     /// Structured final response schema.
     pub response_schema: super::shape::RecipeResponseSchemaDraft<'a>,
     /// Trust and provenance metadata.
@@ -64,7 +64,7 @@ pub struct RecipeWorkflow {
     validation_gates: Collection<Text>,
     retry_policy: super::attempt::RecipeRetryPolicy,
     subrecipes: Collection<Text>,
-    dag_plan: Option<super::dag::RecipeDagPlan>,
+    dag_plan: Option<super::graph::RecipeDagPlan>,
     response_schema: super::shape::RecipeResponseSchema,
     provenance: super::admit::RecipeTrustReceipt,
 }
@@ -93,9 +93,9 @@ impl RecipeWorkflow {
         let subrecipes = super::text_collection(SUBRECIPE_FIELD, draft.subrecipes, false)?;
         let response_schema = super::shape::RecipeResponseSchema::validate(&draft.response_schema)?;
         let provenance = super::admit::RecipeTrustReceipt::new(&draft.provenance)?;
-        let dag_plan = super::dag::validate_recipe_dag(
+        let dag_plan = super::graph::validate_recipe_dag(
             draft.dag_steps,
-            super::dag::RecipeDagContext {
+            super::graph::RecipeDagContext {
                 workflow_id: identity.as_str(),
                 parameters: parameters.as_slice(),
                 capability_ceilings: capability_ceilings.as_slice(),
@@ -191,7 +191,7 @@ impl RecipeWorkflow {
 
     /// Returns the optional validated recipe DAG plan.
     #[must_use]
-    pub const fn dag_plan(&self) -> Option<&super::dag::RecipeDagPlan> {
+    pub const fn dag_plan(&self) -> Option<&super::graph::RecipeDagPlan> {
         self.dag_plan.as_ref()
     }
 

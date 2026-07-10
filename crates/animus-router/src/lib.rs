@@ -21,12 +21,12 @@ extern crate alloc;
 
 mod boundary;
 mod choose;
+mod fairness;
 mod input;
 mod limit;
 pub(crate) mod outcome;
 mod policy;
 mod projection;
-mod rotation;
 mod schema;
 
 /// Evidence module (edition-2024 file-style entry point).
@@ -48,6 +48,12 @@ pub use evidence::{
     ReceiptDraft, ReceiptLeak, Redaction, RoleStep, RouterExecutionPlan,
     materialize_execution_plan, materialize_execution_plan_with_rotation, validate_receipt_text,
 };
+pub use fairness::{
+    RouterRotationCursor, RouterRotationCursorClass, RouterRotationCursorDraft,
+    RouterRotationDecision, RouterRotationError, RouterRotationPolicy, RouterRotationReceipt,
+    RouterRotationReceiptDraft, RouterRotationSnapshot, RouterRotationSnapshotDraft,
+    RouterRotationStaleCursorPolicy, rotate_eligible_candidates,
+};
 pub use input::{
     RequestMetadata, RequestMetadataDraft, RuleSignalSource, SignalProjectionError, SignalSource,
     project_signals,
@@ -60,12 +66,6 @@ pub use outcome::{
 pub use policy::ROUTER_RECIPE_POLICY_JSON;
 pub use projection::{
     FallbackEligibility, PrivacyBand, SignalBand, SignalDraft, Signals, TaskShape,
-};
-pub use rotation::{
-    RouterRotationCursor, RouterRotationCursorClass, RouterRotationCursorDraft,
-    RouterRotationDecision, RouterRotationError, RouterRotationPolicy, RouterRotationReceipt,
-    RouterRotationReceiptDraft, RouterRotationSnapshot, RouterRotationSnapshotDraft,
-    RouterRotationStaleCursorPolicy, rotate_eligible_candidates,
 };
 pub use schema::{OutputContract, Recipe, RecipeDraft, Role, RouteFamily};
 

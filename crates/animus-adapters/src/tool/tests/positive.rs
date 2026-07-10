@@ -1,3 +1,4 @@
+use super::super::planning::*;
 use super::super::*;
 use super::support::*;
 
@@ -189,4 +190,140 @@ fn hashed_edit_validation_runs_without_host_adapter() {
 
     assert_eq!(plan.spans().len(), SINGLE_HASHED_EDIT_COUNT);
     assert_eq!(plan.snapshot_hash(), HASH_A);
+}
+
+#[test]
+fn progressive_discovery_returns_metadata_only_details_and_receipt() {
+    // r[verify agent_harness_runtime.goose_code_mode_tool_planning.discovery]
+    let definitions = [
+        definition(DefinitionStatus::Active, NAME),
+        definition(DefinitionStatus::Inactive, INACTIVE_NAME),
+        definition(DefinitionStatus::Untrusted, "unsafe_tool"),
+    ];
+    let discovered = discover_tools(
+        &DiscoveryRequestDraft {
+            query_label: Some(DISCOVERY_QUERY),
+            required_capability_labels: &[CAPABILITY_READ],
+            detail_tool_names: &[NAME],
+            ceilings: DiscoveryCeilings::bounded(),
+        },
+        &definitions,
+    )
+    .expect("metadata-only discovery should validate");
+
+    assert_eq!(discovered.query_label(), DISCOVERY_QUERY);
+    assert_eq!(discovered.summaries().len(), SUMMARY_COUNT);
+    assert_eq!(discovered.details().len(), DETAIL_COUNT);
+    assert_eq!(discovered.summaries()[FIRST_INDEX].tool_name(), NAME);
+    assert_eq!(
+        discovered.summaries()[FIRST_INDEX].schema_identity(),
+        SCHEMA_ID
+    );
+    assert_eq!(
+        discovered.summaries()[FIRST_INDEX].capability_labels()[FIRST_INDEX],
+        CAPABILITY_READ
+    );
+    assert_eq!(discovered.details()[FIRST_INDEX].description(), DESCRIPTION);
+    assert_eq!(
+        discovered.details()[FIRST_INDEX].source_identity(),
+        SOURCE_IDENTITY
+    );
+    assert_eq!(
+        discovered.receipt().status(),
+        crate::ReceiptStatus::Completed
+    );
+    assert!(!discovered.discovery_identity().is_empty());
+}
+
+#[test]
+fn steel_fabric_and_declarative_batch_plan_are_admitted() {
+    // r[verify agent_harness_runtime.goose_code_mode_tool_planning.plan_dtos]
+    // r[verify agent_harness_runtime.goose_code_mode_tool_planning.fabric]
+    // r[verify agent_harness_runtime.goose_code_mode_tool_planning.step_admission]
+    // r[verify agent_harness_runtime.goose_code_mode_tool_planning.intermediates]
+    // r[verify agent_harness_runtime.goose_code_mode_tool_planning.receipts]
+    let fabric = admit_plan_fabric(&admitted_fabric()).expect("fabric fields are safe");
+    assert!(fabric.is_admitted());
+    assert_eq!(fabric.kind(), Some(PlanFabricKind::Steel));
+    assert_eq!(fabric.allowed_host_actions().len(), DOUBLE_STEP_COUNT);
+
+    let plan = admitted_declarative_batch_plan();
+    assert_eq!(plan.status(), PlanStatus::Admitted);
+    assert_eq!(plan.issue(), PlanIssue::None);
+    assert_eq!(plan.steps().len(), DOUBLE_STEP_COUNT);
+    assert_eq!(
+        plan.steps()[SECOND_INDEX].dependencies()[FIRST_INDEX],
+        STEP_FIRST
+    );
+    assert_eq!(
+        plan.steps()[SECOND_INDEX].intermediate_bindings()[FIRST_INDEX].binding_id(),
+        BINDING_FIRST
+    );
+    assert!(!plan.plan_identity().is_empty());
+
+    let receipt = PlanReceipt::new(&PlanReceiptDraft {
+        plan: &plan,
+        policy_hash: HASH_A,
+        diagnostics: &[DIAGNOSTIC_OK],
+    })
+    .expect("receipt metadata should be safe");
+    assert_eq!(receipt.record().status(), crate::ReceiptStatus::Completed);
+    assert_eq!(receipt.plan_identity(), plan.plan_identity());
+    assert!(!receipt.receipt_hash().is_empty());
+}
+
+fn admitted_declarative_batch_plan() -> Plan {
+    let definitions = [definition(DefinitionStatus::Active, NAME)];
+    let discovered = discovery();
+    let first_request = request();
+    let second_request = request_for(RequestFixture {
+        name: NAME,
+        approval_posture: APPROVAL_PRE_APPROVED,
+        mutation_targets: &[TARGET_OTHER],
+        required_capability_labels: &[CAPABILITY_READ],
+    });
+    let binding = PlanIntermediateBindingDraft {
+        binding_id: Some(BINDING_FIRST),
+        source_step_id: Some(STEP_FIRST),
+        target_argument: Some(TARGET_ARGUMENT),
+        value_kind: PlanIntermediateKind::BoundedText,
+        use_kind: PlanIntermediateUse::ArgumentText,
+        char_count: VISIBLE_BUDGET,
+        content_hash: Some(HASH_C),
+    };
+    let dependencies = [STEP_FIRST];
+    let intermediate_bindings = [binding];
+    assert_eq!(definitions.len(), SINGLE_STEP_COUNT);
+    assert_eq!(discovered.summaries().len(), SUMMARY_COUNT);
+    let steps = [
+        PlanStepDraft {
+            step_id: Some(STEP_FIRST),
+            request: &first_request,
+            cancellation_posture: PlanCancellationPosture::Continue,
+            timeout_posture: PlanTimeoutPosture::WithinDeadline,
+            depends_on: &[],
+            intermediate_bindings: &[],
+        },
+        PlanStepDraft {
+            step_id: Some(STEP_SECOND),
+            request: &second_request,
+            cancellation_posture: PlanCancellationPosture::Continue,
+            timeout_posture: PlanTimeoutPosture::WithinDeadline,
+            depends_on: &dependencies,
+            intermediate_bindings: &intermediate_bindings,
+        },
+    ];
+    admit_plan(
+        &PlanDraft {
+            batch_id: Some(PLAN_BATCH),
+            fabric: admitted_fabric(),
+            batch_policy: PLAN_BATCH_POLICY_SERIAL,
+            steps: &steps,
+        },
+        PlanAdmissionContext {
+            discovery: &discovered,
+            definitions: &definitions,
+        },
+    )
+    .expect("tool plan should validate")
 }

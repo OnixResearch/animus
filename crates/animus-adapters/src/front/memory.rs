@@ -17,6 +17,8 @@ const DESCRIPTOR_ID_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("memory_descriptor_id");
 const MEMORY_SOURCE_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("memory_source_label");
+const MEMORY_CATEGORY_FIELD: crate::validation::FieldName =
+    crate::validation::FieldName::new("memory_category_label");
 const DECISION_LABEL_FIELD: crate::validation::FieldName =
     crate::validation::FieldName::new("memory_decision_label");
 const RECEIPT_LABEL_FIELD: crate::validation::FieldName =
@@ -44,13 +46,13 @@ pub use optin_impl005::*;
 include!("memory/impl/optin/impl006.rs");
 include!("memory/impl/optin/impl007.rs");
 include!("memory/impl/optin/impl008.rs");
-#[path = "memory/impl/generic/adapter_records.rs"]
+#[path = "memory/impl/generic/adapter/records.rs"]
 mod generic_adapter_records;
 pub use generic_adapter_records::*;
-#[path = "memory/impl/generic/operation_controls.rs"]
+#[path = "memory/impl/generic/operation/controls.rs"]
 mod generic_operation_controls;
 pub use generic_operation_controls::*;
-#[path = "memory/impl/generic/conformance_matrix.rs"]
+#[path = "memory/impl/generic/conformance/matrix.rs"]
 mod generic_conformance_matrix;
 pub use generic_conformance_matrix::*;
 

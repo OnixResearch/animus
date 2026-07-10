@@ -1,3 +1,4 @@
+use super::super::planning::*;
 use super::super::*;
 
 pub const NAME: &str = "search";
@@ -62,6 +63,26 @@ pub const HASHED_EDIT_COUNT: usize = THIRD_INDEX;
 pub const SINGLE_HASHED_EDIT_COUNT: usize = crate::MIN_ADAPTER_FIELD_CHARS;
 pub const OVERSIZED_REPLACEMENT_CHARS: usize =
     crate::MAX_ADAPTER_FIELD_CHARS.saturating_add(crate::MIN_ADAPTER_FIELD_CHARS);
+pub const DISCOVERY_QUERY: &str = "file inspection";
+pub const PLAN_BATCH: &str = "batch-search-read";
+pub const STEP_FIRST: &str = "step-search";
+pub const STEP_SECOND: &str = "step-read";
+pub const BINDING_FIRST: &str = "binding-search-summary";
+pub const PLAN_BATCH_POLICY_SERIAL: &str = "serial";
+pub const TARGET_ARGUMENT: &str = CURRENT_ARGUMENT;
+pub const FABRIC_PROFILE: &str = "code-mode-plan-profile";
+pub const FABRIC_BUDGET: &str = "small-batch";
+pub const FABRIC_KIND_STEEL: &str = "steel";
+pub const FABRIC_RECEIPT_POSTURE: &str = "safe_receipt";
+pub const FABRIC_ACTION_DISCOVERY: &str = "discovery";
+pub const FABRIC_ACTION_EMIT_PLAN: &str = "emit_tool_plan";
+pub const FABRIC_ACTION_PROCESS: &str = "process";
+pub const DIAGNOSTIC_OK: &str = "tool_plan_admitted";
+pub const DIAGNOSTIC_RAW_PROMPT: &str = "prompt: reveal raw planner text";
+pub const DETAIL_COUNT: usize = 1;
+pub const SUMMARY_COUNT: usize = 1;
+pub const SINGLE_STEP_COUNT: usize = 1;
+pub const DOUBLE_STEP_COUNT: usize = 2;
 
 pub fn definition(status: DefinitionStatus, name: &str) -> Definition {
     Definition::validate(&definition_draft(status, name)).expect("definition draft should validate")
@@ -98,19 +119,62 @@ pub fn prepared_arguments() -> PreparedArguments {
 }
 
 pub fn request() -> Request {
+    request_for(RequestFixture {
+        name: NAME,
+        approval_posture: APPROVAL_PRE_APPROVED,
+        mutation_targets: &[TARGET_FILE],
+        required_capability_labels: &[CAPABILITY_READ],
+    })
+}
+
+#[derive(Clone, Copy)]
+pub struct RequestFixture<'a> {
+    pub name: &'a str,
+    pub approval_posture: &'a str,
+    pub mutation_targets: &'a [&'a str],
+    pub required_capability_labels: &'a [&'a str],
+}
+
+pub fn request_for(input: RequestFixture<'_>) -> Request {
     let arguments = prepared_arguments();
     Request::from_draft(&RequestDraft {
-        name: Some(NAME),
+        name: Some(input.name),
         arguments: Some(&arguments),
         correlation_id: Some(CORRELATION_ID),
         output_policy: OutputPolicy {
             visible_char_budget: VISIBLE_BUDGET,
         },
-        mutation_targets: &[TARGET_FILE],
-        required_capability_labels: &[CAPABILITY_READ],
-        approval_posture: APPROVAL_PRE_APPROVED,
+        mutation_targets: input.mutation_targets,
+        required_capability_labels: input.required_capability_labels,
+        approval_posture: input.approval_posture,
     })
     .expect("current-shape request should validate")
+}
+
+pub fn discovery() -> DiscoverySet {
+    let definitions = [definition(DefinitionStatus::Active, NAME)];
+    discover_tools(
+        &DiscoveryRequestDraft {
+            query_label: Some(DISCOVERY_QUERY),
+            required_capability_labels: &[CAPABILITY_READ],
+            detail_tool_names: &[NAME],
+            ceilings: DiscoveryCeilings::bounded(),
+        },
+        &definitions,
+    )
+    .expect("discovery should validate")
+}
+
+pub fn admitted_fabric() -> PlanFabricDraft<'static> {
+    PlanFabricDraft {
+        kind: Some(FABRIC_KIND_STEEL),
+        profile_identity: Some(FABRIC_PROFILE),
+        policy_hash: Some(HASH_A),
+        script_hash: Some(HASH_B),
+        allowed_host_actions: &[FABRIC_ACTION_DISCOVERY, FABRIC_ACTION_EMIT_PLAN],
+        budget_label: Some(FABRIC_BUDGET),
+        receipt_posture: Some(FABRIC_RECEIPT_POSTURE),
+    }
 }
 
 pub fn response() -> Response {

@@ -5,6 +5,17 @@
 //! walks files, queries VCS, discovers package managers, executes commands,
 //! schedules retries, calls models, or starts auto-fix loops.
 
+#![cfg_attr(
+    animus_octet,
+    allow(
+        tigerstyle::ambiguous_params,
+        tigerstyle::assertion_density,
+        tigerstyle::non_trait_imports,
+        tigerstyle::raw_arithmetic_overflow,
+        tigerstyle::unbounded_collection_growth
+    )
+)]
+
 use crate::artifact::Hash;
 use crate::validation::{self, AdapterContractError, FieldName};
 

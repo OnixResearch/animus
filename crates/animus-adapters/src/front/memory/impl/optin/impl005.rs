@@ -216,6 +216,23 @@ pub enum MemoryError {
         /// Record, candidate, or command identity.
         record_id: String,
     },
+    /// Explicit memory category metadata was required but absent.
+    MissingCategory {
+        /// Record identity.
+        record_id: String,
+    },
+    /// Explicit memory category metadata was not supported.
+    UnsupportedCategory {
+        /// Record identity.
+        record_id: String,
+        /// Unsupported category label.
+        category_label: String,
+    },
+    /// A memory-quality claim omitted a required baseline.
+    MissingBaseline {
+        /// Claim identity.
+        claim_id: String,
+    },
     /// Memory confidence was outside the supported range.
     InvalidConfidence {
         /// Minimum supported confidence percentage.
@@ -281,6 +298,22 @@ impl core::fmt::Display for MemoryError {
             }
             Self::MissingEvidence { record_id } => {
                 write!(formatter, "{record_id} is missing memory evidence metadata")
+            }
+            Self::MissingCategory { record_id } => {
+                write!(formatter, "{record_id} is missing explicit memory category")
+            }
+            Self::UnsupportedCategory {
+                record_id,
+                category_label,
+            } => write!(
+                formatter,
+                "{record_id} uses unsupported memory category {category_label}"
+            ),
+            Self::MissingBaseline { claim_id } => {
+                write!(
+                    formatter,
+                    "{claim_id} is missing memory evaluation baseline"
+                )
             }
             Self::InvalidConfidence {
                 min_percent,

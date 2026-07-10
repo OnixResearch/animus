@@ -5,6 +5,19 @@
 //! data only; it never spawns subagents, calls models, reads repositories,
 //! opens networks, creates processes, or enforces parallelism.
 
+#![cfg_attr(
+    animus_octet,
+    allow(
+        tigerstyle::ambiguous_params,
+        tigerstyle::assertion_density,
+        tigerstyle::bool_naming,
+        tigerstyle::function_length,
+        tigerstyle::non_trait_imports,
+        tigerstyle::numeric_units,
+        tigerstyle::path_segment_repetition
+    )
+)]
+
 use crate::artifact::Hash;
 use crate::validation::{self, AdapterContractError, FieldName};
 

@@ -4,6 +4,16 @@
 //! not grant authority and cannot bypass capability, policy, confirmation,
 //! sandbox, mutation-window, or executor checks.
 
+#![cfg_attr(
+    animus_octet,
+    allow(
+        tigerstyle::ambiguous_params,
+        tigerstyle::assertion_density,
+        tigerstyle::non_trait_imports,
+        tigerstyle::path_segment_repetition
+    )
+)]
+
 use crate::artifact::Hash;
 use crate::validation::{self, AdapterContractError, FieldName};
 
@@ -1043,12 +1053,9 @@ mod tests {
     const BATCH_ID: &str = "batch-alpha";
     const TOOL_READ: &str = "read-tool";
     const TOOL_WRITE: &str = "write-tool";
-    const TOOL_NETWORK: &str = "network-tool";
     const RESOURCE_READ: &str = "workspace-summary";
     const RESOURCE_SENSITIVE: &str = "sensitive-adjacent-config";
-    const RESOURCE_NETWORK: &str = "network-output-channel";
     const SUMMARY_READ: &str = "low-risk-read";
-    const SUMMARY_MUTATION: &str = "mutation-requires-review";
     const SUMMARY_PROCESS: &str = "critical-process-command";
     const RULE_READ: &str = "rule-read";
     const RULE_MUTATION: &str = "rule-mutation";

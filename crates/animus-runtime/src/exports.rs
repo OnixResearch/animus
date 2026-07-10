@@ -27,6 +27,15 @@ pub use crate::batch::{
     render_plan_order_records,
 };
 pub use crate::boundary::{evaluate_sandbox_escalation, sandbox_escalation_event};
+pub use crate::branching::{
+    SessionBranchCheckpointStatus, SessionBranchContinuationTarget, SessionBranchDiagnostic,
+    SessionBranchDiagnosticKind, SessionBranchError, SessionBranchErrorKind,
+    SessionBranchOperation, SessionBranchPlan, SessionBranchPlanStatus, SessionBranchPlannerInput,
+    SessionBranchPolicy, SessionBranchPolicyAdmission, SessionBranchPolicyDraft,
+    SessionBranchReceipt, SessionBranchRequest, SessionBranchRequestDraft, SessionCopyDescriptor,
+    SessionCopyDescriptorClass, SessionCopyDescriptorDraft, SessionLedgerEntry,
+    SessionLedgerEntryDraft, plan_session_branch, validate_session_branch_receipt_text,
+};
 pub use crate::capmap::{
     RuntimeCapabilityFamily, RuntimeCapabilityFamilyMapError, RuntimeCapabilityFamilyRecord,
     runtime_capability_family_map, validate_runtime_capability_family_map,
@@ -36,6 +45,14 @@ pub use crate::caps::{
     RuntimeCapabilityDescriptorDraft, RuntimeCapabilityError, RuntimeCapabilityErrorKind,
     RuntimeCapabilityOutcome, RuntimeCapabilityRegistry, RuntimeCapabilityResolution,
     RuntimeCapabilityServiceKind,
+};
+pub use crate::checkpoint::{
+    VcsSnapshotBackendKind, VcsSnapshotConfirmationStatus, VcsSnapshotDiagnostic,
+    VcsSnapshotDiagnosticKind, VcsSnapshotError, VcsSnapshotErrorKind, VcsSnapshotFreshness,
+    VcsSnapshotIntent, VcsSnapshotOperation, VcsSnapshotPlan, VcsSnapshotPlanRequest,
+    VcsSnapshotPlanRequestDraft, VcsSnapshotPlanStatus, VcsSnapshotPlannerInput,
+    VcsSnapshotProtectedAction, VcsSnapshotReceipt, VcsSnapshotRecord, VcsSnapshotRecordDraft,
+    VcsSnapshotServiceStatus, plan_vcs_snapshot_operation, validate_vcs_snapshot_receipt_text,
 };
 pub use crate::composition_conformance::{
     CompositionCaseKind, CompositionDiagnostic, CompositionDiagnosticKind,
@@ -122,6 +139,19 @@ pub use crate::hooks::{
     TurnHookEffect, TurnHookError, TurnHookErrorKind, TurnHookEvent, TurnHookOutcome,
     TurnHookState, TurnHookTransition, advance_turn_hooks, bind_lifecycle_hook_output_to_policy,
     evaluate_lifecycle_hook_trust, route_lifecycle_hook_requests,
+};
+pub use crate::mailbox::{
+    ActiveWorkReference, ActiveWorkStatus, CancellationHandleClass, CancellationRequest,
+    DispatchAcknowledgementDraft, ImmediateDispatchRequest, InterruptKeyword,
+    InterruptQueueAdmission, InterruptSendMode, InterruptSignalDraft, MessageBudgetClass,
+    MessageDispatch, MessageDispatchAcknowledgementOutcome, MessageEditDraft,
+    MessageItemOperationDraft, MessageQueueError, MessageQueueErrorKind, MessageQueueEvent,
+    MessageQueueOperation, MessageQueueOperationKind, MessageQueuePolicy, MessageQueuePolicyDraft,
+    MessageQueueReceipt, MessageQueueReceiptDraft, MessageQueueState, MessageQueueTransition,
+    MessageRedactionState, MessageReorderDraft, MessageSafetyClass, MessageScopeOperationDraft,
+    PauseRequest, QueueItemEvent, QueuedMessage, QueuedMessageDraft, RedirectionPayload,
+    RedirectionPayloadDraft, UserControlEvent, apply_message_queue_operation,
+    blake3_message_queue_hash, classify_interrupt_signal, validate_message_queue_receipt_text,
 };
 pub use crate::orchestration::{
     KanbanBlockRecord, KanbanBoardService, KanbanComment, KanbanCompletion, KanbanContextAssembly,
@@ -212,6 +242,14 @@ pub use crate::researchspec::{
     validate_research_baseline, validate_research_hypothesis, validate_research_run,
     validate_research_study_contract,
 };
+pub use crate::runtime_dag::{
+    RuntimeDagBlockedNode, RuntimeDagBounds, RuntimeDagEdge, RuntimeDagGraph, RuntimeDagIssueKind,
+    RuntimeDagNode, RuntimeDagReceipt, RuntimeDagReceiptLeak, RuntimeDagRedactionStatus,
+    RuntimeDagTopologicalBatch, RuntimeDagTopologicalPlan, RuntimeDagValidationIssue,
+    RuntimeDagValidationReport, blake3_runtime_dag_fingerprint, explain_runtime_dag_blocked_nodes,
+    plan_runtime_dag_topology, project_runtime_dag_receipt, validate_runtime_dag_graph,
+    validate_runtime_dag_receipt,
+};
 pub use crate::scaffold::{
     ScaffoldAdmissionDecision, ScaffoldAdmissionEffect, ScaffoldAdmissionOutcome,
     ScaffoldAdmissionRequest, ScaffoldDiagnostic, ScaffoldDiagnosticKind, ScaffoldFingerprint,
@@ -221,15 +259,6 @@ pub use crate::scaffold::{
     ScaffoldSelectionRequest, ScaffoldStrategyKnob, ScaffoldValidationResult,
     apply_scaffold_admission, blake3_scaffold_fingerprint, select_scaffold_profile,
     validate_scaffold_influence_receipt, validate_scaffold_profile,
-};
-pub use crate::session_branching::{
-    SessionBranchCheckpointStatus, SessionBranchContinuationTarget, SessionBranchDiagnostic,
-    SessionBranchDiagnosticKind, SessionBranchError, SessionBranchErrorKind,
-    SessionBranchOperation, SessionBranchPlan, SessionBranchPlanStatus, SessionBranchPlannerInput,
-    SessionBranchPolicy, SessionBranchPolicyAdmission, SessionBranchPolicyDraft,
-    SessionBranchReceipt, SessionBranchRequest, SessionBranchRequestDraft, SessionCopyDescriptor,
-    SessionCopyDescriptorClass, SessionCopyDescriptorDraft, SessionLedgerEntry,
-    SessionLedgerEntryDraft, plan_session_branch, validate_session_branch_receipt_text,
 };
 pub use crate::shell::{RuntimeAdapters, run_agent_loop};
 #[cfg(feature = "steel")]

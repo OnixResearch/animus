@@ -5,6 +5,16 @@
 //! models, schedules timers, persists sessions, delegates workers, probes
 //! providers, or enforces read-only behavior by prompt text.
 
+#![cfg_attr(
+    animus_octet,
+    allow(
+        tigerstyle::ambiguous_params,
+        tigerstyle::assertion_density,
+        tigerstyle::non_trait_imports,
+        tigerstyle::raw_arithmetic_overflow
+    )
+)]
+
 use crate::artifact::Hash;
 use crate::validation::{self, AdapterContractError, FieldName};
 

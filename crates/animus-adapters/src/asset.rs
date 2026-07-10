@@ -7,6 +7,22 @@
 //! unlinks, installs plugins, writes manifests, or treats a global host store as
 //! canonical.
 
+#![cfg_attr(
+    animus_octet,
+    allow(
+        tigerstyle::ambiguous_params,
+        tigerstyle::assertion_density,
+        tigerstyle::bool_naming,
+        tigerstyle::function_length,
+        tigerstyle::non_trait_imports,
+        tigerstyle::numeric_units,
+        tigerstyle::path_segment_repetition,
+        tigerstyle::raw_arithmetic_overflow,
+        tigerstyle::too_many_parameters,
+        tigerstyle::unbounded_collection_growth
+    )
+)]
+
 use alloc::format;
 
 use crate::artifact::Hash;

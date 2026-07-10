@@ -7,6 +7,7 @@ mod gate;
 pub mod hashed;
 mod limit;
 mod message;
+mod planning;
 mod schedule;
 
 #[cfg(test)]
@@ -30,6 +31,29 @@ pub use limit::{
     OutputStatus,
 };
 pub use message::{ApprovalPosture, OutputRedactionClass, Request, RequestDraft, Response};
+// Internal planning names stay short under `tool::planning`; these aliases preserve
+// the root-level public DTO names documented for embedders.
+#[cfg_attr(animus_octet, allow(tigerstyle::renamed_imports))]
+pub use planning::{
+    DiscoveryCeilings as ToolDiscoveryCeilings, DiscoveryDetail as ToolDiscoveryDetail,
+    DiscoveryRequestDraft as ToolDiscoveryRequestDraft, DiscoverySet as ToolDiscoverySet,
+    DiscoverySummary as ToolDiscoverySummary, Plan as ToolPlan,
+    PlanAdmissionContext as ToolPlanAdmissionContext, PlanBatchPolicy as ToolPlanBatchPolicy,
+    PlanCancellationPosture as ToolPlanCancellationPosture, PlanDraft as ToolPlanDraft,
+    PlanFabricAdmission as ToolPlanFabricAdmission, PlanFabricDraft as ToolPlanFabricDraft,
+    PlanFabricIssue as ToolPlanFabricIssue, PlanFabricKind as ToolPlanFabricKind,
+    PlanFabricStatus as ToolPlanFabricStatus,
+    PlanIntermediateBinding as ToolPlanIntermediateBinding,
+    PlanIntermediateBindingDraft as ToolPlanIntermediateBindingDraft,
+    PlanIntermediateKind as ToolPlanIntermediateKind,
+    PlanIntermediateUse as ToolPlanIntermediateUse, PlanIssue as ToolPlanIssue,
+    PlanReceipt as ToolPlanReceipt, PlanReceiptDraft as ToolPlanReceiptDraft,
+    PlanStatus as ToolPlanStatus, PlanStepAdmission as ToolPlanStepAdmission,
+    PlanStepDraft as ToolPlanStepDraft, PlanTimeoutPosture as ToolPlanTimeoutPosture,
+    TOOL_DISCOVERY_CONTRACT_IDENTITY, TOOL_PLAN_CONTRACT_IDENTITY,
+    TOOL_PLAN_RECEIPT_CONTRACT_IDENTITY, admit_plan as admit_tool_plan,
+    admit_plan_fabric as admit_tool_plan_fabric, discover_tools,
+};
 pub use schedule::{
     MutationCallDraft, MutationWindow, MutationWindowStatus, plan_mutation_windows,
 };

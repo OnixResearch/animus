@@ -19,6 +19,7 @@ const DIFF_TARGET_LABEL: &str = "working";
 const DIFF_KIND_LABEL: &str = "diff";
 const BINARY_NUL_BYTE: u8 = 0;
 const LINE_SEPARATOR: char = '\n';
+const CONTEXT_ROOT_LABEL: &str = "context-file";
 
 /// Maximum local context body bytes admitted by the default std policy.
 pub const STD_CONTEXT_DEFAULT_MAX_BYTES: u32 = DEFAULT_MAX_CONTEXT_BYTES;
@@ -26,10 +27,95 @@ pub const STD_CONTEXT_DEFAULT_MAX_BYTES: u32 = DEFAULT_MAX_CONTEXT_BYTES;
 /// Maximum local directory entries admitted by the default std policy.
 pub const STD_CONTEXT_DEFAULT_MAX_DIRECTORY_ENTRIES: u32 = DEFAULT_MAX_DIRECTORY_ENTRIES;
 
+/// Class of std-shell capability root opened at the local filesystem boundary.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CapabilityRootKind {
+    /// Operator-declared workspace root.
+    Workspace,
+    /// Operator-declared context-file root.
+    ContextFile,
+    /// Operator-declared artifact root.
+    Artifact,
+    /// Operator-declared host-store root.
+    HostStore,
+}
+
+impl CapabilityRootKind {
+    /// Returns a safe root-kind label for evidence.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Workspace => "workspace",
+            Self::ContextFile => CONTEXT_ROOT_LABEL,
+            Self::Artifact => "artifact",
+            Self::HostStore => "host-store",
+        }
+    }
+}
+
+/// Typed std-shell filesystem capability root.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CapabilityRoot {
+    kind: CapabilityRootKind,
+    path: std::path::PathBuf,
+}
+
+impl CapabilityRoot {
+    /// Builds a workspace root wrapper.
+    #[must_use]
+    pub fn workspace(path: impl Into<std::path::PathBuf>) -> Self {
+        Self::new(CapabilityRootKind::Workspace, path)
+    }
+
+    /// Builds a context-file root wrapper.
+    #[must_use]
+    pub fn context_file(path: impl Into<std::path::PathBuf>) -> Self {
+        Self::new(CapabilityRootKind::ContextFile, path)
+    }
+
+    /// Builds an artifact root wrapper.
+    #[must_use]
+    pub fn artifact(path: impl Into<std::path::PathBuf>) -> Self {
+        Self::new(CapabilityRootKind::Artifact, path)
+    }
+
+    /// Builds a host-store root wrapper.
+    #[must_use]
+    pub fn host_store(path: impl Into<std::path::PathBuf>) -> Self {
+        Self::new(CapabilityRootKind::HostStore, path)
+    }
+
+    /// Builds a typed root wrapper around an operator-declared path.
+    #[must_use]
+    pub fn new(kind: CapabilityRootKind, path: impl Into<std::path::PathBuf>) -> Self {
+        Self {
+            kind,
+            path: path.into(),
+        }
+    }
+
+    /// Returns the root kind.
+    #[must_use]
+    pub const fn kind(&self) -> CapabilityRootKind {
+        self.kind
+    }
+
+    /// Returns the operator-declared root path owned by the std shell.
+    #[must_use]
+    pub fn path(&self) -> &std::path::Path {
+        self.path.as_path()
+    }
+
+    fn open_dir(&self) -> Result<cap_std::fs::Dir, animus_adapters::ContextReferenceError> {
+        cap_std::fs::Dir::open_ambient_dir(self.path(), cap_std::ambient_authority())
+            .map_err(|_error| animus_adapters::ContextReferenceError::ResolverUnavailable)
+    }
+}
+
 /// Policy for explicit std-shell local context resolvers.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Policy {
-    root: std::path::PathBuf,
+    root: CapabilityRoot,
     max_body_bytes: u32,
     max_directory_entries: u32,
     allow_files: bool,
@@ -41,8 +127,14 @@ impl Policy {
     /// Builds a policy allowing local file, directory, and preloaded diff roles under a root.
     #[must_use]
     pub fn allow_local(root: impl Into<std::path::PathBuf>) -> Self {
+        Self::allow_local_capability(CapabilityRoot::context_file(root))
+    }
+
+    /// Builds a policy allowing local roles under a typed capability root.
+    #[must_use]
+    pub fn allow_local_capability(root: CapabilityRoot) -> Self {
         Self {
-            root: root.into(),
+            root,
             max_body_bytes: DEFAULT_MAX_CONTEXT_BYTES,
             max_directory_entries: DEFAULT_MAX_DIRECTORY_ENTRIES,
             allow_files: true,
@@ -54,8 +146,14 @@ impl Policy {
     /// Builds a policy that denies every local context role under a root.
     #[must_use]
     pub fn deny_all(root: impl Into<std::path::PathBuf>) -> Self {
+        Self::deny_all_capability(CapabilityRoot::context_file(root))
+    }
+
+    /// Builds a deny-all policy under a typed capability root.
+    #[must_use]
+    pub fn deny_all_capability(root: CapabilityRoot) -> Self {
         Self {
-            root: root.into(),
+            root,
             max_body_bytes: DEFAULT_MAX_CONTEXT_BYTES,
             max_directory_entries: DEFAULT_MAX_DIRECTORY_ENTRIES,
             allow_files: false,
@@ -102,7 +200,13 @@ impl Policy {
     /// Returns the local root used for relative target resolution.
     #[must_use]
     pub fn root(&self) -> &std::path::Path {
-        self.root.as_path()
+        self.root.path()
+    }
+
+    /// Returns the typed capability root used by local context operations.
+    #[must_use]
+    pub const fn capability_root(&self) -> &CapabilityRoot {
+        &self.root
     }
 
     /// Returns the maximum admitted body bytes.
@@ -199,8 +303,12 @@ impl animus_adapters::FileContextResolver for LocalFileResolver {
     ) -> Result<animus_adapters::ResolvedContextCandidate, animus_adapters::ContextReferenceError>
     {
         ensure_allowed(self.policy.allow_files)?;
-        let path = resolve_under_root(&self.policy, reference.normalized_target())?;
-        let bytes = read_bounded_file(path.as_path(), self.policy.max_body_bytes)?;
+        let target = resolve_relative_target(&self.policy, reference.normalized_target())?;
+        let bytes = read_bounded_file(
+            self.policy.capability_root(),
+            target,
+            self.policy.max_body_bytes,
+        )?;
         let content = String::from_utf8(bytes)
             .map_err(|_error| animus_adapters::ContextReferenceError::ResolverMalformedOutput)?;
         Ok(animus_adapters::ResolvedContextCandidate::new(
@@ -238,8 +346,8 @@ impl animus_adapters::DirectoryContextResolver for LocalDirectoryResolver {
     ) -> Result<animus_adapters::ResolvedContextCandidate, animus_adapters::ContextReferenceError>
     {
         ensure_allowed(self.policy.allow_directories)?;
-        let path = resolve_under_root(&self.policy, reference.normalized_target())?;
-        let content = read_directory_listing(path.as_path(), &self.policy)?;
+        let target = resolve_relative_target(&self.policy, reference.normalized_target())?;
+        let content = read_directory_listing(self.policy.capability_root(), target, &self.policy)?;
         Ok(animus_adapters::ResolvedContextCandidate::new(
             reference.clone(),
             animus_adapters::ContextResolverKind::Directory,
@@ -307,26 +415,13 @@ fn u32_to_usize_count(value: u32) -> Result<usize, animus_adapters::ContextRefer
     usize::try_from(value).map_err(|_error| animus_adapters::ContextReferenceError::InvalidBudget)
 }
 
-fn resolve_under_root(
+fn resolve_relative_target<'a>(
     policy: &Policy,
-    normalized_target: &str,
-) -> Result<std::path::PathBuf, animus_adapters::ContextReferenceError> {
+    normalized_target: &'a str,
+) -> Result<&'a str, animus_adapters::ContextReferenceError> {
     ensure_policy_bounds(policy)?;
     ensure_relative_target(normalized_target)?;
-    let root = policy
-        .root
-        .canonicalize()
-        .map_err(|_error| animus_adapters::ContextReferenceError::ResolverUnavailable)?;
-    let joined = root.join(normalized_target);
-    let resolved = joined
-        .canonicalize()
-        .map_err(|_error| animus_adapters::ContextReferenceError::ResolverUnavailable)?;
-    if !resolved.starts_with(root.as_path()) {
-        return Err(animus_adapters::ContextReferenceError::PathEscape {
-            reason: "std context target escaped root",
-        });
-    }
-    Ok(resolved)
+    Ok(normalized_target)
 }
 
 fn ensure_policy_bounds(policy: &Policy) -> Result<(), animus_adapters::ContextReferenceError> {
@@ -358,14 +453,36 @@ fn is_escape_component(component: std::path::Component<'_>) -> bool {
 }
 
 fn read_bounded_file(
-    path: &std::path::Path,
+    root: &CapabilityRoot,
+    target: &str,
     max_bytes: u32,
 ) -> Result<Vec<u8>, animus_adapters::ContextReferenceError> {
-    let bytes = std::fs::read(path)
+    let dir = root.open_dir()?;
+    reject_symlink(&dir, target)?;
+    let mut file = dir
+        .open(target)
+        .map_err(|_error| animus_adapters::ContextReferenceError::ResolverUnavailable)?;
+    let mut bytes = Vec::new();
+    std::io::Read::read_to_end(&mut file, &mut bytes)
         .map_err(|_error| animus_adapters::ContextReferenceError::ResolverUnavailable)?;
     ensure_text_bounds(bytes.as_slice(), max_bytes)?;
     reject_binary_body(bytes.as_slice())?;
     Ok(bytes)
+}
+
+fn reject_symlink(
+    dir: &cap_std::fs::Dir,
+    target: &str,
+) -> Result<(), animus_adapters::ContextReferenceError> {
+    let metadata = dir
+        .symlink_metadata(target)
+        .map_err(|_error| animus_adapters::ContextReferenceError::ResolverUnavailable)?;
+    if metadata.file_type().is_symlink() {
+        return Err(animus_adapters::ContextReferenceError::PathEscape {
+            reason: "std context target symlink escape is not admitted",
+        });
+    }
+    Ok(())
 }
 
 fn ensure_text_bounds(
@@ -386,21 +503,23 @@ fn reject_binary_body(bytes: &[u8]) -> Result<(), animus_adapters::ContextRefere
 }
 
 fn read_directory_listing(
-    path: &std::path::Path,
+    root: &CapabilityRoot,
+    target: &str,
     policy: &Policy,
 ) -> Result<String, animus_adapters::ContextReferenceError> {
     debug_assert!(policy.max_body_bytes >= MIN_CONTEXT_BYTES);
     debug_assert!(policy.max_directory_entries >= MIN_DIRECTORY_ENTRIES);
-    let mut entries = std::fs::read_dir(path)
+    let dir = root.open_dir()?;
+    reject_symlink(&dir, target)?;
+    let mut entries = dir
+        .read_dir(target)
         .map_err(|_error| animus_adapters::ContextReferenceError::ResolverUnavailable)?
-        .map(|entry| {
-            entry.map_err(|_error| animus_adapters::ContextReferenceError::ResolverUnavailable)
-        })
-        .collect::<Result<Vec<_>, _>>()?;
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|_error| animus_adapters::ContextReferenceError::ResolverUnavailable)?;
     if entries.len() > u32_to_usize_count(policy.max_directory_entries)? {
         return Err(animus_adapters::ContextReferenceError::ResolverOversized);
     }
-    entries.sort_by_key(std::fs::DirEntry::file_name);
+    entries.sort_by_key(cap_std::fs::DirEntry::file_name);
     let mut listing = String::new();
     for entry in entries {
         let file_name = entry.file_name();
@@ -455,6 +574,8 @@ mod tests {
     const POSITIVE_TEST_ROOT: &str = "positive";
     const NEGATIVE_TEST_ROOT: &str = "negative";
     const MISSING_TEST_ROOT: &str = "missing";
+    const MISSING_ROOT_TEST_ROOT: &str = "missing-root";
+    const SYMLINK_TEST_ROOT: &str = "symlink";
     const SRC_DIR: &str = "src";
     const NESTED_DIR: &str = "nested";
     const LIB_RS: &str = "lib.rs";
@@ -468,10 +589,14 @@ mod tests {
     const MISSING_REFERENCE: &str = "@src/missing.txt";
     const BINARY_REFERENCE: &str = "@src/binary.bin";
     const LARGE_REFERENCE: &str = "@src/large.txt";
+    const TRAVERSAL_REFERENCE: &str = "@../secret.txt";
+    const ABSOLUTE_REFERENCE: &str = "@/tmp/secret.txt";
+    const SYMLINK_REFERENCE: &str = "@src/escape.txt";
     const FILE_BODY: &str = "alpha\nbeta\n";
     const DIFF_BODY: &str = "diff --git a/src/lib.rs b/src/lib.rs\n";
     const BINARY_BODY: &[u8] = b"alpha\0beta";
     const LARGE_BODY: &str = "alpha beta gamma";
+    const OUTSIDE_BODY: &str = "outside root";
     const SMALL_BODY_BYTE_LIMIT: u32 = 4;
     const VISIBLE_BYTES: u32 = 64;
     const VISIBLE_LINES: u32 = 8;
@@ -518,6 +643,23 @@ mod tests {
         let diff_candidate = diff.resolve_diff(&diff_reference)?;
         assert_eq!(diff_candidate.content(), DIFF_BODY);
         Ok(())
+    }
+
+    #[test]
+    fn capability_roots_classify_std_shell_authority() {
+        // r[verify agent_harness_runtime.cap_std_context_boundary.root_wrappers]
+        // r[verify agent_harness_runtime.cap_std_context_boundary.tests.positive]
+        let workspace = CapabilityRoot::workspace("workspace-root");
+        let context = CapabilityRoot::context_file("context-root");
+        let artifact = CapabilityRoot::artifact("artifact-root");
+        let host_store = CapabilityRoot::host_store("host-store-root");
+        let policy = Policy::allow_local_capability(context.clone());
+
+        assert_eq!(workspace.kind(), CapabilityRootKind::Workspace);
+        assert_eq!(context.kind(), CapabilityRootKind::ContextFile);
+        assert_eq!(artifact.kind(), CapabilityRootKind::Artifact);
+        assert_eq!(host_store.kind(), CapabilityRootKind::HostStore);
+        assert_eq!(policy.capability_root().kind().as_str(), CONTEXT_ROOT_LABEL);
     }
 
     #[test]
@@ -573,6 +715,55 @@ mod tests {
             file.resolve_file(&missing),
             Err(animus_adapters::ContextReferenceError::ResolverUnavailable)
         );
+        Ok(())
+    }
+
+    #[test]
+    fn local_resolvers_reject_missing_roots_absolute_paths_and_traversal()
+    -> Result<(), animus_adapters::ContextReferenceError> {
+        // r[verify agent_harness_runtime.cap_std_context_boundary.tests.negative]
+        // r[verify agent_harness_runtime.cap_std_context_boundary.conversion]
+        let missing_root = std::env::temp_dir().join(format!(
+            "{TEST_ROOT_DIR}-{MISSING_ROOT_TEST_ROOT}-{}",
+            std::process::id()
+        ));
+        let _ignored = std::fs::remove_dir_all(missing_root.as_path());
+        let file = LocalFileResolver::new(Policy::allow_local(missing_root));
+        let reference = animus_adapters::parse_context_reference(FILE_REFERENCE)?;
+        assert_eq!(
+            file.resolve_file(&reference),
+            Err(animus_adapters::ContextReferenceError::ResolverUnavailable)
+        );
+        assert!(matches!(
+            animus_adapters::parse_context_reference(TRAVERSAL_REFERENCE),
+            Err(animus_adapters::ContextReferenceError::PathEscape { .. })
+        ));
+        assert!(matches!(
+            animus_adapters::parse_context_reference(ABSOLUTE_REFERENCE),
+            Err(animus_adapters::ContextReferenceError::PathEscape { .. })
+        ));
+        Ok(())
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn local_resolvers_reject_symlink_escape_attempts()
+    -> Result<(), animus_adapters::ContextReferenceError> {
+        // r[verify agent_harness_runtime.cap_std_context_boundary.tests.negative]
+        let root = fixture_root(SYMLINK_TEST_ROOT);
+        write_fixture_files(root.as_path());
+        let outside = root.with_extension("outside");
+        std::fs::write(outside.as_path(), OUTSIDE_BODY).expect("outside fixture should be written");
+        let link = root.join(SRC_DIR).join("escape.txt");
+        std::os::unix::fs::symlink(outside.as_path(), link.as_path())
+            .expect("symlink fixture should be created");
+        let file = LocalFileResolver::new(Policy::allow_local(root));
+        let reference = animus_adapters::parse_context_reference(SYMLINK_REFERENCE)?;
+
+        assert!(matches!(
+            file.resolve_file(&reference),
+            Err(animus_adapters::ContextReferenceError::PathEscape { .. })
+        ));
         Ok(())
     }
 

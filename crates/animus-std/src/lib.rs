@@ -34,7 +34,10 @@ pub use adapters::{
 /// Backwards-compatible name for deterministic fixture bundles.
 pub type FixtureAdapters = Fixtures;
 pub use config::{INTENT_ENV_KEY, load_runtime};
-pub use context::{STD_CONTEXT_DEFAULT_MAX_BYTES, STD_CONTEXT_DEFAULT_MAX_DIRECTORY_ENTRIES};
+pub use context::{
+    CapabilityRoot, CapabilityRootKind, STD_CONTEXT_DEFAULT_MAX_BYTES,
+    STD_CONTEXT_DEFAULT_MAX_DIRECTORY_ENTRIES,
+};
 /// Root public name for the std local diff context resolver.
 pub type LocalDiffContextResolver = context::LocalDiffResolver;
 /// Root public name for the std local directory context resolver.

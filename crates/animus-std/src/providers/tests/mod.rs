@@ -1,5 +1,6 @@
 use super::*;
 
+mod concrete;
 mod streaming;
 
 const PROVIDER_ID: &str = "openai";

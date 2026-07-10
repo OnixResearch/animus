@@ -299,12 +299,14 @@
           "preserves_content_hash",
           "receipt_hash",
           "cairn_validation_hash",
-          "tracey_coverage_hash",
+          "traceability_coverage_hash",
           "mcp_smoke_receipt_hash",
           "coverage_audit_receipt_hash",
           "release_evidence_index_check_hash",
           "preserves_corpus_freshness_hash",
-          "semantic_review_ledger_hash"
+          "semantic_review_ledger_hash",
+          "stack_provenance_hash",
+          "workspace_contract_matrix_hash"
         ],
         "id": "release_readiness",
         "normalization_rules": [
@@ -932,6 +934,12 @@
     }
   },
   "name": "cairn-default",
+  "policy_schema_compatibility": {
+    "field_set_digest": "c5b71f15de4175d9ff01f7cb4b82eed898a71e55f6d1fa5e24a9a0e2bb909b42",
+    "producer": "cairn policy export",
+    "refresh_command": "nix run path:$CAIRN_SOURCE#cairn -- policy export --output cairn-policy/generated/cairn-policy.json",
+    "schema_version": "cairn.policy-schema.v1"
+  },
   "probe_policy": {
     "command_profiles": [
       {
@@ -947,6 +955,7 @@
           "policy",
           "sync",
           "test-harness",
+          "traceability",
           "tracey",
           "validate"
         ],
@@ -1383,6 +1392,37 @@
     {
       "action_keys": [],
       "artifact_keys": [],
+      "case_keys": [],
+      "command": "traceability coverage",
+      "hash_fields": [
+        "input_hash",
+        "policy_hash",
+        "receipt_hash"
+      ],
+      "issue_keys": [],
+      "mismatch_keys": [],
+      "replay_evidence_keys": [],
+      "top_level_keys": [
+        "command",
+        "dangling",
+        "input_hash",
+        "missing",
+        "policy",
+        "policy_hash",
+        "profile",
+        "profile_id",
+        "receipt_hash",
+        "referenced",
+        "requirements",
+        "root",
+        "source_summary",
+        "valid",
+        "verdict"
+      ]
+    },
+    {
+      "action_keys": [],
+      "artifact_keys": [],
       "case_keys": [
         "args",
         "command_kind",
@@ -1490,7 +1530,8 @@
         "receipt_hash",
         "release_readiness_receipt_hash",
         "replay_receipt_hash",
-        "replay_verification_receipt_hash"
+        "replay_verification_receipt_hash",
+        "runtime_evidence_receipt_hash"
       ],
       "issue_keys": [
         "actual",
@@ -1514,6 +1555,48 @@
         "replay_verification_receipt_hash",
         "required_replay_group",
         "root",
+        "runtime_evidence_receipt_hash",
+        "valid",
+        "verdict"
+      ]
+    },
+    {
+      "action_keys": [],
+      "artifact_keys": [],
+      "case_keys": [],
+      "command": "runtime-evidence verify",
+      "hash_fields": [
+        "chain_root_hash",
+        "checkpoint_hash",
+        "head_hash",
+        "preserves_content_hash",
+        "receipt_hash"
+      ],
+      "issue_keys": [
+        "actual",
+        "code",
+        "expected",
+        "field_path"
+      ],
+      "mismatch_keys": [],
+      "replay_evidence_keys": [],
+      "top_level_keys": [
+        "boundary",
+        "capture_origin_summary",
+        "chain",
+        "chain_root_hash",
+        "checkpoint",
+        "checkpoint_hash",
+        "command",
+        "completeness",
+        "head_hash",
+        "issues",
+        "preserves_content_hash",
+        "receipt_hash",
+        "record_count",
+        "root",
+        "schema_version",
+        "subject",
         "valid",
         "verdict"
       ]
@@ -1561,6 +1644,7 @@
         "coverage_audit_receipt_hash",
         "manifest_hash",
         "receipt_hash",
+        "runtime_evidence_receipt_hash",
         "signer_metadata_hash"
       ],
       "issue_keys": [
@@ -1580,6 +1664,7 @@
         "manifest_hash",
         "receipt_hash",
         "root",
+        "runtime_evidence_receipt_hash",
         "signer_metadata_hash",
         "valid",
         "verdict"
@@ -1639,7 +1724,8 @@
         "manifest_hash",
         "manifest_verification_receipt_hash",
         "preserves_content_hash",
-        "receipt_hash"
+        "receipt_hash",
+        "stack_provenance_hash"
       ],
       "issue_keys": [
         "actual",
@@ -1660,6 +1746,8 @@
         "preserves_content_hash",
         "receipt_hash",
         "root",
+        "stack_provenance",
+        "stack_provenance_hash",
         "valid",
         "verification_role_summary",
         "verdict"
@@ -2243,6 +2331,24 @@
       "FAIL"
     ]
   },
+  "runtime_evidence_policy": {
+    "aggregation_profiles": [],
+    "allowed_capture_origins": [
+      "boundary_captured",
+      "ingested_telemetry",
+      "wrapper_asserted",
+      "unknown"
+    ],
+    "allowed_hash_algorithms": [
+      "BLAKE3"
+    ],
+    "forbidden_summary_fragments": [
+      "SECRET=",
+      "token=",
+      "/home/"
+    ],
+    "max_summary_bytes": 256
+  },
   "schemas": [
     {
       "artifacts": [
@@ -2278,6 +2384,16 @@
       "id": "spec-driven"
     }
   ],
+  "stack_provenance_gate": {
+    "accepted_valence_policy_hashes": [
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    "allowed_claim_scopes": [
+      "stack_provenance.v1.lifecycle_policy_conformance"
+    ],
+    "mode": "optional",
+    "required_boundary": "Cairn consumed Valence and Mantle stack provenance receipts for lifecycle/release policy conformance only; it did not prove source-code correctness, Valence verifier soundness, Mantle build correctness, or Trellis/Octet proof validity"
+  },
   "steel_orchestration_policy": {
     "enabled": false,
     "profiles": [
@@ -2331,5 +2447,91 @@
     ],
     "strictness": "strict"
   },
-  "version": 1
+  "traceability_policy": {
+    "default_profile": "cairn-default",
+    "profiles": [
+      {
+        "evidence_sources": [
+          {
+            "extensions": [
+              "rs"
+            ],
+            "root": "crates",
+            "source_kind": "rust_source"
+          },
+          {
+            "extensions": [
+              "ncl"
+            ],
+            "root": "crates",
+            "source_kind": "nickel_source"
+          },
+          {
+            "extensions": [
+              "rs",
+              "ncl"
+            ],
+            "root": "tools",
+            "source_kind": "tool_source"
+          }
+        ],
+        "id": "cairn-default",
+        "marker_verbs": [
+          "impl",
+          "verify",
+          "depends",
+          "related"
+        ],
+        "requirement_sources": [
+          {
+            "extensions": [
+              "md"
+            ],
+            "root": "cairn/specs",
+            "source_kind": "accepted_specs"
+          }
+        ]
+      },
+      {
+        "evidence_sources": [
+          {
+            "extensions": [
+              "rs"
+            ],
+            "root": "src",
+            "source_kind": "rust_source"
+          },
+          {
+            "extensions": [
+              "rs"
+            ],
+            "root": "tests",
+            "source_kind": "rust_source"
+          }
+        ],
+        "id": "trellis-rust",
+        "marker_verbs": [
+          "impl",
+          "verify",
+          "depends",
+          "related"
+        ],
+        "requirement_sources": [
+          {
+            "extensions": [
+              "md"
+            ],
+            "root": "docs/requirements.md",
+            "source_kind": "requirements_doc"
+          }
+        ]
+      }
+    ]
+  },
+  "version": 1,
+  "workspace_contract_matrix_gate": {
+    "accepted_matrix_hashes": [],
+    "mode": "disabled",
+    "required_boundary": "workspace contract matrix validation proves declared edge health only; it does not prove provider correctness, does not prove consumer behavioral correctness, does not prove verifier soundness, or does not prove release eligibility"
+  }
 }

@@ -3,7 +3,7 @@
 mod capability;
 mod catalog;
 mod choice;
-mod dispatch;
+mod concrete;
 mod identity;
 mod reason;
 mod secret;
@@ -19,7 +19,7 @@ pub use capability::{
 };
 pub use catalog::{ModelEntry, ProviderEntry, ProviderRegistry};
 pub use choice::{ModelSelection, SelectedModel};
-pub use dispatch::{
+pub use concrete::{
     OpenAiResponsesContentPart, OpenAiResponsesDispatchRequest, OpenAiResponsesMessage,
     OpenAiResponsesMetadata, OpenAiResponsesTool, ProviderDispatchCancellationState,
     ProviderDispatchConstructorInventoryEntry, ProviderDispatchCredentialState,

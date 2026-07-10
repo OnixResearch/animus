@@ -218,7 +218,28 @@ let change_entries = [
     "agent_harness_runtime.subagent_coordinator.lifecycle",
     "agent_harness_runtime.subagent_fanout_fanin.plan",
     "agent_harness_runtime.subagent_fanout_fanin.aggregation",
-  ] ["adapt-openclaw-session-isolation-tools", "adapt-hermes-multi-lens-focus-decks", "adapt-hermes-plan-loop-mode-fsm"],
+  ] ["adapt-openclaw-session-isolation-tools", "adapt-hermes-multi-lens-focus-decks", "adapt-hermes-plan-loop-mode-fsm", "add-runtime-dag-contract-kit"],
+  change "add-runtime-dag-contract-kit" core_role "runtime-loop" [
+    "agent_harness_runtime.validation",
+    "agent_harness_runtime.clankers_safe_receipts.closeout",
+    "agent_harness_runtime.clankers_runtime_facade_inventory.schema",
+  ] ["extend-recipe-workflows-with-dags", "add-researchspec-promotion-dags", "add-roadmap-dag-explanations", "add-nested-subagent-delegation-graphs", "adapt-goose-code-mode-tool-planning"],
+  change "extend-recipe-workflows-with-dags" core_role "policy-guidance" [
+    "add-runtime-dag-contract-kit",
+    "agent_harness_runtime.goose_recipe_workflows.manifest",
+    "agent_harness_runtime.goose_recipe_workflows.trust",
+    "agent_harness_runtime.goose_recipe_workflows.retry_policy",
+  ] ["adapt-goose-code-mode-tool-planning"],
+  change "add-researchspec-promotion-dags" core_role "export-surfaces" [
+    "add-runtime-dag-contract-kit",
+    "agent_harness_runtime.hermes_researchspec.keep_promotion",
+    "agent_harness_runtime.hermes_researchspec.keep_promotion.overlap",
+    "agent_harness_runtime.hermes_researchspec.runs",
+  ] ["adapt-hermes-scoped-validation-planner", "adapt-hermes-vcs-snapshot-ledger"],
+  change "add-roadmap-dag-explanations" foundation_role "roadmap-sequencing" [
+    "agent_harness_runtime.cairn_policy.closeout",
+    "agent_harness_runtime.validation",
+  ] ["add-runtime-dag-contract-kit", "define-dogfoodable-host-readiness-roadmap"],
   change "adapt-openclaw-security-plugin-guardrails" host_role "policy-guidance" [
     "agent_harness_runtime.clash_ucan.capability_request",
     "agent_harness_runtime.zerostack_permission_kernel.receipts",
@@ -336,6 +357,67 @@ let change_entries = [
     "agent_harness_runtime.provenance_ledger.branch_queries",
     "agent_harness_runtime.provenance_ledger.receipts",
   ] ["adapt-hermes-scoped-validation-planner"],
+  change "refactor-adapter-crate-maintainability" core_role "concrete-adapters" [
+    "agent_harness_runtime.validation",
+    "agent_harness_runtime.clankers_focused_rails.closeout",
+  ] ["harden-provider-stream-parser-rails", "add-concrete-provider-dispatch-adapter", "add-host-tool-executor-capability-packs", "add-host-session-persistence-adapter", "add-fake-backed-headless-dogfood-shell"],
+  change "harden-provider-stream-parser-rails" host_role "concrete-adapters" [
+    "refactor-adapter-crate-maintainability",
+    "agent_harness_runtime.model_streaming.parser_entrypoint",
+    "agent_harness_runtime.clankers_safe_receipts.rejects_leaks",
+  ] ["add-concrete-provider-streaming-adapters", "add-provider-projection-conformance-fixtures", "add-concrete-provider-dispatch-adapter"],
+  change "add-concrete-provider-dispatch-adapter" host_role "concrete-adapters" [
+    "add-canonical-model-message-contracts",
+    "negotiate-model-capability-matrix",
+    "add-provider-projection-conformance-fixtures",
+    "harden-provider-stream-parser-rails",
+    "agent_harness_runtime.pi_provider_registry.metadata",
+    "agent_harness_runtime.clankers_injected_services.provider_boundary",
+  ] ["define-model-router-execution-service", "add-concrete-provider-streaming-adapters", "add-fake-backed-headless-dogfood-shell"],
+  change "add-host-tool-executor-capability-packs" host_role "concrete-adapters" [
+    "adapt-goose-code-mode-tool-planning",
+    "agent_harness_runtime.pi_tool_contracts.definition_metadata",
+    "agent_harness_runtime.pi_tool_contracts.argument_validation",
+    "agent_harness_runtime.pi_tool_contracts.output_bounds",
+    "agent_harness_runtime.hermes_plugin_manifests.executor_boundary",
+  ] ["adapt-clankers-tool-gateway-delivery", "adapt-hermes-host-asset-reconciliation", "add-fake-backed-headless-dogfood-shell"],
+  change "add-host-session-persistence-adapter" host_role "concrete-adapters" [
+    "adapt-goose-session-branching-controls",
+    "adapt-hermes-vcs-snapshot-ledger",
+    "agent_harness_runtime.pi_session_tree.ledger_contract",
+    "agent_harness_runtime.provenance_ledger.receipts",
+    "agent_harness_runtime.clankers_safe_receipts.closeout",
+  ] ["adapt-pi-session-tree-ledger", "adapt-session-restore-contract", "add-fake-backed-headless-dogfood-shell"],
+  change "add-fake-backed-headless-dogfood-shell" product_role "ui-headless" [
+    "define-dogfoodable-host-readiness-roadmap",
+    "agent_harness_runtime.pi_headless_protocol.command_response",
+    "agent_harness_runtime.pi_headless_protocol.event_stream",
+    "agent_harness_runtime.clankers_injected_services.provider_boundary",
+    "agent_harness_runtime.clankers_safe_receipts.rejects_leaks",
+  ] ["add-concrete-provider-dispatch-adapter", "add-host-tool-executor-capability-packs", "add-host-session-persistence-adapter"],
+  change "adapt-turnstone-intent-validation" core_role "policy-guidance" [
+    "agent_harness_runtime.pi_tool_contracts.definition_metadata",
+    "agent_harness_runtime.pi_tool_contracts.argument_validation",
+    "agent_harness_runtime.zerostack_permission_kernel.receipts",
+    "agent_harness_runtime.clankers_confirmation_broker.requests",
+  ] ["adapt-turnstone-output-guard", "add-turnstone-headless-eval-scorer", "add-host-tool-executor-capability-packs"],
+  change "adapt-turnstone-output-guard" core_role "policy-guidance" [
+    "agent_harness_runtime.pi_tool_contracts.output_bounds",
+    "agent_harness_runtime.clankers_safe_receipts.rejects_leaks",
+    "agent_harness_runtime.pi_event_lifecycle.mode_neutral",
+  ] ["adapt-turnstone-intent-validation", "add-turnstone-headless-eval-scorer", "add-host-tool-executor-capability-packs"],
+  change "add-turnstone-headless-eval-scorer" evaluation_role "evaluation" [
+    "agent_harness_runtime.claude_code_headless.events",
+    "agent_harness_runtime.pi_tool_contracts.failure_classes",
+    "agent_harness_runtime.ornith_eval_feedback.plan",
+    "agent_harness_runtime.ornith_eval_feedback.receipts",
+  ] ["adapt-turnstone-intent-validation", "adapt-turnstone-output-guard", "add-fake-backed-headless-dogfood-shell"],
+  change "adopt-cap-std-context-boundary" host_role "concrete-adapters" [
+    "agent_harness_runtime.clankers_context_references.resolvers",
+    "agent_harness_runtime.clankers_context_references.bounds",
+    "agent_harness_runtime.zerostack_context_layering.discovery",
+    "agent_harness_runtime.zerostack_context_layering.admission",
+  ] ["adapt-hermes-host-asset-reconciliation", "add-host-session-persistence-adapter"],
 ]
 in
 
@@ -351,7 +433,11 @@ let overlap_entries = [
   overlap "openclaw-gateway-control-plane" "adapt-openclaw-gateway-control-plane" ["adapt-openclaw-node-capability-hosts", "adapt-openclaw-session-isolation-tools", "adapt-openclaw-security-plugin-guardrails"],
   overlap "openclaw-node-invocation" "adapt-openclaw-node-capability-hosts" ["adapt-openclaw-gateway-control-plane", "adapt-openclaw-security-plugin-guardrails"],
   overlap "openclaw-session-tool-visibility" "adapt-openclaw-session-isolation-tools" ["adapt-openclaw-security-plugin-guardrails"],
-  overlap "nested-subagent-delegation-graphs" "add-nested-subagent-delegation-graphs" ["adapt-openclaw-session-isolation-tools", "adapt-hermes-multi-lens-focus-decks", "adapt-hermes-plan-loop-mode-fsm"],
+  overlap "nested-subagent-delegation-graphs" "add-nested-subagent-delegation-graphs" ["adapt-openclaw-session-isolation-tools", "adapt-hermes-multi-lens-focus-decks", "adapt-hermes-plan-loop-mode-fsm", "add-runtime-dag-contract-kit"],
+  overlap "runtime-dag-contract-kit" "add-runtime-dag-contract-kit" ["extend-recipe-workflows-with-dags", "add-researchspec-promotion-dags", "add-roadmap-dag-explanations", "add-nested-subagent-delegation-graphs", "adapt-goose-code-mode-tool-planning"],
+  overlap "recipe-workflow-dags" "extend-recipe-workflows-with-dags" ["add-runtime-dag-contract-kit", "adapt-goose-code-mode-tool-planning"],
+  overlap "researchspec-promotion-dags" "add-researchspec-promotion-dags" ["add-runtime-dag-contract-kit", "adapt-hermes-scoped-validation-planner", "adapt-hermes-vcs-snapshot-ledger"],
+  overlap "roadmap-dag-explanations" "add-roadmap-dag-explanations" ["add-runtime-dag-contract-kit", "define-dogfoodable-host-readiness-roadmap"],
   overlap "openclaw-security-plugin-guardrails" "adapt-openclaw-security-plugin-guardrails" ["adapt-openclaw-gateway-control-plane", "adapt-openclaw-node-capability-hosts", "adapt-openclaw-session-isolation-tools"],
   overlap "memory-family-contracts" "surface-memory-family-contract-index" ["add-cognitive-memory-taxonomy", "add-memory-routing-contracts", "enrich-memory-retrieval-quality-policy", "add-production-memory-policy-descriptors", "add-memory-evaluation-rail"],
   overlap "memory-routing-quality" "add-memory-routing-contracts" ["add-cognitive-memory-taxonomy", "enrich-memory-retrieval-quality-policy", "add-production-memory-policy-descriptors", "add-memory-evaluation-rail"],
@@ -368,6 +454,16 @@ let overlap_entries = [
   overlap "hermes-roi-action-routing" "adapt-hermes-roi-recommendation-contracts" ["adapt-hermes-done-review-lifecycle", "adapt-hermes-corrective-memory-metrics", "adapt-hermes-multi-lens-focus-decks"],
   overlap "hermes-host-asset-reconciliation" "adapt-hermes-host-asset-reconciliation" ["adapt-hermes-multi-lens-focus-decks"],
   overlap "hermes-vcs-snapshot-ledger" "adapt-hermes-vcs-snapshot-ledger" ["adapt-hermes-scoped-validation-planner"],
+  overlap "adapter-maintainability-hotspots" "refactor-adapter-crate-maintainability" ["harden-provider-stream-parser-rails", "add-concrete-provider-dispatch-adapter", "add-host-tool-executor-capability-packs", "add-host-session-persistence-adapter", "add-fake-backed-headless-dogfood-shell"],
+  overlap "provider-stream-parser-rails" "harden-provider-stream-parser-rails" ["add-concrete-provider-streaming-adapters", "add-provider-projection-conformance-fixtures", "add-concrete-provider-dispatch-adapter"],
+  overlap "concrete-provider-dispatch" "add-concrete-provider-dispatch-adapter" ["define-model-router-execution-service", "add-concrete-provider-streaming-adapters", "add-fake-backed-headless-dogfood-shell"],
+  overlap "tool-executor-capability-packs" "add-host-tool-executor-capability-packs" ["adapt-goose-code-mode-tool-planning", "adapt-hermes-host-asset-reconciliation", "add-fake-backed-headless-dogfood-shell"],
+  overlap "host-session-persistence-adapter" "add-host-session-persistence-adapter" ["adapt-goose-session-branching-controls", "adapt-hermes-vcs-snapshot-ledger", "add-fake-backed-headless-dogfood-shell"],
+  overlap "fake-backed-headless-dogfood-shell" "add-fake-backed-headless-dogfood-shell" ["add-concrete-provider-dispatch-adapter", "add-host-tool-executor-capability-packs", "add-host-session-persistence-adapter"],
+  overlap "turnstone-intent-validation" "adapt-turnstone-intent-validation" ["adapt-turnstone-output-guard", "add-turnstone-headless-eval-scorer", "add-host-tool-executor-capability-packs"],
+  overlap "turnstone-output-guard" "adapt-turnstone-output-guard" ["adapt-turnstone-intent-validation", "add-turnstone-headless-eval-scorer", "add-host-tool-executor-capability-packs"],
+  overlap "turnstone-headless-eval-scorer" "add-turnstone-headless-eval-scorer" ["adapt-turnstone-intent-validation", "adapt-turnstone-output-guard", "add-fake-backed-headless-dogfood-shell"],
+  overlap "cap-std-context-boundary" "adopt-cap-std-context-boundary" ["adapt-hermes-host-asset-reconciliation", "add-host-session-persistence-adapter"],
 ]
 in
 

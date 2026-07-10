@@ -5,6 +5,17 @@
 //! descriptors only; it never scans repositories, reads diffs, calls models,
 //! opens UI, creates lifecycle changes, delegates work, or starts implementation.
 
+#![cfg_attr(
+    animus_octet,
+    allow(
+        tigerstyle::ambiguous_params,
+        tigerstyle::assertion_density,
+        tigerstyle::non_trait_imports,
+        tigerstyle::numeric_units,
+        tigerstyle::path_segment_repetition
+    )
+)]
+
 use crate::artifact::Hash;
 use crate::validation::{self, AdapterContractError, FieldName};
 

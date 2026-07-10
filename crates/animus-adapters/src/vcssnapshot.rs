@@ -5,6 +5,18 @@
 //! commands, creates branches or stashes, mutates worktrees, schedules snapshots,
 //! opens UI, cleans up storage, or restores files.
 
+#![cfg_attr(
+    animus_octet,
+    allow(
+        tigerstyle::ambiguous_params,
+        tigerstyle::assertion_density,
+        tigerstyle::compound_condition,
+        tigerstyle::function_length,
+        tigerstyle::non_trait_imports,
+        tigerstyle::unbounded_collection_growth
+    )
+)]
+
 use crate::artifact::Hash;
 use crate::validation::{self, AdapterContractError, FieldName};
 

@@ -337,6 +337,7 @@ fn raw_endpoint_descriptor_is_rejected() {
             provenance_hash: HASH_D,
         });
 
+    assert!(result.is_err());
     assert_eq!(
         result,
         Err(super::super::RemoteServerAdmissionError::UnsafeMaterial { marker: "https://" })

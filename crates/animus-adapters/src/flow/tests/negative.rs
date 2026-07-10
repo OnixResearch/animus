@@ -306,6 +306,7 @@ fn recipe_dag_rejects_duplicate_steps_before_planning_effects() {
         },
     ];
 
+    assert_eq!(duplicate_steps.len(), DAG_TWO_STEP_COUNT);
     assert!(matches!(
         RecipeWorkflow::validate(&RecipeWorkflowDraft {
             dag_steps: &duplicate_steps,
@@ -401,6 +402,7 @@ fn recipe_dag_rejects_cycles_before_planning_effects() {
         },
     ];
 
+    assert_eq!(cyclic_steps.len(), DAG_TWO_STEP_COUNT);
     assert!(matches!(
         RecipeWorkflow::validate(&RecipeWorkflowDraft {
             dag_steps: &cyclic_steps,
@@ -411,7 +413,7 @@ fn recipe_dag_rejects_cycles_before_planning_effects() {
 }
 
 #[test]
-fn recipe_dag_rejects_recipe_gate_bypasses_and_receipt_leaks() {
+fn recipe_dag_rejects_undeclared_outputs() {
     let undeclared_output = [
         RecipeDagStepDraft {
             step_id: DAG_STEP_RESEARCH_A,
@@ -436,6 +438,19 @@ fn recipe_dag_rejects_recipe_gate_bypasses_and_receipt_leaks() {
             capability_ceilings: &[CAPABILITY_MODEL],
         },
     ];
+
+    assert_eq!(undeclared_output.len(), DAG_TWO_STEP_COUNT);
+    assert!(matches!(
+        RecipeWorkflow::validate(&RecipeWorkflowDraft {
+            dag_steps: &undeclared_output,
+            ..workflow_draft()
+        }),
+        Err(RecipeWorkflowError::UndeclaredDagOutput { .. })
+    ));
+}
+
+#[test]
+fn recipe_dag_rejects_untrusted_subrecipes() {
     let untrusted_subrecipe = [RecipeDagStepDraft {
         step_id: DAG_STEP_SUBRECIPE,
         kind: "subrecipe",
@@ -447,6 +462,19 @@ fn recipe_dag_rejects_recipe_gate_bypasses_and_receipt_leaks() {
         subrecipe_refs: &["goose.recipe.ghost"],
         capability_ceilings: &[CAPABILITY_MODEL],
     }];
+
+    assert_eq!(untrusted_subrecipe.len(), DAG_SINGLE_STEP_COUNT);
+    assert!(matches!(
+        RecipeWorkflow::validate(&RecipeWorkflowDraft {
+            dag_steps: &untrusted_subrecipe,
+            ..workflow_draft()
+        }),
+        Err(RecipeWorkflowError::UntrustedDagSubrecipe { .. })
+    ));
+}
+
+#[test]
+fn recipe_dag_rejects_capability_widening() {
     let capability_widening = [RecipeDagStepDraft {
         step_id: DAG_STEP_RESEARCH_A,
         kind: "tool",
@@ -458,6 +486,19 @@ fn recipe_dag_rejects_recipe_gate_bypasses_and_receipt_leaks() {
         subrecipe_refs: &[],
         capability_ceilings: &["network.fetch"],
     }];
+
+    assert_eq!(capability_widening.len(), DAG_SINGLE_STEP_COUNT);
+    assert!(matches!(
+        RecipeWorkflow::validate(&RecipeWorkflowDraft {
+            dag_steps: &capability_widening,
+            ..workflow_draft()
+        }),
+        Err(RecipeWorkflowError::CapabilityWidening { .. })
+    ));
+}
+
+#[test]
+fn recipe_dag_rejects_retry_bypass() {
     let retry_bypass = [RecipeDagStepDraft {
         step_id: DAG_STEP_RESEARCH_B,
         kind: "retry",
@@ -470,27 +511,7 @@ fn recipe_dag_rejects_recipe_gate_bypasses_and_receipt_leaks() {
         capability_ceilings: &[CAPABILITY_TOOL],
     }];
 
-    assert!(matches!(
-        RecipeWorkflow::validate(&RecipeWorkflowDraft {
-            dag_steps: &undeclared_output,
-            ..workflow_draft()
-        }),
-        Err(RecipeWorkflowError::UndeclaredDagOutput { .. })
-    ));
-    assert!(matches!(
-        RecipeWorkflow::validate(&RecipeWorkflowDraft {
-            dag_steps: &untrusted_subrecipe,
-            ..workflow_draft()
-        }),
-        Err(RecipeWorkflowError::UntrustedDagSubrecipe { .. })
-    ));
-    assert!(matches!(
-        RecipeWorkflow::validate(&RecipeWorkflowDraft {
-            dag_steps: &capability_widening,
-            ..workflow_draft()
-        }),
-        Err(RecipeWorkflowError::CapabilityWidening { .. })
-    ));
+    assert_eq!(retry_bypass.len(), DAG_SINGLE_STEP_COUNT);
     assert!(matches!(
         RecipeWorkflow::validate(&RecipeWorkflowDraft {
             dag_steps: &retry_bypass,

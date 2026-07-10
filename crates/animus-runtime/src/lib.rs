@@ -34,8 +34,10 @@ mod background;
 #[allow(excessive_file_length)]
 mod batch;
 mod boundary;
+mod branching;
 mod capmap;
 mod caps;
+mod checkpoint;
 #[path = "composition/conformance.rs"]
 mod composition_conformance;
 mod context_layering;
@@ -44,32 +46,47 @@ mod contract;
 #[path = "continuation/mod.rs"]
 mod controller;
 mod dataset_export;
+#[path = "dogfoodshell.rs"]
+pub mod dogfood_shell;
 mod eval_feedback;
 mod exports;
 mod fabric;
 mod fresh_context_tasks;
 mod headless;
 mod hooks;
+mod mailbox;
+#[path = "nestedsubagentgraphs.rs"]
+pub mod nested_subagent_graphs;
 #[allow(excessive_file_length)]
 #[path = "kanban.rs"]
 mod orchestration;
 mod pi_compaction;
 mod prelude;
+#[path = "productionmemorypolicy.rs"]
+pub mod production_memory_policy;
 mod provenance;
 mod provider_hardening;
 mod quality_records;
 mod researchspec;
+#[path = "researchspecpromotiondag.rs"]
+pub mod researchspec_promotion_dag;
+mod runtime_dag;
 mod scaffold;
-mod session_branching;
+#[path = "sessionpersistence.rs"]
+pub mod session_persistence;
 mod shell;
 mod status;
 pub mod subagents;
 mod telemetry;
 #[path = "tooladmission.rs"]
 mod tool_admission;
+#[path = "toolexecutorpacks.rs"]
+pub mod tool_executor_packs;
 mod transition;
 mod trust_boundary;
 mod turns;
+#[path = "turnstoneeval.rs"]
+pub mod turnstone_eval;
 mod workcmd;
 mod worker_team;
 mod zerostack_midturn;

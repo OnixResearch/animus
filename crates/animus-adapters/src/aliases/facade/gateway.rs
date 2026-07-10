@@ -1,8 +1,8 @@
 mod auth;
+mod backend;
 mod input;
 mod policy;
 mod record;
-mod server;
 mod taxonomy;
 #[cfg(test)]
 mod tests;
@@ -49,7 +49,7 @@ pub type RemoteAdmissionReceipt = AdmissionReceipt;
 /// Admission validation error.
 pub type RemoteAdmissionError = AdmissionError;
 
-pub use server::{
+pub use backend::{
     REMOTE_SERVER_RECEIPT_LEAK_MARKERS, RemoteServerAdmissionDecision, RemoteServerAdmissionError,
     RemoteServerAdmissionOutcome, RemoteServerAdmissionPolicy, RemoteServerAdmissionPolicyDraft,
     RemoteServerAdmissionReason, RemoteServerAdmissionReceipt, RemoteServerAdmissionRequest,

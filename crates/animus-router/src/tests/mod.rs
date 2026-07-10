@@ -1,4 +1,5 @@
 mod bounded;
+mod fairness;
 mod fallback;
 mod negative;
 mod positive;
@@ -223,84 +224,4 @@ pub(super) fn rotation_snapshot(fixture: RotationSnapshotFixture) -> crate::Rout
         cursors: core::slice::from_ref(&cursor),
     })
     .expect("rotation snapshot should validate")
-}
-
-#[test]
-fn materialize_execution_plan_rejects_cyclic_fallback() {
-    // r[verify agent_harness_runtime.model_router.execution_plan.invariants.cyclic_fallback]
-    let cycle_catalog = alloc::vec![
-        entry(EntryFixture {
-            label: MODEL_PRIMARY,
-            backend: BACKEND_LOCAL,
-            role: "primary",
-            local: true,
-        }),
-        entry(EntryFixture {
-            label: MODEL_ESCALATION,
-            backend: BACKEND_LOCAL,
-            role: "escalation",
-            local: true,
-        }),
-        entry(EntryFixture {
-            label: MODEL_PRIMARY,
-            backend: BACKEND_LOCAL,
-            role: "fallback",
-            local: true,
-        }),
-    ];
-    let plan = selected_plan(SelectedPlanFixture {
-        recipe_id: RECIPE_CONFIDENCE,
-        family: crate::RouteFamily::Confidence,
-        selected_models: &[MODEL_PRIMARY, MODEL_ESCALATION],
-        output_contract: crate::OutputContract::Json,
-        bounds: plan_bounds(BoundsFixture {
-            max_candidates: MAX_CANDIDATES_THREE,
-            max_parallelism: MAX_PARALLELISM_THREE,
-            min_success_quorum: QUORUM_ONE,
-            timeout_class: crate::limit::DeadlineClass::Standard,
-            max_synthesis_attempts: SYNTHESIS_ONE,
-            max_repair_attempts: REPAIR_ONE,
-            fallback_policy: crate::limit::FallbackPolicy::BestValidEvidence,
-        }),
-        privacy: crate::PrivacyBand::RemoteAllowed,
-        fallback_eligibility: crate::FallbackEligibility::Eligible,
-    });
-
-    assert_eq!(plan.family(), crate::RouteFamily::Confidence);
-    assert_eq!(plan.selected_models().len(), 2);
-    assert_eq!(plan.privacy(), crate::PrivacyBand::RemoteAllowed);
-    assert_eq!(
-        crate::materialize_execution_plan(&plan, &cycle_catalog, &budget()),
-        Err(crate::ExecutionPlanError::CyclicFallback)
-    );
-}
-
-#[test]
-fn materialize_execution_plan_rejects_ineligible_fallback() {
-    // r[verify agent_harness_runtime.model_router.execution_plan.invariants.fallback_eligibility]
-    let plan = selected_plan(SelectedPlanFixture {
-        recipe_id: RECIPE_CONFIDENCE,
-        family: crate::RouteFamily::Confidence,
-        selected_models: &[MODEL_PRIMARY, MODEL_ESCALATION],
-        output_contract: crate::OutputContract::Json,
-        bounds: plan_bounds(BoundsFixture {
-            max_candidates: MAX_CANDIDATES_THREE,
-            max_parallelism: MAX_PARALLELISM_THREE,
-            min_success_quorum: QUORUM_ONE,
-            timeout_class: crate::limit::DeadlineClass::Standard,
-            max_synthesis_attempts: SYNTHESIS_ONE,
-            max_repair_attempts: REPAIR_ONE,
-            fallback_policy: crate::limit::FallbackPolicy::BestValidEvidence,
-        }),
-        privacy: crate::PrivacyBand::RemoteAllowed,
-        fallback_eligibility: crate::FallbackEligibility::Ineligible,
-    });
-
-    assert_eq!(plan.family(), crate::RouteFamily::Confidence);
-    assert_eq!(plan.selected_models().len(), 2);
-    assert_eq!(plan.privacy(), crate::PrivacyBand::RemoteAllowed);
-    assert_eq!(
-        crate::materialize_execution_plan(&plan, &catalog(), &budget()),
-        Err(crate::ExecutionPlanError::FallbackModelNotEligible)
-    );
 }

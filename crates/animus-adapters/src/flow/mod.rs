@@ -7,9 +7,9 @@
 mod admit;
 mod assign;
 mod attempt;
-mod dag;
 mod data;
 mod field;
+mod graph;
 mod shape;
 
 #[cfg(test)]
@@ -28,12 +28,12 @@ pub use attempt::{
     RecipeRetryPlan, RecipeRetryPlanDraft, RecipeRetryPolicy, RecipeRetryPolicyDraft,
     RecipeRetryRequest, RecipeRetryRequestStatus, plan_recipe_retry,
 };
-pub use dag::{
+pub use data::{RecipeWorkflow, RecipeWorkflowDraft};
+pub use field::{RecipeParameter, RecipeParameterDraft, RecipeParameterKind};
+pub use graph::{
     RecipeDagAdmission, RecipeDagBatch, RecipeDagBlockReason, RecipeDagBlockedStep, RecipeDagPlan,
     RecipeDagReceipt, RecipeDagStep, RecipeDagStepDraft, RecipeDagStepKind, plan_recipe_dag,
 };
-pub use data::{RecipeWorkflow, RecipeWorkflowDraft};
-pub use field::{RecipeParameter, RecipeParameterDraft, RecipeParameterKind};
 pub use shape::{
     RecipeAutomationOutcome, RecipeAutomationStatus, RecipeOutputDraft, RecipeOutputFailure,
     RecipeOutputFieldDraft, RecipeResponseField, RecipeResponseFieldDraft, RecipeResponseFieldKind,
@@ -371,7 +371,7 @@ fn fmt_recipe_dag_error(
             formatter,
             "recipe DAG step {step_id} references undeclared retry check {retry_ref}"
         ),
-        _ => unreachable!("non-DAG recipe workflow error matched earlier"),
+        _ => formatter.write_str("recipe workflow validation failed"),
     }
 }
 

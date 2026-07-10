@@ -92,6 +92,14 @@ Intent validation contracts are optional SDK DTOs. `validate_intent_verdict` acc
 
 Non-claims: Animus does not provide smart approvals, live LLM judge execution, approval bypass, raw command/tool bodies in durable evidence, or any executor grant. Normal capability, policy, confirmation, sandbox, mutation, and executor gates remain required before dispatch.
 
+## Output guard boundary
+
+Output guard contracts are optional SDK DTOs. `scan_output_summary` evaluates already-bounded host-supplied output summaries and safe references for prompt-injection markers, credential-like values, encoded payloads, adversarial URLs, unsafe references, and over-budget summaries. `validate_output_assessment` accepts safe assessment metadata, detector flags, annotations, redaction state, counts, detector tiers, references, and BLAKE3 hashes.
+
+`merge_output_assessments` preserves deterministic findings: optional classifier assessments can add flags or annotations but cannot lower deterministic risk or override credential redaction. `plan_output_projection` denies unsafe output or projects only clean/redacted text according to policy. `validate_output_guard_receipt` stores only flags, risk labels, counts, output hashes, redaction markers, detector tier labels, and safe references.
+
+Non-claims: Animus does not depend on Turnstone, render product UI warning chips, call live classifiers, fetch URLs, execute shells, persist raw tool output, store credentials, or turn judge rationales into authority.
+
 ## Validation
 
 Focused validation:

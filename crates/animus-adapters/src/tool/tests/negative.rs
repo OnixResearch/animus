@@ -1,5 +1,6 @@
 mod spans;
 
+use super::super::planning::*;
 use super::super::*;
 use super::support::*;
 
@@ -297,4 +298,219 @@ fn missing_executor_denied_capability_and_unsafe_output_fail_without_fallback() 
         Some(FailureClass::UnsafeOutputReference)
     );
     assert!(!unsafe_output.fallback_attempted());
+}
+
+#[test]
+fn plan_fabric_rejects_arbitrary_host_actions() {
+    // r[verify agent_harness_runtime.goose_code_mode_tool_planning.fabric.denied]
+    let denied = admit_plan_fabric(&PlanFabricDraft {
+        allowed_host_actions: &[FABRIC_ACTION_PROCESS],
+        ..admitted_fabric()
+    })
+    .expect("safe labels should parse");
+
+    assert_eq!(denied.status(), PlanFabricStatus::Denied);
+    assert_eq!(denied.issue(), PlanFabricIssue::UnsupportedHostAction);
+}
+
+#[test]
+fn plan_denies_undiscovered_tools_without_ambient_lookup() {
+    // r[verify agent_harness_runtime.goose_code_mode_tool_planning.step_admission.denied]
+    let definitions = [
+        definition(DefinitionStatus::Active, NAME),
+        definition(DefinitionStatus::Inactive, INACTIVE_NAME),
+    ];
+    let discovered = discovery();
+    let hidden_request = request_for(RequestFixture {
+        name: INACTIVE_NAME,
+        approval_posture: APPROVAL_PRE_APPROVED,
+        mutation_targets: &[TARGET_OTHER],
+        required_capability_labels: &[CAPABILITY_READ],
+    });
+    let steps = [PlanStepDraft {
+        step_id: Some(STEP_FIRST),
+        request: &hidden_request,
+        cancellation_posture: PlanCancellationPosture::Continue,
+        timeout_posture: PlanTimeoutPosture::WithinDeadline,
+        depends_on: &[],
+        intermediate_bindings: &[],
+    }];
+    let plan = admit_plan(
+        &PlanDraft {
+            batch_id: Some(PLAN_BATCH),
+            fabric: admitted_fabric(),
+            batch_policy: PLAN_BATCH_POLICY_SERIAL,
+            steps: &steps,
+        },
+        PlanAdmissionContext {
+            discovery: &discovered,
+            definitions: &definitions,
+        },
+    )
+    .expect("denied plan should still be typed");
+
+    assert_eq!(plan.status(), PlanStatus::Denied);
+    assert_eq!(plan.issue(), PlanIssue::UndiscoveredTool);
+    assert_eq!(plan.steps().len(), SINGLE_STEP_COUNT);
+    assert_eq!(
+        plan.steps()[FIRST_INDEX].issue(),
+        PlanIssue::UndiscoveredTool
+    );
+}
+
+#[test]
+fn plan_denies_cancelled_and_timed_out_steps() {
+    let definitions = [definition(DefinitionStatus::Active, NAME)];
+    let discovered = discovery();
+    let tool_request = request();
+    let cancelled_steps = [PlanStepDraft {
+        step_id: Some(STEP_FIRST),
+        request: &tool_request,
+        cancellation_posture: PlanCancellationPosture::Cancelled,
+        timeout_posture: PlanTimeoutPosture::WithinDeadline,
+        depends_on: &[],
+        intermediate_bindings: &[],
+    }];
+    let cancelled = admit_plan(
+        &PlanDraft {
+            batch_id: Some(PLAN_BATCH),
+            fabric: admitted_fabric(),
+            batch_policy: PLAN_BATCH_POLICY_SERIAL,
+            steps: &cancelled_steps,
+        },
+        PlanAdmissionContext {
+            discovery: &discovered,
+            definitions: &definitions,
+        },
+    )
+    .expect("cancelled plan should remain typed");
+    assert_eq!(cancelled.status(), PlanStatus::Denied);
+    assert_eq!(cancelled.issue(), PlanIssue::Cancelled);
+
+    let timed_out_steps = [PlanStepDraft {
+        step_id: Some(STEP_FIRST),
+        request: &tool_request,
+        cancellation_posture: PlanCancellationPosture::Continue,
+        timeout_posture: PlanTimeoutPosture::TimedOut,
+        depends_on: &[],
+        intermediate_bindings: &[],
+    }];
+    let timed_out = admit_plan(
+        &PlanDraft {
+            batch_id: Some(PLAN_BATCH),
+            fabric: admitted_fabric(),
+            batch_policy: PLAN_BATCH_POLICY_SERIAL,
+            steps: &timed_out_steps,
+        },
+        PlanAdmissionContext {
+            discovery: &discovered,
+            definitions: &definitions,
+        },
+    )
+    .expect("timed-out plan should remain typed");
+    assert_eq!(timed_out.status(), PlanStatus::Denied);
+    assert_eq!(timed_out.issue(), PlanIssue::TimedOut);
+}
+
+#[test]
+fn plan_rejects_binary_intermediate_as_text() {
+    // r[verify agent_harness_runtime.goose_code_mode_tool_planning.intermediates.binary]
+    let definitions = [definition(DefinitionStatus::Active, NAME)];
+    let discovered = discovery();
+    let first_request = request();
+    let second_request = request_for(RequestFixture {
+        name: NAME,
+        approval_posture: APPROVAL_PRE_APPROVED,
+        mutation_targets: &[TARGET_OTHER],
+        required_capability_labels: &[CAPABILITY_READ],
+    });
+    let binary_text_binding = PlanIntermediateBindingDraft {
+        binding_id: Some(BINDING_FIRST),
+        source_step_id: Some(STEP_FIRST),
+        target_argument: Some(TARGET_ARGUMENT),
+        value_kind: PlanIntermediateKind::Binary,
+        use_kind: PlanIntermediateUse::ArgumentText,
+        char_count: VISIBLE_BUDGET,
+        content_hash: Some(HASH_C),
+    };
+    let steps = [
+        PlanStepDraft {
+            step_id: Some(STEP_FIRST),
+            request: &first_request,
+            cancellation_posture: PlanCancellationPosture::Continue,
+            timeout_posture: PlanTimeoutPosture::WithinDeadline,
+            depends_on: &[],
+            intermediate_bindings: &[],
+        },
+        PlanStepDraft {
+            step_id: Some(STEP_SECOND),
+            request: &second_request,
+            cancellation_posture: PlanCancellationPosture::Continue,
+            timeout_posture: PlanTimeoutPosture::WithinDeadline,
+            depends_on: &[STEP_FIRST],
+            intermediate_bindings: &[binary_text_binding],
+        },
+    ];
+    let plan = admit_plan(
+        &PlanDraft {
+            batch_id: Some(PLAN_BATCH),
+            fabric: admitted_fabric(),
+            batch_policy: PLAN_BATCH_POLICY_SERIAL,
+            steps: &steps,
+        },
+        PlanAdmissionContext {
+            discovery: &discovered,
+            definitions: &definitions,
+        },
+    )
+    .expect("unsafe intermediate should deny plan without raw payload");
+
+    assert_eq!(plan.status(), PlanStatus::Denied);
+    assert_eq!(plan.issue(), PlanIssue::UnsafeIntermediate);
+    assert_eq!(
+        plan.steps()[SECOND_INDEX].issue(),
+        PlanIssue::UnsafeIntermediate
+    );
+}
+
+#[test]
+fn plan_receipt_rejects_raw_prompt_diagnostics() {
+    // r[verify agent_harness_runtime.goose_code_mode_tool_planning.receipts.rejects_leaks]
+    let definitions = [definition(DefinitionStatus::Active, NAME)];
+    let discovered = discovery();
+    let tool_request = request();
+    let steps = [PlanStepDraft {
+        step_id: Some(STEP_FIRST),
+        request: &tool_request,
+        cancellation_posture: PlanCancellationPosture::Continue,
+        timeout_posture: PlanTimeoutPosture::WithinDeadline,
+        depends_on: &[],
+        intermediate_bindings: &[],
+    }];
+    let plan = admit_plan(
+        &PlanDraft {
+            batch_id: Some(PLAN_BATCH),
+            fabric: admitted_fabric(),
+            batch_policy: PLAN_BATCH_POLICY_SERIAL,
+            steps: &steps,
+        },
+        PlanAdmissionContext {
+            discovery: &discovered,
+            definitions: &definitions,
+        },
+    )
+    .expect("plan should validate before receipt leak check");
+    assert_eq!(plan.status(), PlanStatus::Admitted);
+
+    let leak = PlanReceipt::new(&PlanReceiptDraft {
+        plan: &plan,
+        policy_hash: HASH_A,
+        diagnostics: &[DIAGNOSTIC_RAW_PROMPT],
+    })
+    .expect_err("raw prompt diagnostics must be rejected");
+
+    assert!(matches!(
+        leak,
+        crate::safe::receipt::Error::UnsafeMetadata { .. }
+    ));
 }

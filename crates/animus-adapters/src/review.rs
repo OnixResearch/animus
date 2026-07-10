@@ -12,10 +12,10 @@
     usize_in_public_api
 )]
 
-include!("review/impl/report_types.rs");
-include!("review/impl/metric_records.rs");
-include!("review/impl/report_reducers.rs");
-include!("review/impl/report_parser.rs");
+include!("review/impl/report/types.rs");
+include!("review/impl/metric/records.rs");
+include!("review/impl/report/reducers.rs");
+include!("review/impl/report/parser.rs");
 include!("review/impl/impl005.rs");
-include!("review/impl/corrective_memory.rs");
-include!("review/impl/lifecycle_review.rs");
+include!("review/impl/corrective/memory.rs");
+include!("review/impl/lifecycle/review.rs");

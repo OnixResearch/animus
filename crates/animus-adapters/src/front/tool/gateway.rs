@@ -1,9 +1,9 @@
-include!("gateway/delivery_types.rs");
-include!("gateway/delivery_request.rs");
-include!("gateway/delivery_policy.rs");
-include!("gateway/delivery_outbox.rs");
-include!("gateway/delivery_retry_receipts.rs");
-include!("gateway/delivery_errors.rs");
+include!("gateway/delivery/types.rs");
+include!("gateway/delivery/request.rs");
+include!("gateway/delivery/policy.rs");
+include!("gateway/delivery/outbox.rs");
+include!("gateway/delivery/retry/receipts.rs");
+include!("gateway/delivery/errors.rs");
 
 #[cfg(test)]
 mod tests {
