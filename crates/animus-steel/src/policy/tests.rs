@@ -2,6 +2,8 @@ use serde::Deserialize;
 
 const PROFILE_NAME: &str = "default-loop";
 const SCRIPT_LABEL: &str = "scripts/default-loop.scm";
+const RALPH_PROFILE_NAME: &str = "ralph-loop";
+const RALPH_SCRIPT_LABEL: &str = "scripts/ralph-loop.scm";
 const BAD_PROFILE_NAME: &str = "Bad Profile";
 const PATH_ESCAPE_LABEL: &str = "../outside.scm";
 const UNKNOWN_ACTION: &str = "filesystem";
@@ -11,6 +13,7 @@ const INVALID_HASH: &str = "not-a-blake3-hash";
 const ZERO_TURN_BUDGET: u32 = 0;
 const ONE_TURN_BUDGET: u32 = 1;
 const TWO_TURN_BUDGET: u32 = 2;
+const RALPH_TURN_BUDGET: u32 = 10;
 const RAW_PROMPT_TEXT: &str = "prompt: deploy credentials";
 const RAW_PROVIDER_PAYLOAD: &str = "provider payload body";
 const SCRIPT_SOURCE: &str = r"
@@ -25,8 +28,16 @@ const EXPORTED_POLICY_JSON: &str =
     include_str!("../../../../policy/steel-runtime/generated/steel-runtime-policy.json");
 const EXPORTED_DEFAULT_SCRIPT: &str =
     include_str!("../../../../policy/steel-runtime/scripts/default-loop.scm");
+const EXPORTED_RALPH_SCRIPT: &str =
+    include_str!("../../../../policy/steel-runtime/scripts/ralph-loop.scm");
 const POLICY_SCHEMA: &str = "animus.steel-runtime-policy.v1";
+const EXPECTED_PROFILE_COUNT: usize = 2;
 const EXPECTED_DEFAULT_PROFILE_COUNT: usize = 1;
+const RALPH_TASK_STATE: &str = "branch: ralph/example\nstory: S1 passes false";
+const RALPH_INCOMPLETE_MESSAGE: &str = "implemented S1; S2 remains";
+const RALPH_COMPLETION_PROMISE: &str = "COMPLETE";
+const RALPH_COMPLETE_MESSAGE: &str = "all stories pass\nCOMPLETE";
+const RALPH_PROMPT_MARKER: &str = "complete one unfinished Ralph story";
 
 #[test]
 fn generated_policy_export_allows_default_script() {
@@ -55,6 +66,7 @@ fn generated_policy_export_allows_default_script() {
     let receipt = checked_profile.activate(&activation);
 
     assert_eq!(policy.schema, POLICY_SCHEMA);
+    assert_eq!(policy.profiles.len(), EXPECTED_PROFILE_COUNT);
     assert_eq!(profile.name, PROFILE_NAME);
     assert_eq!(profile.script.label, SCRIPT_LABEL);
     assert_eq!(
@@ -63,6 +75,86 @@ fn generated_policy_export_allows_default_script() {
     );
     assert!(receipt.is_allowed());
     assert_eq!(receipt.denied_reason(), None);
+}
+
+#[test]
+fn generated_policy_export_allows_ralph_script() {
+    let policy = exported_policy();
+    let profile = exported_profile_by_name(&policy, RALPH_PROFILE_NAME);
+    let action_refs = action_refs(profile);
+    let draft = super::ProfileDraft {
+        name: profile.name.as_str(),
+        enabled: profile.enabled,
+        is_default: profile.is_default,
+        script_label: profile.script.label.as_str(),
+        script_hash: profile.script.hash.as_str(),
+        max_turns: profile.budget.max_turns,
+        allowed_host_actions: action_refs.as_slice(),
+        fallback_mode: profile.fallback_mode.as_str(),
+        receipt_redaction: profile.receipt_redaction.mode.as_str(),
+    };
+    let checked_profile = profile_from_draft(&draft).expect("ralph policy should build");
+    let script = super::Script::new(
+        checked_profile.name(),
+        checked_profile.script_label(),
+        EXPORTED_RALPH_SCRIPT,
+    );
+    let activation = super::Activation::new(
+        script,
+        RALPH_TURN_BUDGET,
+        super::DEFAULT_RUNTIME_HOST_ACTIONS,
+    );
+    let receipt = checked_profile.activate(&activation);
+
+    assert_eq!(profile.name, RALPH_PROFILE_NAME);
+    assert_eq!(profile.script.label, RALPH_SCRIPT_LABEL);
+    assert_eq!(profile.budget.max_turns, RALPH_TURN_BUDGET);
+    assert_eq!(
+        profile.script.hash,
+        super::script_hash(EXPORTED_RALPH_SCRIPT)
+    );
+    assert!(receipt.is_allowed());
+    assert_eq!(receipt.denied_reason(), None);
+}
+
+#[test]
+fn ralph_script_reprompts_until_completion_promise() {
+    let first_turn = crate::LoopTurn::new(RALPH_TASK_STATE, None, None)
+        .expect("ralph first turn should validate");
+    let first_decision = crate::SteelLoopFabric::decide_once(EXPORTED_RALPH_SCRIPT, &first_turn)
+        .expect("ralph first turn should produce model request");
+    assert_model_prompt_contains(
+        first_decision,
+        &[
+            RALPH_TASK_STATE,
+            RALPH_PROMPT_MARKER,
+            RALPH_COMPLETION_PROMISE,
+        ],
+    );
+
+    let incomplete_turn =
+        crate::LoopTurn::new(RALPH_TASK_STATE, Some(RALPH_INCOMPLETE_MESSAGE), None)
+            .expect("ralph incomplete turn should validate");
+    let incomplete_decision =
+        crate::SteelLoopFabric::decide_once(EXPORTED_RALPH_SCRIPT, &incomplete_turn)
+            .expect("ralph incomplete turn should produce another model request");
+    assert_model_prompt_contains(
+        incomplete_decision,
+        &["Previous iteration summary", RALPH_INCOMPLETE_MESSAGE],
+    );
+
+    let complete_turn = crate::LoopTurn::new(RALPH_TASK_STATE, Some(RALPH_COMPLETE_MESSAGE), None)
+        .expect("ralph complete turn should validate");
+    let complete_decision =
+        crate::SteelLoopFabric::decide_once(EXPORTED_RALPH_SCRIPT, &complete_turn)
+            .expect("ralph complete turn should produce final response");
+
+    match complete_decision {
+        crate::LoopDecision::Respond { response } => {
+            assert_eq!(response.message(), RALPH_COMPLETE_MESSAGE);
+        }
+        other => panic!("expected ralph final response, got {other:?}"),
+    }
 }
 
 #[test]
@@ -269,6 +361,28 @@ fn default_exported_profile(policy: &ExportedPolicy) -> &ExportedProfile {
 
     assert_eq!(default_profiles.len(), EXPECTED_DEFAULT_PROFILE_COUNT);
     default_profiles[0]
+}
+
+fn exported_profile_by_name<'a>(policy: &'a ExportedPolicy, name: &str) -> &'a ExportedProfile {
+    policy
+        .profiles
+        .iter()
+        .find(|profile| profile.name.as_str() == name)
+        .expect("exported profile should exist")
+}
+
+fn assert_model_prompt_contains(decision: crate::LoopDecision, needles: &[&str]) {
+    match decision {
+        crate::LoopDecision::CallModel { request } => {
+            for needle in needles {
+                assert!(
+                    request.prompt().contains(needle),
+                    "ralph prompt should contain {needle:?}"
+                );
+            }
+        }
+        other => panic!("expected ralph model request, got {other:?}"),
+    }
 }
 
 fn action_refs(profile: &ExportedProfile) -> Vec<&str> {

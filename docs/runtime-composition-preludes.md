@@ -22,6 +22,8 @@ The flat root exports remain compatibility surfaces. Do not remove or silently r
 
 `LoopFabric` consumes `RuntimeLoopTurn` and returns `RuntimeLoopDecision`, so custom Rust, replay, or test fabrics do not construct Steel values. The default Steel runner is an adapter behind the `steel` feature, enabled by the default `compat` bundle.
 
+The Nickel-governed Steel policy includes `default-loop` for a simple model-then-response fabric and `ralph-loop` for a bounded Ralph-style profile. `ralph-loop` repeats model turns until the previous model message contains `COMPLETE` or the runtime turn budget ends; all PRD/progress loading, fresh sessions, VCS, validation, shell, browser, and persistence effects remain host-owned.
+
 Focused checks:
 
 ```sh

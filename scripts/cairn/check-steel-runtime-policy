@@ -68,8 +68,9 @@ policy_drift: ${policy_drift_status}
 policy_next_check: ${policy_next_check}
 positive_fixtures:
 - Nickel steel_runtime_policy export matches checked generated JSON
-- animus-steel generated policy export activates the checked default script
+- animus-steel generated policy export activates the checked default and Ralph scripts
 - animus-steel valid model/tool/respond/stop decision programs
+- animus-steel Ralph script prompt, reprompt, and completion-promise behavior
 - animus-runtime steel_runtime positive dispatch programs
 negative_fixtures:
 - animus-runtime steel_policy denial blocks adapter dispatch
