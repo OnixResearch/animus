@@ -20,11 +20,13 @@ mod config;
 mod context;
 #[cfg(feature = "syndicate-host")]
 mod dataspace;
+mod document;
 #[cfg(feature = "dogfood-smoke")]
 mod dogfood_smoke;
 mod execution;
 #[cfg(feature = "iroh-host")]
 mod iroh;
+mod modelevidence;
 mod observability;
 mod providers;
 
@@ -40,6 +42,11 @@ pub use context::{
     CapabilityRoot, CapabilityRootKind, STD_CONTEXT_DEFAULT_MAX_BYTES,
     STD_CONTEXT_DEFAULT_MAX_DIRECTORY_ENTRIES,
 };
+pub use document::{
+    DocumentExtractionError, DocumentExtractionHost, DocumentExtractionIsolationRequirement,
+    DocumentExtractionPlan, DocumentExtractionRequest, DocumentExtractionServiceState,
+    DocumentExtractor, plan_document_extraction, validate_document_report_at_shell,
+};
 #[cfg(feature = "dogfood-smoke")]
 pub use dogfood_smoke::run_packaged_headless_dogfood_smoke;
 /// Root public name for the std local diff context resolver.
@@ -50,6 +57,11 @@ pub type LocalDirectoryContextResolver = context::LocalDirectoryResolver;
 pub type LocalFileContextResolver = context::LocalFileResolver;
 /// Root public name for the std no-op context resolver.
 pub type NullContextResolver = context::NullResolver;
+pub use modelevidence::{
+    ModelEvidenceIngestError, ModelEvidenceIngestHost, ModelEvidenceIngestPlan,
+    ModelEvidenceIngestRequest, ModelEvidenceIngestServiceState, ModelEvidenceSource,
+    plan_model_evidence_ingest, validate_model_evidence_at_shell,
+};
 /// Root public name for std context resolver policy.
 pub type StdContextPolicy = context::Policy;
 #[cfg(feature = "syndicate-host")]

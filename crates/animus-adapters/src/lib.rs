@@ -31,6 +31,7 @@ mod bridge;
 mod child;
 mod codex;
 mod dataspace;
+mod document;
 mod effect;
 mod flow;
 mod front;
@@ -45,6 +46,7 @@ mod manifest;
 mod mcpapp;
 mod modefsm;
 mod model;
+mod modelevidence;
 mod multimodal;
 /// Optional OpenClaw-inspired node capability-host DTOs.
 pub mod node;
@@ -144,6 +146,14 @@ pub use dataspace::{
     AssertionStatus, OrchestrationEvent, OrchestrationEventDraft, OrchestrationEventKind, Scope,
     ScopeDraft, Subscription, SubscriptionDraft, SubscriptionIssue,
 };
+pub use document::{
+    DocumentContentTrust, DocumentFormat, DocumentIngestDiagnostic, DocumentIngestError,
+    DocumentIngestNonClaim, DocumentIngestReport, DocumentIngestReportDraft, DocumentIngestStatus,
+    DocumentIngestValidationIssue, DocumentIsolationStatus, DocumentMetadata,
+    DocumentMetadataDraft, DocumentRedactionLabel, DocumentSection, DocumentSectionDraft,
+    DocumentSourceIdentity, DocumentSourceIdentityDraft, DocumentTableCell, DocumentTableCellDraft,
+    DocumentTruncationStatus, PROHIBITED_DOCUMENT_INGEST_EFFECTS, validate_document_ingest_report,
+};
 pub use front::*;
 pub use hostcontrol::{
     HostControlEnvelope, HostControlError, HostEvent, HostEventKind, HostEventSubscription,
@@ -188,6 +198,13 @@ pub use modefsm::{
     SelectedStepUpdateDraft, StepSelectionStatus, apply_selected_step_update, extract_plan_steps,
     mode_state_from_extraction, plan_mode_controller, start_loop_work,
     validate_breakout_acknowledgement, validate_mode_descriptor, validate_mode_receipt,
+};
+pub use modelevidence::{
+    ModelArtifactIdentity, ModelArtifactIdentityDraft, ModelEvidenceCapabilityLabel,
+    ModelEvidenceDiagnostic, ModelEvidenceError, ModelEvidenceFreshness, ModelEvidenceKind,
+    ModelEvidenceNonClaim, ModelEvidenceReport, ModelEvidenceReportDraft,
+    ModelEvidenceResultStatus, ModelEvidenceValidationIssue, ModelEvidenceVerifierKind,
+    PROHIBITED_MODEL_EVIDENCE_EFFECTS, validate_model_evidence_report,
 };
 pub use recover::{
     CheckpointBackendKind, CheckpointDraft, CheckpointError, CheckpointFailureClass,

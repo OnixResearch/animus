@@ -28,6 +28,12 @@ Role rotation happens after role, backend, privacy, budget, duplicate-label, and
 
 `RouterRotationReceipt` records safe recipe, route-family, role, policy, cursor class, selected model label, bounded candidate count, catalog hash, next-cursor hash, redaction markers, and a BLAKE3 identity. It rejects raw prompts, provider payloads, health probes, credentials, endpoints, full paths, and unbounded traces.
 
+## Model-evidence advisory inputs
+
+`ModelEvidenceReport` lets hosts feed already-produced verification, conversion, kernel-proof, or benchmark-support reports into routing and admission policy without granting verifier authority to reusable crates. Validation checks evidence kind, model and corpus identities, verifier identity, property scope, freshness, diagnostics, advisory capability labels, and non-claims. Benchmark-only, stale, mismatched, unsupported-verifier, missing-property, overclaiming, or weakened-non-claim reports fail closed.
+
+Accepted reports are advisory unless a later Cairn change promotes a narrower profile with additional gates. `ModelEvidenceReport::advisory_decision_receipt` preserves non-claims for arbitrary robustness, output correctness, hallucination prevention, verifier soundness, benchmark superiority, release eligibility, GPU correctness, and whole-system safety.
+
 ## Verification and non-claims
 
 Fixture-backed evidence currently covers:
@@ -38,6 +44,7 @@ Fixture-backed evidence currently covers:
 - quorum and over-parallel denial;
 - fallback/repair binding and provider-bypass denial;
 - round-robin role and fallback rotation with stale-cursor, privacy-filter, and receipt-leak fixtures;
+- model-evidence advisory report validation and non-claim preservation;
 - safe receipt construction and leak rejection.
 
-Non-claims: this does not implement live OpenAI/Anthropic/local provider clients, provider discovery, credential storage, networked multi-model execution, production latency routing, health checks, or a default multi-provider agent runtime.
+Non-claims: this does not implement live OpenAI/Anthropic/local provider clients, provider discovery, credential storage, networked multi-model execution, production latency routing, health checks, verifier execution, GPU access, model safety proofs, benchmark superiority claims, or a default multi-provider agent runtime.

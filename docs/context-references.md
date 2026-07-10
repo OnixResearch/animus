@@ -25,6 +25,12 @@ Expansion uses explicit host-injected resolver traits for files, directories, di
 
 The provenance validator rejects raw content markers, credential-looking labels, absolute paths, oversized/unbounded labels, and inconsistent unbounded-output counts before review summaries or ledgers are emitted.
 
+## Document-ingest context artifacts
+
+`DocumentIngestReport` is the adapter DTO for host-owned document extraction. A host may read local files or invoke optional extractors, but reusable crates receive only safe source labels, BLAKE3 identities, admitted format labels, bounded section/table summaries, diagnostics, redaction labels, and explicit non-claims.
+
+Accepted document reports remain untrusted context. `DocumentIngestReport::context_receipt` preserves non-claims for parser soundness, extraction completeness, OCR coverage, semantic truth, embedded-content safety, release eligibility, and downstream task correctness when context assembly records provenance.
+
 ## Std shell resolvers
 
 `animus-std` provides explicit opt-in context shells for deterministic embedding:
@@ -33,5 +39,6 @@ The provenance validator rejects raw content markers, credential-looking labels,
 - `LocalFileContextResolver` reads policy-admitted relative text files under a configured root.
 - `LocalDirectoryContextResolver` returns bounded, sorted, relative directory listings.
 - `LocalDiffContextResolver` exposes already-loaded diff text; it does not spawn VCS commands.
+- `DocumentExtractionHost` plans local document extraction and delegates filesystem reads, optional extractor execution, timeout enforcement, process isolation, redaction, and receipt writes to an injected host service.
 
 These shells are not ambient discovery. They reject path escapes, missing files, binary/NUL-containing bodies, oversized files or listings, denied policy, unavailable roots, and network/image roles unless a separate host-owned adapter is explicitly supplied.
