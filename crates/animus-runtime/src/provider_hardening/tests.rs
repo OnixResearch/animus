@@ -38,6 +38,23 @@ const CONTEXT_BUDGET: u32 = 256;
 const OUTPUT_BUDGET: u32 = 64;
 const SMALL_CONTEXT_BUDGET: u32 = 1;
 const SMALL_OUTPUT_BUDGET: u32 = 1;
+const STREAM_CALL_ID: &str = "call-1";
+const STREAM_TOOL_ID: &str = "tool-1";
+const STREAM_PRIVATE_REASONING: &str = "private reasoning";
+const EXPECTED_PARSER_INVENTORY_ENTRIES: usize = 1;
+const EXPECTED_POSITIVE_STREAM_FRAMES: usize = 6;
+const EXPECTED_POSITIVE_CONTENT_FRAMES: usize = 2;
+const EXPECTED_TERMINAL_COUNT: usize = 1;
+const TINY_FRAME_BUDGET: usize = 8;
+const TINY_RECORD_BUDGET: usize = 16;
+const TINY_AGGREGATE_BUDGET: usize = 32;
+const ONE_RECORD_BUDGET: usize = 1;
+const ONE_EVENT_BUDGET: usize = 1;
+const ZERO_COMPLETION_BUDGET: usize = 0;
+const INVALID_UTF8_CHUNK: &[u8] = &[u8::MAX];
+const ORDERED_CONTENT_CHUNK: &[u8] =
+    b"{\"event\":\"content\",\"call_id\":\"call-1\",\"order\":1,\"body\":\"a\"}\n";
+const ORDERED_FINISH_CHUNK: &[u8] = b"{\"event\":\"finish\",\"call_id\":\"call-1\",\"order\":2}\n";
 
 #[test]
 fn api_style_resolution_handles_first_party_gateway_and_ambiguous_cases() {
@@ -251,6 +268,271 @@ fn receipts_hash_sensitive_endpoints_and_keep_reviewable_metadata() {
     assert_eq!(receipt.api_style, ProviderApiStyle::Responses);
     assert_eq!(receipt.capability_class, ProviderModelClass::TextAgent);
     assert_eq!(receipt.credential_source_class, "redacted");
+}
+
+#[test]
+fn provider_stream_parser_inventory_names_entrypoint_and_raw_boundary_review() {
+    // r[agent_harness_runtime.provider_stream_parser_rails.inventory]
+    let inventory = provider_stream_parser_inventory();
+    assert_eq!(inventory.len(), EXPECTED_PARSER_INVENTORY_ENTRIES);
+    assert!(validate_provider_stream_parser_inventory(&inventory).is_ok());
+    let entry = &inventory[0];
+    assert_eq!(entry.entrypoint, "parse_provider_stream_chunks");
+    assert!(entry.input_framing.contains("SSE"));
+    assert!(entry.normalized_output.contains("ModelStreamFrame"));
+    assert!(entry.budget_policy.contains("pre-buffer"));
+    assert!(
+        entry
+            .receipt_projection
+            .contains("ProviderStreamParserReceipt")
+    );
+    assert!(entry.raw_boundary_review.contains("budgeted"));
+
+    let invalid = vec![ProviderStreamParserInventoryEntry {
+        entrypoint: String::new(),
+        input_framing: String::new(),
+        normalized_output: String::new(),
+        budget_policy: String::new(),
+        receipt_projection: String::new(),
+        raw_boundary_review: String::new(),
+    }];
+    assert!(validate_provider_stream_parser_inventory(&invalid).is_err());
+}
+
+#[test]
+fn provider_stream_parser_accepts_sse_json_split_boundaries_and_safe_receipts() {
+    // r[agent_harness_runtime.provider_stream_parser_rails.entrypoint_fixtures.split_boundary]
+    // r[agent_harness_runtime.provider_stream_parser_rails.receipts.hidden_reasoning]
+    let chunks: &[&[u8]] = &[
+        b"data: {\"event\":\"content\",\"call_id\":\"call-1\",\"order\":1,\"body\":\"Hel\"}\n",
+        b"data: {\"event\":\"content\",\"call_id\":\"call-1\",\"order\":2,\"body\":\"lo",
+        b"\"}\n{\"event\":\"thought\",\"call_id\":\"call-1\",\"order\":3,\"body\":\"private reasoning\"}\n",
+        b"{\"event\":\"tool\",\"call_id\":\"call-1\",\"order\":4,\"tool_call_id\":\"tool-1\",\"body\":\"arguments-hash\"}\n",
+        b"{\"event\":\"usage\",\"call_id\":\"call-1\",\"order\":5,\"input_tokens\":7,\"output_tokens\":11}\n",
+        b"{\"event\":\"finish\",\"call_id\":\"call-1\",\"order\":6}\n",
+    ];
+    let report = parse_provider_stream_chunks(provider_stream_input(
+        chunks,
+        ProviderStreamParserBudget::default(),
+    ))
+    .expect("provider stream should parse");
+
+    assert_eq!(report.frames.len(), EXPECTED_POSITIVE_STREAM_FRAMES);
+    assert_eq!(report.receipt.status, ProviderStreamParserStatus::Success);
+    assert_eq!(report.receipt.record_count, EXPECTED_POSITIVE_STREAM_FRAMES);
+    assert_eq!(report.receipt.event_count, EXPECTED_POSITIVE_STREAM_FRAMES);
+    assert_eq!(report.receipt.completion_count, EXPECTED_TERMINAL_COUNT);
+    assert!(report.receipt.stream_identity.starts_with(BLAKE3_ALGORITHM));
+    assert!(
+        report
+            .receipt
+            .redaction_markers
+            .contains(&"thought:redacted".to_string())
+    );
+    assert!(
+        report
+            .receipt
+            .redaction_markers
+            .contains(&"tool_call:redacted".to_string())
+    );
+    assert!(!format!("{:?}", report.receipt).contains(STREAM_PRIVATE_REASONING));
+    assert!(validate_provider_stream_parser_receipt(&report.receipt).is_ok());
+    assert_eq!(report.frames[0].call_id().as_str(), STREAM_CALL_ID);
+    assert_eq!(report.frames[0].body(), Some("Hel"));
+    assert_eq!(report.frames[1].body(), Some("lo"));
+    assert_eq!(
+        report.frames[3].tool_call_id().expect("tool id").as_str(),
+        STREAM_TOOL_ID
+    );
+    assert_eq!(
+        report
+            .frames
+            .iter()
+            .filter(|frame| frame.kind() == animus_adapters::ModelStreamFrameKind::ContentDelta)
+            .count(),
+        EXPECTED_POSITIVE_CONTENT_FRAMES
+    );
+}
+
+#[test]
+fn provider_stream_parser_rejects_malformed_order_and_terminal_cases() {
+    // r[agent_harness_runtime.provider_stream_parser_rails.typed_failures.malformed_record]
+    assert_parse_failure(
+        &[INVALID_UTF8_CHUNK],
+        ProviderStreamParserBudget::default(),
+        ProviderStreamParseFailureKind::InvalidEncoding,
+        None,
+    );
+    assert_parse_failure(
+        &[b"data: {not-json}\n"],
+        ProviderStreamParserBudget::default(),
+        ProviderStreamParseFailureKind::MalformedRecord,
+        None,
+    );
+    assert_parse_failure(
+        &[b"{\"event\":\"audio\",\"call_id\":\"call-1\",\"order\":1}\n"],
+        ProviderStreamParserBudget::default(),
+        ProviderStreamParseFailureKind::UnsupportedEvent,
+        None,
+    );
+    assert_parse_failure(
+        &[b"{\"event\":\"terminal\",\"status\":\"mystery\",\"call_id\":\"call-1\",\"order\":1}\n"],
+        ProviderStreamParserBudget::default(),
+        ProviderStreamParseFailureKind::UnknownTerminalState,
+        None,
+    );
+    assert_parse_failure(
+        &[b"{\"event\":\"content\",\"call_id\":\"call-1\",\"order\":1,\"body\":\"partial\"}\n"],
+        ProviderStreamParserBudget::default(),
+        ProviderStreamParseFailureKind::MissingTerminal,
+        None,
+    );
+    assert_parse_failure(
+        &[
+            b"{\"event\":\"content\",\"call_id\":\"call-1\",\"order\":2,\"body\":\"late\"}\n",
+            b"{\"event\":\"content\",\"call_id\":\"call-1\",\"order\":1,\"body\":\"early\"}\n",
+        ],
+        ProviderStreamParserBudget::default(),
+        ProviderStreamParseFailureKind::InvalidOrder,
+        None,
+    );
+    assert_parse_failure(
+        &[
+            b"{\"event\":\"finish\",\"call_id\":\"call-1\",\"order\":1}\n",
+            b"{\"event\":\"failure\",\"call_id\":\"call-1\",\"order\":2,\"reason\":\"provider\"}\n",
+        ],
+        ProviderStreamParserBudget::default(),
+        ProviderStreamParseFailureKind::DuplicateTerminal,
+        None,
+    );
+    assert_parse_failure(
+        &[b"{\"event\":\"content\",\"call_id\":\"call-1\",\"order\":1,\"body\":\"unterminated\"}"],
+        ProviderStreamParserBudget::default(),
+        ProviderStreamParseFailureKind::MalformedRecord,
+        None,
+    );
+}
+
+#[test]
+fn provider_stream_parser_enforces_pre_aggregation_budgets() {
+    // r[agent_harness_runtime.provider_stream_parser_rails.budgets.oversized_frame]
+    assert_parse_failure(
+        &[b"{\"event\":\"finish\",\"call_id\":\"call-1\",\"order\":1}\n"],
+        ProviderStreamParserBudget {
+            frame_bytes: TINY_FRAME_BUDGET,
+            ..ProviderStreamParserBudget::default()
+        },
+        ProviderStreamParseFailureKind::BudgetExceeded,
+        Some(ProviderStreamBudgetKind::FrameBytes),
+    );
+    assert_parse_failure(
+        &[b"{\"event\":\"finish\",\"call_id\":\"call-1\",\"order\":1}\n"],
+        ProviderStreamParserBudget {
+            record_bytes: TINY_RECORD_BUDGET,
+            ..ProviderStreamParserBudget::default()
+        },
+        ProviderStreamParseFailureKind::BudgetExceeded,
+        Some(ProviderStreamBudgetKind::RecordBytes),
+    );
+    assert_parse_failure(
+        ordered_content_finish_chunks(),
+        ProviderStreamParserBudget {
+            aggregate_bytes: TINY_AGGREGATE_BUDGET,
+            ..ProviderStreamParserBudget::default()
+        },
+        ProviderStreamParseFailureKind::BudgetExceeded,
+        Some(ProviderStreamBudgetKind::AggregateBytes),
+    );
+    assert_parse_failure(
+        ordered_content_finish_chunks(),
+        ProviderStreamParserBudget {
+            record_count: ONE_RECORD_BUDGET,
+            ..ProviderStreamParserBudget::default()
+        },
+        ProviderStreamParseFailureKind::BudgetExceeded,
+        Some(ProviderStreamBudgetKind::RecordCount),
+    );
+    assert_parse_failure(
+        ordered_content_finish_chunks(),
+        ProviderStreamParserBudget {
+            event_count: ONE_EVENT_BUDGET,
+            ..ProviderStreamParserBudget::default()
+        },
+        ProviderStreamParseFailureKind::BudgetExceeded,
+        Some(ProviderStreamBudgetKind::EventCount),
+    );
+    assert_parse_failure(
+        &[b"{\"event\":\"finish\",\"call_id\":\"call-1\",\"order\":1}\n"],
+        ProviderStreamParserBudget {
+            completion_count: ZERO_COMPLETION_BUDGET,
+            ..ProviderStreamParserBudget::default()
+        },
+        ProviderStreamParseFailureKind::BudgetExceeded,
+        Some(ProviderStreamBudgetKind::CompletionCount),
+    );
+}
+
+#[test]
+fn provider_stream_parser_receipt_validation_rejects_leak_markers() {
+    // r[agent_harness_runtime.provider_stream_parser_rails.receipts.hidden_reasoning]
+    // r[agent_harness_runtime.provider_stream_parser_rails.verification]
+    let chunks: &[&[u8]] = &[b"{\"event\":\"finish\",\"call_id\":\"call-1\",\"order\":1}\n"];
+    let report = parse_provider_stream_chunks(provider_stream_input(
+        chunks,
+        ProviderStreamParserBudget::default(),
+    ))
+    .expect("minimal finish should parse");
+    let mut forged = report.receipt.clone();
+    forged
+        .redaction_markers
+        .push("hidden_reasoning: private reasoning".to_string());
+
+    let failure = validate_provider_stream_parser_receipt(&forged).expect_err("leak marker");
+    assert_eq!(failure.kind, ProviderStreamParseFailureKind::ReceiptLeak);
+
+    let mut forged_family = report.receipt.clone();
+    forged_family.provider_family = "/home/provider/raw".to_string();
+    let family_failure =
+        validate_provider_stream_parser_receipt(&forged_family).expect_err("unsafe family");
+    assert_eq!(
+        family_failure.kind,
+        ProviderStreamParseFailureKind::ReceiptLeak
+    );
+}
+
+fn ordered_content_finish_chunks() -> &'static [&'static [u8]] {
+    &[ORDERED_CONTENT_CHUNK, ORDERED_FINISH_CHUNK]
+}
+
+fn provider_stream_input<'a>(
+    chunks: &'a [&'a [u8]],
+    budget: ProviderStreamParserBudget,
+) -> ProviderStreamParserInput<'a> {
+    ProviderStreamParserInput {
+        provider_family: PROVIDER_ID,
+        chunks,
+        budget,
+    }
+}
+
+fn assert_parse_failure(
+    chunks: &[&[u8]],
+    budget: ProviderStreamParserBudget,
+    expected: ProviderStreamParseFailureKind,
+    expected_budget: Option<ProviderStreamBudgetKind>,
+) {
+    let report = parse_provider_stream_chunks(provider_stream_input(chunks, budget))
+        .expect_err("parser should fail closed");
+    assert_eq!(report.failure.kind, expected);
+    assert_eq!(report.failure.budget_kind, expected_budget);
+    assert_eq!(
+        report.receipt.status,
+        ProviderStreamParserStatus::ParserFailure
+    );
+    assert_eq!(report.receipt.failure_kind, Some(expected));
+    assert_eq!(report.receipt.budget_kind, expected_budget);
+    assert!(report.receipt.stream_identity.starts_with(BLAKE3_ALGORITHM));
+    assert!(validate_provider_stream_parser_receipt(&report.receipt).is_ok());
 }
 
 fn model(model_class: ProviderModelClass) -> ProviderModelMetadata {

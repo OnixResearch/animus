@@ -1,0 +1,5 @@
+{
+  "depends_on": [
+    "refactor-adapter-crate-maintainability"
+  ]
+}

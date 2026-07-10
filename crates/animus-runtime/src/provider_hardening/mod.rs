@@ -22,6 +22,7 @@
 )]
 mod core;
 mod data;
+mod stream;
 
 pub use core::{
     blake3_provider_hardening_fingerprint, filter_agent_model, negotiate_model_capability,
@@ -38,6 +39,13 @@ pub use data::{
     ProviderModelMetadata, ProviderPrivacyPosture, ProviderSecretSourceReference,
     ProviderSelectionReceipt, ProviderSelectionReceiptInput, ProviderStreamChannel,
     ProviderStructuredOutputMode, ProviderValidationResult,
+};
+pub use stream::{
+    ProviderStreamBudgetKind, ProviderStreamParseFailure, ProviderStreamParseFailureKind,
+    ProviderStreamParseFailureReport, ProviderStreamParseReport, ProviderStreamParserBudget,
+    ProviderStreamParserInput, ProviderStreamParserInventoryEntry, ProviderStreamParserReceipt,
+    ProviderStreamParserStatus, parse_provider_stream_chunks, provider_stream_parser_inventory,
+    validate_provider_stream_parser_inventory, validate_provider_stream_parser_receipt,
 };
 
 pub(crate) const BLAKE3_ALGORITHM: &str = "BLAKE3";
