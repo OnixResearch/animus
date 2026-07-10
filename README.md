@@ -105,6 +105,7 @@ scripts/cairn/check-injected-services --root .
 scripts/cairn/check-composition-conformance --root .
 scripts/cairn/check-adapter-conformance-index --root .
 scripts/cairn/check-component-catalog --root .
+scripts/cairn/check-runtime-kernel-split --root .
 scripts/cairn/check-adapter-maintainability --root .
 scripts/cairn/check-release-evidence-index --root .
 scripts/cairn/check-current-head-release-evidence-index --root .
@@ -116,6 +117,7 @@ nix run .#cargo-tigerstyle -- check
 nix run .#check-nickel-configs
 nix build .#checks.x86_64-linux.adapter-conformance-index --no-link -L
 nix build .#checks.x86_64-linux.component-catalog --no-link -L
+nix build .#checks.x86_64-linux.runtime-kernel-split --no-link -L
 nix build .#checks.x86_64-linux.dogfood-readiness --no-link -L
 nix build .#checks.x86_64-linux.packaged-headless-dogfood-smoke --no-link -L
 nix build .#checks.x86_64-linux.clash-ucan-authority --no-link -L

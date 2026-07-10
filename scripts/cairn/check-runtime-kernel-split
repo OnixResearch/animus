@@ -1,0 +1,58 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+readonly FIXTURE_DIR=cairn/runtime-kernel-split-fixtures
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+
+if [ "${1:-}" = "--root" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  repo_root=$(CDPATH= cd -- "$2" && pwd)
+fi
+
+if ! command -v rustc >/dev/null 2>&1; then
+  printf '%s\n' 'error: rustc is required. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+
+if ! command -v cargo >/dev/null 2>&1; then
+  printf '%s\n' 'error: cargo is required. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+
+rust_source=${script_dir}/check-runtime-kernel-split.rs
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/animus-runtime-kernel-split.XXXXXX")
+trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
+
+checker=${tmp_dir}/check-runtime-kernel-split
+rustc --edition=2021 "${rust_source}" -o "${checker}"
+
+cd "${repo_root}"
+
+cargo check -p animus-runtime --no-default-features --locked
+cargo test -p animus-runtime kernel --no-default-features --locked
+cargo tree \
+  -p animus-runtime \
+  --no-default-features \
+  --locked \
+  --edges normal \
+  --prefix none \
+  > "${tmp_dir}/runtime-kernel.tree"
+
+"${checker}" \
+  --tree "${tmp_dir}/runtime-kernel.tree" \
+  --kernel "${repo_root}/crates/animus-runtime/src/kernel.rs"
+
+if [ -d "${repo_root}/${FIXTURE_DIR}" ]; then
+  for fixture in "${repo_root}/${FIXTURE_DIR}"/*; do
+    if [ ! -e "${fixture}" ]; then
+      continue
+    fi
+    "${checker}" --fixture "${fixture}"
+  done
+fi

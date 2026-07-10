@@ -1,0 +1,5 @@
+expected_issue=RUNTIME_KERNEL_MISSING_EXPORT
+kind=source
+---
+pub use crate::{RuntimeInput, RuntimeConfig, LoopFabric, TurnState, RuntimeEvent, RunReport,
+    RuntimeCapabilityRegistry, ToolDispatchPlan, run_agent_loop};

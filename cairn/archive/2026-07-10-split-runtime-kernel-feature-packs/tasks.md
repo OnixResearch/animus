@@ -1,0 +1,8 @@
+# Tasks
+
+- [x] [serial] Define the runtime kernel boundary and catalog entry covering runtime input/config, neutral loop fabric, turn state, events, reports, capability registry, and model/tool dispatch planning. r[agent_harness_runtime.runtime_kernel_split.kernel]
+- [x] [depends:agent_harness_runtime.runtime_kernel_split.kernel] Add a kernel-only build or feature profile that excludes Steel, headless, provenance, worker-team, batch, compaction, dataset export, research/eval, TUI, std shell, provider clients, storage, and host authority. r[agent_harness_runtime.runtime_kernel_split.kernel]
+- [x] [depends:agent_harness_runtime.runtime_kernel_split.kernel] Classify runtime domains into feature packs and record each pack's owner, dependencies, composition links, authority posture, and focused checks in the component catalog. r[agent_harness_runtime.runtime_kernel_split.packs]
+- [x] [depends:agent_harness_runtime.runtime_kernel_split.packs] Preserve flat `animus-runtime` exports as compatibility facade paths and add parity or compile tests for representative migrated imports. r[agent_harness_runtime.runtime_kernel_split.compat_facade]
+- [x] [depends:agent_harness_runtime.runtime_kernel_split.packs] Add positive feature-pack composition fixtures and negative fixtures for kernel-only builds that accidentally pull Steel, std shell, provider, persistence, process, network, or terminal authority. r[agent_harness_runtime.runtime_kernel_split.verification]
+- [x] [depends:agent_harness_runtime.runtime_kernel_split.verification] Update runtime composition docs, facade inventory, component catalog projection, README crate guidance, and closeout evidence with kernel and feature-pack validation. r[agent_harness_runtime.runtime_kernel_split.verification]

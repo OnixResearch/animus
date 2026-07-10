@@ -1,6 +1,6 @@
 # Runtime composition preludes and capability features
 
-Animus keeps the broad `animus-runtime` facade for compatibility and adds focused domain preludes for new embedder code.
+Animus keeps the broad `animus-runtime` facade for compatibility and adds focused domain preludes for new embedder code. The minimal kernel import path is `animus_runtime::kernel`; it re-exports typed runtime input/config, neutral loop fabric, turn state, runtime events/reports, capability registry, model/tool dispatch planning, and injected adapter orchestration without pulling Steel or optional runtime packs.
 
 ## Domain preludes
 
@@ -8,6 +8,7 @@ Use the smallest prelude that matches the integration seam:
 
 | Prelude | Use for | Authority posture |
 | --- | --- | --- |
+| `kernel` | minimal no-default runtime kernel for typed loop input/config, neutral fabric, turn state, runtime events/reports, capability registry, and model/tool dispatch plans | reusable contracts plus injected model/tool dispatch |
 | `loop_prelude` | neutral loop turns/decisions, transition helpers, model dispatch plans, runtime reports, and caller-supplied fabrics | reusable contracts plus injected model/tool dispatch |
 | `tool_prelude` | model/tool requests, canonical model message/envelope DTOs, adapters, typed adapter-call outcomes, explicit capability descriptors, registries, and fail-closed outcomes | host-injection surface plus reusable canonical DTOs |
 | `headless_prelude` | UI-neutral headless commands, events, responses, run requests, and thread records | reusable contracts |
@@ -27,10 +28,12 @@ The Nickel-governed Steel policy includes `default-loop` for a simple model-then
 Focused checks:
 
 ```sh
+scripts/cairn/check-runtime-kernel-split --root .
 cargo test -p animus-runtime admission::tests --locked
 cargo test -p animus-runtime shell::tests --locked
 cargo test -p animus-runtime --locked
 cargo check -p animus-runtime --no-default-features --locked
+cargo test -p animus-runtime kernel --no-default-features --locked
 ```
 
 ## Capability registry
@@ -51,4 +54,4 @@ Compatibility defaults preserve the simple model adapter path: non-streaming dis
 
 `runtime_capability_family_map()` records the maintained family-to-feature map for `loop`, `headless`, `provenance`, `batch`, `worker-team`, `policy`, `quality`, `research`, `scaffold`, `compaction`, `dataset-export`, `status`, and `compatibility`. Validate map edits with `validate_runtime_capability_family_map` tests and the inventory rail.
 
-Cargo exposes matching feature labels plus the default `compat` bundle and `all-families`. Selected family preludes are guarded by `compat` or their family feature, while the broad flat facade remains available for compatibility until a planned migration rewires internal facade references. `steel` is an actual optional integration dependency.
+Cargo exposes matching feature labels plus the default `compat` bundle and `all-families`. Selected family preludes are guarded by `compat` or their family feature, while the broad flat facade remains available for compatibility until a planned migration rewires internal facade references. `steel` is an actual optional integration dependency. `cairn/component-catalog.ncl` records the runtime kernel plus headless, provenance, worker-team, policy, batch, compaction, dataset-export, quality, research, scaffold, status, and orchestration feature-pack entries with owner, dependency, authority, and focused-check metadata.

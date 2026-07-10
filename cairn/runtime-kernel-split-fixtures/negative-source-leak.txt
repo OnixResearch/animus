@@ -1,0 +1,6 @@
+expected_issue=RUNTIME_KERNEL_FORBIDDEN_SOURCE
+kind=source
+---
+pub use crate::{RuntimeInput, RuntimeConfig, LoopFabric, TurnState, RuntimeEvent, RunReport,
+    RuntimeCapabilityRegistry, ModelDispatchPlan, ToolDispatchPlan, run_agent_loop};
+pub use crate::headless::{RunRequest, HeadlessCommand};

@@ -198,6 +198,7 @@
                 || baseName == "check-provenance-ledger"
                 || baseName == "check-release-evidence-index"
                 || baseName == "check-runtime-facade-inventory"
+                || baseName == "check-runtime-kernel-split"
                 || baseName == "check-safe-receipts-artifacts"
                 || baseName == "check-wasm-surface"
                 || baseName == "generate-current-head-release-evidence-index"
@@ -336,6 +337,10 @@
 
           cargo-runtime = cargoCheck "animus-cargo-runtime" [ ] ''
             cargo check -p animus-runtime --locked
+          '';
+
+          runtime-kernel-split = cargoCheck "animus-runtime-kernel-split" [ ] ''
+            sh scripts/cairn/check-runtime-kernel-split --root .
           '';
 
           cargo-runtime-feature = cargoCheck "animus-cargo-runtime-feature" [ ] ''

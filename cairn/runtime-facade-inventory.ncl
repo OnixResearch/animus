@@ -1699,6 +1699,7 @@ let entry_values = [
   entry "animus-runtime::production_memory_policy" "animus-runtime" runtime reusable none stable "bounded memory policy module",
   entry "animus-runtime::provider_stream_parser_inventory" "animus-runtime" runtime reusable none stable "provider stream parser inventory helper",
   entry "animus-runtime::researchspec_promotion_dag" "animus-runtime" runtime reusable none stable "pure research promotion DAG module",
+  entry "animus-runtime::kernel" "animus-runtime" runtime reusable none stable "minimal runtime kernel import path",
   entry "animus-runtime::session_persistence" "animus-runtime" runtime injection injected stable "host-injected ledger/session seam with pure replay and receipt planning",
   entry "animus-runtime::tool_executor_packs" "animus-runtime" runtime reusable none stable "tool executor pack descriptor module",
   entry "animus-runtime::turnstone_eval" "animus-runtime" runtime reusable none stable "pure intent evaluation module",

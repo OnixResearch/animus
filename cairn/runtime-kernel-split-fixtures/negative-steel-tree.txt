@@ -1,0 +1,5 @@
+expected_issue=RUNTIME_KERNEL_FORBIDDEN_DEPENDENCY
+kind=tree
+---
+animus-runtime v0.1.0
+animus-steel v0.1.0

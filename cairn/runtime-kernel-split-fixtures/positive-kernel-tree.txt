@@ -1,0 +1,8 @@
+expected_issue=OK
+kind=tree
+---
+animus-runtime v0.1.0
+animus-adapters v0.1.0
+animus-core v0.1.0
+animus-router v0.1.0
+blake3 v1.8.5

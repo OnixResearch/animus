@@ -54,6 +54,7 @@ mod fabric;
 mod fresh_context_tasks;
 mod headless;
 mod hooks;
+pub mod kernel;
 mod mailbox;
 #[path = "nestedsubagentgraphs.rs"]
 pub mod nested_subagent_graphs;
