@@ -12,6 +12,7 @@ workspace = true
 
 [features]
 default = []
+iroh-host = []
 syndicate-host = []
 
 [dependencies]

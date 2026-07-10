@@ -66,6 +66,7 @@ workspace = true
 [features]
 default = ["std"]
 std = ["dep:animus-std"]
+iroh-host = ["std", "animus-std/iroh-host"]
 basalt-reference = ["dep:basalt"]
 cairn-reference = ["dep:cairn_core"]
 trellis-reference = ["dep:trellis"]

@@ -55,9 +55,10 @@ pub use execution::{RunError, RunReport, SummaryModelAdapter, run, run_with_mode
 #[cfg(feature = "iroh-host")]
 pub use iroh::{
     IROH_AGENT_COMMS_PROTOCOL, IrohAdapterError, IrohAgentCommsAdapter, IrohAgentFrame,
-    IrohAgentFrameDraft, IrohAgentTransport, IrohFrameKind, IrohRemoteAdmission,
-    IrohRouteDescriptor, IrohRouteDescriptorDraft, admit_iroh_scope, project_assertion_frame,
-    project_iroh_frame, project_orchestration_event_frame,
+    IrohAgentFrameDraft, IrohAgentReceipt, IrohAgentTransport, IrohFrameKind, IrohRemoteAdmission,
+    IrohRouteDescriptor, IrohRouteDescriptorDraft, admit_iroh_scope, iroh_frame_receipt,
+    iroh_route_receipt, project_assertion_frame, project_iroh_frame,
+    project_orchestration_event_frame,
 };
 /// Root public name for the in-memory observability sink.
 pub type InMemoryObservabilitySink = observability::InMemorySink;

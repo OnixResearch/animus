@@ -1,8 +1,0 @@
-# Tasks
-
-- [ ] [serial] Define the `iroh-host` route descriptor over safe node/topic/protocol labels, scope, max frame bytes, remote admission, and optional BLAKE3 ticket or node-address hash. r[agent_harness_runtime.iroh_agent_comms_host.route]
-- [ ] [depends:route] Map Iroh route metadata into the neutral agent-comms route and use neutral frame projection helpers for assertions, orchestration events, headless metadata, and subagent lifecycle metadata. r[agent_harness_runtime.iroh_agent_comms_host.neutral_mapping]
-- [ ] [depends:neutral_mapping] Define a caller-supplied Iroh transport port for publish, query/subscribe, and event delivery without constructing Iroh endpoints or parsing tickets in reusable crates. r[agent_harness_runtime.iroh_agent_comms_host.injected_transport]
-- [ ] [depends:injected_transport] Reject raw tickets, node-address bodies, relay URLs, private keys, auth headers, credentials, prompts, provider payloads, file bodies, tool payloads, model outputs, unbounded logs, missing admission, cross-scope frames, and oversized frames before transport effects. r[agent_harness_runtime.iroh_agent_comms_host.fail_closed]
-- [ ] [depends:fail_closed] Add safe Iroh receipts and docs that name host-owned live endpoint, ticket, relay, auth, retry, persistence, and smoke-test responsibilities as non-default host behavior. r[agent_harness_runtime.iroh_agent_comms_host.docs_receipts]
-- [ ] [depends:docs_receipts] Add positive fake-transport publish/query/event tests and negative invalid protocol, raw-ticket, missing-admission, scope-mismatch, oversized-frame, unavailable-transport, no-ambient-fallback, and receipt-leak tests. r[agent_harness_runtime.iroh_agent_comms_host.verification]

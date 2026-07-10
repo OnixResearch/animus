@@ -1,0 +1,5 @@
+{
+  "depends_on": [
+    "extract-agent-comms-transport-contract"
+  ]
+}

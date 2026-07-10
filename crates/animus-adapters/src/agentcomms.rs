@@ -72,6 +72,7 @@ const DENIED: &str = "denied";
 const PROMPT_REQUIRED: &str = "prompt_required";
 const MISSING: &str = "missing";
 
+const ROUTE_METADATA_KIND: &str = "route_metadata";
 const DATASPACE_ASSERTION_KIND: &str = "dataspace_assertion";
 const ORCHESTRATION_EVENT_KIND: &str = "orchestration_event";
 const HEADLESS_COMMAND_KIND: &str = "headless_command";
@@ -229,6 +230,8 @@ impl AgentCommsAdmission {
 #[cfg_attr(animus_octet, allow(tigerstyle::path_segment_repetition))]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum AgentCommsFrameKind {
+    /// Route-admission metadata receipt.
+    RouteMetadata,
     /// Redacted dataspace assertion projection.
     DataspaceAssertion,
     /// Host orchestration event projection.
@@ -249,6 +252,7 @@ impl AgentCommsFrameKind {
     /// Returns [`AgentCommsError`] when the frame-kind label is empty or unsupported.
     pub fn parse(value: &str) -> Result<Self, AgentCommsError> {
         parse_value(FRAME_KIND_FIELD, value, |normalized| match normalized {
+            ROUTE_METADATA_KIND => Some(Self::RouteMetadata),
             DATASPACE_ASSERTION_KIND => Some(Self::DataspaceAssertion),
             ORCHESTRATION_EVENT_KIND => Some(Self::OrchestrationEvent),
             HEADLESS_COMMAND_KIND => Some(Self::HeadlessCommand),
@@ -262,6 +266,7 @@ impl AgentCommsFrameKind {
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
+            Self::RouteMetadata => ROUTE_METADATA_KIND,
             Self::DataspaceAssertion => DATASPACE_ASSERTION_KIND,
             Self::OrchestrationEvent => ORCHESTRATION_EVENT_KIND,
             Self::HeadlessCommand => HEADLESS_COMMAND_KIND,
@@ -947,7 +952,7 @@ impl AgentCommsReceipt {
             admission: route.admission().as_str(),
             max_frame_bytes: route.max_frame_bytes(),
             frame_id: route.route_label(),
-            frame_kind: route.transport_family().as_str(),
+            frame_kind: AgentCommsFrameKind::RouteMetadata.as_str(),
             payload_hash: route.policy_hash().as_str(),
             payload_bytes: 0,
             item_count: 0,
@@ -2000,6 +2005,10 @@ mod tests {
             redactions: &[ROUTE_METADATA_ONLY],
         })
         .expect_err("raw ticket marker should fail");
+        let route_receipt = test_ok(AgentCommsReceipt::from_route(
+            &route,
+            AgentCommsReceiptStatus::Admitted,
+        ))?;
         let receipt = test_ok(AgentCommsReceipt::from_frame(
             &route,
             &frame,
@@ -2010,6 +2019,11 @@ mod tests {
             leak,
             AgentCommsError::UnsafeRoute { .. } | AgentCommsError::ReceiptLeak { .. }
         ));
+        assert_eq!(
+            route_receipt.frame_kind(),
+            AgentCommsFrameKind::RouteMetadata
+        );
+        assert_eq!(route_receipt.status(), AgentCommsReceiptStatus::Admitted);
         assert_eq!(receipt.transport_family(), AgentCommsTransportFamily::Iroh);
         assert_eq!(receipt.status(), AgentCommsReceiptStatus::Completed);
         assert!(!receipt.redactions().is_empty());

@@ -38,6 +38,16 @@ pub use animus_std::{
     load_runtime, run, run_with_model,
 };
 
+/// Re-export of the optional host-owned Iroh agent communication adapter seam.
+#[cfg(feature = "iroh-host")]
+pub use animus_std::{
+    IROH_AGENT_COMMS_PROTOCOL, IrohAdapterError, IrohAgentCommsAdapter, IrohAgentFrame,
+    IrohAgentFrameDraft, IrohAgentReceipt, IrohAgentTransport, IrohFrameKind, IrohRemoteAdmission,
+    IrohRouteDescriptor, IrohRouteDescriptorDraft, admit_iroh_scope, iroh_frame_receipt,
+    iroh_route_receipt, project_assertion_frame, project_iroh_frame,
+    project_orchestration_event_frame,
+};
+
 /// Re-export of the optional Basalt UCAN contract-boundary dependency.
 #[cfg(feature = "basalt-reference")]
 pub use basalt;
