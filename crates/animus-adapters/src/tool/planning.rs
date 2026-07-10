@@ -41,8 +41,6 @@ const MAX_INTERMEDIATE_CHARS: u32 = super::MAX_VISIBLE_OUTPUT_CHARS;
 const MIN_INTERMEDIATE_CHARS_USIZE: usize = 0;
 const MAX_INTERMEDIATE_CHARS_USIZE: usize = crate::MAX_ADAPTER_FIELD_CHARS;
 
-const _: () = assert!(MAX_INTERMEDIATE_CHARS_USIZE >= MIN_INTERMEDIATE_CHARS_USIZE);
-
 const FABRIC_KIND_STEEL: &str = "steel";
 const FABRIC_KIND_TYPED: &str = "typed";
 const FABRIC_ACTION_DISCOVERY: &str = "discovery";
@@ -237,6 +235,11 @@ impl DiscoverySet {
 /// Returns [`super::ContractError`] when labels are malformed, ceilings are out
 /// of bounds, requested detail names are duplicated or unknown, or safe receipt
 /// metadata validation rejects the generated evidence.
+///
+/// # Panics
+///
+/// Panics if validated discovery ceilings drift outside their admitted non-empty bounded range.
+/// This indicates an internal validation contract violation after admission.
 pub fn discover_tools(
     draft: &DiscoveryRequestDraft<'_>,
     definitions: &[super::Definition],
@@ -458,6 +461,11 @@ impl PlanFabricAdmission {
 /// # Errors
 ///
 /// Returns [`super::ContractError`] when supplied labels are malformed.
+///
+/// # Panics
+///
+/// Panics if the admitted host-action list exceeds bounds after collection, or if fabric status
+/// and issue classification diverge after pure admission.
 pub fn admit_plan_fabric(
     draft: &PlanFabricDraft<'_>,
 ) -> Result<PlanFabricAdmission, super::ContractError> {
@@ -848,7 +856,7 @@ pub struct Plan {
     status: PlanStatus,
     issue: PlanIssue,
     steps: Collection<PlanStepAdmission>,
-    plan_identity: Text,
+    identity: Text,
 }
 
 impl Plan {
@@ -891,7 +899,7 @@ impl Plan {
     /// Returns a BLAKE3 identity over safe plan metadata.
     #[must_use]
     pub fn plan_identity(&self) -> &str {
-        self.plan_identity.as_str()
+        self.identity.as_str()
     }
 }
 
@@ -901,6 +909,11 @@ impl Plan {
 ///
 /// Returns [`super::ContractError`] when plan metadata is malformed or exceeds
 /// bounded limits.
+///
+/// # Panics
+///
+/// Panics if the validated plan step count drifts outside the admitted non-empty bounded range.
+/// This indicates an internal validation contract violation after admission.
 pub fn admit_plan(
     draft: &PlanDraft<'_>,
     context: PlanAdmissionContext<'_>,
@@ -926,7 +939,7 @@ pub fn admit_plan(
     }
     let issue = first_plan_issue(&step_results);
     let status = status_for_issue(issue);
-    let plan_identity = plan_identity(&batch_id, &fabric, batch_policy, &step_results);
+    let identity = plan_identity(&batch_id, &fabric, batch_policy, &step_results);
     Ok(Plan {
         batch_id,
         fabric,
@@ -934,7 +947,7 @@ pub fn admit_plan(
         status,
         issue,
         steps: step_results,
-        plan_identity,
+        identity,
     })
 }
 
@@ -1202,6 +1215,7 @@ fn discovery_identity(
     super::hash_parts(&parts)
 }
 
+#[derive(Clone, Copy)]
 struct DiscoveryReceiptInput<'a> {
     query_label: &'a str,
     discovery_identity: &'a str,

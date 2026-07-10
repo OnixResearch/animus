@@ -110,7 +110,7 @@ pub enum EmptyExpectationPolicy {
     FailClosed,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ScorePolicy {
     pub mode: MatchMode,
     pub empty_expectation: EmptyExpectationPolicy,

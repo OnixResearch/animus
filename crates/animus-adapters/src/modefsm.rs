@@ -1002,8 +1002,8 @@ fn safe_bounded_text(
 }
 
 fn safe_text(field: FieldName, value: &str, subject_id: Option<&str>) -> ModeResult<Text> {
-    let normalized =
-        validation::normalized_adapter_field(field, value).map_err(map_adapter_error)?;
+    let normalized = validation::normalized_adapter_field(field, value)
+        .map_err(|error| map_adapter_error(&error))?;
     let lower = normalized.to_ascii_lowercase();
     if UNSAFE_MODE_MARKERS
         .iter()
@@ -1019,8 +1019,8 @@ fn safe_text(field: FieldName, value: &str, subject_id: Option<&str>) -> ModeRes
 }
 
 fn safe_hash(value: &str) -> ModeResult<Text> {
-    let normalized =
-        validation::normalized_adapter_field(HASH_FIELD, value).map_err(map_adapter_error)?;
+    let normalized = validation::normalized_adapter_field(HASH_FIELD, value)
+        .map_err(|error| map_adapter_error(&error))?;
     if Hash::new(&normalized).is_ok() {
         Ok(normalized)
     } else {
@@ -1036,7 +1036,7 @@ fn is_stale_ack(acknowledgement_epoch: u32, current_epoch: u32) -> bool {
     current_epoch.saturating_sub(acknowledgement_epoch) > STALE_ACK_EPOCH_DELTA
 }
 
-fn map_adapter_error(error: AdapterContractError) -> ModeDiagnostic {
+fn map_adapter_error(error: &AdapterContractError) -> ModeDiagnostic {
     match error {
         AdapterContractError::EmptyField { field } => {
             diagnostic(ModeDiagnosticCode::EmptyField, None, field)
@@ -1186,7 +1186,7 @@ mod tests {
             },
         )
         .unwrap();
-        let stale = apply_selected_step_update(
+        let stale_update = apply_selected_step_update(
             &selected,
             &SelectedStepUpdateDraft {
                 step_id: STEP_ONE,
@@ -1207,7 +1207,7 @@ mod tests {
 
         assert_eq!(selected.runtime_state(), ModeRuntimeState::Selected);
         assert_eq!(selected.steps()[0].status(), StepSelectionStatus::Selected);
-        assert_eq!(stale.code(), ModeDiagnosticCode::StaleUpdate);
+        assert_eq!(stale_update.code(), ModeDiagnosticCode::StaleUpdate);
         assert_eq!(unknown.code(), ModeDiagnosticCode::UnknownStep);
     }
 

@@ -707,7 +707,7 @@ fn validate_collection_limit(field: &'static str, len: usize, max: usize) -> Out
 
 fn bounded_scan_text(value: &str) -> OutputResult<Text> {
     validation::validate_required_adapter_field(OUTPUT_TEXT_FIELD, value)
-        .map_err(map_adapter_error)?;
+        .map_err(|error| map_adapter_error(&error))?;
     if value.chars().count() > MAX_OUTPUT_SUMMARY_CHARS {
         return Err(diagnostic(
             OutputGuardDiagnosticCode::FieldTooLong,
@@ -719,8 +719,8 @@ fn bounded_scan_text(value: &str) -> OutputResult<Text> {
 }
 
 fn safe_text(field: FieldName, value: &str, output_ref: Option<&str>) -> OutputResult<Text> {
-    let normalized =
-        validation::normalized_adapter_field(field, value).map_err(map_adapter_error)?;
+    let normalized = validation::normalized_adapter_field(field, value)
+        .map_err(|error| map_adapter_error(&error))?;
     let lower = normalized.to_ascii_lowercase();
     if UNSAFE_REFERENCE_MARKERS
         .iter()
@@ -736,8 +736,8 @@ fn safe_text(field: FieldName, value: &str, output_ref: Option<&str>) -> OutputR
 }
 
 fn safe_hash(value: &str) -> OutputResult<Text> {
-    let normalized =
-        validation::normalized_adapter_field(HASH_FIELD, value).map_err(map_adapter_error)?;
+    let normalized = validation::normalized_adapter_field(HASH_FIELD, value)
+        .map_err(|error| map_adapter_error(&error))?;
     if Hash::new(&normalized).is_ok() {
         Ok(normalized)
     } else {
@@ -749,9 +749,10 @@ fn safe_hash(value: &str) -> OutputResult<Text> {
     }
 }
 
-fn map_adapter_error(error: AdapterContractError) -> OutputGuardDiagnostic {
+fn map_adapter_error(error: &AdapterContractError) -> OutputGuardDiagnostic {
     match error {
-        AdapterContractError::EmptyField { field } => {
+        AdapterContractError::EmptyField { field }
+        | AdapterContractError::EmptyCollection { field } => {
             diagnostic(OutputGuardDiagnosticCode::EmptyField, None, field)
         }
         AdapterContractError::FieldTooLong { field, .. } => {
@@ -762,9 +763,6 @@ fn map_adapter_error(error: AdapterContractError) -> OutputGuardDiagnostic {
         }
         AdapterContractError::InvalidEvidenceHash { field, .. } => {
             diagnostic(OutputGuardDiagnosticCode::InvalidHash, None, field)
-        }
-        AdapterContractError::EmptyCollection { field } => {
-            diagnostic(OutputGuardDiagnosticCode::EmptyField, None, field)
         }
         AdapterContractError::UnsupportedStatusState { field, .. }
         | AdapterContractError::UnsupportedStatusObservationKind { field, .. }

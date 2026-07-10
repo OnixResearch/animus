@@ -1,4 +1,4 @@
-//! ResearchSpec promotion DAG contracts.
+//! `ResearchSpec` promotion DAG contracts.
 //!
 //! This pure core validates group ordering, blocked explanations, and safe
 //! receipts. Hosts own benchmark execution, patch application, VCS operations,

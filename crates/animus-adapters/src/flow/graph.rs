@@ -430,6 +430,11 @@ pub(super) fn validate_recipe_dag(
 ///
 /// Returns [`RecipeWorkflowError`](super::RecipeWorkflowError) when host-supplied
 /// denial labels contain unsafe metadata.
+///
+/// # Panics
+///
+/// Panics if a previously validated DAG plan is empty or exceeds the bounded step count. This
+/// indicates an internal workflow validation contract violation before host admission projection.
 pub fn plan_recipe_dag(
     workflow: &super::data::RecipeWorkflow,
     admission: RecipeDagAdmission<'_>,

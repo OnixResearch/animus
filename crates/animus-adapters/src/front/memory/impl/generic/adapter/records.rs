@@ -1610,6 +1610,11 @@ impl MemoryExternalBenchmarkImport {
 /// # Errors
 ///
 /// Returns [`MemoryError`] when observed IDs are unsafe or counts exceed supported bounds.
+///
+/// # Panics
+///
+/// Panics if observed or fixture descriptor counts drift above the supported bound after
+/// validation. This indicates an internal evaluation-fixture contract violation.
 // r[impl agent_harness_runtime.memory_evaluation.metrics]
 pub fn reduce_memory_evaluation_metrics(
     input: MemoryEvaluationInput<'_>,
@@ -1745,8 +1750,8 @@ impl MemoryRetrievalQualityPolicy {
                 .map_err(MemoryError::InvalidHash)?,
             prioritize_manual_pins: draft.prioritize_manual_pins,
             category_priority: draft.category_priority.to_vec(),
-            diversity_group_limit: NonZeroU32::new(draft.diversity_group_limit).ok_or_else(
-                || MemoryError::ZeroBudgetUnits {
+            diversity_group_limit: NonZeroU32::new(draft.diversity_group_limit).ok_or(
+                MemoryError::ZeroBudgetUnits {
                     descriptor_id: error_label,
                 },
             )?,
@@ -2148,13 +2153,13 @@ fn build_memory_retrieval_plan(
     let mut selected_count = u32::default();
     for candidate in ordered {
         let decision = if let Some(quality) = quality_policy {
-            memory_quality_retrieval_decision(
+            memory_quality_retrieval_decision(MemoryQualityRetrievalDecisionInput {
                 candidate,
                 policy,
                 quality,
                 consumed_units,
-                group_counts.as_slice(),
-            )
+                group_counts: group_counts.as_slice(),
+            })
         } else {
             memory_retrieval_decision(
                 candidate,
@@ -2217,23 +2222,28 @@ fn memory_retrieval_decision(
     budget_retrieval_decision(record, policy, consumed_units)
 }
 
-fn memory_quality_retrieval_decision(
-    candidate: &MemoryRetrievalCandidate<'_>,
-    policy: &MemoryRetrievalPolicy<'_>,
-    quality: &MemoryRetrievalQualityPolicy,
+#[derive(Clone, Copy)]
+struct MemoryQualityRetrievalDecisionInput<'a> {
+    candidate: &'a MemoryRetrievalCandidate<'a>,
+    policy: &'a MemoryRetrievalPolicy<'a>,
+    quality: &'a MemoryRetrievalQualityPolicy,
     consumed_units: u32,
-    group_counts: &[(String, u32)],
+    group_counts: &'a [(String, u32)],
+}
+
+fn memory_quality_retrieval_decision(
+    input: MemoryQualityRetrievalDecisionInput<'_>,
 ) -> MemoryRetrievalDecision {
-    let record = candidate.record;
-    if let Some(status) = common_retrieval_skip(record, policy) {
+    let record = input.candidate.record;
+    if let Some(status) = common_retrieval_skip(record, input.policy) {
         return skipped_retrieval(status);
     }
     if let Some(group) = record.conflict_group() {
-        if group_count(group_counts, group) >= quality.diversity_group_limit().get() {
+        if group_count(input.group_counts, group) >= input.quality.diversity_group_limit().get() {
             return skipped_retrieval(MemoryRetrievalOutcomeStatus::DiversityDuplicate);
         }
     }
-    budget_retrieval_decision(record, policy, consumed_units)
+    budget_retrieval_decision(record, input.policy, input.consumed_units)
 }
 
 fn common_retrieval_skip(

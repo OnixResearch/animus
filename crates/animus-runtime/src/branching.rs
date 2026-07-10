@@ -364,6 +364,8 @@ pub enum SessionBranchDiagnosticKind {
     MissingLedgerParent,
     /// Ledger snapshot ancestry contained a cycle.
     LedgerCycle,
+    /// Ledger ancestry path exceeded the bounded receipt span type.
+    LedgerPathTooLong,
 }
 
 impl SessionBranchDiagnosticKind {
@@ -382,6 +384,7 @@ impl SessionBranchDiagnosticKind {
             Self::DuplicateLedgerEntry => "duplicate_ledger_entry",
             Self::MissingLedgerParent => "missing_ledger_parent",
             Self::LedgerCycle => "ledger_cycle",
+            Self::LedgerPathTooLong => "ledger_path_too_long",
         }
     }
 }
@@ -1096,11 +1099,8 @@ fn ledger_index(
     std::collections::BTreeMap<&str, &SessionLedgerEntry>,
     Collection<SessionBranchDiagnostic>,
 ) {
-    debug_assert!(ledger.len() <= ledger.len().saturating_add(usize::from(1_u8)));
-    debug_assert!(HASH_HEX_LENGTH > 0);
     let mut index = std::collections::BTreeMap::new();
-    let mut diagnostics = Collection::new();
-    diagnostics.reserve(ledger.len());
+    let mut diagnostics = Collection::with_capacity(ledger.len());
     for entry in ledger {
         if index.insert(entry.entry_hash(), entry).is_some() {
             diagnostics.push(SessionBranchDiagnostic::new(
@@ -1121,6 +1121,16 @@ fn ledger_index(
             }
         }
     }
+    assert!(
+        index.len() <= ledger.len(),
+        "ledger index cannot contain more unique entries than source ledger"
+    );
+    assert!(
+        diagnostics
+            .iter()
+            .all(|diagnostic| !diagnostic.field().is_empty()),
+        "ledger diagnostics must identify a field"
+    );
     (index, diagnostics)
 }
 
@@ -1145,10 +1155,15 @@ fn suffix_span_count(
         ));
         return 0;
     };
-    match u32::try_from(cut_position) {
-        Ok(count) => count,
-        Err(_) => u32::MAX,
-    }
+    let Ok(span_count) = u32::try_from(cut_position) else {
+        diagnostics.push(SessionBranchDiagnostic::new(
+            SessionBranchDiagnosticKind::LedgerPathTooLong,
+            FIELD_LEDGER_ENTRY_HASH,
+            "ledger path exceeds bounded span count",
+        ));
+        return 0;
+    };
+    span_count
 }
 
 fn path_from_head<'a>(
@@ -1158,8 +1173,7 @@ fn path_from_head<'a>(
 ) -> Option<Collection<&'a SessionLedgerEntry>> {
     debug_assert!(!source_head_hash.is_empty());
     debug_assert!(diagnostics.capacity() >= diagnostics.len());
-    let mut path = Collection::new();
-    path.reserve(index.len());
+    let mut path = Collection::with_capacity(index.len());
     diagnostics.reserve(index.len());
     let mut seen = std::collections::BTreeSet::new();
     let mut next_hash = Some(source_head_hash);
@@ -1360,7 +1374,6 @@ fn validate_hash(input: SafeFieldValue<'_>) -> Result<Text, SessionBranchError> 
 
 fn validate_safe_text(input: SafeFieldValue<'_>) -> Result<Text, SessionBranchError> {
     debug_assert!(!input.field.is_empty());
-    debug_assert!(MAX_SAFE_TEXT_BYTES > 0);
     if input.value.is_empty() {
         return Err(SessionBranchError::new(
             SessionBranchErrorKind::EmptyField,

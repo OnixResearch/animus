@@ -816,7 +816,7 @@ fn validate_profile(
 
 fn reject_raw_command(command: &str) -> PlannerResult<()> {
     let normalized = validation::normalized_adapter_field(PROFILE_LABEL_FIELD, command)
-        .map_err(map_adapter_error)?;
+        .map_err(|error| map_adapter_error(&error))?;
     let lower = normalized.to_ascii_lowercase();
     if RAW_COMMAND_MARKERS
         .iter()
@@ -938,8 +938,8 @@ fn safe_bounded_text(
 }
 
 fn safe_text(field: FieldName, value: &str, subject_id: Option<&str>) -> PlannerResult<Text> {
-    let normalized =
-        validation::normalized_adapter_field(field, value).map_err(map_adapter_error)?;
+    let normalized = validation::normalized_adapter_field(field, value)
+        .map_err(|error| map_adapter_error(&error))?;
     let lower = normalized.to_ascii_lowercase();
     if UNSAFE_VALIDATION_MARKERS
         .iter()
@@ -955,8 +955,8 @@ fn safe_text(field: FieldName, value: &str, subject_id: Option<&str>) -> Planner
 }
 
 fn safe_hash(value: &str) -> PlannerResult<Text> {
-    let normalized =
-        validation::normalized_adapter_field(HASH_FIELD, value).map_err(map_adapter_error)?;
+    let normalized = validation::normalized_adapter_field(HASH_FIELD, value)
+        .map_err(|error| map_adapter_error(&error))?;
     if Hash::new(&normalized).is_ok() {
         Ok(normalized)
     } else {
@@ -968,7 +968,7 @@ fn safe_hash(value: &str) -> PlannerResult<Text> {
     }
 }
 
-fn map_adapter_error(error: AdapterContractError) -> ValidationPlannerDiagnostic {
+fn map_adapter_error(error: &AdapterContractError) -> ValidationPlannerDiagnostic {
     match error {
         AdapterContractError::EmptyField { field } => {
             diagnostic(ValidationPlannerDiagnosticCode::EmptyField, None, field)

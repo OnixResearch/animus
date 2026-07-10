@@ -1235,7 +1235,6 @@ fn validate_hash(input: SafeFieldValue<'_>) -> Result<Text, VcsSnapshotError> {
 
 fn validate_safe_text(input: SafeFieldValue<'_>) -> Result<Text, VcsSnapshotError> {
     debug_assert!(!input.field.is_empty());
-    debug_assert!(MAX_SAFE_TEXT_BYTES > 0);
     if input.value.is_empty() {
         return Err(VcsSnapshotError::new(
             VcsSnapshotErrorKind::EmptyField,

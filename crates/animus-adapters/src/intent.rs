@@ -59,7 +59,6 @@ const UNSAFE_INTENT_MARKERS: &[&str] = &[
     "unbounded transcript",
 ];
 
-const _: () = assert!(MIN_CONFIDENCE <= MAX_CONFIDENCE);
 const _: () = assert!(MIN_VERDICT_COUNT > 0);
 const _: () = assert!(MAX_EVIDENCE_REFS > 0);
 const _: () = assert!(MAX_EXAMPLES > 0);
@@ -956,8 +955,8 @@ fn validate_non_empty_bound(field: &'static str, len: usize, max: usize) -> Inte
 }
 
 fn safe_text(field: FieldName, value: &str, subject_id: Option<&str>) -> IntentResult<Text> {
-    let normalized =
-        validation::normalized_adapter_field(field, value).map_err(map_adapter_error)?;
+    let normalized = validation::normalized_adapter_field(field, value)
+        .map_err(|error| map_adapter_error(&error))?;
     let lower = normalized.to_ascii_lowercase();
     if UNSAFE_INTENT_MARKERS
         .iter()
@@ -973,8 +972,8 @@ fn safe_text(field: FieldName, value: &str, subject_id: Option<&str>) -> IntentR
 }
 
 fn safe_hash(value: &str) -> IntentResult<Text> {
-    let normalized =
-        validation::normalized_adapter_field(HASH_FIELD, value).map_err(map_adapter_error)?;
+    let normalized = validation::normalized_adapter_field(HASH_FIELD, value)
+        .map_err(|error| map_adapter_error(&error))?;
     if Hash::new(&normalized).is_ok() {
         Ok(normalized)
     } else {
@@ -1002,7 +1001,7 @@ fn example_matches_action_class(example: &str, class: IntentActionClass) -> bool
     }
 }
 
-fn map_adapter_error(error: AdapterContractError) -> IntentDiagnostic {
+fn map_adapter_error(error: &AdapterContractError) -> IntentDiagnostic {
     match error {
         AdapterContractError::EmptyField { field } => {
             diagnostic(IntentDiagnosticCode::EmptyField, None, field)
@@ -1103,7 +1102,8 @@ mod tests {
         }
     }
 
-    fn rule(
+    #[derive(Clone, Copy)]
+    struct RuleFixture {
         rule_id: &'static str,
         action_class: IntentActionClass,
         risk: IntentRiskLevel,
@@ -1111,49 +1111,51 @@ mod tests {
         rationale: &'static str,
         positive_examples: &'static [&'static str],
         negative_examples: &'static [&'static str],
-    ) -> IntentHeuristicRule {
+    }
+
+    fn rule(fixture: RuleFixture) -> IntentHeuristicRule {
         validate_intent_heuristic_rule(&IntentHeuristicRuleDraft {
-            rule_id,
-            action_class,
+            rule_id: fixture.rule_id,
+            action_class: fixture.action_class,
             match_class: IntentMatchClass::ToolKind,
-            risk,
-            recommendation,
-            rationale_label: rationale,
-            positive_examples,
-            negative_examples,
+            risk: fixture.risk,
+            recommendation: fixture.recommendation,
+            rationale_label: fixture.rationale,
+            positive_examples: fixture.positive_examples,
+            negative_examples: fixture.negative_examples,
         })
         .unwrap()
     }
 
     fn rules() -> [IntentHeuristicRule; 3] {
         [
-            rule(
-                RULE_READ,
-                IntentActionClass::ReadOnly,
-                IntentRiskLevel::Low,
-                IntentRecommendation::Allow,
-                RATIONALE_READ,
-                &READ_POSITIVE,
-                &READ_NEGATIVE,
-            ),
-            rule(
-                RULE_MUTATION,
-                IntentActionClass::Mutation,
-                IntentRiskLevel::High,
-                IntentRecommendation::RequireReview,
-                RATIONALE_MUTATION,
-                &MUTATION_POSITIVE,
-                &MUTATION_NEGATIVE,
-            ),
-            rule(
-                RULE_PROCESS,
-                IntentActionClass::Process,
-                IntentRiskLevel::Critical,
-                IntentRecommendation::Deny,
-                RATIONALE_PROCESS,
-                &PROCESS_POSITIVE,
-                &PROCESS_NEGATIVE,
-            ),
+            rule(RuleFixture {
+                rule_id: RULE_READ,
+                action_class: IntentActionClass::ReadOnly,
+                risk: IntentRiskLevel::Low,
+                recommendation: IntentRecommendation::Allow,
+                rationale: RATIONALE_READ,
+                positive_examples: &READ_POSITIVE,
+                negative_examples: &READ_NEGATIVE,
+            }),
+            rule(RuleFixture {
+                rule_id: RULE_MUTATION,
+                action_class: IntentActionClass::Mutation,
+                risk: IntentRiskLevel::High,
+                recommendation: IntentRecommendation::RequireReview,
+                rationale: RATIONALE_MUTATION,
+                positive_examples: &MUTATION_POSITIVE,
+                negative_examples: &MUTATION_NEGATIVE,
+            }),
+            rule(RuleFixture {
+                rule_id: RULE_PROCESS,
+                action_class: IntentActionClass::Process,
+                risk: IntentRiskLevel::Critical,
+                recommendation: IntentRecommendation::Deny,
+                rationale: RATIONALE_PROCESS,
+                positive_examples: &PROCESS_POSITIVE,
+                negative_examples: &PROCESS_NEGATIVE,
+            }),
         ]
     }
 
@@ -1194,15 +1196,15 @@ mod tests {
     #[test]
     fn heuristic_rules_validate_fixture_direction() {
         // r[verify agent_harness_runtime.turnstone_intent_validation.heuristics]
-        let process = rule(
-            RULE_PROCESS,
-            IntentActionClass::Process,
-            IntentRiskLevel::Critical,
-            IntentRecommendation::Deny,
-            RATIONALE_PROCESS,
-            &PROCESS_POSITIVE,
-            &PROCESS_NEGATIVE,
-        );
+        let process = rule(RuleFixture {
+            rule_id: RULE_PROCESS,
+            action_class: IntentActionClass::Process,
+            risk: IntentRiskLevel::Critical,
+            recommendation: IntentRecommendation::Deny,
+            rationale: RATIONALE_PROCESS,
+            positive_examples: &PROCESS_POSITIVE,
+            negative_examples: &PROCESS_NEGATIVE,
+        });
         let malformed = validate_intent_heuristic_rule(&IntentHeuristicRuleDraft {
             positive_examples: &READ_POSITIVE,
             ..IntentHeuristicRuleDraft {

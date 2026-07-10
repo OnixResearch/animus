@@ -1347,6 +1347,7 @@ fn render_receipt_text(receipt: &RemoteServerAdmissionReceipt) -> alloc::string:
     renderer.finish()
 }
 
+#[derive(Clone, Copy)]
 struct ReceiptLine<'a> {
     key: &'a str,
     value: &'a str,
@@ -1433,6 +1434,7 @@ fn ensure_no_remote_server_leak(text: &str) -> Result<(), RemoteServerAdmissionE
     Ok(())
 }
 
+#[derive(Clone, Copy)]
 struct IdentityLabel<'a> {
     label: &'a str,
     value: &'a str,

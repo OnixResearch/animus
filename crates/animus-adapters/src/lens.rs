@@ -1147,8 +1147,8 @@ fn safe_bounded_text(
 }
 
 fn safe_text(field: FieldName, value: &str, focus_id: Option<&str>) -> LensResult<Text> {
-    let normalized =
-        validation::normalized_adapter_field(field, value).map_err(map_adapter_error)?;
+    let normalized = validation::normalized_adapter_field(field, value)
+        .map_err(|error| map_adapter_error(&error))?;
     let lower = normalized.to_ascii_lowercase();
     if UNSAFE_CONTEXT_MARKERS
         .iter()
@@ -1164,8 +1164,8 @@ fn safe_text(field: FieldName, value: &str, focus_id: Option<&str>) -> LensResul
 }
 
 fn safe_hash(field: FieldName, value: &str) -> LensResult<Text> {
-    let normalized =
-        validation::normalized_adapter_field(field, value).map_err(map_adapter_error)?;
+    let normalized = validation::normalized_adapter_field(field, value)
+        .map_err(|error| map_adapter_error(&error))?;
     if Hash::new(&normalized).is_ok() {
         Ok(normalized)
     } else {
@@ -1199,7 +1199,7 @@ fn validate_collection_limit(field: &'static str, len: usize, max: usize) -> Len
     Ok(())
 }
 
-fn map_adapter_error(error: AdapterContractError) -> LensDiagnostic {
+fn map_adapter_error(error: &AdapterContractError) -> LensDiagnostic {
     match error {
         AdapterContractError::EmptyField { field } => {
             diagnostic(LensDiagnosticCode::EmptyField, None, field)

@@ -712,14 +712,14 @@ pub fn plan_review_lifecycle_dispatch(
     request: &ReviewLifecycleRequest,
     reviewer_status: ReviewServiceStatus,
 ) -> ReviewDispatchPlan {
-    let status = if !request.requires_independent_reviewer() {
-        ReviewDispatchStatus::Ready
-    } else {
+    let status = if request.requires_independent_reviewer() {
         match reviewer_status {
             ReviewServiceStatus::Available => ReviewDispatchStatus::Ready,
             ReviewServiceStatus::Missing => ReviewDispatchStatus::ReviewerServiceMissing,
             ReviewServiceStatus::Unavailable => ReviewDispatchStatus::ReviewerServiceUnavailable,
         }
+    } else {
+        ReviewDispatchStatus::Ready
     };
     ReviewDispatchPlan {
         request_hash: request.request_hash().to_owned(),
@@ -788,13 +788,13 @@ pub fn validate_review_lifecycle_receipt(
     for evidence_hash in draft.evidence_hashes {
         evidence_hashes.push(validate_blake3_hash("evidence_hash", evidence_hash)?);
     }
-    let receipt_hash = review_lifecycle_receipt_hash(
-        request_hash.as_str(),
-        draft.status,
-        draft.continuation,
-        issue_code.as_deref(),
-        evidence_hashes.as_slice(),
-    );
+    let receipt_hash = review_lifecycle_receipt_hash(ReviewLifecycleReceiptHashInput {
+        request_hash: request_hash.as_str(),
+        status: draft.status,
+        continuation: draft.continuation,
+        issue_code: issue_code.as_deref(),
+        evidence_hashes: evidence_hashes.as_slice(),
+    });
     Ok(ReviewLifecycleReceipt {
         receipt_hash,
         request_hash,
@@ -949,19 +949,22 @@ fn review_lifecycle_request_hash(request: &ReviewLifecycleRequest) -> String {
     hash_text(canonical.as_str())
 }
 
-fn review_lifecycle_receipt_hash(
-    request_hash: &str,
+#[derive(Clone, Copy)]
+struct ReviewLifecycleReceiptHashInput<'a> {
+    request_hash: &'a str,
     status: ReviewLifecycleStatus,
     continuation: ReviewContinuationIntent,
-    issue_code: Option<&str>,
-    evidence_hashes: &[String],
-) -> String {
+    issue_code: Option<&'a str>,
+    evidence_hashes: &'a [String],
+}
+
+fn review_lifecycle_receipt_hash(input: ReviewLifecycleReceiptHashInput<'_>) -> String {
     let mut canonical = String::from(REVIEW_LIFECYCLE_RECEIPT_HASH_DOMAIN);
-    push_corrective_hash_part(&mut canonical, request_hash);
-    push_corrective_hash_part(&mut canonical, status.as_str());
-    push_corrective_hash_part(&mut canonical, continuation.as_str());
-    push_corrective_hash_part(&mut canonical, issue_code.unwrap_or_default());
-    for evidence_hash in evidence_hashes {
+    push_corrective_hash_part(&mut canonical, input.request_hash);
+    push_corrective_hash_part(&mut canonical, input.status.as_str());
+    push_corrective_hash_part(&mut canonical, input.continuation.as_str());
+    push_corrective_hash_part(&mut canonical, input.issue_code.unwrap_or_default());
+    for evidence_hash in input.evidence_hashes {
         push_corrective_hash_part(&mut canonical, evidence_hash.as_str());
     }
     hash_text(canonical.as_str())

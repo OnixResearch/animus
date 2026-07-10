@@ -332,7 +332,7 @@ impl AgentCommsRedaction {
 
     /// Returns the stable redaction label.
     #[must_use]
-    pub const fn as_str(&self) -> &'static str {
+    pub const fn as_str(self) -> &'static str {
         match self {
             Self::PromptOmitted => ASSERTION_RED_ACTION_PROMPT_OMITTED,
             Self::ProviderPayloadOmitted => ASSERTION_RED_ACTION_PROVIDER_PAYLOAD_OMITTED,
@@ -571,15 +571,15 @@ impl AgentCommsRoute {
             None => None,
         };
         let admission = AgentCommsAdmission::parse(draft.admission)?;
-        let route_hash = build_route_hash(
-            route_label.as_str(),
+        let route_hash = build_route_hash(&RouteHashInput {
+            route_label: route_label.as_str(),
             transport_family,
-            &draft.scope,
-            endpoint_hash.as_ref(),
-            &policy_hash,
+            scope: &draft.scope,
+            endpoint_hash: endpoint_hash.as_ref(),
+            policy_hash: &policy_hash,
             admission,
-            draft.max_frame_bytes,
-        );
+            max_frame_bytes: draft.max_frame_bytes,
+        });
 
         Ok(Self {
             route_label,
@@ -650,7 +650,7 @@ impl AgentCommsRoute {
 
 /// Borrowed input used to validate an agent-comms frame.
 #[cfg_attr(animus_octet, allow(tigerstyle::path_segment_repetition))]
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct AgentCommsFrameDraft<'a> {
     /// Safe frame correlation id.
     pub frame_id: &'a str,
@@ -843,7 +843,7 @@ impl AgentCommsReceipt {
     ///
     /// Returns [`AgentCommsError`] when a label, hash, redaction, or policy field is unsafe or missing.
     #[cfg_attr(animus_octet, allow(tigerstyle::numeric_units))]
-    pub fn new(draft: AgentCommsReceiptDraft<'_>) -> Result<Self, AgentCommsError> {
+    pub fn new(draft: &AgentCommsReceiptDraft<'_>) -> Result<Self, AgentCommsError> {
         let route_label = required_safe_text(ROUTE_LABEL_FIELD, draft.route_label, |reason| {
             AgentCommsError::UnsafeRoute { reason }
         })?;
@@ -882,15 +882,15 @@ impl AgentCommsReceipt {
             .iter()
             .map(|redaction| AgentCommsRedaction::parse(redaction))
             .collect::<Result<Vec<_>, _>>()?;
-        let route_hash = build_route_hash(
-            route_label.as_str(),
+        let route_hash = build_route_hash(&RouteHashInput {
+            route_label: route_label.as_str(),
             transport_family,
-            &draft.scope,
-            endpoint_hash.as_ref(),
-            &policy_hash,
+            scope: &draft.scope,
+            endpoint_hash: endpoint_hash.as_ref(),
+            policy_hash: &policy_hash,
             admission,
-            draft.max_frame_bytes,
-        );
+            max_frame_bytes: draft.max_frame_bytes,
+        });
         let frame_hash = build_frame_hash(&FrameHashInput {
             frame_id: frame_id.as_str(),
             kind: frame_kind,
@@ -943,7 +943,7 @@ impl AgentCommsReceipt {
         status: AgentCommsReceiptStatus,
     ) -> Result<Self, AgentCommsError> {
         let redactions = [AgentCommsRedaction::RouteMetadataOnly.as_str()];
-        Self::new(AgentCommsReceiptDraft {
+        Self::new(&AgentCommsReceiptDraft {
             route_label: route.route_label(),
             transport_family: route.transport_family().as_str(),
             scope: route.scope().clone(),
@@ -974,9 +974,10 @@ impl AgentCommsReceipt {
         let redactions = frame
             .redactions()
             .iter()
+            .copied()
             .map(AgentCommsRedaction::as_str)
             .collect::<Vec<_>>();
-        Self::new(AgentCommsReceiptDraft {
+        Self::new(&AgentCommsReceiptDraft {
             route_label: route.route_label(),
             transport_family: route.transport_family().as_str(),
             scope: route.scope().clone(),
@@ -1073,6 +1074,10 @@ pub trait AgentCommsTransport {
     type Error;
 
     /// Publishes a validated dataspace assertion.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Self::Error`] when the host transport cannot publish the assertion.
     fn publish_assertion(
         &mut self,
         route: &AgentCommsRoute,
@@ -1081,6 +1086,10 @@ pub trait AgentCommsTransport {
     ) -> Result<(), Self::Error>;
 
     /// Queries assertions through the validated route.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Self::Error`] when the host transport cannot complete the query.
     fn query_assertions(
         &mut self,
         route: &AgentCommsRoute,
@@ -1088,6 +1097,10 @@ pub trait AgentCommsTransport {
     ) -> Result<Vec<Assertion>, Self::Error>;
 
     /// Publishes a validated orchestration event.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Self::Error`] when the host transport cannot publish the event.
     fn publish_orchestration_event(
         &mut self,
         route: &AgentCommsRoute,
@@ -1491,30 +1504,32 @@ fn orchestration_event_item_count(event: &OrchestrationEvent) -> u32 {
     ORCHESTRATION_EVENT_WITHOUT_TARGET_ITEM_COUNT
 }
 
-#[cfg_attr(
-    animus_octet,
-    allow(tigerstyle::assertion_density, tigerstyle::too_many_parameters)
-)]
-fn build_route_hash(
-    route_label: &str,
+#[derive(Clone, Copy)]
+struct RouteHashInput<'a> {
+    route_label: &'a str,
     transport_family: AgentCommsTransportFamily,
-    scope: &Scope,
-    endpoint_hash: Option<&SafeHash>,
-    policy_hash: &SafeHash,
+    scope: &'a Scope,
+    endpoint_hash: Option<&'a SafeHash>,
+    policy_hash: &'a SafeHash,
     admission: AgentCommsAdmission,
     max_frame_bytes: u32,
-) -> SafeHash {
-    let scope_summary = scope_summary(scope);
-    let endpoint = endpoint_hash.map_or(NO_ENDPOINT_HASH, SafeHash::as_str);
-    let max_frame_bytes = max_frame_bytes.to_string();
+}
+
+#[cfg_attr(animus_octet, allow(tigerstyle::assertion_density))]
+fn build_route_hash(input: &RouteHashInput<'_>) -> SafeHash {
+    let scope_summary = scope_summary(input.scope);
+    let endpoint = input
+        .endpoint_hash
+        .map_or(NO_ENDPOINT_HASH, SafeHash::as_str);
+    let max_frame_bytes = input.max_frame_bytes.to_string();
     safe_hash_parts(&[
         ROUTE_HASH_SCHEMA,
-        route_label,
-        transport_family.as_str(),
+        input.route_label,
+        input.transport_family.as_str(),
         scope_summary.as_str(),
         endpoint,
-        policy_hash.as_str(),
-        admission.as_str(),
+        input.policy_hash.as_str(),
+        input.admission.as_str(),
         max_frame_bytes.as_str(),
     ])
 }
@@ -1538,6 +1553,7 @@ fn build_frame_hash(summary: &FrameHashInput<'_>) -> SafeHash {
     let redactions = summary
         .redactions
         .iter()
+        .copied()
         .map(AgentCommsRedaction::as_str)
         .collect::<Vec<_>>()
         .join(",");
@@ -1576,6 +1592,7 @@ fn build_receipt_hash(summary: &ReceiptHashInput<'_>) -> SafeHash {
     let redactions = summary
         .redactions
         .iter()
+        .copied()
         .map(AgentCommsRedaction::as_str)
         .collect::<Vec<_>>()
         .join(",");
@@ -1599,6 +1616,12 @@ fn scope_hash(scope: &Scope) -> SafeHash {
     let scope_summary = scope_summary(scope);
     safe_hash_parts(&["animus.agent-comms.scope.v1", scope_summary.as_str()])
 }
+
+const ASSERTION_FRAME_ID_PREFIX: &str = "agent-comms-frame:assertion:";
+const EVENT_FRAME_ID_PREFIX: &str = "agent-comms-frame:orchestration-event:";
+const COMMAND_FRAME_ID_PREFIX: &str = "agent-comms-frame:headless-command:";
+const HEADLESS_EVENT_FRAME_ID_PREFIX: &str = "agent-comms-frame:headless-event:";
+const SUBAGENT_FRAME_ID_PREFIX: &str = "agent-comms-frame:subagent-lifecycle:";
 
 #[cfg(test)]
 #[cfg_attr(
@@ -1988,7 +2011,7 @@ mod tests {
         let route = route(WORKSPACE, ADMITTED, Some(SAFE_HASH))?;
         let command = host_command()?;
         let frame = test_ok(project_headless_command_frame(&route, &command))?;
-        let leak = AgentCommsReceipt::new(AgentCommsReceiptDraft {
+        let leak = AgentCommsReceipt::new(&AgentCommsReceiptDraft {
             route_label: ROUTE_LABEL_BAD,
             transport_family: IROH_FAMILY,
             scope: scope(WORKSPACE)?,
@@ -2064,9 +2087,3 @@ mod tests {
         Ok(())
     }
 }
-
-const ASSERTION_FRAME_ID_PREFIX: &str = "agent-comms-frame:assertion:";
-const EVENT_FRAME_ID_PREFIX: &str = "agent-comms-frame:orchestration-event:";
-const COMMAND_FRAME_ID_PREFIX: &str = "agent-comms-frame:headless-command:";
-const HEADLESS_EVENT_FRAME_ID_PREFIX: &str = "agent-comms-frame:headless-event:";
-const SUBAGENT_FRAME_ID_PREFIX: &str = "agent-comms-frame:subagent-lifecycle:";

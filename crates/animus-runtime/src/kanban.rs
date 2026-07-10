@@ -1060,7 +1060,7 @@ fn adapter_error_to_kanban(
     assert!(!SEQUENCE_FIELD.is_empty());
     match error {
         animus_adapters::orchestration::OrchestrationError::Contract(contract) => {
-            adapter_contract_error_to_kanban(contract, reason)
+            adapter_contract_error_to_kanban(&contract, reason)
         }
         animus_adapters::orchestration::OrchestrationError::MissingService => KanbanError::new(
             KanbanErrorKind::BoardServiceUnavailable,
@@ -1101,11 +1101,12 @@ fn adapter_error_to_kanban(
 }
 
 fn adapter_contract_error_to_kanban(
-    contract: animus_adapters::AdapterContractError,
+    contract: &animus_adapters::AdapterContractError,
     reason: String,
 ) -> KanbanError {
     match contract {
-        animus_adapters::AdapterContractError::EmptyField { field } => {
+        animus_adapters::AdapterContractError::EmptyField { field }
+        | animus_adapters::AdapterContractError::EmptyCollection { field } => {
             KanbanError::new(KanbanErrorKind::EmptyField, field, reason)
         }
         animus_adapters::AdapterContractError::FieldTooLong { field, .. } => {
@@ -1126,9 +1127,6 @@ fn adapter_contract_error_to_kanban(
         | animus_adapters::AdapterContractError::UnsupportedDataspaceValue { field, .. }
         | animus_adapters::AdapterContractError::UnsupportedRouterValue { field, .. } => {
             KanbanError::new(KanbanErrorKind::InjectedServiceFailure, field, reason)
-        }
-        animus_adapters::AdapterContractError::EmptyCollection { field } => {
-            KanbanError::new(KanbanErrorKind::EmptyField, field, reason)
         }
     }
 }
@@ -1544,6 +1542,7 @@ fn contains_unsafe_marker(value: &str) -> bool {
     })
 }
 
+#[derive(Clone, Copy)]
 struct UnsafeMarkerCheck<'a> {
     normalized_value: &'a str,
     marker: &'a str,

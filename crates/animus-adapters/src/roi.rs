@@ -65,7 +65,6 @@ const UNSAFE_ROI_MARKERS: &[&str] = &[
     "unbounded transcript",
 ];
 
-const _: () = assert!(MIN_SCORE <= MAX_SCORE);
 const _: () = assert!(MAX_TEXT_CHARS >= validation::MIN_ADAPTER_FIELD_CHARS);
 const _: () = assert!(MAX_REASON_CHARS >= MAX_TEXT_CHARS);
 const _: () = assert!(MAX_FIRST_ACTIONS > 0);
@@ -357,31 +356,31 @@ impl RoiDiagnostic {
 impl RoiScoreInput {
     /// Impact score.
     #[must_use]
-    pub const fn impact(&self) -> u8 {
+    pub const fn impact(self) -> u8 {
         self.impact
     }
 
     /// Effort score.
     #[must_use]
-    pub const fn effort(&self) -> u8 {
+    pub const fn effort(self) -> u8 {
         self.effort
     }
 
     /// Confidence score.
     #[must_use]
-    pub const fn confidence(&self) -> u8 {
+    pub const fn confidence(self) -> u8 {
         self.confidence
     }
 
     /// Unblock value score.
     #[must_use]
-    pub const fn unblock_value(&self) -> u8 {
+    pub const fn unblock_value(self) -> u8 {
         self.unblock_value
     }
 
     /// Risk reduction score.
     #[must_use]
-    pub const fn risk_reduction(&self) -> u8 {
+    pub const fn risk_reduction(self) -> u8 {
         self.risk_reduction
     }
 }
@@ -919,8 +918,8 @@ fn safe_bounded_text(
 }
 
 fn safe_text(field: FieldName, value: &str, subject_id: Option<&str>) -> RoiResult<Text> {
-    let normalized =
-        validation::normalized_adapter_field(field, value).map_err(map_adapter_error)?;
+    let normalized = validation::normalized_adapter_field(field, value)
+        .map_err(|error| map_adapter_error(&error))?;
     let lower = normalized.to_ascii_lowercase();
     if UNSAFE_ROI_MARKERS
         .iter()
@@ -936,8 +935,8 @@ fn safe_text(field: FieldName, value: &str, subject_id: Option<&str>) -> RoiResu
 }
 
 fn safe_hash(value: &str) -> RoiResult<Text> {
-    let normalized =
-        validation::normalized_adapter_field(HASH_FIELD, value).map_err(map_adapter_error)?;
+    let normalized = validation::normalized_adapter_field(HASH_FIELD, value)
+        .map_err(|error| map_adapter_error(&error))?;
     if Hash::new(&normalized).is_ok() {
         Ok(normalized)
     } else {
@@ -949,7 +948,7 @@ fn safe_hash(value: &str) -> RoiResult<Text> {
     }
 }
 
-fn map_adapter_error(error: AdapterContractError) -> RoiDiagnostic {
+fn map_adapter_error(error: &AdapterContractError) -> RoiDiagnostic {
     match error {
         AdapterContractError::EmptyField { field } => {
             diagnostic(RoiDiagnosticCode::EmptyField, None, field)

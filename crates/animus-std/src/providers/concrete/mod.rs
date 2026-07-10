@@ -764,18 +764,14 @@ pub fn provider_dispatch_constructor_inventory() -> Vec<ProviderDispatchConstruc
 /// # Errors
 ///
 /// Returns [`ProviderDispatchError`] when constructor count or shared-field preservation drifts.
+///
+/// # Panics
+///
+/// Panics if constructor inventory invariants drift after validation has accepted them.
 pub fn validate_provider_dispatch_constructor_inventory(
     inventory: &[ProviderDispatchConstructorInventoryEntry],
     expected_count: u64,
 ) -> Result<(), ProviderDispatchError> {
-    assert!(
-        EXPECTED_OPENAI_RESPONSES_CONSTRUCTOR_COUNT <= MAX_PROVIDER_DISPATCH_CONSTRUCTORS,
-        "expected constructor inventory must stay bounded"
-    );
-    assert!(
-        MAX_PROVIDER_DISPATCH_CONSTRUCTORS > 0,
-        "constructor inventory limit must be positive"
-    );
     let actual_count = u64::try_from(inventory.len()).map_err(|_error| {
         ProviderDispatchError::ConstructorInventory {
             reason: MATRIX_REASON_COUNT,
@@ -799,6 +795,24 @@ pub fn validate_provider_dispatch_constructor_inventory(
             reason: MATRIX_REASON_FIELD,
         });
     }
+    assert!(
+        !inventory.is_empty(),
+        "validated inventory must be non-empty"
+    );
+    assert_eq!(
+        actual_count, expected_count,
+        "validated constructor count must match expectation"
+    );
+    assert!(
+        actual_count <= MAX_PROVIDER_DISPATCH_CONSTRUCTORS,
+        "validated constructor count must stay bounded"
+    );
+    assert!(
+        inventory
+            .iter()
+            .all(|entry| !entry.constructor.is_empty() && entry.shared_fields.is_complete()),
+        "validated constructor shared fields must stay complete"
+    );
     Ok(())
 }
 
@@ -813,6 +827,11 @@ pub const fn expected_openai_responses_constructor_count() -> u64 {
 /// # Errors
 ///
 /// Returns [`ProviderDispatchError`] when selected-model capability checks fail.
+///
+/// # Panics
+///
+/// Panics if the supplied selected model or canonical request bypassed prior validation and lacks
+/// required model/message metadata.
 pub fn build_openai_responses_dispatch_request(
     selected_model: &super::SelectedModel,
     canonical_request: &animus_adapters::CanonicalModelRequest,
@@ -848,6 +867,10 @@ pub fn build_openai_responses_dispatch_request(
 }
 
 /// Renders a stable provider-native request fixture literal for review.
+///
+/// # Panics
+///
+/// Panics if the provider request bypassed construction and lacks required model/message metadata.
 #[must_use]
 pub fn render_openai_responses_request_fixture(
     request: &OpenAiResponsesDispatchRequest,
@@ -956,6 +979,11 @@ pub fn validate_provider_dispatch_shared_field_matrix(
 ///
 /// Returns [`ProviderDispatchError`] when any prerequisite, projection fixture,
 /// capability check, or parity rail fails closed before provider contact.
+///
+/// # Panics
+///
+/// Panics if the dispatch input bypassed prerequisite setup and lacks reviewed fixture or selected
+/// provider metadata.
 pub fn plan_provider_dispatch(
     input: &ProviderDispatchInput<'_>,
 ) -> Result<ProviderDispatchPlan, ProviderDispatchError> {
@@ -1023,6 +1051,11 @@ pub fn normalize_openai_responses_fixture_response(
 /// # Errors
 ///
 /// Returns [`ProviderDispatchError`] when the receipt contains unsafe material or unapproved markers.
+///
+/// # Panics
+///
+/// Panics if compile-time provider redaction markers are empty, indicating an internal receipt
+/// contract configuration error.
 pub fn validate_provider_dispatch_receipt(
     receipt: &ProviderDispatchReceipt,
 ) -> Result<(), ProviderDispatchError> {

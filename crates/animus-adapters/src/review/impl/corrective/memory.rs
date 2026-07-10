@@ -837,13 +837,13 @@ pub fn validate_corrective_host_action_receipt(
     for evidence_hash in draft.evidence_hashes {
         evidence_hashes.push(validate_blake3_hash("evidence_hash", evidence_hash)?);
     }
-    let receipt_hash = corrective_receipt_hash(
-        draft.action_kind,
-        store_label.as_str(),
-        draft.status,
-        issue_code.as_deref(),
-        evidence_hashes.as_slice(),
-    );
+    let receipt_hash = corrective_receipt_hash(CorrectiveReceiptHashInput {
+        action_kind: draft.action_kind,
+        store_label: store_label.as_str(),
+        status: draft.status,
+        issue_code: issue_code.as_deref(),
+        evidence_hashes: evidence_hashes.as_slice(),
+    });
     Ok(CorrectiveHostActionReceipt {
         receipt_hash,
         action_kind: draft.action_kind,
@@ -965,19 +965,22 @@ fn corrective_candidate_hash(candidate: &CorrectivePromotionCandidate) -> String
     hash_text(canonical.as_str())
 }
 
-fn corrective_receipt_hash(
+#[derive(Clone, Copy)]
+struct CorrectiveReceiptHashInput<'a> {
     action_kind: CorrectiveHostActionKind,
-    store_label: &str,
+    store_label: &'a str,
     status: CorrectiveHostActionReceiptStatus,
-    issue_code: Option<&str>,
-    evidence_hashes: &[String],
-) -> String {
+    issue_code: Option<&'a str>,
+    evidence_hashes: &'a [String],
+}
+
+fn corrective_receipt_hash(input: CorrectiveReceiptHashInput<'_>) -> String {
     let mut canonical = String::from(CORRECTIVE_ACTION_HASH_DOMAIN);
-    push_corrective_hash_part(&mut canonical, action_kind.as_str());
-    push_corrective_hash_part(&mut canonical, store_label);
-    push_corrective_hash_part(&mut canonical, status.as_str());
-    push_corrective_hash_part(&mut canonical, issue_code.unwrap_or_default());
-    for evidence_hash in evidence_hashes {
+    push_corrective_hash_part(&mut canonical, input.action_kind.as_str());
+    push_corrective_hash_part(&mut canonical, input.store_label);
+    push_corrective_hash_part(&mut canonical, input.status.as_str());
+    push_corrective_hash_part(&mut canonical, input.issue_code.unwrap_or_default());
+    for evidence_hash in input.evidence_hashes {
         push_corrective_hash_part(&mut canonical, evidence_hash.as_str());
     }
     hash_text(canonical.as_str())

@@ -87,6 +87,12 @@ impl From<crate::AdapterContractError> for RouterRotationError {
 /// # Errors
 ///
 /// Returns [`RouterRotationError`] when no eligible candidates exist or stale cursor policy denies reset.
+///
+/// # Panics
+///
+/// Panics if the validated candidate list becomes empty after the explicit empty check, or if the
+/// snapshot catalog hash is not a BLAKE3-sized safe hash. Both conditions indicate an internal
+/// contract violation after admission.
 pub fn rotate_eligible_candidates(
     role: crate::Role,
     candidates: &[alloc::string::String],

@@ -350,12 +350,10 @@ fn records_for_scope<'a>(
 }
 
 fn validate_replay_sequence(records: &[&SafeSessionRecord]) -> PersistenceResult<()> {
-    let mut expected = MIN_FRESHNESS_SEQUENCE;
-    for record in records {
+    for (expected, record) in (MIN_FRESHNESS_SEQUENCE..).zip(records.iter()) {
         if record.replay_sequence != expected {
             return Err(vec![PersistenceIssue::ReplayGap]);
         }
-        expected += MIN_FRESHNESS_SEQUENCE;
     }
     Ok(())
 }

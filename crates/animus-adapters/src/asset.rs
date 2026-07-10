@@ -780,15 +780,15 @@ pub fn classify_host_asset_drift(
     }
     for observation in &inventory.observations {
         if find_manifest(inventory.manifests.as_slice(), observation.asset_id()).is_none() {
-            reports.push(report(
-                observation.asset_id(),
-                observation.kind(),
-                HostAssetDriftClass::HostOnly,
-                None,
-                Some(observation.content_identity()),
-                observation.store_label(),
-                None,
-            ));
+            reports.push(report(HostAssetReportInput {
+                asset_id: observation.asset_id(),
+                kind: observation.kind(),
+                class: HostAssetDriftClass::HostOnly,
+                manifest_identity: None,
+                installed_identity: Some(observation.content_identity()),
+                store_label: observation.store_label(),
+                diagnostic: None,
+            }));
         }
     }
     reports
@@ -988,31 +988,31 @@ fn classify_manifest_asset(
     current_epoch: u32,
 ) -> HostAssetDriftReport {
     if manifest.trust() == HostAssetTrust::Untrusted {
-        return report(
-            manifest.asset_id(),
-            manifest.kind(),
-            HostAssetDriftClass::UntrustedAsset,
-            Some(manifest.content_identity()),
-            observation.map(HostAssetObservation::content_identity),
-            manifest.store_label(),
-            Some(diagnostic(
+        return report(HostAssetReportInput {
+            asset_id: manifest.asset_id(),
+            kind: manifest.kind(),
+            class: HostAssetDriftClass::UntrustedAsset,
+            manifest_identity: Some(manifest.content_identity()),
+            installed_identity: observation.map(HostAssetObservation::content_identity),
+            store_label: manifest.store_label(),
+            diagnostic: Some(diagnostic(
                 HostAssetDiagnosticCode::UnsupportedStore,
                 Some(manifest.asset_id()),
                 "untrusted asset is advisory-only",
             )),
-        );
+        });
     }
 
     match observation {
-        None => report(
-            manifest.asset_id(),
-            manifest.kind(),
-            HostAssetDriftClass::ManifestOnly,
-            Some(manifest.content_identity()),
-            None,
-            manifest.store_label(),
-            None,
-        ),
+        None => report(HostAssetReportInput {
+            asset_id: manifest.asset_id(),
+            kind: manifest.kind(),
+            class: HostAssetDriftClass::ManifestOnly,
+            manifest_identity: Some(manifest.content_identity()),
+            installed_identity: None,
+            store_label: manifest.store_label(),
+            diagnostic: None,
+        }),
         Some(installed) => classify_installed_pair(manifest, installed, current_epoch),
     }
 }
@@ -1023,70 +1023,70 @@ fn classify_installed_pair(
     current_epoch: u32,
 ) -> HostAssetDriftReport {
     if observation_is_stale(installed.observed_epoch(), current_epoch) {
-        return report(
-            manifest.asset_id(),
-            manifest.kind(),
-            HostAssetDriftClass::StaleObservation,
-            Some(manifest.content_identity()),
-            Some(installed.content_identity()),
-            manifest.store_label(),
-            Some(diagnostic(
+        return report(HostAssetReportInput {
+            asset_id: manifest.asset_id(),
+            kind: manifest.kind(),
+            class: HostAssetDriftClass::StaleObservation,
+            manifest_identity: Some(manifest.content_identity()),
+            installed_identity: Some(installed.content_identity()),
+            store_label: manifest.store_label(),
+            diagnostic: Some(diagnostic(
                 HostAssetDiagnosticCode::StaleObservation,
                 Some(manifest.asset_id()),
                 "installed asset observation is stale",
             )),
-        );
+        });
     }
     if manifest.store_label() != installed.store_label() {
-        return report(
-            manifest.asset_id(),
-            manifest.kind(),
-            HostAssetDriftClass::UnsupportedStore,
-            Some(manifest.content_identity()),
-            Some(installed.content_identity()),
-            manifest.store_label(),
-            Some(diagnostic(
+        return report(HostAssetReportInput {
+            asset_id: manifest.asset_id(),
+            kind: manifest.kind(),
+            class: HostAssetDriftClass::UnsupportedStore,
+            manifest_identity: Some(manifest.content_identity()),
+            installed_identity: Some(installed.content_identity()),
+            store_label: manifest.store_label(),
+            diagnostic: Some(diagnostic(
                 HostAssetDiagnosticCode::UnsupportedStore,
                 Some(manifest.asset_id()),
                 "manifest and installed store labels differ",
             )),
-        );
+        });
     }
     if manifest.content_identity() != installed.content_identity() {
-        return report(
-            manifest.asset_id(),
-            manifest.kind(),
-            HostAssetDriftClass::IdentityMismatch,
-            Some(manifest.content_identity()),
-            Some(installed.content_identity()),
-            manifest.store_label(),
-            Some(diagnostic(
+        return report(HostAssetReportInput {
+            asset_id: manifest.asset_id(),
+            kind: manifest.kind(),
+            class: HostAssetDriftClass::IdentityMismatch,
+            manifest_identity: Some(manifest.content_identity()),
+            installed_identity: Some(installed.content_identity()),
+            store_label: manifest.store_label(),
+            diagnostic: Some(diagnostic(
                 HostAssetDiagnosticCode::InvalidHash,
                 Some(manifest.asset_id()),
                 "installed content identity differs from manifest identity",
             )),
-        );
+        });
     }
     if installed.enablement() == HostAssetEnablement::Disabled {
-        return report(
-            manifest.asset_id(),
-            manifest.kind(),
-            HostAssetDriftClass::InstalledDisabled,
-            Some(manifest.content_identity()),
-            Some(installed.content_identity()),
-            manifest.store_label(),
-            None,
-        );
+        return report(HostAssetReportInput {
+            asset_id: manifest.asset_id(),
+            kind: manifest.kind(),
+            class: HostAssetDriftClass::InstalledDisabled,
+            manifest_identity: Some(manifest.content_identity()),
+            installed_identity: Some(installed.content_identity()),
+            store_label: manifest.store_label(),
+            diagnostic: None,
+        });
     }
-    report(
-        manifest.asset_id(),
-        manifest.kind(),
-        HostAssetDriftClass::InstalledMatchesManifest,
-        Some(manifest.content_identity()),
-        Some(installed.content_identity()),
-        manifest.store_label(),
-        None,
-    )
+    report(HostAssetReportInput {
+        asset_id: manifest.asset_id(),
+        kind: manifest.kind(),
+        class: HostAssetDriftClass::InstalledMatchesManifest,
+        manifest_identity: Some(manifest.content_identity()),
+        installed_identity: Some(installed.content_identity()),
+        store_label: manifest.store_label(),
+        diagnostic: None,
+    })
 }
 
 fn action_for_report(report: &HostAssetDriftReport) -> Option<HostAssetAction> {
@@ -1151,8 +1151,8 @@ fn action_id_for(asset_id: &str, kind: HostAssetActionKind) -> Text {
 }
 
 fn safe_text(field: FieldName, value: &str) -> AssetResult<Text> {
-    let normalized =
-        validation::normalized_adapter_field(field, value).map_err(map_adapter_error)?;
+    let normalized = validation::normalized_adapter_field(field, value)
+        .map_err(|error| map_adapter_error(&error))?;
     let lower = normalized.to_ascii_lowercase();
     if UNSAFE_LABEL_MARKERS
         .iter()
@@ -1181,8 +1181,8 @@ fn safe_store_label(value: &str) -> AssetResult<Text> {
 }
 
 fn safe_hash(field: FieldName, value: &str) -> AssetResult<Text> {
-    let normalized =
-        validation::normalized_adapter_field(field, value).map_err(map_adapter_error)?;
+    let normalized = validation::normalized_adapter_field(field, value)
+        .map_err(|error| map_adapter_error(&error))?;
     if Hash::new(&normalized).is_ok() {
         Ok(normalized)
     } else {
@@ -1253,23 +1253,25 @@ fn is_blocking_diagnostic(diagnostic: &HostAssetDiagnostic) -> bool {
     )
 }
 
-fn report(
-    asset_id: &str,
+struct HostAssetReportInput<'a> {
+    asset_id: &'a str,
     kind: HostAssetKind,
     class: HostAssetDriftClass,
-    manifest_identity: Option<&str>,
-    installed_identity: Option<&str>,
-    store_label: &str,
+    manifest_identity: Option<&'a str>,
+    installed_identity: Option<&'a str>,
+    store_label: &'a str,
     diagnostic: Option<HostAssetDiagnostic>,
-) -> HostAssetDriftReport {
+}
+
+fn report(input: HostAssetReportInput<'_>) -> HostAssetDriftReport {
     HostAssetDriftReport {
-        asset_id: Text::from(asset_id),
-        kind,
-        class,
-        manifest_identity: manifest_identity.map(Text::from),
-        installed_identity: installed_identity.map(Text::from),
-        store_label: Text::from(store_label),
-        diagnostic,
+        asset_id: Text::from(input.asset_id),
+        kind: input.kind,
+        class: input.class,
+        manifest_identity: input.manifest_identity.map(Text::from),
+        installed_identity: input.installed_identity.map(Text::from),
+        store_label: Text::from(input.store_label),
+        diagnostic: input.diagnostic,
     }
 }
 
@@ -1285,7 +1287,7 @@ fn diagnostic(
     }
 }
 
-fn map_adapter_error(error: AdapterContractError) -> HostAssetDiagnostic {
+fn map_adapter_error(error: &AdapterContractError) -> HostAssetDiagnostic {
     match error {
         AdapterContractError::EmptyField { field } => {
             diagnostic(HostAssetDiagnosticCode::EmptyField, None, field)

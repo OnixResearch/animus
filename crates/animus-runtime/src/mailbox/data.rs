@@ -1034,7 +1034,6 @@ pub(crate) fn normalize_safe_metadata(
     value: &str,
 ) -> Result<String, super::MessageQueueError> {
     debug_assert!(!field.is_empty());
-    debug_assert!(super::MAX_SAFE_METADATA_CHARS > 0);
     let trimmed = value.trim();
     if trimmed.is_empty() {
         return Err(super::MessageQueueError::new(
@@ -1092,8 +1091,6 @@ fn validate_policy_bounds(
     max_items: u32,
     allowed_sources: &[&str],
 ) -> Result<(), super::MessageQueueError> {
-    debug_assert!(super::MIN_MAX_QUEUE_ITEMS > 0);
-    debug_assert!(super::MAX_POLICY_SOURCE_COUNT >= super::MIN_POLICY_SOURCE_COUNT);
     if max_items < super::MIN_MAX_QUEUE_ITEMS {
         return Err(super::MessageQueueError::new(
             super::MessageQueueErrorKind::InvalidPolicy,
@@ -1115,6 +1112,15 @@ fn validate_policy_bounds(
             "too many source labels in policy",
         ));
     }
+    assert!(
+        max_items >= super::MIN_MAX_QUEUE_ITEMS,
+        "validated queue policy must admit a positive item bound"
+    );
+    assert!(
+        (super::MIN_POLICY_SOURCE_COUNT..=super::MAX_POLICY_SOURCE_COUNT)
+            .contains(&allowed_sources.len()),
+        "validated queue policy source count must stay bounded"
+    );
     Ok(())
 }
 

@@ -717,27 +717,27 @@ mod tests {
         // r[verify agent_harness_runtime.subagent_nested_graphs.admission]
         // r[verify agent_harness_runtime.subagent_nested_graphs.rollup]
         let graph = graph_with_nodes(vec![
-            node(
-                ROOT,
-                None,
-                ROOT_DEPTH,
-                caps(&[CAP_READ, CAP_SEARCH]),
-                NestedTerminalStatus::Succeeded,
-            ),
-            node(
-                CHILD,
-                Some(ROOT),
-                MIN_DEPTH,
-                caps(&[CAP_READ]),
-                NestedTerminalStatus::Succeeded,
-            ),
-            node(
-                SIBLING,
-                Some(ROOT),
-                MIN_DEPTH,
-                caps(&[CAP_SEARCH]),
-                NestedTerminalStatus::Failed,
-            ),
+            node(NodeFixture {
+                node_id: ROOT,
+                parent_id: None,
+                depth: ROOT_DEPTH,
+                capabilities: caps(&[CAP_READ, CAP_SEARCH]),
+                terminal_status: NestedTerminalStatus::Succeeded,
+            }),
+            node(NodeFixture {
+                node_id: CHILD,
+                parent_id: Some(ROOT),
+                depth: MIN_DEPTH,
+                capabilities: caps(&[CAP_READ]),
+                terminal_status: NestedTerminalStatus::Succeeded,
+            }),
+            node(NodeFixture {
+                node_id: SIBLING,
+                parent_id: Some(ROOT),
+                depth: MIN_DEPTH,
+                capabilities: caps(&[CAP_SEARCH]),
+                terminal_status: NestedTerminalStatus::Failed,
+            }),
         ]);
         let report = validate_nested_subagent_graph(&graph);
         let rollup = rollup_nested_subagent_graph(&graph).expect("rollup");
@@ -754,27 +754,27 @@ mod tests {
         // r[verify agent_harness_runtime.subagent_nested_graphs.monotonicity]
         // r[verify agent_harness_runtime.subagent_nested_graphs.verification]
         let mut graph = graph_with_nodes(vec![
-            node(
-                ROOT,
-                Some(GRANDCHILD),
-                ROOT_DEPTH,
-                caps(&[CAP_READ]),
-                NestedTerminalStatus::Pending,
-            ),
-            node(
-                CHILD,
-                Some(ROOT),
-                MIN_DEPTH,
-                caps(&[CAP_READ, CAP_MUTATE]),
-                NestedTerminalStatus::Pending,
-            ),
-            node(
-                GRANDCHILD,
-                Some(CHILD),
-                DEFAULT_MAX_DEPTH + MIN_DEPTH,
-                caps(&[CAP_READ]),
-                NestedTerminalStatus::Pending,
-            ),
+            node(NodeFixture {
+                node_id: ROOT,
+                parent_id: Some(GRANDCHILD),
+                depth: ROOT_DEPTH,
+                capabilities: caps(&[CAP_READ]),
+                terminal_status: NestedTerminalStatus::Pending,
+            }),
+            node(NodeFixture {
+                node_id: CHILD,
+                parent_id: Some(ROOT),
+                depth: MIN_DEPTH,
+                capabilities: caps(&[CAP_READ, CAP_MUTATE]),
+                terminal_status: NestedTerminalStatus::Pending,
+            }),
+            node(NodeFixture {
+                node_id: GRANDCHILD,
+                parent_id: Some(CHILD),
+                depth: DEFAULT_MAX_DEPTH + MIN_DEPTH,
+                capabilities: caps(&[CAP_READ]),
+                terminal_status: NestedTerminalStatus::Pending,
+            }),
         ]);
         graph.edges = vec![
             edge(ROOT, CHILD, None),
@@ -828,20 +828,20 @@ mod tests {
         // r[verify agent_harness_runtime.subagent_nested_graphs.host_owned]
         // r[verify agent_harness_runtime.subagent_nested_graphs.verification.closeout]
         let graph = graph_with_nodes(vec![
-            node(
-                ROOT,
-                None,
-                ROOT_DEPTH,
-                caps(&[CAP_READ]),
-                NestedTerminalStatus::Succeeded,
-            ),
-            node(
-                CHILD,
-                Some(ROOT),
-                MIN_DEPTH,
-                caps(&[CAP_READ]),
-                NestedTerminalStatus::Cancelled,
-            ),
+            node(NodeFixture {
+                node_id: ROOT,
+                parent_id: None,
+                depth: ROOT_DEPTH,
+                capabilities: caps(&[CAP_READ]),
+                terminal_status: NestedTerminalStatus::Succeeded,
+            }),
+            node(NodeFixture {
+                node_id: CHILD,
+                parent_id: Some(ROOT),
+                depth: MIN_DEPTH,
+                capabilities: caps(&[CAP_READ]),
+                terminal_status: NestedTerminalStatus::Cancelled,
+            }),
         ]);
         let service = require_nested_graph_host_service(&graph).expect_err("host required");
         assert!(
@@ -883,25 +883,27 @@ mod tests {
         }
     }
 
-    fn node(
-        node_id: &str,
-        parent_id: Option<&str>,
+    struct NodeFixture {
+        node_id: &'static str,
+        parent_id: Option<&'static str>,
         depth: u16,
         capabilities: BTreeSet<String>,
         terminal_status: NestedTerminalStatus,
-    ) -> NestedSubagentNode {
+    }
+
+    fn node(fixture: NodeFixture) -> NestedSubagentNode {
         NestedSubagentNode {
-            node_id: node_id.to_owned(),
-            parent_id: parent_id.map(str::to_owned),
-            depth,
-            capabilities,
+            node_id: fixture.node_id.to_owned(),
+            parent_id: fixture.parent_id.map(str::to_owned),
+            depth: fixture.depth,
+            capabilities: fixture.capabilities,
             workspace_scope: WORKSPACE.to_owned(),
             workspace_authority: WorkspaceAuthority::ReadOnly,
             mutation_authority: false,
             model_ceiling: MODEL.to_owned(),
-            budget: budget(depth),
-            terminal_status,
-            safe_output_hash: nested_graph_hash(node_id, OUTPUT_BYTES),
+            budget: budget(fixture.depth),
+            terminal_status: fixture.terminal_status,
+            safe_output_hash: nested_graph_hash(fixture.node_id, OUTPUT_BYTES),
             evidence_refs: vec![EVIDENCE.to_owned()],
         }
     }

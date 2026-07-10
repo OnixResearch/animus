@@ -1,6 +1,6 @@
 //! VCS-neutral snapshot ledger contracts.
 //!
-//! Hosts may map these DTOs to jj, Git, BranchFS, in-memory, or custom recovery
+//! Hosts may map these DTOs to jj, Git, `BranchFS`, in-memory, or custom recovery
 //! backends. This module validates records and plans only; it never runs VCS
 //! commands, creates branches or stashes, mutates worktrees, schedules snapshots,
 //! opens UI, cleans up storage, or restores files.
@@ -678,6 +678,11 @@ pub fn validate_snapshot_record(draft: &SnapshotRecordDraft<'_>) -> SnapshotResu
 }
 
 /// Builds a snapshot lineage and reports missing parents without reading VCS state.
+///
+/// # Errors
+///
+/// Returns [`SnapshotDiagnostic`] when the supplied record list is empty, exceeds bounds, or any
+/// record fails snapshot validation.
 pub fn validate_snapshot_lineage(
     drafts: &[SnapshotRecordDraft<'_>],
 ) -> SnapshotResult<SnapshotLineage> {
@@ -717,22 +722,22 @@ pub fn plan_snapshot_operation(
     if service_status == SnapshotServiceStatus::Missing
         || service_status == SnapshotServiceStatus::Unavailable
     {
-        return rejected_plan(
-            draft.operation,
-            SnapshotPlanStatus::ServiceUnavailable,
-            SnapshotDiagnosticCode::ServiceUnavailable,
-            None,
-            "snapshot service unavailable",
-        );
+        return rejected_plan(SnapshotRejection {
+            operation: draft.operation,
+            status: SnapshotPlanStatus::ServiceUnavailable,
+            code: SnapshotDiagnosticCode::ServiceUnavailable,
+            snapshot_id: None,
+            message: "snapshot service unavailable",
+        });
     }
     if service_status == SnapshotServiceStatus::Unsupported {
-        return rejected_plan(
-            draft.operation,
-            SnapshotPlanStatus::Unsupported,
-            SnapshotDiagnosticCode::Unsupported,
-            None,
-            "snapshot operation unsupported",
-        );
+        return rejected_plan(SnapshotRejection {
+            operation: draft.operation,
+            status: SnapshotPlanStatus::Unsupported,
+            code: SnapshotDiagnosticCode::Unsupported,
+            snapshot_id: None,
+            message: "snapshot operation unsupported",
+        });
     }
     let target = match safe_text(SNAPSHOT_ID_FIELD, draft.target_snapshot_id, None) {
         Ok(value) => value,
@@ -745,13 +750,13 @@ pub fn plan_snapshot_operation(
         .iter()
         .find(|item| item.snapshot_id() == target)
     else {
-        return rejected_plan(
-            draft.operation,
-            SnapshotPlanStatus::Rejected,
-            SnapshotDiagnosticCode::UnknownSnapshot,
-            Some(target.as_str()),
-            "target snapshot is missing",
-        );
+        return rejected_plan(SnapshotRejection {
+            operation: draft.operation,
+            status: SnapshotPlanStatus::Rejected,
+            code: SnapshotDiagnosticCode::UnknownSnapshot,
+            snapshot_id: Some(target.as_str()),
+            message: "target snapshot is missing",
+        });
     };
     let proof = match validate_freshness_proof(&draft.freshness) {
         Ok(value) => value,
@@ -764,34 +769,34 @@ pub fn plan_snapshot_operation(
         || is_stale(proof.proof_epoch(), proof.current_epoch())
         || proof.expected_workspace_hash() != record.workspace_hash()
     {
-        return rejected_plan(
-            draft.operation,
-            SnapshotPlanStatus::StaleSnapshot,
-            SnapshotDiagnosticCode::StaleSnapshot,
-            Some(target.as_str()),
-            "snapshot freshness proof is stale or mismatched",
-        );
+        return rejected_plan(SnapshotRejection {
+            operation: draft.operation,
+            status: SnapshotPlanStatus::StaleSnapshot,
+            code: SnapshotDiagnosticCode::StaleSnapshot,
+            snapshot_id: Some(target.as_str()),
+            message: "snapshot freshness proof is stale or mismatched",
+        });
     }
     if draft.protection == SnapshotProtectionClass::Protected {
         match draft.confirmation {
             SnapshotConfirmationStatus::Confirmed => {}
             SnapshotConfirmationStatus::Denied => {
-                return rejected_plan(
-                    draft.operation,
-                    SnapshotPlanStatus::ConfirmationDenied,
-                    SnapshotDiagnosticCode::ConfirmationRequired,
-                    Some(target.as_str()),
-                    "snapshot operation confirmation denied",
-                );
+                return rejected_plan(SnapshotRejection {
+                    operation: draft.operation,
+                    status: SnapshotPlanStatus::ConfirmationDenied,
+                    code: SnapshotDiagnosticCode::ConfirmationRequired,
+                    snapshot_id: Some(target.as_str()),
+                    message: "snapshot operation confirmation denied",
+                });
             }
             SnapshotConfirmationStatus::Missing => {
-                return rejected_plan(
-                    draft.operation,
-                    SnapshotPlanStatus::ConfirmationRequired,
-                    SnapshotDiagnosticCode::ConfirmationRequired,
-                    Some(target.as_str()),
-                    "snapshot operation requires confirmation",
-                );
+                return rejected_plan(SnapshotRejection {
+                    operation: draft.operation,
+                    status: SnapshotPlanStatus::ConfirmationRequired,
+                    code: SnapshotDiagnosticCode::ConfirmationRequired,
+                    snapshot_id: Some(target.as_str()),
+                    message: "snapshot operation requires confirmation",
+                });
             }
         }
     }
@@ -912,8 +917,8 @@ fn validate_non_empty_bound(field: &'static str, len: usize, max: usize) -> Snap
 }
 
 fn safe_text(field: FieldName, value: &str, snapshot_id: Option<&str>) -> SnapshotResult<Text> {
-    let normalized =
-        validation::normalized_adapter_field(field, value).map_err(map_adapter_error)?;
+    let normalized = validation::normalized_adapter_field(field, value)
+        .map_err(|error| map_adapter_error(&error))?;
     let lower = normalized.to_ascii_lowercase();
     if UNSAFE_SNAPSHOT_MARKERS
         .iter()
@@ -929,8 +934,8 @@ fn safe_text(field: FieldName, value: &str, snapshot_id: Option<&str>) -> Snapsh
 }
 
 fn safe_hash(value: &str) -> SnapshotResult<Text> {
-    let normalized =
-        validation::normalized_adapter_field(HASH_FIELD, value).map_err(map_adapter_error)?;
+    let normalized = validation::normalized_adapter_field(HASH_FIELD, value)
+        .map_err(|error| map_adapter_error(&error))?;
     if Hash::new(&normalized).is_ok() {
         Ok(normalized)
     } else {
@@ -946,19 +951,26 @@ fn is_stale(proof_epoch: u32, current_epoch: u32) -> bool {
     current_epoch.saturating_sub(proof_epoch) > STALE_FRESHNESS_EPOCH_DELTA
 }
 
-fn rejected_plan(
+#[derive(Clone, Copy)]
+struct SnapshotRejection<'a> {
     operation: SnapshotOperationKind,
     status: SnapshotPlanStatus,
     code: SnapshotDiagnosticCode,
-    snapshot_id: Option<&str>,
-    message: &str,
-) -> SnapshotOperationPlan {
+    snapshot_id: Option<&'a str>,
+    message: &'a str,
+}
+
+fn rejected_plan(rejection: SnapshotRejection<'_>) -> SnapshotOperationPlan {
     SnapshotOperationPlan {
-        status,
-        operation,
+        status: rejection.status,
+        operation: rejection.operation,
         target_snapshot_id: None,
         required_capability: None,
-        diagnostic: Some(diagnostic(code, snapshot_id, message)),
+        diagnostic: Some(diagnostic(
+            rejection.code,
+            rejection.snapshot_id,
+            rejection.message,
+        )),
     }
 }
 
@@ -976,7 +988,7 @@ fn rejected_from_error(
     }
 }
 
-fn map_adapter_error(error: AdapterContractError) -> SnapshotDiagnostic {
+fn map_adapter_error(error: &AdapterContractError) -> SnapshotDiagnostic {
     match error {
         AdapterContractError::EmptyField { field } => {
             diagnostic(SnapshotDiagnosticCode::EmptyField, None, field)
