@@ -14,8 +14,8 @@ This document is the maintained ownership map for request processing. It is a re
 8. **Reusable status authority selection** is owned by `animus-runtime::select_agent_status`, `AgentStatusSelection`, and `StatusDecisionExplanation`. The selector is pure over a validated target request, logical sequence, and in-memory observations; presentation metadata remains visual-only.
 9. **Reusable runtime dispatch and projection** are owned by `animus-runtime::run_agent_loop`, `LoopFabric`, `ToolDispatchPlan`, `RuntimeEvent`, `RunReport`, and `RuntimeStatus` (`crates/animus-runtime/src/`). The runtime shell admits tool calls through active trusted catalog definitions, exact capability labels, approval posture, output policy, and mutation-window planning before calling injected fabrics/adapters. It records ordered bounded events, handles stop/final/max-turn/failure statuses, and does not discover providers or credentials.
 10. **Std-shell adapter dispatch** is owned by `animus-std::run_with_model`, `run`, and `SummaryModelAdapter` (`crates/animus-std/src/execution.rs`). The shell wires typed config, core state, and caller-provided adapters without discovering providers or credentials. The legacy **Runtime event/report projection** remains represented by `animus-std::RunReport` and `animus-std::RunError` for this shell path.
-11. **Safe receipt construction** is future host-owned behavior. Until a receipt DTO lands, evidence summaries must follow `docs/cairn-lifecycle.md`, `docs/status-authority.md`, and `docs/safety-contract.md`: bounded status, issue codes, counts, safe relative labels, BLAKE3 hashes where content identity is needed, and explicit redaction markers.
-12. **Host ledger persistence seam** is future host-owned behavior. The source-of-truth placeholder is a future host-owned `LedgerService` trait or DTO set; reusable core, adapter, Steel, and runtime crates must not persist sessions directly.
+11. **Safe receipt construction** for ledger/session replay and restore planning is owned by `animus-runtime::session_persistence::LedgerSessionReceiptDraft` plus `validate_ledger_session_receipt`. Evidence summaries must stay bounded: status, issue codes, counts, safe relative labels, BLAKE3 hashes where content identity is needed, explicit redaction markers, and omitted-surface non-claims.
+12. **Host ledger persistence seam** is owned by `animus-runtime::session_persistence`. Hosts inject a `LedgerSessionService` descriptor (the accepted host-owned `LedgerService` marker for this seam) and already-loaded ledger entries; reusable runtime code validates descriptors, plans replay/restore, and validates receipts without discovering stores, reading files, opening databases, contacting networks, using clocks, or writing sessions.
 
 ## Boundary owners
 
@@ -33,8 +33,8 @@ This document is the maintained ownership map for request processing. It is a re
 | Status authority selection | `animus-runtime` | `select_agent_status`, `AgentStatusSelection`, `StatusDecisionExplanation` | Pure selection over typed inputs only. |
 | Runtime dispatch | `animus-runtime` | `run_agent_loop`, `run_with_steel_program`, `ToolDispatchPlan`, `RuntimeEvent`, `RunReport`, `RuntimeStatus` | Calls injected fabric/model/tool boundaries only after exact catalog/capability admission. |
 | Std dispatch | `animus-std` | `run_with_model`, `run`, `SummaryModelAdapter` | Shell orchestration only; no provider discovery. |
-| Receipts | host-owned future surface | Future receipt DTO | Must be redacted and bounded before persistence. |
-| Ledger persistence | host-owned future surface | Future host-owned `LedgerService` trait | Host-owned persistence only. |
+| Ledger/session receipts | `animus-runtime` | `LedgerSessionReceiptDraft`, `validate_ledger_session_receipt` | Safe labels, counts, hashes, redaction/freshness classes, and non-claims only. |
+| Ledger/session seam | `animus-runtime` | `LedgerSessionService`, `LedgerReplayRequest`, `SessionRestoreRequest`, `LedgerEntry`, `plan_ledger_replay`, `plan_session_restore` | Service descriptors and ledger entries are host-injected; durable storage remains host-owned. |
 
 ## Forbidden dependencies and side effects
 
@@ -64,11 +64,11 @@ This document is the maintained ownership map for request processing. It is a re
 
 ### Receipt boundary
 
-Receipt and evidence code must not embed raw prompts, credentials, provider payloads, raw tool output, raw terminal snapshots, unbounded stdout/stderr, unbounded detector transcripts, full private paths, or raw private file bodies. Status-decision explanations must use safe hashes and bounded redacted summaries. Validate current lifecycle evidence with `scripts/cairn/check-evidence-safety --root .`.
+Receipt and evidence code must not embed raw prompts, credentials, provider payloads, raw tool output, raw terminal snapshots, unbounded stdout/stderr, unbounded detector transcripts, full private paths, or raw private file bodies. Status-decision explanations and ledger/session receipts must use safe hashes, bounded redacted summaries, freshness classes, sequence ranges, counts, and omitted-surface non-claims. Validate current lifecycle evidence with `scripts/cairn/check-evidence-safety --root .`.
 
-### Future ledger boundary
+### Host ledger persistence seam
 
-A future ledger service must be host-injected. Reusable crates must not discover sessions, read host persistence, or resume conversations by ambient global state. Until the service exists, resume behavior is a documented seam, not an implemented claim.
+The ledger/session service is host-injected through `animus-runtime::session_persistence`. `LedgerSessionService` is the concrete `LedgerService` marker for the accepted seam. Reusable crates validate descriptors, plan replay/restore over already-loaded entries, and reject unsafe receipts; they must not discover sessions, read host persistence, create default global stores, or resume conversations by ambient global state. Durable backends, locking, freshness collection, writes, and migrations remain host-owned implementation work.
 
 ## Validation commands
 
@@ -81,6 +81,7 @@ cargo test -p animus-steel
 cargo test -p animus-runtime
 cargo test -p animus-std
 scripts/cairn/check-tool-catalog --root .
+cargo test -p animus-runtime session_persistence --locked
 scripts/cairn/check-request-lifecycle --root .
 scripts/cairn/check-evidence-safety --root .
 scripts/cairn/check-wasm-surface --root .

@@ -83,6 +83,7 @@ cargo test -p animus-adapters
 cargo test -p animus-preserves
 cargo test -p animus-steel
 cargo test -p animus-runtime
+cargo test -p animus-runtime session_persistence --locked
 cargo test -p animus-std
 cargo check --workspace --all-targets
 cargo clippy --workspace --all-targets -- -D warnings

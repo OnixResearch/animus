@@ -15,7 +15,7 @@ The reusable `animus-runtime` provenance module defines DTOs and pure helpers fo
 - adapter-safe tool/effect outcomes that fail before completed-effect evidence is claimed when services are missing, unavailable, denied, cancelled, or incomplete;
 - redacted Toolpath-compatible Graph/Path/Step projection types.
 
-The module is a functional core over already-loaded data. It does not read files, inspect environment, spawn processes, call providers, use clocks, discover sessions, persist ledgers, or require a concrete storage backend.
+The provenance module is a functional core over already-loaded data. The adjacent `animus-runtime::session_persistence` seam adds host-injected `LedgerSessionService` descriptors, replay/restore planning over already-loaded ledger entries, mutation-record DTOs, and safe ledger/session receipts. Neither module reads files, inspects environment, spawns processes, calls providers, uses clocks, discovers sessions, persists ledgers, or requires a concrete storage backend.
 
 ## Clankers adoption boundary
 
@@ -28,7 +28,7 @@ Animus adapts these Clankers patterns:
 - tool-host outcomes and effect request/result metadata;
 - dependency-isolated reusable runtime contracts.
 
-Animus does not adopt Clankers desktop storage, Automerge sessions, daemon/attach control plane, TUI, plugin runtime, Matrix/P2P routing, global session directories, transcript compatibility records, provider router, product CLI, or self-evolution workflows.
+Animus does not adopt Clankers desktop storage, Automerge sessions, daemon/attach control plane, TUI, plugin runtime, Matrix/P2P routing, global session directories, transcript compatibility records, provider router, product CLI, or self-evolution workflows. The ledger/session seam rejects ambient global-store fallback unless a host supplies an explicit descriptor and already-loaded records.
 
 ## Toolpath matrix
 
@@ -51,6 +51,6 @@ Animus does not adopt Clankers desktop storage, Automerge sessions, daemon/attac
 
 ## Evidence and validation
 
-Focused validation lives in `scripts/cairn/check-provenance-ledger --root .`. It runs the runtime provenance tests and checks that default Cargo manifests do not introduce Toolpath, `toolpath-convo`, Pathbase, provider importer, Git/GitHub derivation, Clankers session/message, Automerge, daemon, Matrix, plugin-runtime, or global session-directory dependencies.
+Focused validation lives in `scripts/cairn/check-provenance-ledger --root .`. It runs the runtime provenance tests and checks that default Cargo manifests do not introduce Toolpath, `toolpath-convo`, Pathbase, provider importer, Git/GitHub derivation, Clankers session/message, Automerge, daemon, Matrix, plugin-runtime, or global session-directory dependencies. The focused ledger/session seam test is `cargo test -p animus-runtime session_persistence --locked`.
 
 Closeout evidence should name the focused rail, runtime crate tests, clippy/workspace checks when run, Nickel/config drift if applicable, Cairn validation, and Cairn gates. Any skipped rail must name the concrete blocker and next-best validation.
