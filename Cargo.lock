@@ -62,9 +62,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "animus-adapter-observability"
+version = "0.1.0"
+dependencies = [
+ "animus-adapter-safe",
+]
+
+[[package]]
+name = "animus-adapter-safe"
+version = "0.1.0"
+
+[[package]]
 name = "animus-adapters"
 version = "0.1.0"
 dependencies = [
+ "animus-adapter-observability",
+ "animus-adapter-safe",
  "animus-core",
  "animus-router",
  "blake3",

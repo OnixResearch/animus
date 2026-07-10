@@ -1,0 +1,9 @@
+# Tasks
+
+- [x] [serial] Use the component catalog to inventory adapter-family owners, public exports, feature gates, dependency edges, conformance rows, and focused checks. r[agent_harness_runtime.adapter_family_crates.facade]
+- [x] [depends:agent_harness_runtime.adapter_family_crates.facade] Extract the first low-risk reusable family crates, starting with safe receipt and observability contracts, while preserving `animus-adapters` re-export compatibility. r[agent_harness_runtime.adapter_family_crates.independent_crates]
+- [x] [depends:agent_harness_runtime.adapter_family_crates.independent_crates] Add re-export parity tests proving moved public items resolve identically through direct family crates and the `animus-adapters` facade. r[agent_harness_runtime.adapter_family_crates.facade]
+- [x] [depends:agent_harness_runtime.adapter_family_crates.independent_crates] Add no-std, Wasm, and forbidden-authority purity checks for extracted reusable contract crates. r[agent_harness_runtime.adapter_family_crates.independent_crates]
+- [x] [depends:agent_harness_runtime.adapter_family_crates.independent_crates] Update the component catalog, contracts index, runtime facade inventory, adapter conformance index, and README crate guidance for extracted families. r[agent_harness_runtime.adapter_family_crates.migration]
+- [x] [depends:agent_harness_runtime.adapter_family_crates.migration] Add positive and negative conformance fixtures for moved families, missing facade exports, dependency cycles, authority leaks, and unsafe receipts. r[agent_harness_runtime.adapter_family_crates.verification]
+- [x] [depends:agent_harness_runtime.adapter_family_crates.verification] Run per-family tests, `cargo test -p animus-adapters`, catalog checks, adapter conformance checks, Wasm surface checks, Cairn validate, and Cairn gates. r[agent_harness_runtime.adapter_family_crates.verification]

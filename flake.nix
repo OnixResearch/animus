@@ -181,6 +181,7 @@
                 || baseName == "check-clankers-product-surfaces"
                 || baseName == "check-dogfood-readiness"
                 || baseName == "check-adapter-conformance-index"
+                || baseName == "check-adapter-family-crates"
                 || baseName == "check-ast-grep-agent-boundary-audits"
                 || baseName == "check-component-catalog"
                 || baseName == "check-clash-ucan-authority"
@@ -343,6 +344,10 @@
 
           runtime-kernel-split = cargoCheck "animus-runtime-kernel-split" [ ] ''
             sh scripts/cairn/check-runtime-kernel-split --root .
+          '';
+
+          adapter-family-crates = cargoCheck "animus-adapter-family-crates" [ ] ''
+            sh scripts/cairn/check-adapter-family-crates --root .
           '';
 
           ast-grep-agent-boundary-audits = cargoCheck "animus-ast-grep-agent-boundary-audits" [

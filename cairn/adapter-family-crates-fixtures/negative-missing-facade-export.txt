@@ -1,0 +1,4 @@
+crate=animus-adapter-observability
+authority=none
+check=cargo test -p animus-adapter-observability --locked
+receipt=safe-labels-counts-hashes-only

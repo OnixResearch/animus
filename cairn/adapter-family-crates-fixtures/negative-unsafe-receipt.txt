@@ -1,0 +1,5 @@
+crate=animus-adapter-safe
+facade=animus-adapters
+authority=none
+check=cargo test -p animus-adapter-safe --locked
+receipt=token=secret

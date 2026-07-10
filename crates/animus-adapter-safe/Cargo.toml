@@ -1,0 +1,11 @@
+[package]
+name = "animus-adapter-safe"
+description = "no_std safe receipt contract family for animus adapter boundaries."
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true

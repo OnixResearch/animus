@@ -50,7 +50,9 @@ mod modelevidence;
 mod multimodal;
 /// Optional OpenClaw-inspired node capability-host DTOs.
 pub mod node;
-mod observability;
+pub use animus_adapter_observability as observability;
+#[cfg(test)]
+mod adapter_family_crates;
 /// OpenClaw-inspired security audit and plugin guardrail DTOs.
 #[path = "openclaw/guardrails.rs"]
 pub mod openclaw_guardrails;

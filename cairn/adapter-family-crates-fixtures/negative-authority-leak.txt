@@ -1,0 +1,6 @@
+crate=animus-adapter-safe
+facade=animus-adapters
+authority=filesystem
+forbidden=std::fs::read_to_string
+check=cargo test -p animus-adapter-safe --locked
+receipt=safe-labels-counts-hashes-only

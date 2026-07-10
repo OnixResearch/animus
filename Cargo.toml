@@ -1,5 +1,7 @@
 [workspace]
 members = [
+  "crates/animus-adapter-observability",
+  "crates/animus-adapter-safe",
   "crates/animus-adapters",
   "crates/animus-core",
   "crates/animus-preserves",
@@ -11,6 +13,8 @@ members = [
 ]
 default-members = [
   ".",
+  "crates/animus-adapter-observability",
+  "crates/animus-adapter-safe",
   "crates/animus-adapters",
   "crates/animus-core",
   "crates/animus-preserves",

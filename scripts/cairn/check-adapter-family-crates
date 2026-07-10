@@ -1,0 +1,34 @@
+#!/usr/bin/env sh
+set -eu
+
+ROOT="."
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --root)
+      shift
+      ROOT="$1"
+      ;;
+    *)
+      echo "ADAPTER_FAMILY_UNKNOWN_ARG: $1" >&2
+      exit 1
+      ;;
+  esac
+  shift
+done
+
+cd "$ROOT"
+
+TMPDIR_ROOT="${TMPDIR:-/tmp}/animus-adapter-family-crates.$$"
+mkdir -p "$TMPDIR_ROOT"
+trap 'rm -rf "$TMPDIR_ROOT"' EXIT INT TERM
+
+rustc scripts/cairn/check-adapter-family-crates.rs -o "$TMPDIR_ROOT/check-adapter-family-crates"
+"$TMPDIR_ROOT/check-adapter-family-crates" --root .
+
+cargo test -p animus-adapter-safe --locked
+cargo test -p animus-adapter-observability --locked
+cargo test -p animus-adapters adapter_family_crates --locked
+cargo check -p animus-adapter-safe --target wasm32-unknown-unknown --locked
+cargo check -p animus-adapter-observability --target wasm32-unknown-unknown --locked
+
+echo "adapter family crates rail: ok"

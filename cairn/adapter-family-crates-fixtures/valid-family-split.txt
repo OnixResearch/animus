@@ -1,0 +1,9 @@
+crate=animus-adapter-safe
+crate=animus-adapter-observability
+facade=animus-adapters
+edge=animus-adapter-observability->animus-adapter-safe
+authority=none
+check=cargo test -p animus-adapter-safe --locked
+check=cargo test -p animus-adapter-observability --locked
+check=cargo test -p animus-adapters adapter_family_crates --locked
+receipt=safe-labels-counts-hashes-only

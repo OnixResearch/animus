@@ -1,0 +1,14 @@
+[package]
+name = "animus-adapter-observability"
+description = "no_std observability adapter contract family for animus."
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+animus-adapter-safe = { path = "../animus-adapter-safe", version = "0.1.0" }

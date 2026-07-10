@@ -1,0 +1,8 @@
+crate=family-a
+crate=family-b
+facade=animus-adapters
+edge=family-a->family-b
+edge=family-b->family-a
+authority=none
+check=cargo test -p family-a --locked
+receipt=safe-labels-counts-hashes-only
