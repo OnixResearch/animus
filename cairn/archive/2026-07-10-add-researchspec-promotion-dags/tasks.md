@@ -1,0 +1,8 @@
+# Tasks
+
+- [x] [serial] Define ResearchSpec promotion DAG group, dependency edge, kept-run evidence, touched-file summary, guardrail status, blocked-group, topological-batch, and safe receipt DTOs. r[agent_harness_runtime.hermes_researchspec.promotion_dag]
+- [x] [depends:promotion_dag] Add pure validation for duplicate groups, unknown dependencies, cycles, self-dependencies, overlapping touched files, stale run evidence, failed or unkept runs, unresolved hypothesis decisions, and guarded-file conflicts. r[agent_harness_runtime.hermes_researchspec.promotion_dag.validation]
+- [x] [depends:promotion_dag.validation] Produce deterministic promotion batches and blocked-group explanations without applying patches, invoking VCS commands, editing files, or archiving studies. r[agent_harness_runtime.hermes_researchspec.promotion_dag.order]
+- [x] [depends:promotion_dag.order] Add safe promotion DAG receipts using BLAKE3 graph identities, safe group labels, dependency edges, bounded counts, run evidence hashes, issue codes, and redaction markers. r[agent_harness_runtime.hermes_researchspec.promotion_dag.receipts]
+- [x] [depends:promotion_dag.receipts] Update docs and focused rail coverage to explain promotion DAG non-claims and host-owned mutation boundaries. r[agent_harness_runtime.hermes_researchspec.promotion_dag.docs]
+- [x] [depends:promotion_dag.docs] Add positive and negative tests for independent batches, dependent ordering, blocked explanations, cycles, unknown dependencies, overlapping files, stale evidence, failed runs, guarded-file conflicts, unsafe receipts, and raw diff leaks. r[agent_harness_runtime.hermes_researchspec.promotion_dag.verification]

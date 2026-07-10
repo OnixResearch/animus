@@ -1,0 +1,8 @@
+# Tasks
+
+- [x] [serial] Define tool executor pack descriptor, executor binding, exact capability requirement, output policy, mutation policy, approval posture, and prompt-exposure state DTOs. r[agent_harness_runtime.tool_executor_packs.descriptor]
+- [x] [depends:descriptor] Add admission logic that requires active trusted definitions, schema identities, executor service readiness, exact capability labels, approval state, and output policy before prompt exposure or dispatch. r[agent_harness_runtime.tool_executor_packs.admission]
+- [x] [depends:admission] Add deterministic fake executor pack fixtures for read-only and bounded-output tool calls without filesystem, process, network, plugin, or shell authority. r[agent_harness_runtime.tool_executor_packs.fake_executors]
+- [x] [depends:fake_executors] Add safe executor receipts for completed, denied, missing, unavailable, timed-out, cancelled, malformed-output, unsafe-reference, unbounded-output, mutation-conflict, and leak-rejected outcomes. r[agent_harness_runtime.tool_executor_packs.receipts]
+- [x] [depends:receipts] Document packaged tool packs as host-owned, non-default assets and list product tools, plugin execution, shell/process/network/filesystem authority, and global discovery as non-claims. r[agent_harness_runtime.tool_executor_packs.docs]
+- [x] [depends:docs] Add positive fake executor tests and negative missing-executor, capability-gap, denied-approval, malformed-args, unsafe-reference, unbounded-output, mutation-conflict, timeout, cancellation, and receipt-leak tests. r[agent_harness_runtime.tool_executor_packs.verification]

@@ -1,0 +1,8 @@
+# Tasks
+
+- [x] [serial] Define injected session persistence service descriptors and append, snapshot, replay, restore, compact, forget/tombstone, and store-readiness DTOs. r[agent_harness_runtime.session_persistence_adapter.service]
+- [x] [depends:service] Require explicit store descriptor, session scope, branch identity, schema version, redaction policy, freshness, and receipt policy before durable writes or restores. r[agent_harness_runtime.session_persistence_adapter.admission]
+- [x] [depends:admission] Add deterministic in-memory fake persistence fixtures for append, replay, restore, compaction-summary, and tombstone flows without filesystem or database authority. r[agent_harness_runtime.session_persistence_adapter.fake_store]
+- [x] [depends:fake_store] Persist only safe ledger records with BLAKE3 identities, redaction classes, counts, status classes, parent links, and typed replay receipts; reject raw prompts, outputs, tool bodies, provider payloads, credentials, and private paths. r[agent_harness_runtime.session_persistence_adapter.safe_records]
+- [x] [depends:safe_records] Add typed failure outcomes for missing store, unavailable backend, stale snapshot, schema mismatch, unsafe record, partial write, replay gap, restore conflict, and leak rejection. r[agent_harness_runtime.session_persistence_adapter.failures]
+- [x] [depends:failures] Add positive append/replay/restore fake tests and negative missing-store, stale-snapshot, schema-mismatch, unsafe-record, partial-write, unavailable-backend, global-store-default, replay-gap, restore-conflict, and leak tests. r[agent_harness_runtime.session_persistence_adapter.verification]

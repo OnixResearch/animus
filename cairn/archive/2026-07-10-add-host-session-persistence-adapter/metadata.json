@@ -1,0 +1,6 @@
+{
+  "depends_on": [
+    "adapt-goose-session-branching-controls",
+    "adapt-hermes-vcs-snapshot-ledger"
+  ]
+}

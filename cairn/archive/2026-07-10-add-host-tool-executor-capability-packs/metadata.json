@@ -1,0 +1,5 @@
+{
+  "depends_on": [
+    "adapt-goose-code-mode-tool-planning"
+  ]
+}

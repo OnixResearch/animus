@@ -11786,3 +11786,569 @@ r[agent_harness_runtime.adapter_crate_maintainability.verification.closeout]
 - WHEN closeout evidence is collected
 - THEN it names inventory, ownership map, semantic shard changes, functional-core splits, lint-scope changes, compatibility aliases, conformance evidence, dogfood readiness, and Cairn gates
 - AND it states that no new provider client, tool executor, persistence backend, dogfood shell behavior, or product feature was claimed.
+
+### Requirement: Non-default headless dogfood entrypoint
+
+r[agent_harness_runtime.dogfood_headless_shell.entrypoint] Animus MUST provide a non-default headless or CLI dogfood entrypoint that can run one bounded prompt path through accepted runtime, adapter, policy, and receipt contracts using injected deterministic fake services.
+
+#### Scenario: Host runs a fake-backed prompt
+
+r[agent_harness_runtime.dogfood_headless_shell.entrypoint.fake_prompt]
+- GIVEN a host invokes the non-default dogfood shell with a safe prompt request and deterministic fixture configuration
+- WHEN the shell starts a run
+- THEN it constructs the run from typed request, policy, model, tool, and output descriptors
+- AND it does not read ambient credentials, discover providers, open the network, spawn processes, start a daemon, write a global store, or require a terminal UI.
+
+### Requirement: Prompt and adapter admission precede dispatch
+
+r[agent_harness_runtime.dogfood_headless_shell.admission] The dogfood shell MUST admit prompt input, policy profile, selected model capability, optional tool metadata, output contract, and noninteractive behavior before any model or tool adapter is called.
+
+#### Scenario: Missing model service fails closed
+
+r[agent_harness_runtime.dogfood_headless_shell.admission.missing_model]
+- GIVEN a dogfood run request is otherwise valid
+- AND no model service is injected
+- WHEN admission evaluates the dispatch path
+- THEN the shell returns a typed missing-service failure
+- AND it does not attempt fallback provider discovery, network dispatch, tool execution, or final-response fabrication.
+
+### Requirement: Dogfood events are ordered runtime facts
+
+r[agent_harness_runtime.dogfood_headless_shell.events] A fake-backed dogfood run MUST emit ordered runtime events for prompt admission, model request, model response, optional tool-admission decision, completion status, and shutdown using the same event taxonomy consumed by headless, SDK, receipt, and future UI surfaces.
+
+#### Scenario: Successful fake model response produces terminal event
+
+r[agent_harness_runtime.dogfood_headless_shell.events.success]
+- GIVEN the fixture model adapter returns a valid bounded response
+- WHEN the dogfood run completes
+- THEN the event sequence records admitted model dispatch before the model response
+- AND the terminal completion event appears after all adapter outcome events.
+
+### Requirement: Dogfood receipts store safe evidence only
+
+r[agent_harness_runtime.dogfood_headless_shell.receipts] The dogfood shell MUST produce a safe receipt index that stores status classes, event counts, adapter labels, redaction markers, BLAKE3 identities, and omitted-surface non-claims without raw prompts, raw model outputs, raw tool bodies, provider payloads, credentials, private paths, or unbounded logs.
+
+#### Scenario: Receipt leak attempt is rejected
+
+r[agent_harness_runtime.dogfood_headless_shell.receipts.leak_rejection]
+- GIVEN a fake-backed run attempts to persist raw prompt text or raw model output in durable receipt metadata
+- WHEN receipt validation runs
+- THEN validation rejects the receipt with a leak diagnostic
+- AND no dogfood readiness claim is indexed from that receipt.
+
+### Requirement: Dogfood docs name evidence rung and non-claims
+
+r[agent_harness_runtime.dogfood_headless_shell.docs] Dogfood shell documentation and examples MUST name the highest completed evidence rung and list live providers, credential discovery, network dispatch, default product tools, persistence, daemon/attach, TUI dogfood, plugin runtime, production readiness, and Clankers parity as non-claims unless separately indexed.
+
+#### Scenario: Example remains fake-backed only
+
+r[agent_harness_runtime.dogfood_headless_shell.docs.fake_backed_only]
+- GIVEN a user reads the dogfood shell example
+- WHEN the example describes expected evidence
+- THEN it states that the run proves fake-backed integration only
+- AND it points to the next validation rung for packaged headless or optional live-provider claims.
+
+### Requirement: Dogfood shell verification
+
+r[agent_harness_runtime.dogfood_headless_shell.verification] The dogfood shell change MUST include positive and negative tests or fixtures for fake-backed success, missing model service, denied capability, malformed fixture output, unsafe evidence, receipt leak rejection, and omitted-surface overclaim detection before archive.
+
+#### Scenario: Closeout evidence is bounded
+
+r[agent_harness_runtime.dogfood_headless_shell.verification.closeout]
+- GIVEN maintainers prepare to archive the dogfood shell change
+- WHEN closeout validation runs
+- THEN evidence names the fake-backed smoke, negative fixtures, adapter conformance, dogfood readiness, docs, Cairn validation, and Cairn gates
+- AND skipped optional live-provider, TUI, daemon, plugin, persistence, and production checks are recorded as non-claims or blockers.
+
+### Requirement: Session persistence is an injected host service
+
+r[agent_harness_runtime.session_persistence_adapter.service] Animus MUST model durable session persistence as an injected host service with typed append, snapshot, replay, restore, compact, forget/tombstone, and store-readiness operations over safe ledger records.
+
+#### Scenario: Host supplies an in-memory persistence service
+
+r[agent_harness_runtime.session_persistence_adapter.service.injected]
+- GIVEN a host supplies an in-memory persistence service descriptor
+- WHEN the runtime requests append and replay operations
+- THEN Animus calls the injected service through typed requests and outcomes
+- AND reusable crates do not choose a filesystem layout, database backend, lock strategy, encryption scheme, clock source, or global store path.
+
+### Requirement: Durable persistence admission is explicit
+
+r[agent_harness_runtime.session_persistence_adapter.admission] Persistence operations MUST require explicit store descriptor, session scope, branch identity, schema version, redaction policy, freshness policy, and receipt policy before durable append, snapshot, replay, restore, compact, or tombstone work.
+
+#### Scenario: Missing store descriptor fails closed
+
+r[agent_harness_runtime.session_persistence_adapter.admission.missing_store]
+- GIVEN a runtime run has safe events to persist
+- AND no store descriptor is injected
+- WHEN persistence admission runs
+- THEN Animus returns a missing-store outcome
+- AND it does not write to ambient filesystem paths, global stores, caches, current working directories, or best-effort logs.
+
+### Requirement: Fake persistence store proves replay shape
+
+r[agent_harness_runtime.session_persistence_adapter.fake_store] The first persistence adapter evidence SHOULD include a deterministic in-memory fake store that supports append, replay, restore, compaction-summary, and tombstone flows without filesystem, database, daemon, or network authority.
+
+#### Scenario: Replay restores safe session state
+
+r[agent_harness_runtime.session_persistence_adapter.fake_store.replay]
+- GIVEN a fake store contains a valid sequence of safe ledger records for a session branch
+- WHEN replay runs
+- THEN Animus rebuilds safe session state, branch links, counts, and terminal status from the records
+- AND it does not require raw transcripts, provider payloads, tool bodies, or private paths.
+
+### Requirement: Persistent records are safe ledger facts
+
+r[agent_harness_runtime.session_persistence_adapter.safe_records] Durable session records MUST contain only safe ledger facts such as schema version, session and branch identities, parent identities, BLAKE3 content identities, redaction classes, event counts, token/count summaries, status classes, safe adapter labels, and typed replay receipt references.
+
+#### Scenario: Unsafe raw record is rejected
+
+r[agent_harness_runtime.session_persistence_adapter.safe_records.raw_prompt]
+- GIVEN a persistence request includes raw prompt text, raw model output, tool body, provider payload, credential, private path, or unbounded log
+- WHEN record validation runs
+- THEN Animus rejects the record with a leak diagnostic
+- AND no durable session state is updated from that record.
+
+### Requirement: Persistence failures are typed outcomes
+
+r[agent_harness_runtime.session_persistence_adapter.failures] Persistence and replay MUST return typed outcomes for missing store, unavailable backend, stale snapshot, schema mismatch, unsafe record, partial write, replay gap, restore conflict, tombstone conflict, and leak rejection.
+
+#### Scenario: Stale snapshot blocks restore
+
+r[agent_harness_runtime.session_persistence_adapter.failures.stale_snapshot]
+- GIVEN a restore request references a snapshot older than the admitted freshness policy
+- WHEN restore admission runs
+- THEN Animus returns a stale-snapshot outcome
+- AND it does not silently continue from outdated state.
+
+### Requirement: Session persistence verification
+
+r[agent_harness_runtime.session_persistence_adapter.verification] The session persistence adapter change MUST include positive and negative tests for service descriptors, persistence admission, fake-store append, replay, restore, compaction summaries, tombstones, missing stores, stale snapshots, schema mismatches, unsafe records, partial writes, unavailable backends, global-store defaults, replay gaps, restore conflicts, and leak rejection before archive.
+
+#### Scenario: Closeout scopes persistence claims
+
+r[agent_harness_runtime.session_persistence_adapter.verification.closeout]
+- GIVEN maintainers prepare to archive persistence adapter work
+- WHEN closeout validation runs
+- THEN evidence names fake-store append/replay/restore tests, negative fixtures, safe record checks, docs, Cairn validation, and Cairn gates
+- AND filesystem layout, database backend, daemon persistence, encryption subsystem, production recovery, and live-provider continuity remain omitted non-claims unless separately indexed.
+
+### Requirement: ResearchSpec promotion groups are explicit DAG nodes
+
+r[agent_harness_runtime.hermes_researchspec.promotion_dag] Animus MUST represent ResearchSpec promotion ordering as explicit DAG data containing promotion group IDs, kept run IDs, dependency edges, touched-file summaries, metric evidence labels, guardrail status labels, host-held patch or diff hashes, blocked-group explanations, topological batches, and safe promotion receipt identities.
+
+#### Scenario: Dependent promotion groups are represented safely
+
+r[agent_harness_runtime.hermes_researchspec.promotion_dag.dependent]
+- GIVEN two kept promotion groups touch disjoint files
+- AND one group declares that it depends on the other group's accepted behavior
+- WHEN promotion DAG DTO validation runs
+- THEN Animus records the dependency as safe graph structure
+- AND no patch body, raw diff, benchmark log, provider payload, or full host path is copied into reusable runtime state.
+
+### Requirement: Promotion DAG validation rejects unsafe or ambiguous groups
+
+r[agent_harness_runtime.hermes_researchspec.promotion_dag.validation] ResearchSpec promotion DAG validation MUST reject duplicate groups, duplicate edges, unknown dependencies, self-dependencies, cycles, overlapping touched files without an explicit block decision, stale run evidence, failed or unkept runs, unresolved hypothesis decisions, guarded-file conflicts, unsafe labels, and malformed receipt metadata.
+
+#### Scenario: Cycle blocks promotion planning
+
+r[agent_harness_runtime.hermes_researchspec.promotion_dag.validation.cycle]
+- GIVEN promotion group A depends on group B and group B depends on group A through one or more edges
+- WHEN promotion DAG validation runs
+- THEN validation returns a cycle diagnostic with safe group identity evidence
+- AND no promotion eligibility, archive-ready status, VCS operation, or workspace mutation is produced.
+
+### Requirement: Promotion order is deterministic and non-mutating
+
+r[agent_harness_runtime.hermes_researchspec.promotion_dag.order] Animus MUST produce deterministic topological promotion batches and blocked-group explanations over valid ResearchSpec promotion DAGs, and MUST NOT apply patches, invoke VCS commands, edit files, run benchmarks, persist study archives, or merge work from reusable runtime logic.
+
+#### Scenario: Independent groups become a stable batch
+
+r[agent_harness_runtime.hermes_researchspec.promotion_dag.order.batch]
+- GIVEN several promotion groups have no unmet dependencies and pass keep, guardrail, and overlap checks
+- WHEN promotion DAG ordering runs
+- THEN those groups are returned in a deterministic sorted batch
+- AND actual promotion, branch movement, file edits, archive mutation, and conflict resolution remain host-owned.
+
+### Requirement: Promotion DAG receipts are safe evidence
+
+r[agent_harness_runtime.hermes_researchspec.promotion_dag.receipts] ResearchSpec promotion DAG receipts MUST include only schema labels, safe group IDs, sorted dependency edges, bounded counts, issue codes, metric evidence hashes, touched-file summary hashes, guardrail status labels, patch or diff hashes, BLAKE3 graph receipt identities, and redaction markers.
+
+#### Scenario: Raw diff leak is rejected
+
+r[agent_harness_runtime.hermes_researchspec.promotion_dag.receipts.rejects_raw_diff]
+- GIVEN a promotion receipt fixture contains raw diff content, raw benchmark output, a raw prompt, provider payload, credential-looking value, absolute path dump, raw model output, raw tool output, or unbounded log text
+- WHEN promotion DAG receipt validation runs
+- THEN validation rejects the receipt with a leak diagnostic
+- AND the promotion group cannot be counted as safe durable evidence.
+
+### Requirement: Promotion DAG documentation states host-owned mutation boundaries
+
+r[agent_harness_runtime.hermes_researchspec.promotion_dag.docs] ResearchSpec promotion DAG documentation MUST explain that the DAG only validates ordering, dependency evidence, and safe receipts, while benchmark execution, patch application, VCS operations, conflict resolution, archive mutation, scheduling, and persistence remain host-owned.
+
+#### Scenario: Maintainer reviews promotion non-claims
+
+r[agent_harness_runtime.hermes_researchspec.promotion_dag.docs.non_claims]
+- GIVEN maintainers inspect ResearchSpec promotion DAG documentation
+- WHEN they compare reusable runtime behavior with host adapter behavior
+- THEN the documentation identifies pure ordering and receipt projection as reusable claims
+- AND it records benchmark execution, branch mutation, file writes, patch application, and study archive persistence as non-claims.
+
+### Requirement: Promotion DAG verification covers positive and negative cases
+
+r[agent_harness_runtime.hermes_researchspec.promotion_dag.verification] ResearchSpec promotion DAG adoption MUST include focused positive and negative tests for independent promotion batches, dependent ordering, blocked-group explanations, duplicate groups, duplicate edges, unknown dependencies, cycles, overlapping files, stale run evidence, failed or unkept runs, unresolved hypotheses, guarded-file conflicts, unsafe labels, receipt redaction, raw diff leak rejection, documentation, Cairn validation, and Cairn gates.
+
+#### Scenario: Closeout evidence names promotion DAG coverage
+
+r[agent_harness_runtime.hermes_researchspec.promotion_dag.verification.closeout]
+- GIVEN maintainers intend to archive ResearchSpec promotion DAG support
+- WHEN closeout validation runs
+- THEN evidence names promotion DAG DTOs, validation, ordering, receipts, docs, positive tests, negative tests, Cairn validation, and Cairn gates
+- AND it records VCS mutation, patch application, benchmark execution, conflict resolution, archive writes, and persistence as non-claims.
+
+### Requirement: Tool executor packs describe admitted host authority
+
+r[agent_harness_runtime.tool_executor_packs.descriptor] Animus MUST represent host-owned tool executor packs with typed descriptors that bind tool definitions, schema identities, executor service labels, exact capability requirements, output policies, mutation policies, approval posture, and prompt-exposure state.
+
+#### Scenario: Read-only executor pack is declared
+
+r[agent_harness_runtime.tool_executor_packs.descriptor.read_only]
+- GIVEN a host supplies a read-only executor pack for a known tool definition
+- WHEN descriptor validation runs
+- THEN Animus accepts safe tool name, schema identity, executor label, required capability, bounded output policy, and non-mutating policy
+- AND it does not import tool implementation code, inspect plugins, or grant filesystem, process, network, or shell authority.
+
+### Requirement: Executor pack admission precedes prompt exposure and dispatch
+
+r[agent_harness_runtime.tool_executor_packs.admission] Tool prompt exposure and dispatch MUST require active trusted definition metadata, valid schema identity, executor service readiness, exact declared capability labels, approval posture, output policy, and mutation policy before an executor is called.
+
+#### Scenario: Executor-less tool is not dispatch-ready
+
+r[agent_harness_runtime.tool_executor_packs.admission.missing_executor]
+- GIVEN a trusted active tool definition exists
+- AND no executor pack is injected for that tool
+- WHEN prompt exposure and dispatch admission run
+- THEN dispatch fails with a missing-executor class
+- AND no fallback executor, shell command, plugin process, network call, or provider call is attempted.
+
+### Requirement: Fake executor packs provide deterministic first evidence
+
+r[agent_harness_runtime.tool_executor_packs.fake_executors] The first tool executor pack implementation SHOULD include deterministic fake executors that exercise read-only, bounded-output, and denied-dispatch paths without host effects.
+
+#### Scenario: Fake executor returns bounded output
+
+r[agent_harness_runtime.tool_executor_packs.fake_executors.bounded_output]
+- GIVEN an admitted fake executor pack receives valid prepared arguments
+- WHEN the fake executor returns output
+- THEN Animus bounds or hashes the output according to policy
+- AND the response records safe redaction and output status metadata.
+
+### Requirement: Executor outcomes produce safe receipts
+
+r[agent_harness_runtime.tool_executor_packs.receipts] Tool executor pack outcomes MUST produce safe receipts for completed, denied, missing, unavailable, timed-out, cancelled, malformed-output, unsafe-reference, unbounded-output, mutation-conflict, and leak-rejected cases using safe labels, counts, BLAKE3 identities, failure classes, and redaction markers only.
+
+#### Scenario: Unsafe output reference is rejected
+
+r[agent_harness_runtime.tool_executor_packs.receipts.unsafe_reference]
+- GIVEN an executor returns a private path, URL, raw handle, or unbounded output reference not admitted by output policy
+- WHEN response and receipt validation run
+- THEN Animus returns an unsafe-reference or unbounded-output failure class
+- AND durable evidence omits the unsafe reference body.
+
+### Requirement: Tool pack docs preserve non-default product boundary
+
+r[agent_harness_runtime.tool_executor_packs.docs] Documentation for executor packs MUST state that reusable crates expose contracts only and that packaged tools, plugin execution, filesystem/process/network/shell authority, product catalogs, and global tool discovery remain host-owned non-default behavior.
+
+#### Scenario: Capability pack example scopes authority
+
+r[agent_harness_runtime.tool_executor_packs.docs.scope]
+- GIVEN a user reads a capability-pack example
+- WHEN the example lists supported tools
+- THEN it also lists exact capability labels, output policy, mutation policy, and omitted product behavior
+- AND it does not imply default product tools ship with reusable Animus crates.
+
+### Requirement: Tool executor pack verification
+
+r[agent_harness_runtime.tool_executor_packs.verification] The executor pack change MUST include positive and negative tests for descriptor validation, admission, fake executor success, missing executor, capability gaps, denied approval, malformed arguments, unsafe references, unbounded output, mutation conflict, timeout, cancellation, and receipt leak rejection before archive.
+
+#### Scenario: Closeout evidence names tool non-claims
+
+r[agent_harness_runtime.tool_executor_packs.verification.closeout]
+- GIVEN maintainers prepare to archive executor pack work
+- WHEN closeout validation runs
+- THEN evidence names descriptor DTOs, admission, fake executors, receipts, docs, positive tests, negative tests, Cairn validation, and Cairn gates
+- AND it records product tool catalogs, plugin execution, global discovery, shell/process/network/filesystem authority, and production readiness as non-claims.
+
+### Requirement: Headless eval DTOs describe suites and observations safely
+
+r[agent_harness_runtime.turnstone_headless_eval.dto] Animus MUST represent headless eval suites, cases, setup summaries, expected actions, argument matchers, observed actions, run scores, aggregate scores, holdout markers, and receipts with typed DTOs.
+
+#### Scenario: Suite DTO omits raw fixture bodies
+
+r[agent_harness_runtime.turnstone_headless_eval.dto.safe_suite]
+- GIVEN a host supplies a headless eval suite with case labels and setup hashes
+- WHEN suite DTO validation runs
+- THEN Animus accepts safe case identities, expected action specs, holdout markers, and setup summaries
+- AND it excludes raw prompts, raw fixture bodies, provider payloads, full paths, credentials, and raw tool output.
+
+### Requirement: Action matching is pure and bounded
+
+r[agent_harness_runtime.turnstone_headless_eval.matching] Animus MUST match observed actions to expected actions by tool name, exact arguments, bounded regex-like argument patterns, malformed raw-argument markers, and duplicate-match prevention using pure deterministic logic.
+
+#### Scenario: Expected action matches by bounded pattern
+
+r[agent_harness_runtime.turnstone_headless_eval.matching.pattern]
+- GIVEN an expected action includes a bounded pattern for a command label
+- AND an observed action has a matching safe argument summary
+- WHEN action matching runs
+- THEN Animus marks the observed action as matched once
+- AND duplicate use of the same observed action for multiple expectations is rejected or reported according to policy.
+
+### Requirement: Scoring supports explicit match modes
+
+r[agent_harness_runtime.turnstone_headless_eval.scoring] Animus MUST score expected and observed action ledgers with exact, ordered-subset, subset, and contains-any modes and an explicit empty-expectation policy.
+
+#### Scenario: Ordered subset allows extra tools between matches
+
+r[agent_harness_runtime.turnstone_headless_eval.scoring.ordered_subset]
+- GIVEN expected actions appear in order within a longer observed tool ledger
+- WHEN ordered-subset scoring runs
+- THEN Animus reports all expected actions matched with a passing score
+- AND extra tools are reported as safe metadata rather than ignored silently.
+
+### Requirement: Aggregates separate holdout and feedback data
+
+r[agent_harness_runtime.turnstone_headless_eval.aggregates] Animus MUST reduce multi-run eval observations into pass rate, average score, flaky case labels, unmatched-action summaries, extra-tool counts, malformed-tool-call signals, holdout summaries, and non-holdout feedback summaries without leaking holdout-only details into feedback outputs.
+
+#### Scenario: Holdout case is excluded from optimizer feedback
+
+r[agent_harness_runtime.turnstone_headless_eval.aggregates.holdout]
+- GIVEN an eval suite contains holdout and non-holdout cases
+- WHEN aggregate reduction runs
+- THEN holdout scores are reported in holdout summaries
+- AND optimizer feedback summaries exclude holdout-only failure details.
+
+### Requirement: Host shell owns execution effects
+
+r[agent_harness_runtime.turnstone_headless_eval.host_boundary] Headless eval execution MUST keep fixture setup, provider calls, tool execution, temporary workspaces, timeouts, concurrency, clocks, filesystem access, and persistence in host shells or injected services.
+
+#### Scenario: Reusable scorer receives observed ledger only
+
+r[agent_harness_runtime.turnstone_headless_eval.host_boundary.no_effects]
+- GIVEN a host has already executed a headless eval run and collected a safe observed ledger
+- WHEN reusable scoring runs
+- THEN Animus computes deterministic scores from the in-memory ledger
+- AND it does not create temp directories, read files, call providers, run tools, spawn processes, or write persistence.
+
+### Requirement: Eval receipts are safe summaries
+
+r[agent_harness_runtime.turnstone_headless_eval.receipts] Headless eval receipts MUST contain suite identity, case labels, run counts, score summaries, policy hashes, fixture/setup hashes, BLAKE3 evidence hashes, redaction markers, and safe diagnostics only.
+
+#### Scenario: Receipt rejects raw transcript
+
+r[agent_harness_runtime.turnstone_headless_eval.receipts.no_transcript]
+- GIVEN a receipt draft includes a raw model transcript, raw prompt, or raw tool output
+- WHEN receipt validation runs
+- THEN Animus rejects the receipt with a leak diagnostic
+- AND durable evidence keeps only safe labels, counts, hashes, and score summaries.
+
+### Requirement: Headless eval docs distinguish measurement from proof
+
+r[agent_harness_runtime.turnstone_headless_eval.docs] Documentation for the headless eval scorer MUST state that tool-sequence scoring is measurement, not proof, and that online prompt self-modification, live provider runner, product CLI, and raw transcript storage are non-claims.
+
+#### Scenario: Documentation names scorer limits
+
+r[agent_harness_runtime.turnstone_headless_eval.docs.measurement]
+- GIVEN users read the headless eval scorer documentation
+- WHEN they inspect the limitations section
+- THEN it states that scores measure sampled behavior and do not prove semantic correctness
+- AND it identifies optimizer loops, live execution, product CLI behavior, and raw transcript storage as outside reusable scope.
+
+### Requirement: Headless eval verification covers scoring and safety failures
+
+r[agent_harness_runtime.turnstone_headless_eval.verification] The headless eval scorer change MUST include positive tests for all match modes and aggregate reducers plus negative malformed specs, invalid patterns, duplicate matches, unsafe receipts, holdout leakage, empty-expectation policy, and impossible score inputs before archive.
+
+#### Scenario: Closeout evidence names scorer fixtures
+
+r[agent_harness_runtime.turnstone_headless_eval.verification.closeout]
+- GIVEN maintainers prepare to archive headless eval scorer work
+- WHEN closeout evidence is reviewed
+- THEN it names DTOs, matching, scoring, aggregation, host-boundary docs, receipts, positive tests, negative tests, Cairn validation, and Cairn gates
+- AND it records Turnstone optimizer behavior and live provider execution as non-claims.
+
+### Requirement: Animus std-shell context filesystem authority is capability-rooted
+
+r[agent_harness_runtime.cap_std_context_boundary.root_wrappers] Animus MUST represent workspace, context-file, artifact, and host-store filesystem authority in `animus-std` as typed capability roots opened by the standard-library shell.
+
+#### Scenario: Valid context path stays under the declared root
+
+r[agent_harness_runtime.cap_std_context_boundary.tests.positive]
+- GIVEN `animus-std` has opened an operator-declared workspace or context root
+- WHEN context discovery, layering, provenance, or host-store code reads a valid relative path through the typed root
+- THEN the operation MUST remain confined to that declared root and preserve deterministic context precedence.
+
+#### Scenario: Invalid context path cannot escape the root
+
+r[agent_harness_runtime.cap_std_context_boundary.tests.negative]
+- GIVEN input names `../` traversal, an absolute path, a missing capability root, a symlink escape attempt, or hidden host-file exposure outside the declared root
+- WHEN `animus-std` resolves the path through the typed root
+- THEN Animus MUST fail closed before loading that file into context or host-store evidence.
+
+### Requirement: Capability dependency stays in the std shell
+
+r[agent_harness_runtime.cap_std_context_boundary.dependency] Animus MUST add `cap-std` only to `animus-std` shell/adaptor code that owns filesystem effects.
+
+#### Scenario: Reusable crates stay filesystem-neutral
+
+r[agent_harness_runtime.cap_std_context_boundary.conversion]
+- GIVEN `animus-core`, `animus-adapters`, `animus-steel`, `animus-runtime`, `animus-tui`, and root facade contracts are reviewed
+- WHEN cap-std adoption is complete
+- THEN those crates MUST operate on in-memory DTOs, adapter contracts, loaded context values, or validated relative locators and MUST NOT depend on `cap-std` or open ambient filesystem paths directly.
+
+### Requirement: Capability boundary is documented without host-effect overclaims
+
+r[agent_harness_runtime.cap_std_context_boundary.docs] Animus MUST document that capability roots bound local filesystem reads and writes only and do not sandbox model/tool behavior, provider trust, process execution, credentials, network access, or TUI safety.
+
+#### Scenario: Closeout evidence includes std-shell boundary validation
+
+r[agent_harness_runtime.cap_std_context_boundary.validation]
+- GIVEN the cap-std context-boundary change is ready to archive
+- WHEN focused `animus-std` tests, crate-boundary scans, Cairn validation, and gate checks run
+- THEN the evidence MUST include positive and negative filesystem-boundary coverage and visible host-effect non-claim documentation.
+
+### Requirement: Nested subagents are explicit graph data
+
+r[agent_harness_runtime.subagent_nested_graphs.graph] Animus MUST represent nested subagent work as optional typed delegation graph data containing safe node IDs, admitted parent/child edges, ancestry proofs, depth policy, graph status, host admission receipts, and safe graph receipt identities.
+
+#### Scenario: Host supplies a two-level graph
+
+r[agent_harness_runtime.subagent_nested_graphs.graph.two_level]
+- GIVEN a host supplies a parent run, a child review run, and a grandchild read-only investigation as graph nodes
+- AND every edge has a host admission receipt and ancestry proof
+- WHEN graph DTO validation runs
+- THEN Animus accepts the graph as explicit delegation data
+- AND it does not spawn a grandchild, enqueue work, call a provider, or mutate workspace state.
+
+### Requirement: Every nested edge requires admission and acyclic lineage
+
+r[agent_harness_runtime.subagent_nested_graphs.admission] Nested subagent graph validation MUST be pure over supplied graph DTOs and MUST reject missing host admissions, duplicate node IDs, cycle edges, stale ancestry proofs, parent/child identity mismatches, over-depth graphs, unsupported edge kinds, and ambiguous roots.
+
+#### Scenario: Recursive self-spawn is rejected
+
+r[agent_harness_runtime.subagent_nested_graphs.admission.self_spawn]
+- GIVEN a graph edge attempts to make a child its own descendant or reuses an ancestor node as a new child
+- WHEN graph admission validation runs
+- THEN validation returns a cycle or recursive-spawn diagnostic
+- AND no child-run admission, service call, or success receipt is produced.
+
+### Requirement: Descendant authority and budgets only narrow
+
+r[agent_harness_runtime.subagent_nested_graphs.monotonicity] Nested delegation validation MUST enforce monotonic authority and budget inheritance so every descendant capability set, workspace scope, mutation authority, context budget, turn budget, tool-call budget, time budget, model/profile ceiling, return mode, and output detail bound is equal to or narrower than all ancestors and host policy.
+
+#### Scenario: Grandchild cannot regain denied mutation authority
+
+r[agent_harness_runtime.subagent_nested_graphs.monotonicity.no_widening]
+- GIVEN a child run has read-only workspace access and no mutation authority
+- AND a proposed grandchild edge requests write access or mutation intent authority
+- WHEN monotonicity validation runs
+- THEN validation rejects the edge with an authority-widening diagnostic
+- AND the graph cannot be admitted for execution.
+
+### Requirement: Multi-level rollups are safe non-executing reductions
+
+r[agent_harness_runtime.subagent_nested_graphs.rollup] Nested graph cancellation, fan-in, and influence rollup MUST be deterministic reducers over supplied node statuses, terminal reports, safe output hashes, bounded evidence references, and mutation-intent summaries, and MUST NOT execute children, import raw descendant transcripts, apply mutations, or count missing descendants as success.
+
+#### Scenario: Grandchild failure rolls up as attributed evidence
+
+r[agent_harness_runtime.subagent_nested_graphs.rollup.failure]
+- GIVEN a grandchild terminal report contains a failed status, safe output hash, and bounded evidence reference
+- WHEN graph rollup runs
+- THEN the parent-visible result attributes the failure to the child/grandchild path with safe status classes and hashes
+- AND raw logs, provider payloads, full paths, credentials, and unbounded output are excluded.
+
+### Requirement: Nested execution and product surfaces remain host-owned
+
+r[agent_harness_runtime.subagent_nested_graphs.host_owned] Scheduling, recursive spawn request admission, `SubagentService` injection, queue selection, provider/model calls, retries, polling, cancellation dispatch, persistence, UI tree rendering, workspace mutation, and lifecycle storage for nested delegation MUST remain host-owned behavior outside reusable runtime and adapter-contract crates.
+
+#### Scenario: Missing graph host service fails closed
+
+r[agent_harness_runtime.subagent_nested_graphs.host_owned.missing_service]
+- GIVEN an admitted nested graph contains a pending child-to-grandchild edge
+- AND no host graph execution service is injected
+- WHEN an embedder attempts to execute or observe the edge through reusable contracts
+- THEN Animus returns a service-unavailable or host-required diagnostic
+- AND it does not create fallback schedulers, provider clients, shell commands, or background workers.
+
+### Requirement: Nested graph verification covers positive and negative cases
+
+r[agent_harness_runtime.subagent_nested_graphs.verification] The nested subagent graph adaptation MUST include focused positive and negative tests for two-level graphs, sibling-plus-grandchild graphs, acyclic admission, max-depth enforcement, stale lineage, authority monotonicity, budget inheritance, missing host admission, recursive self-spawn denial, cancellation propagation, fan-in rollup, host-owned execution boundaries, no automatic nesting, and receipt leak rejection.
+
+#### Scenario: Closeout evidence states non-claims
+
+r[agent_harness_runtime.subagent_nested_graphs.verification.closeout]
+- GIVEN maintainers intend to archive the nested subagent graph adaptation
+- WHEN closeout validation runs
+- THEN evidence names graph DTOs, admission, monotonicity, rollup, host-owned boundaries, receipts, docs, Cairn validation, and Cairn gate checks
+- AND it records automatic recursive spawning, default subagent workers, provider calls, background schedulers, UI controls, raw transcript import, and workspace mutation as non-claims.
+
+### Requirement: Production memory tier descriptors
+
+r[agent_harness_runtime.memory_production_policy.tiers] Production memory posture MUST be represented as typed descriptors for declared memory surfaces, tier labels, retention posture, TTL posture, promotion and demotion reasons, backup posture, and maintenance status, and reusable Animus logic MUST NOT construct or operate concrete cache, database, vector, graph, file, archive, or backup systems.
+
+#### Scenario: Tier descriptor names posture without backend authority
+
+r[agent_harness_runtime.memory_production_policy.tiers.descriptive]
+- GIVEN a host declares hot cache, warm search, and cold archive memory surfaces
+- WHEN production memory policy validation runs
+- THEN Animus records safe tier labels, retention posture, TTL posture, and maintenance status
+- AND no Redis, SQL, vector, graph, file, archive, or backup operation is dispatched by reusable logic.
+
+### Requirement: Erasure evidence distinguishes complete and partial outcomes
+
+r[agent_harness_runtime.memory_production_policy.erasure] Memory erasure planning and receipts MUST enumerate declared memory surfaces and record complete, partial, denied, stale, unavailable, or unsupported outcomes per surface without claiming deletion for unavailable or unverified surfaces.
+
+#### Scenario: Unavailable vector surface prevents complete erasure claim
+
+r[agent_harness_runtime.memory_production_policy.erasure.partial]
+- GIVEN a user erasure request covers raw records, summaries, embeddings, graph relationships, cache entries, and archives
+- AND the embedding surface is unavailable
+- WHEN erasure receipt validation runs
+- THEN the receipt records a partial or unavailable outcome for that surface
+- AND no report claims complete right-to-forget completion.
+
+### Requirement: Cost and latency budget descriptors
+
+r[agent_harness_runtime.memory_production_policy.budgets] Memory operation evidence MAY include safe cost budget, latency budget, quota, redaction, and operation-count descriptors, but clocks, billing systems, metrics exporters, dashboards, and alerting remain host-owned and MUST NOT be required by reusable core logic.
+
+#### Scenario: Budget evidence remains safe metadata
+
+r[agent_harness_runtime.memory_production_policy.budgets.safe]
+- GIVEN a host reports memory retrieval and extraction budget posture
+- WHEN budget descriptor validation runs
+- THEN safe budget labels, quota status, operation counts, and redaction classes are accepted
+- AND raw billing data, credentials, provider payloads, unbounded logs, and full paths are rejected.
+
+### Requirement: Tenant isolation descriptors
+
+r[agent_harness_runtime.memory_production_policy.tenant_isolation] Multi-tenant memory surfaces MUST declare scope and isolation posture for user, project, thread, tenant, or host boundaries, and retrieval or erasure planning MUST fail closed when required isolation metadata is missing or unsafe.
+
+#### Scenario: Missing tenant scope blocks shared-memory operation
+
+r[agent_harness_runtime.memory_production_policy.tenant_isolation.missing]
+- GIVEN a shared memory surface is marked multi-tenant
+- AND a retrieval or erasure operation lacks required tenant or user scope metadata
+- WHEN production memory policy validation runs
+- THEN validation rejects the operation with a typed isolation diagnostic
+- AND no prompt influence, deletion, search, or export operation is planned.
+
+### Requirement: Production memory policy verification
+
+r[agent_harness_runtime.memory_production_policy.verification] The production memory policy adaptation MUST include focused positive and negative tests for tier descriptors, erasure completeness, partial and unavailable deletion outcomes, budget descriptors, tenant isolation, unsafe observability labels, stale receipts, no backend authority, and leak rejection.
+
+#### Scenario: Closeout evidence covers production policy fixtures
+
+r[agent_harness_runtime.memory_production_policy.verification.closeout]
+- GIVEN maintainers intend to archive the production memory policy adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused tier, erasure, budget, tenant-isolation, docs, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
