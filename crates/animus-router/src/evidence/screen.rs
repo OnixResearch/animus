@@ -17,6 +17,7 @@ pub struct RouterExecutionPlan {
     pub(super) remaining_synthesis_attempts: u32,
     pub(super) remaining_repair_attempts: u32,
     pub(super) fallback_chain: FallbackChain,
+    pub(super) rotation_decisions: Vec<crate::RouterRotationDecision>,
 }
 
 impl RouterExecutionPlan {
@@ -84,6 +85,12 @@ impl RouterExecutionPlan {
     #[must_use]
     pub fn fallback_chain(&self) -> &FallbackChain {
         &self.fallback_chain
+    }
+
+    /// Returns safe rotation decisions used during selection or fallback materialization.
+    #[must_use]
+    pub fn rotation_decisions(&self) -> &[crate::RouterRotationDecision] {
+        self.rotation_decisions.as_slice()
     }
 }
 
@@ -200,16 +207,45 @@ pub fn materialize_execution_plan(
     catalog: &[crate::CatalogEntry],
     budget: &crate::Budget,
 ) -> Result<RouterExecutionPlan, ExecutionPlanError> {
+    materialize_execution_plan_inner(selected, catalog, budget, None)
+}
+
+/// Materializes a deterministic router execution plan with explicit fallback rotation.
+///
+/// # Errors
+///
+/// Returns [`ExecutionPlanError`] when selected roles, quorum, budget, rotation, or fallback constraints fail.
+pub fn materialize_execution_plan_with_rotation(
+    selected: &crate::SelectedPlan,
+    catalog: &[crate::CatalogEntry],
+    budget: &crate::Budget,
+    rotation: &crate::RouterRotationSnapshot,
+) -> Result<RouterExecutionPlan, ExecutionPlanError> {
+    materialize_execution_plan_inner(selected, catalog, budget, Some(rotation))
+}
+
+fn materialize_execution_plan_inner(
+    selected: &crate::SelectedPlan,
+    catalog: &[crate::CatalogEntry],
+    budget: &crate::Budget,
+    rotation: Option<&crate::RouterRotationSnapshot>,
+) -> Result<RouterExecutionPlan, ExecutionPlanError> {
     let roles = super::plan::roles_for_family(selected.family());
     validate_plan_constraints(selected, roles.len())?;
     let (role_steps, route_labels) = build_role_steps(selected, catalog, budget, roles)?;
     let fallback_chain =
         super::plan::build_fallback_chain(selected, catalog, budget, &route_labels)?;
+    let (fallback_chain, fallback_decision) = rotate_fallback_chain(fallback_chain, rotation)?;
+    let mut rotation_decisions = selected.rotation_decisions().to_vec();
+    if let Some(decision) = fallback_decision {
+        rotation_decisions.push(decision);
+    }
 
     Ok(super::record::assemble_execution_plan(
         selected,
         role_steps,
         fallback_chain,
+        rotation_decisions,
     ))
 }
 
@@ -242,6 +278,56 @@ fn validate_plan_constraints(
     }
 
     Ok(())
+}
+
+fn rotate_fallback_chain(
+    chain: FallbackChain,
+    rotation: Option<&crate::RouterRotationSnapshot>,
+) -> Result<(FallbackChain, Option<crate::RouterRotationDecision>), ExecutionPlanError> {
+    let Some(snapshot) = rotation else {
+        return Ok((chain, None));
+    };
+    if !snapshot.policy().rotates_role(crate::Role::Fallback) || chain.steps().is_empty() {
+        return Ok((chain, None));
+    }
+
+    let labels = chain
+        .steps()
+        .iter()
+        .map(|step| String::from(step.model_label()))
+        .collect::<Vec<_>>();
+    let decision = crate::rotate_eligible_candidates(crate::Role::Fallback, &labels, snapshot)
+        .map_err(|error| execution_error_from_rotation(&error))?;
+    let rotated_chain = rotate_chain_to_label(&chain, decision.selected_model())?;
+    Ok((rotated_chain, Some(decision)))
+}
+
+fn rotate_chain_to_label(
+    chain: &FallbackChain,
+    selected_label: &str,
+) -> Result<FallbackChain, ExecutionPlanError> {
+    let Some(start_index) = chain
+        .steps()
+        .iter()
+        .position(|step| step.model_label() == selected_label)
+    else {
+        return Err(ExecutionPlanError::FallbackModelNotEligible);
+    };
+    let mut steps = Vec::with_capacity(chain.steps().len());
+    steps.extend(chain.steps()[start_index..].iter().cloned());
+    steps.extend(chain.steps()[..start_index].iter().cloned());
+    Ok(FallbackChain { steps })
+}
+
+fn execution_error_from_rotation(error: &crate::RouterRotationError) -> ExecutionPlanError {
+    match error {
+        crate::RouterRotationError::StaleCursor
+        | crate::RouterRotationError::NoEligibleCandidates
+        | crate::RouterRotationError::Contract(_)
+        | crate::RouterRotationError::ReceiptLeak(_) => {
+            ExecutionPlanError::FallbackModelNotEligible
+        }
+    }
 }
 
 fn build_role_steps(

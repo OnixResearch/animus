@@ -249,6 +249,7 @@ pub(super) fn assemble_execution_plan(
     selected: &crate::SelectedPlan,
     role_steps: alloc::vec::Vec<super::screen::RoleStep>,
     fallback_chain: super::screen::FallbackChain,
+    rotation_decisions: alloc::vec::Vec<crate::RouterRotationDecision>,
 ) -> super::screen::RouterExecutionPlan {
     super::screen::RouterExecutionPlan {
         recipe_id: alloc::string::String::from(selected.recipe_id()),
@@ -270,5 +271,6 @@ pub(super) fn assemble_execution_plan(
             selected.bounds().max_repair_attempts()
         },
         fallback_chain,
+        rotation_decisions,
     }
 }

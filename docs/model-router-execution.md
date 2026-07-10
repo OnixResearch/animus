@@ -20,6 +20,14 @@ Step outcomes and receipts record status classes, bounded counts, selected safe 
 
 Fallback and repair execution is policy-bound. Hosts must evaluate failures against `BudgetLedger`, `FallbackChain`, and the selected fallback policy before retrying or falling back. Provider-side fallback, health-check fallback, and ambient model-registry fallback are denied unless the materialized chain explicitly authorizes the target.
 
+## Round-robin rotation
+
+Round-robin model selection is an explicit host-owned policy input, not a provider fallback or live load balancer. Hosts may pass `RouterRotationSnapshot` cursor metadata to `select_recipe_with_rotation` and `materialize_execution_plan_with_rotation`; reusable router logic validates cursor labels and catalog hashes, rotates only already eligible candidates, and returns next-cursor metadata without persisting state, reading clocks, probing health, discovering providers, or touching credentials.
+
+Role rotation happens after role, backend, privacy, budget, duplicate-label, and recipe-family filtering. Fallback rotation only reorders the materialized `FallbackChain` when policy explicitly enables fallback rotation; `evaluate_fallback` still consumes the chain in order and continues to deny provider-side or ambient fallback bypasses.
+
+`RouterRotationReceipt` records safe recipe, route-family, role, policy, cursor class, selected model label, bounded candidate count, catalog hash, next-cursor hash, redaction markers, and a BLAKE3 identity. It rejects raw prompts, provider payloads, health probes, credentials, endpoints, full paths, and unbounded traces.
+
 ## Verification and non-claims
 
 Fixture-backed evidence currently covers:
@@ -29,6 +37,7 @@ Fixture-backed evidence currently covers:
 - single-route and collaborative fan-out dispatch envelopes;
 - quorum and over-parallel denial;
 - fallback/repair binding and provider-bypass denial;
+- round-robin role and fallback rotation with stale-cursor, privacy-filter, and receipt-leak fixtures;
 - safe receipt construction and leak rejection.
 
 Non-claims: this does not implement live OpenAI/Anthropic/local provider clients, provider discovery, credential storage, networked multi-model execution, production latency routing, health checks, or a default multi-provider agent runtime.

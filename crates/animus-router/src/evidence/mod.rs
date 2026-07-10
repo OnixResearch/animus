@@ -12,7 +12,7 @@ pub use label::{DurationBucket, QuorumClass, Redaction};
 pub use record::{Receipt, ReceiptDraft, ReceiptLeak, validate_receipt_text};
 pub use screen::{
     ExecutionPlanError, FallbackChain, FallbackStep, RoleStep, RouterExecutionPlan,
-    materialize_execution_plan,
+    materialize_execution_plan, materialize_execution_plan_with_rotation,
 };
 
 #[cfg(test)]

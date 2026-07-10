@@ -11,6 +11,7 @@ pub(super) const RECIPE_FUSION: &str = "recipe:fusion";
 pub(super) const RECIPE_WORKFLOW: &str = "recipe:workflow";
 pub(super) const BAD_VALUE: &str = "surprise";
 pub(super) const MODEL_PRIMARY: &str = "model:primary";
+pub(super) const MODEL_PRIMARY_ALT: &str = "model:primary:alt";
 pub(super) const MODEL_ESCALATION: &str = "model:escalation";
 pub(super) const MODEL_RATER: &str = "model:rater";
 pub(super) const MODEL_SYNTHESIZER: &str = "model:synthesizer";
@@ -18,10 +19,13 @@ pub(super) const MODEL_JUDGE: &str = "model:judge";
 pub(super) const MODEL_FINALIZER: &str = "model:finalizer";
 pub(super) const MODEL_WORKER: &str = "model:worker";
 pub(super) const MODEL_FALLBACK_LOCAL: &str = "model:fallback:local";
+pub(super) const MODEL_FALLBACK_REMOTE: &str = "model:fallback:remote";
 pub(super) const BACKEND_LOCAL: &str = "backend:local";
 pub(super) const BACKEND_REMOTE: &str = "backend:remote";
 pub(super) const SAFE_HASH: &str =
     "0000000000000000000000000000000000000000000000000000000000000000";
+pub(super) const OTHER_SAFE_HASH: &str =
+    "1111111111111111111111111111111111111111111111111111111111111111";
 pub(super) const ZERO_COUNT: u32 = 0;
 pub(super) const MAX_CANDIDATES_ONE: u32 = 1;
 pub(super) const MAX_CANDIDATES_TWO: u32 = 2;
@@ -194,6 +198,31 @@ pub(super) fn plan_bounds(fixture: BoundsFixture) -> crate::Bounds {
 
 pub(super) fn selected_plan(fixture: SelectedPlanFixture<'_>) -> crate::SelectedPlan {
     crate::choose::test_selected_plan(fixture)
+}
+
+#[derive(Clone, Copy)]
+pub(super) struct RotationSnapshotFixture {
+    pub(super) policy: &'static str,
+    pub(super) stale_cursor_policy: &'static str,
+    pub(super) role: &'static str,
+    pub(super) position: u32,
+    pub(super) cursor_hash: &'static str,
+    pub(super) catalog_hash: &'static str,
+}
+
+pub(super) fn rotation_snapshot(fixture: RotationSnapshotFixture) -> crate::RouterRotationSnapshot {
+    let cursor = crate::RouterRotationCursorDraft {
+        role: fixture.role,
+        position: fixture.position,
+        catalog_hash: Some(fixture.cursor_hash),
+    };
+    crate::RouterRotationSnapshot::new(crate::RouterRotationSnapshotDraft {
+        policy: fixture.policy,
+        stale_cursor_policy: fixture.stale_cursor_policy,
+        catalog_hash: fixture.catalog_hash,
+        cursors: core::slice::from_ref(&cursor),
+    })
+    .expect("rotation snapshot should validate")
 }
 
 #[test]
