@@ -1,12 +1,14 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::env;
 use std::ffi::OsStr;
+use std::fmt::Write as _;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
 const ARG_ROOT: &str = "--root";
 const ARG_ROADMAP: &str = "--roadmap";
+const ARG_REVIEW_MARKDOWN: &str = "--review-markdown";
 const CAIRN_CHANGES_DIR: &str = "cairn/changes";
 const CAIRN_SPECS_DIR: &str = "cairn/specs";
 const FIELD_SEPARATOR: char = '|';
@@ -21,6 +23,7 @@ const CHANGE_FIELD_COUNT: usize = 6;
 const OVERLAP_FIELD_COUNT: usize = 4;
 const ACTIVE_FIELD_COUNT: usize = 2;
 const ACCEPTED_FIELD_COUNT: usize = 2;
+const MAX_SAFE_FIELD_BYTES: usize = 160;
 const RECORD_KIND_TIER: &str = "tier";
 const RECORD_KIND_CHANGE: &str = "change";
 const RECORD_KIND_OVERLAP: &str = "overlap";
@@ -44,6 +47,34 @@ const ISSUE_DEPENDENCY_CYCLE: &str = "ROADMAP_DEPENDENCY_CYCLE";
 const ISSUE_UNSAFE_PRODUCT_SURFACE: &str = "ROADMAP_UNSAFE_PRODUCT_SURFACE";
 const ISSUE_UNKNOWN_OVERLAP_OWNER: &str = "ROADMAP_UNKNOWN_OVERLAP_OWNER";
 const ISSUE_UNKNOWN_OVERLAP_RELATED: &str = "ROADMAP_UNKNOWN_OVERLAP_RELATED";
+const ISSUE_PROJECTION_LEAK: &str = "ROADMAP_PROJECTION_LEAK";
+const GRAPH_KIND_CHANGE: &str = "change";
+const GRAPH_KIND_TIER: &str = "tier";
+const BLOCKED_STATUS_ACTIVE_PREREQUISITE: &str = "active-prerequisite";
+const SAFETY_CLASS_FOUNDATIONAL: &str = "foundational";
+const SAFETY_CLASS_RUNTIME: &str = "runtime";
+const SAFETY_MARKER_MISSING_FOUNDATIONAL: &str = "missing-foundational-marker";
+const SAFETY_MARKER_MISSING_RUNTIME: &str = "missing-runtime-marker";
+const REVIEW_PROJECTION_LINE: &str = "ROADMAP_REVIEW projection=markdown fields=change-id,role,tier,prerequisites,issue-codes,counts redaction=applied";
+const REDACTED_FIELD: &str = "[redacted-roadmap-field]";
+const EMPTY_FIELD: &str = "-";
+const LEAK_PATTERNS: &[&str] = &[
+    "/home/",
+    "/tmp/",
+    "sk-",
+    "akia",
+    "begin openssh",
+    "begin rsa",
+    "begin private key",
+    "private key",
+    "provider_payload",
+    "raw prompt",
+    "diff --git",
+    "command output",
+    "token=",
+    "secret=",
+    "password=",
+];
 
 const ALLOWED_ROLES: &[&str] = &[
     ROLE_FOUNDATIONAL,
@@ -78,6 +109,7 @@ const RUNTIME_SAFETY_MARKERS: &[&str] = &[
 struct Config {
     root: PathBuf,
     roadmap: PathBuf,
+    review_markdown: bool,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -108,6 +140,7 @@ struct Roadmap {
     overlaps: Vec<Overlap>,
     active_override: Vec<String>,
     accepted_override: Vec<String>,
+    parse_issues: Vec<Issue>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
@@ -123,10 +156,41 @@ struct BlockedChange {
     prerequisite_id: String,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+struct TopologicalBatch {
+    index: usize,
+    changes: Vec<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+struct CyclePath {
+    graph_kind: &'static str,
+    node_id: String,
+    waits_for: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+struct SafetyMarkerEvidence {
+    class: &'static str,
+    marker: Option<String>,
+    missing_marker_class: &'static str,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+struct ProductSafetyPath {
+    change_id: String,
+    active: bool,
+    foundational: SafetyMarkerEvidence,
+    runtime: SafetyMarkerEvidence,
+}
+
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 struct ValidationReport {
     issues: Vec<Issue>,
     blocked: Vec<BlockedChange>,
+    topological_batches: Vec<TopologicalBatch>,
+    cycle_paths: Vec<CyclePath>,
+    safety_paths: Vec<ProductSafetyPath>,
 }
 
 fn main() {
@@ -148,9 +212,14 @@ fn run() -> Result<(), String> {
     let active_changes = active_changes_for_validation(&config.root, &roadmap)?;
     let accepted_requirements = accepted_requirements_for_validation(&config.root, &roadmap)?;
     let mut report = validate_roadmap(&roadmap, &active_changes, &accepted_requirements);
-    report.issues.sort();
-    report.blocked.sort();
+    sort_report(&mut report);
     print_report(&roadmap, &active_changes, &report);
+    if config.review_markdown {
+        println!(
+            "{}",
+            render_markdown_projection(&roadmap, &active_changes, &report)
+        );
+    }
     if report.issues.is_empty() {
         Ok(())
     } else {
@@ -165,6 +234,7 @@ fn parse_args(mut args: impl Iterator<Item = String>) -> Result<Config, String> 
     let _program = args.next();
     let mut root = None;
     let mut roadmap = None;
+    let mut review_markdown = false;
 
     while let Some(argument) = args.next() {
         match argument.as_str() {
@@ -180,18 +250,25 @@ fn parse_args(mut args: impl Iterator<Item = String>) -> Result<Config, String> 
                     .ok_or_else(|| format!("{ARG_ROADMAP} requires a path"))?;
                 roadmap = Some(PathBuf::from(value));
             }
+            ARG_REVIEW_MARKDOWN => {
+                review_markdown = true;
+            }
             other => return Err(format!("unknown argument: {other}")),
         }
     }
 
     let root = root.unwrap_or_else(|| PathBuf::from("."));
     let roadmap = roadmap.ok_or_else(|| format!("{ARG_ROADMAP} is required"))?;
-    Ok(Config { root, roadmap })
+    Ok(Config {
+        root,
+        roadmap,
+        review_markdown,
+    })
 }
 
 fn parse_roadmap(text: &str) -> Roadmap {
     let mut roadmap = Roadmap::default();
-    for raw_line in text.lines() {
+    for (line_offset, raw_line) in text.lines().enumerate() {
         let line = raw_line.trim();
         if line.is_empty() || line.starts_with('#') {
             continue;
@@ -200,6 +277,7 @@ fn parse_roadmap(text: &str) -> Roadmap {
         if fields.is_empty() {
             continue;
         }
+        let line_number = line_offset + 1;
         match fields[0] {
             RECORD_KIND_TIER if fields.len() == TIER_FIELD_COUNT => roadmap.tiers.push(Tier {
                 id: fields[1].to_string(),
@@ -227,25 +305,23 @@ fn parse_roadmap(text: &str) -> Roadmap {
                 roadmap.accepted_override.push(fields[1].to_string());
             }
             RECORD_KIND_TIER | RECORD_KIND_CHANGE | RECORD_KIND_OVERLAP | RECORD_KIND_ACTIVE
-            | RECORD_KIND_ACCEPTED => {
-                roadmap.changes.push(Change {
-                    id: format!("{ISSUE_MALFORMED_RECORD}:{line}"),
-                    role: String::new(),
-                    tier: String::new(),
-                    prerequisites: Vec::new(),
-                });
-            }
-            _unknown => {
-                roadmap.changes.push(Change {
-                    id: format!("{ISSUE_UNKNOWN_RECORD_KIND}:{line}"),
-                    role: String::new(),
-                    tier: String::new(),
-                    prerequisites: Vec::new(),
-                });
-            }
+            | RECORD_KIND_ACCEPTED => roadmap.parse_issues.push(issue(
+                ISSUE_MALFORMED_RECORD,
+                &record_subject(line_number),
+                "record has the wrong field count",
+            )),
+            _unknown => roadmap.parse_issues.push(issue(
+                ISSUE_UNKNOWN_RECORD_KIND,
+                &record_subject(line_number),
+                "record kind is not supported",
+            )),
         }
     }
     roadmap
+}
+
+fn record_subject(line_number: usize) -> String {
+    format!("record:{line_number}")
 }
 
 fn parse_csv(text: &str) -> Vec<String> {
@@ -353,7 +429,11 @@ fn validate_roadmap(
     active_changes: &BTreeSet<String>,
     accepted_requirements: &BTreeSet<String>,
 ) -> ValidationReport {
-    let mut report = ValidationReport::default();
+    let mut report = ValidationReport {
+        issues: roadmap.parse_issues.clone(),
+        ..ValidationReport::default()
+    };
+    validate_projection_safety(roadmap, active_changes, accepted_requirements, &mut report);
     let tier_ids = collect_tier_ids(roadmap, &mut report);
     let change_ids = collect_change_ids(roadmap, &mut report);
     validate_change_membership(active_changes, &change_ids, &mut report);
@@ -369,8 +449,71 @@ fn validate_roadmap(
     validate_overlaps(roadmap, &change_ids, &mut report);
     validate_change_cycles(roadmap, &change_ids, &mut report);
     validate_tier_cycles(roadmap, &tier_ids, &mut report);
-    validate_product_surface_safety(roadmap, &change_ids, &accepted_requirements, &mut report);
+    validate_product_surface_safety(roadmap, &change_ids, accepted_requirements, &mut report);
+    report.topological_batches = topological_batches(
+        active_changes,
+        &change_prerequisite_edges(roadmap, &change_ids),
+    );
+    report.safety_paths =
+        product_surface_safety_paths(roadmap, &change_ids, accepted_requirements, active_changes);
     report
+}
+
+fn validate_projection_safety(
+    roadmap: &Roadmap,
+    active_changes: &BTreeSet<String>,
+    accepted_requirements: &BTreeSet<String>,
+    report: &mut ValidationReport,
+) {
+    for tier in &roadmap.tiers {
+        validate_projection_label("tier-id", &tier.id, report);
+        for required_tier in &tier.requires {
+            validate_projection_label("tier-prerequisite", required_tier, report);
+        }
+    }
+    for change in &roadmap.changes {
+        validate_projection_label("change-id", &change.id, report);
+        validate_projection_label("role", &change.role, report);
+        validate_projection_label("tier-id", &change.tier, report);
+        for prerequisite in &change.prerequisites {
+            validate_projection_label("change-prerequisite", prerequisite, report);
+        }
+    }
+    for overlap in &roadmap.overlaps {
+        validate_projection_label("overlap-owner", &overlap.owner, report);
+        for related in &overlap.related {
+            validate_projection_label("overlap-related", related, report);
+        }
+    }
+    for active_change in active_changes {
+        validate_projection_label("active-change", active_change, report);
+    }
+    for accepted_requirement in accepted_requirements {
+        validate_projection_label("accepted-requirement", accepted_requirement, report);
+    }
+}
+
+fn validate_projection_label(kind: &'static str, value: &str, report: &mut ValidationReport) {
+    if contains_unsafe_material(value) {
+        report.issues.push(issue(
+            ISSUE_PROJECTION_LEAK,
+            kind,
+            "roadmap projection label contains unsafe material",
+        ));
+    }
+}
+
+fn contains_unsafe_material(value: &str) -> bool {
+    if value.len() > MAX_SAFE_FIELD_BYTES || value.starts_with('/') {
+        return true;
+    }
+    if value.chars().any(char::is_control) {
+        return true;
+    }
+    let lowercase = value.to_ascii_lowercase();
+    LEAK_PATTERNS
+        .iter()
+        .any(|pattern| lowercase.contains(pattern))
 }
 
 fn collect_tier_ids(roadmap: &Roadmap, report: &mut ValidationReport) -> BTreeSet<String> {
@@ -390,22 +533,6 @@ fn collect_tier_ids(roadmap: &Roadmap, report: &mut ValidationReport) -> BTreeSe
 fn collect_change_ids(roadmap: &Roadmap, report: &mut ValidationReport) -> BTreeSet<String> {
     let mut ids = BTreeSet::new();
     for change in &roadmap.changes {
-        if change.id.starts_with(ISSUE_MALFORMED_RECORD) {
-            report.issues.push(issue(
-                ISSUE_MALFORMED_RECORD,
-                &change.id,
-                "record has the wrong field count",
-            ));
-            continue;
-        }
-        if change.id.starts_with(ISSUE_UNKNOWN_RECORD_KIND) {
-            report.issues.push(issue(
-                ISSUE_UNKNOWN_RECORD_KIND,
-                &change.id,
-                "record kind is not supported",
-            ));
-            continue;
-        }
         if !ids.insert(change.id.clone()) {
             report.issues.push(issue(
                 ISSUE_DUPLICATE_CHANGE_ID,
@@ -456,9 +583,6 @@ fn validate_changes(
     report: &mut ValidationReport,
 ) {
     for change in &roadmap.changes {
-        if change.id.starts_with("ROADMAP_") {
-            continue;
-        }
         if !ALLOWED_ROLES.contains(&change.role.as_str()) {
             report.issues.push(issue(
                 ISSUE_UNKNOWN_ROLE,
@@ -523,23 +647,16 @@ fn validate_change_cycles(
     change_ids: &BTreeSet<String>,
     report: &mut ValidationReport,
 ) {
-    let mut edges = BTreeMap::new();
-    for change in &roadmap.changes {
-        let known_prerequisites = change
-            .prerequisites
-            .iter()
-            .filter(|prerequisite| change_ids.contains(*prerequisite))
-            .cloned()
-            .collect();
-        edges.insert(change.id.clone(), known_prerequisites);
-    }
-    for cycle_node in cycle_nodes(change_ids, &edges) {
+    let edges = change_prerequisite_edges(roadmap, change_ids);
+    let cycle_paths = cycle_paths(change_ids, &edges, GRAPH_KIND_CHANGE);
+    for cycle_path in &cycle_paths {
         report.issues.push(issue(
             ISSUE_DEPENDENCY_CYCLE,
-            &cycle_node,
+            &cycle_path.node_id,
             "change prerequisite cycle detected",
         ));
     }
+    report.cycle_paths.extend(cycle_paths);
 }
 
 fn validate_tier_cycles(
@@ -557,13 +674,59 @@ fn validate_tier_cycles(
             .collect();
         edges.insert(tier.id.clone(), known_prerequisites);
     }
-    for cycle_node in cycle_nodes(tier_ids, &edges) {
+    let cycle_paths = cycle_paths(tier_ids, &edges, GRAPH_KIND_TIER);
+    for cycle_path in &cycle_paths {
         report.issues.push(issue(
             ISSUE_DEPENDENCY_CYCLE,
-            &cycle_node,
+            &cycle_path.node_id,
             "tier prerequisite cycle detected",
         ));
     }
+    report.cycle_paths.extend(cycle_paths);
+}
+
+fn change_prerequisite_edges(
+    roadmap: &Roadmap,
+    change_ids: &BTreeSet<String>,
+) -> BTreeMap<String, Vec<String>> {
+    let mut edges = BTreeMap::new();
+    for change in &roadmap.changes {
+        let known_prerequisites = change
+            .prerequisites
+            .iter()
+            .filter(|prerequisite| change_ids.contains(*prerequisite))
+            .cloned()
+            .collect();
+        edges.insert(change.id.clone(), known_prerequisites);
+    }
+    edges
+}
+
+fn cycle_paths(
+    nodes: &BTreeSet<String>,
+    prerequisite_edges: &BTreeMap<String, Vec<String>>,
+    graph_kind: &'static str,
+) -> Vec<CyclePath> {
+    let cycle_nodes: BTreeSet<String> =
+        cycle_nodes(nodes, prerequisite_edges).into_iter().collect();
+    let mut paths = Vec::new();
+    for node in &cycle_nodes {
+        let waits_for = prerequisite_edges
+            .get(node)
+            .and_then(|prerequisites| {
+                prerequisites
+                    .iter()
+                    .find(|prerequisite| cycle_nodes.contains(*prerequisite))
+            })
+            .cloned()
+            .unwrap_or_else(|| node.clone());
+        paths.push(CyclePath {
+            graph_kind,
+            node_id: node.clone(),
+            waits_for,
+        });
+    }
+    paths
 }
 
 fn cycle_nodes(
@@ -621,6 +784,69 @@ fn cycle_nodes(
         .collect()
 }
 
+fn topological_batches(
+    nodes: &BTreeSet<String>,
+    prerequisite_edges: &BTreeMap<String, Vec<String>>,
+) -> Vec<TopologicalBatch> {
+    let mut dependent_edges: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    let mut indegree: BTreeMap<String, usize> = BTreeMap::new();
+    for node in nodes {
+        dependent_edges.entry(node.clone()).or_default();
+        indegree.entry(node.clone()).or_default();
+    }
+    for (node, prerequisites) in prerequisite_edges {
+        if !nodes.contains(node) {
+            continue;
+        }
+        for prerequisite in prerequisites {
+            if nodes.contains(prerequisite) {
+                dependent_edges
+                    .entry(prerequisite.clone())
+                    .or_default()
+                    .push(node.clone());
+                *indegree.entry(node.clone()).or_default() += 1;
+            }
+        }
+    }
+
+    let mut ready: BTreeSet<String> = indegree
+        .iter()
+        .filter(|(_node, count)| **count == 0)
+        .map(|(node, _count)| node.clone())
+        .collect();
+    let mut processed = BTreeSet::new();
+    let mut batches = Vec::new();
+
+    while !ready.is_empty() {
+        let batch_changes: Vec<String> = ready.iter().cloned().collect();
+        batches.push(TopologicalBatch {
+            index: batches.len(),
+            changes: batch_changes.clone(),
+        });
+        let mut next_ready = BTreeSet::new();
+        for node in batch_changes {
+            if !processed.insert(node.clone()) {
+                continue;
+            }
+            if let Some(dependents) = dependent_edges.get(&node) {
+                for dependent in dependents {
+                    if let Some(count) = indegree.get_mut(dependent) {
+                        if *count > 0 {
+                            *count -= 1;
+                        }
+                        if *count == 0 && !processed.contains(dependent) {
+                            next_ready.insert(dependent.clone());
+                        }
+                    }
+                }
+            }
+        }
+        ready = next_ready;
+    }
+
+    batches
+}
+
 fn validate_product_surface_safety(
     roadmap: &Roadmap,
     change_ids: &BTreeSet<String>,
@@ -651,6 +877,61 @@ fn validate_product_surface_safety(
                 "product surface lacks transitive foundational or runtime safety prerequisites",
             ));
         }
+    }
+}
+
+fn product_surface_safety_paths(
+    roadmap: &Roadmap,
+    change_ids: &BTreeSet<String>,
+    accepted_requirements: &BTreeSet<String>,
+    active_changes: &BTreeSet<String>,
+) -> Vec<ProductSafetyPath> {
+    let prerequisite_map = prerequisite_map(roadmap);
+    let mut paths = Vec::new();
+    for change in &roadmap.changes {
+        if change.role != ROLE_PRODUCT_SURFACE {
+            continue;
+        }
+        let transitive = transitive_prerequisites(
+            &change.id,
+            &prerequisite_map,
+            change_ids,
+            accepted_requirements,
+        );
+        paths.push(ProductSafetyPath {
+            change_id: change.id.clone(),
+            active: active_changes.contains(&change.id),
+            foundational: marker_evidence(
+                &transitive,
+                FOUNDATIONAL_SAFETY_MARKERS,
+                SAFETY_CLASS_FOUNDATIONAL,
+                SAFETY_MARKER_MISSING_FOUNDATIONAL,
+            ),
+            runtime: marker_evidence(
+                &transitive,
+                RUNTIME_SAFETY_MARKERS,
+                SAFETY_CLASS_RUNTIME,
+                SAFETY_MARKER_MISSING_RUNTIME,
+            ),
+        });
+    }
+    paths
+}
+
+fn marker_evidence(
+    transitive: &BTreeSet<String>,
+    markers: &[&str],
+    class: &'static str,
+    missing_marker_class: &'static str,
+) -> SafetyMarkerEvidence {
+    let marker = markers
+        .iter()
+        .find(|marker| transitive.contains(**marker))
+        .map(|marker| (*marker).to_string());
+    SafetyMarkerEvidence {
+        class,
+        marker,
+        missing_marker_class,
     }
 }
 
@@ -703,21 +984,237 @@ fn issue(code: &'static str, subject: &str, detail: &str) -> Issue {
     }
 }
 
+fn sort_report(report: &mut ValidationReport) {
+    report.issues.sort();
+    report.blocked.sort();
+    report.topological_batches.sort();
+    report.cycle_paths.sort();
+    report.safety_paths.sort();
+}
+
 fn print_report(roadmap: &Roadmap, active_changes: &BTreeSet<String>, report: &ValidationReport) {
     println!("roadmap changes: {}", roadmap.changes.len());
     println!("active changes: {}", active_changes.len());
+    println!("roadmap DAG batches: {}", report.topological_batches.len());
+    for batch in &report.topological_batches {
+        println!(
+            "DAG_BATCH {} {}",
+            batch.index,
+            safe_join(&batch.changes, ",")
+        );
+    }
     println!("blocked dependents: {}", report.blocked.len());
     for blocked in &report.blocked {
         println!(
-            "BLOCKED {} waits_for {}",
-            blocked.change_id, blocked.prerequisite_id
+            "BLOCKED {} waits_for {} status {}",
+            safe_output_field(&blocked.change_id),
+            safe_output_field(&blocked.prerequisite_id),
+            BLOCKED_STATUS_ACTIVE_PREREQUISITE,
         );
     }
+    println!(
+        "product safety paths: total={} missing={}",
+        report.safety_paths.len(),
+        report
+            .safety_paths
+            .iter()
+            .filter(|path| path.has_missing_marker())
+            .count()
+    );
+    for path in &report.safety_paths {
+        if path.active || path.has_missing_marker() {
+            println!(
+                "SAFETY_PATH {} {} {} {} {}",
+                safe_output_field(&path.change_id),
+                path.foundational.class,
+                safety_marker_label(&path.foundational),
+                path.runtime.class,
+                safety_marker_label(&path.runtime),
+            );
+        }
+    }
+    for cycle_path in &report.cycle_paths {
+        println!(
+            "CYCLE_PATH {} {} waits_for {}",
+            cycle_path.graph_kind,
+            safe_output_field(&cycle_path.node_id),
+            safe_output_field(&cycle_path.waits_for),
+        );
+    }
+    println!("{REVIEW_PROJECTION_LINE}");
     if report.issues.is_empty() {
         println!("roadmap validation: ok");
         return;
     }
     for issue in &report.issues {
-        println!("ERROR {} {} -- {}", issue.code, issue.subject, issue.detail);
+        println!(
+            "ERROR {} {} -- {}",
+            issue.code,
+            safe_output_field(&issue.subject),
+            safe_output_field(&issue.detail),
+        );
+    }
+}
+
+impl ProductSafetyPath {
+    fn has_missing_marker(&self) -> bool {
+        self.foundational.marker.is_none() || self.runtime.marker.is_none()
+    }
+}
+
+fn safety_marker_label(evidence: &SafetyMarkerEvidence) -> String {
+    evidence
+        .marker
+        .as_ref()
+        .map(|marker| safe_output_field(marker))
+        .unwrap_or_else(|| evidence.missing_marker_class.to_string())
+}
+
+fn safe_join(values: &[String], separator: &str) -> String {
+    if values.is_empty() {
+        return EMPTY_FIELD.to_string();
+    }
+    values
+        .iter()
+        .map(|value| safe_output_field(value))
+        .collect::<Vec<_>>()
+        .join(separator)
+}
+
+fn safe_output_field(value: &str) -> String {
+    if value.is_empty() {
+        return EMPTY_FIELD.to_string();
+    }
+    if contains_unsafe_material(value) {
+        return REDACTED_FIELD.to_string();
+    }
+    value.to_string()
+}
+
+fn render_markdown_projection(
+    _roadmap: &Roadmap,
+    active_changes: &BTreeSet<String>,
+    report: &ValidationReport,
+) -> String {
+    let mut output = String::new();
+    output.push_str("# Roadmap DAG review\n\n");
+    output.push_str("Safe fields: change IDs, roles, tiers, prerequisite IDs, accepted requirement IDs, issue codes, bounded counts, and redaction markers only.\n\n");
+    output.push_str("| Count | Value |\n| --- | --- |\n");
+    let _ = writeln!(output, "| active changes | {} |", active_changes.len());
+    let _ = writeln!(
+        output,
+        "| topological batches | {} |",
+        report.topological_batches.len()
+    );
+    let _ = writeln!(output, "| blocked dependents | {} |", report.blocked.len());
+    let _ = writeln!(output, "| issue count | {} |", report.issues.len());
+    output.push_str("\n## Active batches\n\n| Batch | Changes |\n| --- | --- |\n");
+    for batch in &report.topological_batches {
+        let _ = writeln!(
+            output,
+            "| {} | {} |",
+            batch.index,
+            safe_join(&batch.changes, ", ")
+        );
+    }
+    output.push_str(
+        "\n## Blocked dependents\n\n| Change | Waits for | Status |\n| --- | --- | --- |\n",
+    );
+    for blocked in &report.blocked {
+        let _ = writeln!(
+            output,
+            "| {} | {} | {} |",
+            safe_output_field(&blocked.change_id),
+            safe_output_field(&blocked.prerequisite_id),
+            BLOCKED_STATUS_ACTIVE_PREREQUISITE,
+        );
+    }
+    output.push_str("\n## Product safety paths\n\n| Change | Foundational marker | Runtime marker |\n| --- | --- | --- |\n");
+    for path in &report.safety_paths {
+        if path.active || path.has_missing_marker() {
+            let _ = writeln!(
+                output,
+                "| {} | {} | {} |",
+                safe_output_field(&path.change_id),
+                safety_marker_label(&path.foundational),
+                safety_marker_label(&path.runtime),
+            );
+        }
+    }
+    output.push_str("\n## Issues\n\n| Code | Subject |\n| --- | --- |\n");
+    for issue in &report.issues {
+        let _ = writeln!(
+            output,
+            "| {} | {} |",
+            issue.code,
+            safe_output_field(&issue.subject),
+        );
+    }
+    output.push_str(
+        "\nRedaction: unsafe projection fields are replaced with `[redacted-roadmap-field]`.\n",
+    );
+    output
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const VALID_DAG: &str = "\
+tier|base||Base\n\
+tier|runtime|base|Runtime\n\
+tier|ui|runtime|UI\n\
+active|foundation-change\n\
+active|runtime-change\n\
+active|ui-surface\n\
+accepted|agent_harness_runtime.cairn_policy.closeout\n\
+accepted|agent_harness_runtime.validation\n\
+change|foundation-change|foundational|base|agent_harness_runtime.cairn_policy.closeout|\n\
+change|runtime-change|core-runtime|runtime|foundation-change,agent_harness_runtime.validation|\n\
+change|ui-surface|product-surface|ui|runtime-change|";
+
+    const LEAK_DAG: &str = "\
+tier|runtime||Runtime\n\
+active|/home/example/private\n\
+change|/home/example/private|core-runtime|runtime||";
+
+    #[test]
+    fn reports_topological_batches_and_safety_paths_for_valid_fixture() {
+        let roadmap = parse_roadmap(VALID_DAG);
+        let active_changes: BTreeSet<String> = roadmap.active_override.iter().cloned().collect();
+        let accepted_requirements: BTreeSet<String> =
+            roadmap.accepted_override.iter().cloned().collect();
+        let report = validate_roadmap(&roadmap, &active_changes, &accepted_requirements);
+        let expected_batches = vec![
+            vec!["foundation-change".to_string()],
+            vec!["runtime-change".to_string()],
+            vec!["ui-surface".to_string()],
+        ];
+        let actual_batches: Vec<Vec<String>> = report
+            .topological_batches
+            .iter()
+            .map(|batch| batch.changes.clone())
+            .collect();
+        assert_eq!(report.issues, Vec::new());
+        assert_eq!(actual_batches, expected_batches);
+        assert!(report.safety_paths.iter().any(|path| {
+            path.change_id == "ui-surface"
+                && path.foundational.marker.as_deref()
+                    == Some("agent_harness_runtime.cairn_policy.closeout")
+                && path.runtime.marker.as_deref() == Some("agent_harness_runtime.validation")
+        }));
+    }
+
+    #[test]
+    fn rejects_and_redacts_projection_leak_fixture() {
+        let roadmap = parse_roadmap(LEAK_DAG);
+        let active_changes: BTreeSet<String> = roadmap.active_override.iter().cloned().collect();
+        let accepted_requirements = BTreeSet::new();
+        let report = validate_roadmap(&roadmap, &active_changes, &accepted_requirements);
+        assert!(report
+            .issues
+            .iter()
+            .any(|issue| issue.code == ISSUE_PROJECTION_LEAK));
+        assert_eq!(safe_output_field("/home/example/private"), REDACTED_FIELD);
     }
 }

@@ -1,6 +1,6 @@
 # Animus Cairn roadmap
 
-This document explains the planned Cairn change order. The source of truth is `cairn/roadmap.ncl`; `scripts/cairn/check-roadmap` validates that every active change is classified exactly once, prerequisite references are known, dependency cycles are absent, and product surfaces do not bypass foundational safety contracts.
+This document explains the planned Cairn change order. The source of truth is `cairn/roadmap.ncl`; `scripts/cairn/check-roadmap` validates that every active change is classified exactly once, prerequisite references are known, dependency cycles are absent, and product surfaces do not bypass foundational safety contracts. The checker also emits safe DAG explanations: deterministic active-change topological batches, active prerequisite blockers, cycle paths, product-safety marker paths, and a bounded review-projection marker.
 
 ## Roles
 
@@ -75,6 +75,20 @@ This document explains the planned Cairn change order. The source of truth is `c
 ## Dogfoodability readiness rule
 
 Successor Cairns that claim live providers, built-in tools, session persistence, TUI dogfood, daemon/attach, plugin/MCP runtime, release harness behavior, production readiness, or Clankers parity must cite the accepted dogfood readiness prerequisites, name the highest completed evidence rung from [dogfoodable-host-readiness-roadmap.md](dogfoodable-host-readiness-roadmap.md), and list omitted optional surfaces as non-claims. Implementation code alone is not sufficient evidence.
+
+## Roadmap DAG explanation evidence
+
+`scripts/cairn/check-roadmap --root .` is the focused rail for roadmap sequencing. Its default output is safe for closeout summaries and includes only counts, change IDs, tier IDs, role labels, prerequisite IDs, issue codes, redaction markers, and product-safety marker IDs. Use `--review-markdown` on the compiled checker only when a reviewer needs a Markdown projection; keep any generated artifact under ignored local output such as `target/cairn/focused-rails/`.
+
+Closeout evidence may cite:
+
+- `DAG_BATCH <n> <change-ids>` lines for deterministic active-change order;
+- `BLOCKED <change> waits_for <prerequisite> status active-prerequisite` lines for active blockers;
+- `CYCLE_PATH <graph> <node> waits_for <node>` lines for cycle diagnostics;
+- `SAFETY_PATH <change> foundational <marker> runtime <marker>` lines for product-surface safety paths;
+- the `ROADMAP_REVIEW ... redaction=applied` marker to show the projection stayed bounded.
+
+Do not copy proposal/design/task bodies, raw command transcripts, raw diffs, private full paths, credentials, provider payloads, prompts, environment values, or unbounded logs into roadmap closeout evidence. If a review projection is unavailable, record the blocker and cite the next-best `scripts/cairn/check-roadmap --root .` result.
 
 ## Closeout rule
 
