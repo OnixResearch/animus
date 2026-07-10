@@ -1,0 +1,8 @@
+# Tasks
+
+- [x] [serial] Define host-owned provider dispatch input, dispatch plan, service readiness, credential readiness, deadline/cancellation metadata, and safe outcome DTOs for one selected provider family. r[agent_harness_runtime.provider_dispatch_adapter.plan]
+- [x] [depends:plan] Wire canonical model request projection through reviewed provider-native request fixtures without constructing expected literals from the builder under test. r[agent_harness_runtime.provider_dispatch_adapter.request_projection]
+- [x] [depends:request_projection] Add shared request-field parity and constructor inventory rails for concrete provider request construction sites. r[agent_harness_runtime.provider_dispatch_adapter.parity_rails]
+- [x] [depends:parity_rails] Enforce fail-closed known-provider-prefix behavior for missing credentials, disabled backend, unavailable service, failed entitlement, denied fallback policy, timeout, and cancellation before provider contact. r[agent_harness_runtime.provider_dispatch_adapter.fail_closed]
+- [x] [depends:fail_closed] Normalize provider fixture responses and safe provider receipts without raw provider payloads, hidden reasoning, credentials, transport envelopes, or unbounded output. r[agent_harness_runtime.provider_dispatch_adapter.receipts]
+- [x] [depends:receipts] Add positive fixture dispatch tests and negative missing-credential, disabled-backend, unsupported-feature, malformed-response, timeout, cancellation, known-prefix-fallback, and leak tests; document optional live smoke as non-default evidence. r[agent_harness_runtime.provider_dispatch_adapter.verification]

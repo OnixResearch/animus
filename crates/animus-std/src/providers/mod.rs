@@ -3,6 +3,7 @@
 mod capability;
 mod catalog;
 mod choice;
+mod dispatch;
 mod identity;
 mod reason;
 mod secret;
@@ -18,6 +19,20 @@ pub use capability::{
 };
 pub use catalog::{ModelEntry, ProviderEntry, ProviderRegistry};
 pub use choice::{ModelSelection, SelectedModel};
+pub use dispatch::{
+    OpenAiResponsesContentPart, OpenAiResponsesDispatchRequest, OpenAiResponsesMessage,
+    OpenAiResponsesMetadata, OpenAiResponsesTool, ProviderDispatchCancellationState,
+    ProviderDispatchConstructorInventoryEntry, ProviderDispatchCredentialState,
+    ProviderDispatchDeadlineState, ProviderDispatchEntitlementState, ProviderDispatchError,
+    ProviderDispatchFallbackState, ProviderDispatchInput, ProviderDispatchOutcome,
+    ProviderDispatchOutcomeStatus, ProviderDispatchPlan, ProviderDispatchReceipt,
+    ProviderDispatchReceiptPolicy, ProviderDispatchServiceState, ProviderDispatchSharedFieldMatrix,
+    build_openai_responses_dispatch_request, expected_openai_responses_constructor_count,
+    normalize_openai_responses_fixture_response, plan_provider_dispatch,
+    provider_dispatch_constructor_inventory, provider_dispatch_shared_field_matrix,
+    render_openai_responses_request_fixture, validate_provider_dispatch_constructor_inventory,
+    validate_provider_dispatch_receipt, validate_provider_dispatch_shared_field_matrix,
+};
 pub use identity::{ModelId, ProviderId};
 pub use reason::{ReasoningSupport, ThinkingLevel, ThinkingPolicy};
 pub use secret::{

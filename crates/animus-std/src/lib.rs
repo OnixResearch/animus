@@ -21,6 +21,8 @@ mod context;
 #[cfg(feature = "syndicate-host")]
 mod dataspace;
 mod execution;
+#[cfg(feature = "iroh-host")]
+mod iroh;
 mod observability;
 mod providers;
 
@@ -50,6 +52,13 @@ pub use dataspace::{
     build_safe_subscription, project_observation,
 };
 pub use execution::{RunError, RunReport, SummaryModelAdapter, run, run_with_model};
+#[cfg(feature = "iroh-host")]
+pub use iroh::{
+    IROH_AGENT_COMMS_PROTOCOL, IrohAdapterError, IrohAgentCommsAdapter, IrohAgentFrame,
+    IrohAgentFrameDraft, IrohAgentTransport, IrohFrameKind, IrohRemoteAdmission,
+    IrohRouteDescriptor, IrohRouteDescriptorDraft, admit_iroh_scope, project_assertion_frame,
+    project_iroh_frame, project_orchestration_event_frame,
+};
 /// Root public name for the in-memory observability sink.
 pub type InMemoryObservabilitySink = observability::InMemorySink;
 /// Root public name for the no-op observability sink.
@@ -58,13 +67,25 @@ pub use providers::{
     ApiKind, CredentialHandle, CredentialRequirement, CredentialSource, EndpointIdentity,
     InputModality, MissingCredentialDiagnostic, ModelCapabilities, ModelCapabilitiesDraft,
     ModelEntry, ModelId, ModelSelection, ModelStreamingCapabilities, ModelStreamingRequest,
+    OpenAiResponsesContentPart, OpenAiResponsesDispatchRequest, OpenAiResponsesMessage,
+    OpenAiResponsesMetadata, OpenAiResponsesTool, ProviderDispatchCancellationState,
+    ProviderDispatchConstructorInventoryEntry, ProviderDispatchCredentialState,
+    ProviderDispatchDeadlineState, ProviderDispatchEntitlementState, ProviderDispatchError,
+    ProviderDispatchFallbackState, ProviderDispatchInput, ProviderDispatchOutcome,
+    ProviderDispatchOutcomeStatus, ProviderDispatchPlan, ProviderDispatchReceipt,
+    ProviderDispatchReceiptPolicy, ProviderDispatchServiceState, ProviderDispatchSharedFieldMatrix,
     ProviderEntry, ProviderId, ProviderRegistry, ProviderStreamParserInput,
     ProviderStreamingCredentialState, ProviderStreamingDispatchInput,
     ProviderStreamingDispatchPlan, ProviderStreamingError, ProviderStreamingServiceState,
     ReasoningSupport, RegistryError, ResolvedStreamingModes, SelectedModel, StreamFeature,
     StreamRequestMode, StreamSupport, ThinkingLevel, ThinkingPolicy, TokenCost,
-    UnsupportedStreamPolicy, parse_provider_stream_chunks, plan_provider_streaming_dispatch,
-    resolve_credential_from_env_pairs,
+    UnsupportedStreamPolicy, build_openai_responses_dispatch_request,
+    expected_openai_responses_constructor_count, normalize_openai_responses_fixture_response,
+    parse_provider_stream_chunks, plan_provider_dispatch, plan_provider_streaming_dispatch,
+    provider_dispatch_constructor_inventory, provider_dispatch_shared_field_matrix,
+    render_openai_responses_request_fixture, resolve_credential_from_env_pairs,
+    validate_provider_dispatch_constructor_inventory, validate_provider_dispatch_receipt,
+    validate_provider_dispatch_shared_field_matrix,
 };
 
 /// Public runtime configuration type.
