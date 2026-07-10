@@ -54,7 +54,7 @@ const DAEMON_SURFACE: &str = "daemon";
 const TUI_SURFACE: &str = "tui";
 const PLUGIN_SURFACE: &str = "plugin-runtime";
 const PRODUCTION_SURFACE: &str = "production-readiness";
-const CLANKERS_PARITY_SURFACE: &str = "clankers-parity";
+const REFERENCE_PARITY_SURFACE: &str = "reference-parity";
 const UNSAFE_MARKERS: &[&str] = &[
     "RAW_PROMPT:",
     "RAW_MODEL_OUTPUT:",
@@ -327,7 +327,7 @@ fn required_non_claims() -> Vec<String> {
         TUI_SURFACE,
         PLUGIN_SURFACE,
         PRODUCTION_SURFACE,
-        CLANKERS_PARITY_SURFACE,
+        REFERENCE_PARITY_SURFACE,
     ]
     .iter()
     .map(|surface| (*surface).to_owned())

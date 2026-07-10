@@ -1,5 +1,5 @@
-    // r[verify agent_harness_runtime.clankers_prompt_assembly.verification]
-    // r[verify agent_harness_runtime.clankers_prompt_assembly.verification.closeout]
+    // r[verify agent_harness_runtime.prompt_assembly.verification]
+    // r[verify agent_harness_runtime.prompt_assembly.verification.closeout]
     use super::*;
 
     const VALID_HASH: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -31,8 +31,8 @@
 
     #[test]
     fn host_context_only_assembles_admitted_context_without_discovery() {
-        // r[verify agent_harness_runtime.clankers_prompt_assembly.sources.host_context]
-        // r[verify agent_harness_runtime.clankers_prompt_assembly.discovery.missing]
+        // r[verify agent_harness_runtime.prompt_assembly.sources.host_context]
+        // r[verify agent_harness_runtime.prompt_assembly.discovery.missing]
         let host = source(SourceFixture {
             kind: PromptSourceKind::HostContext,
             label: HOST_LABEL,
@@ -69,7 +69,7 @@
 
     #[test]
     fn conflicting_sources_resolve_in_deterministic_order() {
-        // r[verify agent_harness_runtime.clankers_prompt_assembly.precedence.conflict]
+        // r[verify agent_harness_runtime.prompt_assembly.precedence.conflict]
         let beta = source(SourceFixture {
             kind: PromptSourceKind::PolicyProfile,
             label: BETA_LABEL,
@@ -114,7 +114,7 @@
 
     #[test]
     fn over_budget_source_truncates_with_bounded_identity() {
-        // r[verify agent_harness_runtime.clankers_prompt_assembly.ledger.truncated]
+        // r[verify agent_harness_runtime.prompt_assembly.ledger.truncated]
         let large = source(SourceFixture {
             kind: PromptSourceKind::HostContext,
             label: HOST_LABEL,
@@ -202,7 +202,7 @@
 
     #[test]
     fn receipt_validation_rejects_sensitive_prompt_material() {
-        // r[verify agent_harness_runtime.clankers_prompt_assembly.receipts.rejects_leaks]
+        // r[verify agent_harness_runtime.prompt_assembly.receipts.rejects_leaks]
         let valid = PromptAssemblyReceipt::validate(&receipt(ReceiptLeakFixture::none()))
             .expect("safe receipt should validate");
         assert_eq!(valid.source_label(), RECEIPT_LABEL);

@@ -52,7 +52,7 @@ impl DeliveryRetryPlan {
 ///
 /// Panics if a persisted outbox record no longer preserves its non-empty attempt
 /// ID or safe artifact label invariants.
-// r[impl agent_harness_runtime.clankers_tool_gateway.outbox]
+// r[impl agent_harness_runtime.artifact_delivery_gateway.outbox]
 #[must_use]
 pub fn plan_delivery_retry(input: DeliveryRetryInput<'_>) -> DeliveryRetryPlan {
     assert!(
@@ -159,7 +159,7 @@ impl DeliveryReceipt {
     /// # Errors
     ///
     /// Returns [`DeliveryError`] when forbidden receipt fields are present.
-    // r[impl agent_harness_runtime.clankers_tool_gateway.receipts]
+    // r[impl agent_harness_runtime.artifact_delivery_gateway.receipts]
     pub fn validate(draft: &DeliveryReceiptDraft<'_>) -> Result<Self, DeliveryError> {
         reject_delivery_receipt_leaks(draft)?;
         Ok(Self {

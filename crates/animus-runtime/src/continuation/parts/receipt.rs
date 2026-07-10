@@ -15,7 +15,7 @@ pub struct ContinuationReceiptDraft<'a> {
     pub policy_hash: &'a str,
 }
 
-// r[impl agent_harness_runtime.clankers_continuation_policy.receipts]
+// r[impl agent_harness_runtime.continuation_policy.receipts]
 /// Safe continuation receipt metadata.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ContinuationReceipt {

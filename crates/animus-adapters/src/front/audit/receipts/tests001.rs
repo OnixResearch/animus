@@ -1,5 +1,5 @@
-    // r[verify agent_harness_runtime.clankers_audit_receipts.verification]
-    // r[verify agent_harness_runtime.clankers_audit_receipts.verification.closeout]
+    // r[verify agent_harness_runtime.audit_receipts.verification]
+    // r[verify agent_harness_runtime.audit_receipts.verification.closeout]
     use super::*;
 
     const SCHEMA_VERSION: u16 = 1;
@@ -29,7 +29,7 @@
 
     #[test]
     fn empty_window_snapshot_has_zero_counts_and_safe_metadata() {
-        // r[verify agent_harness_runtime.clankers_audit_receipts.snapshots.empty]
+        // r[verify agent_harness_runtime.audit_receipts.snapshots.empty]
         let snapshot = project_audit_snapshot(AuditProjectionInput {
             policy: &policy(PENDING_LIMIT),
             window: &window(),
@@ -56,7 +56,7 @@
 
     #[test]
     fn pending_tool_counts_clamp_without_private_state() {
-        // r[verify agent_harness_runtime.clankers_audit_receipts.clamping.pending_tools]
+        // r[verify agent_harness_runtime.audit_receipts.clamping.pending_tools]
         let work = [AuditWorkDraft {
             kind: AuditWorkKind::ToolCall,
             pending_count: FIVE_COUNT,
@@ -85,7 +85,7 @@
 
     #[test]
     fn sink_unavailable_is_host_owned_and_projection_is_unchanged() {
-        // r[verify agent_harness_runtime.clankers_audit_receipts.host_owned.sink_unavailable]
+        // r[verify agent_harness_runtime.audit_receipts.host_owned.sink_unavailable]
         let work = [AuditWorkDraft {
             kind: AuditWorkKind::ModelCall,
             pending_count: ONE_COUNT,
@@ -122,7 +122,7 @@
 
     #[test]
     fn completed_failure_classes_summarize_without_payloads() {
-        // r[verify agent_harness_runtime.clankers_audit_receipts.composition.failures]
+        // r[verify agent_harness_runtime.audit_receipts.composition.failures]
         let work = [
             completed_work(AuditWorkKind::ModelCall, ONE_COUNT),
             completed_work(AuditWorkKind::ToolCall, TWO_COUNT),
@@ -167,7 +167,7 @@
 
     #[test]
     fn receipt_validation_hashes_safe_metadata_and_rejects_leaks() {
-        // r[verify agent_harness_runtime.clankers_audit_receipts.receipts.rejects_leaks]
+        // r[verify agent_harness_runtime.audit_receipts.receipts.rejects_leaks]
         let snapshot = project_audit_snapshot(AuditProjectionInput {
             policy: &policy(PENDING_LIMIT),
             window: &window(),

@@ -165,8 +165,8 @@ impl ModelRoutingDecision {
 /// # Errors
 ///
 /// Returns [`ModelRoutingError`] when routing policy references become inconsistent.
-// r[impl agent_harness_runtime.clankers_cost_model_routing.decision]
-// r[impl agent_harness_runtime.clankers_cost_model_routing.budget]
+// r[impl agent_harness_runtime.cost_model_routing.decision]
+// r[impl agent_harness_runtime.cost_model_routing.budget]
 pub fn route_model(
     input: ModelRoutingInput<'_>,
 ) -> Result<ModelRoutingDecision, ModelRoutingError> {

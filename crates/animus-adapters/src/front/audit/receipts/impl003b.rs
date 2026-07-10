@@ -93,7 +93,7 @@ impl AuditReceipt {
     /// # Errors
     ///
     /// Returns [`AuditReceiptError`] when forbidden sensitive receipt fields are present.
-    // r[impl agent_harness_runtime.clankers_audit_receipts.receipts]
+    // r[impl agent_harness_runtime.audit_receipts.receipts]
     pub fn validate(draft: &AuditReceiptDraft<'_>) -> Result<Self, AuditReceiptError> {
         reject_receipt_leaks(draft)?;
         Ok(Self {

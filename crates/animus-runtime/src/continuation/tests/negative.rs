@@ -88,7 +88,7 @@ fn mismatched_dispatch_acknowledgement_preserves_pending_state() {
 
 #[test]
 fn stale_dispatch_decision_is_rejected_before_state_changes() {
-    // r[verify agent_harness_runtime.clankers_continuation_policy.acknowledgements.stale]
+    // r[verify agent_harness_runtime.continuation_policy.acknowledgements.stale]
     let decision = ContinuationDecision::Dispatch(ContinuationDispatch {
         work_id: Text::from(UNKNOWN_WORK_ID),
         action: ContinuationAction::ReplayQueuedPrompt,
@@ -180,7 +180,7 @@ fn rejected_dispatch_acknowledgement_keeps_candidate_pending() {
 
 #[test]
 fn receipt_metadata_rejects_leak_fixtures() {
-    // r[verify agent_harness_runtime.clankers_continuation_policy.receipts.rejects_leaks]
+    // r[verify agent_harness_runtime.continuation_policy.receipts.rejects_leaks]
     let policy_hash = default_policy().policy_hash();
     let work_hash = blake3_hex(QUEUED_WORK_ID.as_bytes());
     let fixtures = [

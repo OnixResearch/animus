@@ -33,7 +33,7 @@ impl ContinuationDispatch {
     }
 }
 
-// r[impl agent_harness_runtime.clankers_continuation_policy.priority]
+// r[impl agent_harness_runtime.continuation_policy.priority]
 /// Pure continuation decision.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ContinuationDecision {

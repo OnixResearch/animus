@@ -11,7 +11,7 @@ const OTHER_MODEL_ID: &str = "local-small";
 const BAD_ID_WITH_SPACE: &str = "bad id";
 const API_KEY_ENV: &str = "OPENAI_API_KEY";
 const SECRET_VALUE: &str = "sk-secret-value";
-const OAUTH_TOKEN_VALUE: &str = "oauth-secret-token";
+const BROKERED_TOKEN_VALUE: &str = "brokered-secret-token";
 const FILE_CONTENT_VALUE: &str = "credential-file-secret";
 const CONTEXT_BUDGET: u32 = 128_000;
 const OUTPUT_BUDGET: u32 = 8_192;
@@ -210,20 +210,21 @@ fn credential_handles_do_not_expose_secret_values() {
 
 #[test]
 fn non_env_credential_failures_are_redacted() {
-    let oauth = CredentialRequirement::new(
-        CredentialSource::oauth("openai").expect("oauth label should validate"),
+    let brokered = CredentialRequirement::new(
+        CredentialSource::brokered("openai").expect("brokered label should validate"),
         true,
     );
     let file = CredentialRequirement::new(
         CredentialSource::file("openai-key-file").expect("file label should validate"),
         true,
     );
-    let oauth_error = resolve_credential_from_env_pairs(&oauth, [("TOKEN", OAUTH_TOKEN_VALUE)])
-        .expect_err("oauth shell unavailable should fail");
+    let brokered_error =
+        resolve_credential_from_env_pairs(&brokered, [("TOKEN", BROKERED_TOKEN_VALUE)])
+            .expect_err("brokered shell unavailable should fail");
     let file_error = resolve_credential_from_env_pairs(&file, [("TOKEN", FILE_CONTENT_VALUE)])
         .expect_err("file shell unavailable should fail");
 
-    assert!(!oauth_error.to_string().contains(OAUTH_TOKEN_VALUE));
+    assert!(!brokered_error.to_string().contains(BROKERED_TOKEN_VALUE));
     assert!(!file_error.to_string().contains(FILE_CONTENT_VALUE));
 }
 

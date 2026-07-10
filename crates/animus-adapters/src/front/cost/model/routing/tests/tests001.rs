@@ -1,5 +1,5 @@
-    // r[verify agent_harness_runtime.clankers_cost_model_routing.verification]
-    // r[verify agent_harness_runtime.clankers_cost_model_routing.verification.closeout]
+    // r[verify agent_harness_runtime.cost_model_routing.verification]
+    // r[verify agent_harness_runtime.cost_model_routing.verification.closeout]
     use super::*;
 
     const SCHEMA_VERSION: u16 = 1;
@@ -48,7 +48,7 @@
 
     #[test]
     fn invalid_policies_fail_closed() {
-        // r[verify agent_harness_runtime.clankers_cost_model_routing.policy.invalid]
+        // r[verify agent_harness_runtime.cost_model_routing.policy.invalid]
         assert_policy_issue(
             policy_with_roles(&[
                 role(SIMPLE_ROLE, SIMPLE_MIN_SCORE, None),
@@ -91,7 +91,7 @@
 
     #[test]
     fn simple_medium_complex_and_explicit_hint_decisions_are_pure() {
-        // r[verify agent_harness_runtime.clankers_cost_model_routing.decision.complex]
+        // r[verify agent_harness_runtime.cost_model_routing.decision.complex]
         let policy = validated_policy();
         let catalog = validated_catalog(&catalog_entries());
         let simple = route(
@@ -161,7 +161,7 @@
 
     #[test]
     fn budget_pressure_downgrades_or_denies_with_reason_metadata() {
-        // r[verify agent_harness_runtime.clankers_cost_model_routing.budget.hard_limit]
+        // r[verify agent_harness_runtime.cost_model_routing.budget.hard_limit]
         let policy = validated_policy();
         let catalog = validated_catalog(&catalog_entries());
         let soft = route(&policy, &catalog, complex_signals(), soft_pressure_usage());
@@ -211,7 +211,7 @@
 
     #[test]
     fn missing_price_and_unavailable_models_fail_without_provider_fallback() {
-        // r[verify agent_harness_runtime.clankers_cost_model_routing.catalog.missing_price]
+        // r[verify agent_harness_runtime.cost_model_routing.catalog.missing_price]
         let policy = validated_policy();
         let missing_price_catalog = validated_catalog(&[catalog_entry(
             COMPLEX_ROLE,

@@ -9,8 +9,8 @@
 ///
 /// Panics if a request previously normalized by this module no longer preserves
 /// its non-empty safe artifact label or validated artifact hash invariants.
-// r[impl agent_harness_runtime.clankers_tool_gateway.adapters]
-// r[impl agent_harness_runtime.clankers_tool_gateway.outbox]
+// r[impl agent_harness_runtime.artifact_delivery_gateway.adapters]
+// r[impl agent_harness_runtime.artifact_delivery_gateway.outbox]
 pub fn record_delivery_attempt(
     input: DeliveryExecutionInput<'_>,
 ) -> Result<DeliveryOutboxRecord, DeliveryError> {

@@ -183,7 +183,7 @@ impl RoutingModelCatalog {
     ///
     /// Returns [`ModelRoutingError`] when catalog or tag counts exceed bounds or
     /// labels fail safe boundary validation.
-    // r[impl agent_harness_runtime.clankers_cost_model_routing.catalog]
+    // r[impl agent_harness_runtime.cost_model_routing.catalog]
     pub fn validate(
         drafts: &[RoutingModelCatalogEntryDraft<'_>],
     ) -> Result<Self, ModelRoutingError> {

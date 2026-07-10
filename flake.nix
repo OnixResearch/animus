@@ -377,7 +377,7 @@
             sh scripts/cairn/check-provenance-ledger --root .
           '';
 
-          steel-runtime-policy = cargoCheck "animus-steel-runtime-policy" [ ] ''
+          steel-runtime-policy = cargoCheck "animus-steel-runtime-policy" [ pkgs.nickel ] ''
             sh scripts/cairn/check-steel-runtime-policy --root .
           '';
 

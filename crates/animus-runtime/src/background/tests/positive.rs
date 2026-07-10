@@ -1,6 +1,6 @@
 #[test]
 fn valid_profile_resolves_without_side_effects() {
-    // r[verify agent_harness_runtime.clankers_process_job_profiles.resolution.valid]
+    // r[verify agent_harness_runtime.process_job_profiles.resolution.valid]
     let resolved = super::support::manifest(super::support::valid_profile())
         .resolve(
             super::support::PROFILE_NAME,
@@ -59,7 +59,7 @@ fn valid_profile_resolves_without_side_effects() {
 
 #[test]
 fn source_precedence_prefers_explicit_then_workspace_then_global() {
-    // r[verify agent_harness_runtime.clankers_process_job_profiles.precedence.duplicate]
+    // r[verify agent_harness_runtime.process_job_profiles.precedence.duplicate]
     let sources = [
         super::support::source(
             super::super::ProcessJobProfileSourcePrecedence::Global,

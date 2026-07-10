@@ -63,7 +63,7 @@ impl PromptAssemblyReceipt {
     ///
     /// Returns [`PromptAssemblyError`] when unsafe receipt fields are present or
     /// safe labels/hashes fail validation.
-    // r[impl agent_harness_runtime.clankers_prompt_assembly.receipts]
+    // r[impl agent_harness_runtime.prompt_assembly.receipts]
     pub fn validate(draft: &PromptAssemblyReceiptDraft<'_>) -> Result<Self, PromptAssemblyError> {
         reject_receipt_leaks(draft)?;
         Ok(Self {

@@ -1,5 +1,5 @@
-    // r[verify agent_harness_runtime.clankers_tool_gateway.verification]
-    // r[verify agent_harness_runtime.clankers_tool_gateway.verification.closeout]
+    // r[verify agent_harness_runtime.artifact_delivery_gateway.verification]
+    // r[verify agent_harness_runtime.artifact_delivery_gateway.verification.closeout]
     use super::*;
 
     const VALID_HASH: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -21,7 +21,7 @@
 
     #[test]
     fn local_delivery_request_normalizes_without_raw_artifact_bytes() {
-        // r[verify agent_harness_runtime.clankers_tool_gateway.delivery_dto.local]
+        // r[verify agent_harness_runtime.artifact_delivery_gateway.delivery_dto.local]
         let request = request().expect("safe local delivery request should normalize");
 
         assert_eq!(request.artifact_handle(), ARTIFACT_HANDLE);
@@ -44,7 +44,7 @@
 
     #[test]
     fn policy_rejects_raw_destinations_before_adapter_execution() {
-        // r[verify agent_harness_runtime.clankers_tool_gateway.policy.raw_destination]
+        // r[verify agent_harness_runtime.artifact_delivery_gateway.policy.raw_destination]
         let request = request().expect("safe request should normalize");
         assert_eq!(request.target_kind(), DeliveryTargetKind::LocalSession);
         assert_eq!(request.active_context_label(), Some(CONTEXT_LABEL));
@@ -88,7 +88,7 @@
 
     #[test]
     fn policy_rejects_unsupported_targets_and_missing_context() {
-        // r[verify agent_harness_runtime.clankers_tool_gateway.policy]
+        // r[verify agent_harness_runtime.artifact_delivery_gateway.policy]
         let matrix_request = ArtifactDeliveryRequest::normalize(&ArtifactDeliveryRequestDraft {
             target_kind: DeliveryTargetKind::MatrixRoom,
             ..request_draft()
@@ -117,7 +117,7 @@
 
     #[test]
     fn missing_adapter_fails_without_success_receipt() {
-        // r[verify agent_harness_runtime.clankers_tool_gateway.adapters.missing]
+        // r[verify agent_harness_runtime.artifact_delivery_gateway.adapters.missing]
         let request = request().expect("safe request should normalize");
         let policy = evaluate_policy(policy_input(&request));
         let attempt = record_delivery_attempt(DeliveryExecutionInput {
@@ -139,8 +139,8 @@
     }
     #[test]
     fn adapter_success_and_retryable_failure_record_safe_attempts() {
-        // r[verify agent_harness_runtime.clankers_tool_gateway.adapters]
-        // r[verify agent_harness_runtime.clankers_tool_gateway.outbox]
+        // r[verify agent_harness_runtime.artifact_delivery_gateway.adapters]
+        // r[verify agent_harness_runtime.artifact_delivery_gateway.outbox]
         let request = request().expect("safe request should normalize");
         let policy = evaluate_policy(policy_input(&request));
         let success = record_delivery_attempt(DeliveryExecutionInput {
@@ -192,7 +192,7 @@
 
     #[test]
     fn non_retryable_policy_denial_preserves_original_failure_class() {
-        // r[verify agent_harness_runtime.clankers_tool_gateway.outbox.non_retryable]
+        // r[verify agent_harness_runtime.artifact_delivery_gateway.outbox.non_retryable]
         let request = request().expect("safe request should normalize");
         let denied_policy = evaluate_policy(PolicyInput {
             raw_credential: Some(RAW_TOKEN),
@@ -230,7 +230,7 @@
 
     #[test]
     fn receipt_hashes_safe_metadata_and_rejects_leaks() {
-        // r[verify agent_harness_runtime.clankers_tool_gateway.receipts.rejects_leaks]
+        // r[verify agent_harness_runtime.artifact_delivery_gateway.receipts.rejects_leaks]
         let request = request().expect("safe request should normalize");
         let policy = evaluate_policy(policy_input(&request));
         let attempt = record_delivery_attempt(DeliveryExecutionInput {

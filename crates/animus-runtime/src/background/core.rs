@@ -8,7 +8,7 @@ struct ResolutionContext<'a> {
     source_label: &'a str,
 }
 
-// r[impl agent_harness_runtime.clankers_process_job_profiles.resolution]
+// r[impl agent_harness_runtime.process_job_profiles.resolution]
 /// Resolves a named process-job profile from already-loaded sources and policy.
 ///
 /// No filesystem, process, queue, storage, pueue, systemd, shell, clock, or
@@ -199,7 +199,7 @@ fn start_request(
     request
 }
 
-// r[impl agent_harness_runtime.clankers_process_job_profiles.precedence]
+// r[impl agent_harness_runtime.process_job_profiles.precedence]
 fn select_profile_source<'a>(
     sources: &'a [super::ProcessJobProfileSource],
     profile_name: &str,
@@ -262,7 +262,7 @@ fn select_highest_precedence<'a>(
     })
 }
 
-// r[impl agent_harness_runtime.clankers_process_job_profiles.identity]
+// r[impl agent_harness_runtime.process_job_profiles.identity]
 fn identity_metadata(
     context: ResolutionContext<'_>,
     backend: super::ProcessJobBackend,

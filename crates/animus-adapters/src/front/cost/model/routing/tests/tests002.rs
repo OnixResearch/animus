@@ -1,7 +1,7 @@
 
     #[test]
     fn routing_receipts_hash_safe_metadata_and_reject_leaks() {
-        // r[verify agent_harness_runtime.clankers_cost_model_routing.receipts.rejects_leaks]
+        // r[verify agent_harness_runtime.cost_model_routing.receipts.rejects_leaks]
         let policy = validated_policy();
         let catalog = validated_catalog(&catalog_entries());
         let decision = route(&policy, &catalog, complex_signals(), within_usage());

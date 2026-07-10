@@ -61,7 +61,7 @@ fn valid_receipt_draft<'a>(
 
 #[test]
 fn queued_prompt_state_is_explicit_and_needs_no_hidden_flag() {
-    // r[verify agent_harness_runtime.clankers_continuation_policy.state.queued_prompt]
+    // r[verify agent_harness_runtime.continuation_policy.state.queued_prompt]
     let state = ContinuationState::new()
         .with_busy_prompt(BUSY_WORK_ID)
         .expect("busy work should validate")
@@ -82,7 +82,7 @@ fn queued_prompt_state_is_explicit_and_needs_no_hidden_flag() {
 
 #[test]
 fn queued_prompt_priority_wins_and_leaves_automation_pending() {
-    // r[verify agent_harness_runtime.clankers_continuation_policy.priority.queued_wins]
+    // r[verify agent_harness_runtime.continuation_policy.priority.queued_wins]
     let state = state_with_all_candidates();
     let policy = default_policy();
     let decision = select_next_continuation(&state, &policy);
@@ -156,7 +156,7 @@ fn exact_completion_acknowledgement_records_safe_hash_only() {
 
 #[test]
 fn decision_core_does_not_call_shell_owned_authority() {
-    // r[verify agent_harness_runtime.clankers_continuation_policy.shell_owned.no_provider]
+    // r[verify agent_harness_runtime.continuation_policy.shell_owned.no_provider]
     let probe = ShellProbe::default();
     let decision = select_next_continuation(&state_with_all_candidates(), &default_policy());
 
@@ -178,9 +178,9 @@ fn cancellation_preempts_normal_continuation() {
 
 #[test]
 fn safe_receipt_contains_metadata_hashes_only() {
-    // r[verify agent_harness_runtime.clankers_continuation_policy.receipts]
-    // r[verify agent_harness_runtime.clankers_continuation_policy.verification]
-    // r[verify agent_harness_runtime.clankers_continuation_policy.verification.closeout]
+    // r[verify agent_harness_runtime.continuation_policy.receipts]
+    // r[verify agent_harness_runtime.continuation_policy.verification]
+    // r[verify agent_harness_runtime.continuation_policy.verification.closeout]
     let policy = default_policy();
     let decision = select_next_continuation(&state_with_all_candidates(), &policy);
     let receipt = ContinuationReceipt::from_decision(

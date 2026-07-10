@@ -103,7 +103,7 @@ pub fn admit(request: &super::AdmissionRequest) -> Result<AdmissionDecision, Adm
 /// # Errors
 ///
 /// Returns [`AdmissionError::ReceiptLeak`] when text contains a known raw token,
-/// private key, prompt body, provider payload, transport header, Matrix room,
+/// private key, prompt body, provider payload, transport header, room identifier,
 /// full path, or credential-body marker.
 pub fn validate_safe_text(text: &str) -> Result<(), AdmissionError> {
     for marker in super::LEAK_MARKERS {

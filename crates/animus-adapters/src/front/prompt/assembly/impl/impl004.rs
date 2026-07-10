@@ -3,10 +3,10 @@
 /// # Errors
 ///
 /// Returns [`PromptAssemblyError`] when the source count exceeds the adapter bound.
-// r[impl agent_harness_runtime.clankers_prompt_assembly.sources]
-// r[impl agent_harness_runtime.clankers_prompt_assembly.precedence]
-// r[impl agent_harness_runtime.clankers_prompt_assembly.ledger]
-// r[impl agent_harness_runtime.clankers_prompt_assembly.discovery]
+// r[impl agent_harness_runtime.prompt_assembly.sources]
+// r[impl agent_harness_runtime.prompt_assembly.precedence]
+// r[impl agent_harness_runtime.prompt_assembly.ledger]
+// r[impl agent_harness_runtime.prompt_assembly.discovery]
 pub fn assemble_prompt_sources(
     sources: &[PromptSource],
     policy: &PromptAssemblyPolicy,

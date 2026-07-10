@@ -97,20 +97,20 @@ fn reports_missing_credentials_with_redacted_diagnostic() {
 
 #[test]
 fn non_env_credential_failures_are_redacted() {
-    let oauth = CredentialRequirement::new(
-        CredentialSource::oauth("openai").expect("oauth label should validate"),
+    let brokered = CredentialRequirement::new(
+        CredentialSource::brokered("openai").expect("brokered label should validate"),
         true,
     );
     let file = CredentialRequirement::new(
         CredentialSource::file("openai-key-file").expect("file label should validate"),
         true,
     );
-    let oauth_error = resolve_credential_from_env_pairs(&oauth, [("TOKEN", OAUTH_TOKEN_VALUE)])
-        .expect_err("oauth shell unavailable should fail");
+    let brokered_error = resolve_credential_from_env_pairs(&brokered, [("TOKEN", BROKERED_TOKEN_VALUE)])
+        .expect_err("brokered shell unavailable should fail");
     let file_error = resolve_credential_from_env_pairs(&file, [("TOKEN", FILE_CONTENT_VALUE)])
         .expect_err("file shell unavailable should fail");
 
-    assert!(!oauth_error.to_string().contains(OAUTH_TOKEN_VALUE));
+    assert!(!brokered_error.to_string().contains(BROKERED_TOKEN_VALUE));
     assert!(!file_error.to_string().contains(FILE_CONTENT_VALUE));
 }
 

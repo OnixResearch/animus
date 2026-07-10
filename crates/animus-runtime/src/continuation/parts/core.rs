@@ -8,7 +8,7 @@ struct ReceiptHashParts<'a> {
     policy_hash: &'a str,
 }
 
-// r[impl agent_harness_runtime.clankers_continuation_policy.shell_owned]
+// r[impl agent_harness_runtime.continuation_policy.shell_owned]
 /// Selects the next continuation action without side effects.
 #[must_use]
 pub fn select_next_continuation(

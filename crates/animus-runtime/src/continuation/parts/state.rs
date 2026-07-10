@@ -1,4 +1,4 @@
-// r[impl agent_harness_runtime.clankers_continuation_policy.state]
+// r[impl agent_harness_runtime.continuation_policy.state]
 /// Pure continuation state.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct ContinuationState {
@@ -175,7 +175,7 @@ impl ContinuationState {
         Ok(self)
     }
 
-    // r[impl agent_harness_runtime.clankers_continuation_policy.acknowledgements]
+    // r[impl agent_harness_runtime.continuation_policy.acknowledgements]
     /// Applies an exact dispatch acknowledgement.
     ///
     /// # Errors
@@ -211,7 +211,7 @@ impl ContinuationState {
         }
     }
 
-    // r[impl agent_harness_runtime.clankers_continuation_policy.acknowledgements]
+    // r[impl agent_harness_runtime.continuation_policy.acknowledgements]
     /// Applies an exact completion acknowledgement.
     ///
     /// # Errors

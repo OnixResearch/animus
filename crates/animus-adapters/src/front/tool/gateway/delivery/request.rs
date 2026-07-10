@@ -144,7 +144,7 @@ impl ArtifactDeliveryRequest {
     ///
     /// Returns [`DeliveryError`] when safe text, hash, or no-raw-byte
     /// invariants fail.
-    // r[impl agent_harness_runtime.clankers_tool_gateway.delivery_dto]
+    // r[impl agent_harness_runtime.artifact_delivery_gateway.delivery_dto]
     pub fn normalize(
         draft: &ArtifactDeliveryRequestDraft<'_>,
     ) -> Result<Self, DeliveryError> {

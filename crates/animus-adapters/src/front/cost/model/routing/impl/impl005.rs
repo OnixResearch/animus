@@ -270,7 +270,7 @@ impl ModelRoutingReceipt {
     /// # Errors
     ///
     /// Returns [`ModelRoutingError`] when forbidden receipt fields are present.
-    // r[impl agent_harness_runtime.clankers_cost_model_routing.receipts]
+    // r[impl agent_harness_runtime.cost_model_routing.receipts]
     pub fn validate(draft: &ModelRoutingReceiptDraft<'_>) -> Result<Self, ModelRoutingError> {
         reject_receipt_leaks(draft)?;
         Ok(Self {

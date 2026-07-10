@@ -60,7 +60,7 @@ impl PolicyDecision {
 ///
 /// Panics if a request previously normalized by this module no longer preserves
 /// its non-empty safe artifact handle or toolset label invariants.
-// r[impl agent_harness_runtime.clankers_tool_gateway.policy]
+// r[impl agent_harness_runtime.artifact_delivery_gateway.policy]
 #[must_use]
 pub fn evaluate_policy(input: PolicyInput<'_>) -> PolicyDecision {
     assert!(

@@ -1,6 +1,6 @@
 const ENV_SOURCE_LABEL: &str = "env";
 const FILE_SOURCE_LABEL: &str = "file";
-const OAUTH_SOURCE_LABEL: &str = "oauth";
+const BROKERED_SOURCE_LABEL: &str = "brokered";
 
 /// Credential source label for a provider entry.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -17,9 +17,9 @@ pub enum CredentialSource {
         /// Redacted credential file label.
         label: String,
     },
-    /// Credential is expected through a shell-owned OAuth flow.
-    Oauth {
-        /// Redacted OAuth provider label.
+    /// Credential is expected through a shell-owned Brokered flow.
+    Brokered {
+        /// Redacted Brokered provider label.
         label: String,
     },
 }
@@ -49,14 +49,14 @@ impl CredentialSource {
         })
     }
 
-    /// Builds an OAuth credential source with a redacted label.
+    /// Builds an Brokered credential source with a redacted label.
     ///
     /// # Errors
     ///
     /// Returns [`super::RegistryError`] when the label is unsafe.
-    pub fn oauth(label: &str) -> Result<Self, super::RegistryError> {
+    pub fn brokered(label: &str) -> Result<Self, super::RegistryError> {
         super::identity::validate_id(super::identity::IdField::CredentialSource, label)?;
-        Ok(Self::Oauth {
+        Ok(Self::Brokered {
             label: String::from(label),
         })
     }
@@ -68,7 +68,7 @@ impl CredentialSource {
             Self::None => String::from("none"),
             Self::Environment { name } => format!("{ENV_SOURCE_LABEL}:{name}"),
             Self::File { label } => format!("{FILE_SOURCE_LABEL}:{label}"),
-            Self::Oauth { label } => format!("{OAUTH_SOURCE_LABEL}:{label}"),
+            Self::Brokered { label } => format!("{BROKERED_SOURCE_LABEL}:{label}"),
         }
     }
 }
@@ -171,7 +171,7 @@ where
     match requirement.source() {
         CredentialSource::None => Ok(None),
         CredentialSource::Environment { name } => resolve_environment(requirement, name, pairs),
-        CredentialSource::File { .. } | CredentialSource::Oauth { .. } => {
+        CredentialSource::File { .. } | CredentialSource::Brokered { .. } => {
             missing_credential(requirement)
         }
     }

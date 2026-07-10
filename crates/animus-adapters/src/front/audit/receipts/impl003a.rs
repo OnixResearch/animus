@@ -201,10 +201,10 @@ impl AuditSnapshot {
 /// # Errors
 ///
 /// Returns [`AuditReceiptError`] when count arrays exceed public adapter bounds.
-// r[impl agent_harness_runtime.clankers_audit_receipts.snapshots]
-// r[impl agent_harness_runtime.clankers_audit_receipts.clamping]
-// r[impl agent_harness_runtime.clankers_audit_receipts.host_owned]
-// r[impl agent_harness_runtime.clankers_audit_receipts.composition]
+// r[impl agent_harness_runtime.audit_receipts.snapshots]
+// r[impl agent_harness_runtime.audit_receipts.clamping]
+// r[impl agent_harness_runtime.audit_receipts.host_owned]
+// r[impl agent_harness_runtime.audit_receipts.composition]
 pub fn project_audit_snapshot(
     input: AuditProjectionInput<'_>,
 ) -> Result<AuditSnapshot, AuditReceiptError> {

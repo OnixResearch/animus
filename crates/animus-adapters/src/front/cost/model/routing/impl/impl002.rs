@@ -124,7 +124,7 @@ impl ModelRoutingPolicy {
     ///
     /// Returns [`ModelRoutingError`] when roles, weights, thresholds, downgrade targets,
     /// missing-price behavior, or policy hash are invalid.
-    // r[impl agent_harness_runtime.clankers_cost_model_routing.policy]
+    // r[impl agent_harness_runtime.cost_model_routing.policy]
     pub fn validate(draft: &ModelRoutingPolicyDraft<'_>) -> Result<Self, ModelRoutingError> {
         let schema_version = NonZeroU16::new(draft.schema_version).ok_or(
             ModelRoutingError::Policy(ModelRoutingPolicyIssue::ZeroSchemaVersion),

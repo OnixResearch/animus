@@ -1,6 +1,6 @@
 #[test]
 fn same_precedence_duplicate_profiles_fail_closed() {
-    // r[verify agent_harness_runtime.clankers_process_job_profiles.precedence.duplicate]
+    // r[verify agent_harness_runtime.process_job_profiles.precedence.duplicate]
     let sources = [
         super::support::source(
             super::super::ProcessJobProfileSourcePrecedence::Workspace,
@@ -33,7 +33,7 @@ fn same_precedence_duplicate_profiles_fail_closed() {
 
 #[test]
 fn policy_rejects_secret_env_paths_and_unsupported_backend() {
-    // r[verify agent_harness_runtime.clankers_process_job_profiles.policy.secret_env]
+    // r[verify agent_harness_runtime.process_job_profiles.policy.secret_env]
     let cases = [
         (
             super::super::ProcessJobProfile {
@@ -126,7 +126,7 @@ fn policy_rejects_command_shape_args_writable_path_and_limits() {
 
 #[test]
 fn unsupported_schema_and_invalid_policy_fail_before_request() {
-    // r[verify agent_harness_runtime.clankers_process_job_profiles.nickel.drift]
+    // r[verify agent_harness_runtime.process_job_profiles.nickel.drift]
     let future_manifest = super::super::ProcessJobProfileManifest {
         schema_version: super::support::FUTURE_SCHEMA_VERSION,
         profiles: super::support::manifest(super::support::command_profile()).profiles,
@@ -162,7 +162,7 @@ fn unsupported_schema_and_invalid_policy_fail_before_request() {
 
 #[test]
 fn identity_envelope_rejects_leaks_and_excludes_raw_env_values() {
-    // r[verify agent_harness_runtime.clankers_process_job_profiles.identity.rejects_env]
+    // r[verify agent_harness_runtime.process_job_profiles.identity.rejects_env]
     let resolved = super::support::manifest(super::support::valid_profile())
         .resolve(
             super::support::PROFILE_NAME,

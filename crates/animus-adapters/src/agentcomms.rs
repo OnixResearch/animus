@@ -2,7 +2,7 @@
 //!
 //! This module keeps route admission, bounded frame metadata, projection, and
 //! receipt hygiene reusable across host transports such as Iroh, local IPC,
-//! WebSocket, Matrix, MCP, and future dataspace adapters.
+//! WebSocket, room-bus, MCP, and future dataspace adapters.
 
 #![cfg_attr(
     animus_octet,
@@ -128,7 +128,7 @@ const _: () = assert!(SUBAGENT_SUMMARY_PARTS > 0);
 #[cfg_attr(animus_octet, allow(tigerstyle::path_segment_repetition))]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum AgentCommsTransportFamily {
-    /// Iroh-backed peer-to-peer transport.
+    /// Iroh-backed ticketed transport.
     Iroh,
     /// Local IPC transport.
     LocalIpc,
