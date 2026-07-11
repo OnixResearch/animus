@@ -19,7 +19,7 @@ Animus does not use a root `specs/` directory or root `IMPLEMENTATION_PLAN.md` a
 - `cairn/specs/agent-harness-runtime/spec.md` is the accepted requirement surface.
 - `cairn/changes/<slug>/proposal.md`, `design.md`, `specs/**/spec.md`, and `tasks.md` are the active planning and implementation state.
 - `scripts/ralph-drain-cairns.scm` emits bounded prompts for one Animus lifecycle; its explicit `--run` mode is an operator-owned process effect.
-- `scripts/ralph-drain-stack.scm` is a temporary Pi-hosted supervisor for selected sibling native Cairn repositories; plan mode is effect-free and run mode is explicit.
+- `../ralph-drain-stack.scm` is the workspace-local temporary Pi-hosted supervisor for selected sibling native Cairn repositories; it is not packaged by Animus, plan mode is effect-free, and run mode is explicit.
 
 A Ralph-style iteration should pick one unfinished Cairn task, confirm the work is not already implemented, make focused changes, run the smallest relevant check, update the change package, and stop. If the plan is stale, regenerate or repair the Cairn change package rather than creating a parallel root plan.
 
@@ -44,18 +44,18 @@ Use `ralph-loop` only when the host supplies explicit capabilities and safe task
 
 The stack helper uses a new Pi print-mode process for each bounded round. It never passes continue, resume, fork, session, name, alternate-mode, or argument-terminator overrides through operator options. A named one-hour host timeout sends `TERM` and applies a bounded kill grace so a stalled provider call becomes a local repository blocker. Each prompt tells Pi to load local instructions and Cairn drain guidance, inspect repository-local dependency readiness, preserve existing work, and drain at most one change without touching siblings, pushing, or managing a pull request.
 
-Plan all direct child repositories with native Cairn lifecycle roots through Pi's Steel tool:
+Run Pi from the parent OnixResearch workspace root and plan all direct child repositories with native Cairn lifecycle roots:
 
 ```text
-file: scripts/ralph-drain-stack.scm
-args: ["--workspace-root", ".."]
+file: ralph-drain-stack.scm
+args: []
 ```
 
 Run one round in an explicitly ordered repository:
 
 ```text
-file: scripts/ralph-drain-stack.scm
-args: ["--workspace-root", "..", "--repo", "cairn", "--run", "--limit", "1"]
+file: ralph-drain-stack.scm
+args: ["--repo", "cairn", "--run", "--limit", "1"]
 ```
 
 The supervisor compares active change names, unchecked task counts, and archive directory names before and after Pi exits. One matching removal/archive is archived progress; one decreased task count is task progress; unchanged lifecycle state blocks that repository for the current run. Added changes, multiple removals, task changes in multiple packages, missing archive evidence, historical archive removal, or failed post-archive Cairn validation stop the stack run.
@@ -76,15 +76,15 @@ Run both drain helper self-tests through Pi's Steel tool after changing their re
 file: scripts/ralph-drain-cairns.scm
 args: ["--self-test"]
 
-file: scripts/ralph-drain-stack.scm
+file: ../ralph-drain-stack.scm
 args: ["--self-test"]
 ```
 
 Also inspect stack discovery without `--run`:
 
 ```text
-file: scripts/ralph-drain-stack.scm
+file: ../ralph-drain-stack.scm
 args: ["--workspace-root", "..", "--limit", "1"]
 ```
 
-A host-provided `steel` wrapper may run the same files when it supplies Pi's argument prelude; the current Animus development shell does not package a standalone Steel executable. The policy rail checks Nickel export drift, script hash binding, positive activation, Ralph prompt/reprompt/completion behavior, and negative fail-closed policy/runtime fixtures. The stack helper self-test covers positive and negative planning, progress classification, repository selection, task parsing, scope breaches, and Pi session-freshness arguments without launching Pi.
+A host-provided `steel` wrapper may run the same files when it supplies Pi's argument prelude; the current Animus development shell does not package a standalone Steel executable. Run the stack helper from the workspace root when relying on its default `.` discovery root. The policy rail checks Nickel export drift, script hash binding, positive activation, Ralph prompt/reprompt/completion behavior, and negative fail-closed policy/runtime fixtures. The workspace helper self-test covers positive and negative planning, progress classification, repository selection, task parsing, scope breaches, and Pi session-freshness arguments without launching Pi.

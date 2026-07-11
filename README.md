@@ -150,21 +150,21 @@ args: ["--change", "introduce-steel-runtime-loop"]
 
 The single-repository helper defaults to the repo-pinned Cairn command (`nix run .#cairn --`) and emits Animus-specific guardrails for roadmap blockers, accepted-spec sync verification, evidence safety, and non-claims.
 
-For a temporary Pi-hosted loop across sibling native Cairn repositories, first inspect the effect-free stack plan:
+The temporary Pi-hosted sibling-stack loop is a workspace-local operator tool, not a packaged Animus runtime surface. From the parent OnixResearch workspace root, first inspect its effect-free plan:
 
 ```text
-file: scripts/ralph-drain-stack.scm
-args: ["--workspace-root", ".."]
+file: ralph-drain-stack.scm
+args: []
 ```
 
 Then opt into one fresh `pi -p` round:
 
 ```text
-file: scripts/ralph-drain-stack.scm
-args: ["--workspace-root", "..", "--repo", "cairn", "--run", "--limit", "1"]
+file: ralph-drain-stack.scm
+args: ["--repo", "cairn", "--run", "--limit", "1"]
 ```
 
-Repeat `--repo NAME` pairs to provide advisory repository order. `--limit 0` continues serially until every selected lifecycle is empty, all remaining repositories are blocked, or a scope/validation failure stops the run. Each Pi process has a named one-hour host timeout and bounded termination grace. The supervisor permits at most one repository-local change per Pi round, rescans active changes and task counts afterward, requires a new matching archive plus canonical Cairn validation for archived progress, never pushes, and does not claim cross-repository dependency satisfaction. Run the same file through Pi's Steel tool with `args: ["--self-test"]` for its positive and negative pure-core checks.
+See `../README.md` for full workspace usage, model overrides, blocker semantics, and non-claims. The canonical helper lives at `../ralph-drain-stack.scm`; Animus intentionally does not retain a second implementation copy.
 
 ## Pre-commit hooks
 
