@@ -18,7 +18,8 @@ Animus does not use a root `specs/` directory or root `IMPLEMENTATION_PLAN.md` a
 - `AGENTS.md` is the compact operational guide loaded by agents.
 - `cairn/specs/agent-harness-runtime/spec.md` is the accepted requirement surface.
 - `cairn/changes/<slug>/proposal.md`, `design.md`, `specs/**/spec.md`, and `tasks.md` are the active planning and implementation state.
-- `scripts/ralph-drain-cairns.scm` emits bounded Ralph prompts for draining active Cairn changes without granting ambient authority.
+- `scripts/ralph-drain-cairns.scm` emits bounded prompts for one Animus lifecycle; its explicit `--run` mode is an operator-owned process effect.
+- `scripts/ralph-drain-stack.scm` is a temporary Pi-hosted supervisor for selected sibling native Cairn repositories; plan mode is effect-free and run mode is explicit.
 
 A Ralph-style iteration should pick one unfinished Cairn task, confirm the work is not already implemented, make focused changes, run the smallest relevant check, update the change package, and stop. If the plan is stale, regenerate or repair the Cairn change package rather than creating a parallel root plan.
 
@@ -39,6 +40,28 @@ The profile does not copy Ralph's shell script or Claude plugin hook behavior. H
 
 Use `ralph-loop` only when the host supplies explicit capabilities and safe task state. A missing completion promise does not grant more authority; the normal runtime max-turn policy stops the run.
 
+## Temporary Pi-hosted stack drain
+
+The stack helper uses a new Pi print-mode process for each bounded round. It never passes continue, resume, fork, session, name, alternate-mode, or argument-terminator overrides through operator options. A named one-hour host timeout sends `TERM` and applies a bounded kill grace so a stalled provider call becomes a local repository blocker. Each prompt tells Pi to load local instructions and Cairn drain guidance, inspect repository-local dependency readiness, preserve existing work, and drain at most one change without touching siblings, pushing, or managing a pull request.
+
+Plan all direct child repositories with native Cairn lifecycle roots through Pi's Steel tool:
+
+```text
+file: scripts/ralph-drain-stack.scm
+args: ["--workspace-root", ".."]
+```
+
+Run one round in an explicitly ordered repository:
+
+```text
+file: scripts/ralph-drain-stack.scm
+args: ["--workspace-root", "..", "--repo", "cairn", "--run", "--limit", "1"]
+```
+
+The supervisor compares active change names, unchecked task counts, and archive directory names before and after Pi exits. One matching removal/archive is archived progress; one decreased task count is task progress; unchanged lifecycle state blocks that repository for the current run. Added changes, multiple removals, task changes in multiple packages, missing archive evidence, historical archive removal, or failed post-archive Cairn validation stop the stack run.
+
+Pi exit status and model text never establish completion. `COMPLETE` is reported only when every selected native Cairn lifecycle is empty. Repository ordering is advisory until Cairn's receipt-backed cross-repository dependency contract is implemented, so this helper does not establish dependency satisfaction, release eligibility, or stack correctness. It is a temporary operator tool, not the embedded Animus production host.
+
 ## Verification
 
 Run the focused rail after changing this profile or its Steel policy binding:
@@ -47,10 +70,21 @@ Run the focused rail after changing this profile or its Steel policy binding:
 scripts/cairn/check-steel-runtime-policy --root .
 ```
 
-Run the Cairn drain helper self-test after changing `scripts/ralph-drain-cairns.scm`:
+Run both drain helper self-tests through Pi's Steel tool after changing their respective surfaces:
 
-```sh
-steel scripts/ralph-drain-cairns.scm --self-test
+```text
+file: scripts/ralph-drain-cairns.scm
+args: ["--self-test"]
+
+file: scripts/ralph-drain-stack.scm
+args: ["--self-test"]
 ```
 
-If the host shell does not provide a `steel` executable, run the same file through Pi's Steel runner. The rail checks Nickel export drift, script hash binding, positive activation, Ralph prompt/reprompt/completion behavior, and negative fail-closed policy/runtime fixtures.
+Also inspect stack discovery without `--run`:
+
+```text
+file: scripts/ralph-drain-stack.scm
+args: ["--workspace-root", "..", "--limit", "1"]
+```
+
+A host-provided `steel` wrapper may run the same files when it supplies Pi's argument prelude; the current Animus development shell does not package a standalone Steel executable. The policy rail checks Nickel export drift, script hash binding, positive activation, Ralph prompt/reprompt/completion behavior, and negative fail-closed policy/runtime fixtures. The stack helper self-test covers positive and negative planning, progress classification, repository selection, task parsing, scope breaches, and Pi session-freshness arguments without launching Pi.
