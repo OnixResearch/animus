@@ -437,6 +437,12 @@ let entry_values = [
   entry "animus-adapters::advertise_skill_resources" "animus-adapters" adapters reusable none stable "pure skill resource summary helper",
   entry "animus-adapters::build_skill_disclosure_context" "animus-adapters" adapters reusable none stable "pure skill progressive disclosure helper",
 
+  entry "animus-preserves::adapter" "animus-preserves" preserves reusable none optional_stability "minimal adapter-only Preserves boundary re-export",
+  entry "animus-preserves::policy" "animus-preserves" preserves reusable none optional_stability "policy-visible Preserves compatibility boundary",
+  entry "animus-preserves::provenance" "animus-preserves" preserves reusable none optional_stability "session and provenance Preserves compatibility boundary",
+  entry "animus-preserves::review" "animus-preserves" preserves reusable none optional_stability "review-only Preserves fixture declarations",
+  entry "animus-preserves::runtime" "animus-preserves" preserves reusable none optional_stability "runtime event and report Preserves compatibility boundary",
+  entry "animus-preserves::WireStatus" "animus-preserves" preserves reusable none optional_stability "Preserves family stable-wire posture",
   entry "animus-preserves::from_bytes" "animus-preserves" preserves reusable none optional_stability "Preserves byte decoder",
   entry "animus-preserves::from_text" "animus-preserves" preserves reusable none optional_stability "Preserves text decoder",
   entry "animus-preserves::to_bytes" "animus-preserves" preserves reusable none optional_stability "Preserves byte encoder",

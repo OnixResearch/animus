@@ -92,8 +92,27 @@ name = "animus-preserves"
 version = "0.1.0"
 dependencies = [
  "animus-adapters",
+ "animus-preserves-adapter",
+ "animus-preserves-schema",
  "animus-runtime",
  "preserves",
+ "serde",
+]
+
+[[package]]
+name = "animus-preserves-adapter"
+version = "0.1.0"
+dependencies = [
+ "animus-adapters",
+ "animus-preserves-schema",
+ "preserves",
+ "serde",
+]
+
+[[package]]
+name = "animus-preserves-schema"
+version = "0.1.0"
+dependencies = [
  "serde",
 ]
 

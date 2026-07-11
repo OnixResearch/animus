@@ -434,7 +434,7 @@ impl DataspaceRecord {
     ///
     /// Returns [`crate::CodecError`] when the record is unsupported or unsafe.
     pub fn validate(&self) -> Result<(), crate::CodecError> {
-        self.schema.validate_supported()?;
+        crate::schema::validate_schema_identity(self.schema)?;
         if self.schema.family() != DATASPACE_SCHEMA_FAMILY {
             return Err(crate::CodecError::WrongSchemaFamily {
                 expected: DATASPACE_SCHEMA_FAMILY.as_str(),

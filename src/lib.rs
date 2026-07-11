@@ -60,7 +60,10 @@ pub use cairn_core;
 #[cfg(feature = "trellis-reference")]
 pub use trellis;
 
-/// Re-export of the optional Preserves boundary serialization bridge.
+/// Re-export of the optional broad Preserves compatibility facade.
+///
+/// Adapter-only consumers should depend on `animus-preserves-adapter` directly;
+/// schema-only consumers should use `animus-preserves-schema`.
 #[cfg(feature = "preserves")]
 pub use animus_preserves;
 

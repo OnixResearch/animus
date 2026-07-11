@@ -1,0 +1,17 @@
+[package]
+name = "animus-preserves-adapter"
+description = "Minimal Preserves bridge for Animus adapter DTOs without runtime dependencies."
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+animus-adapters = { path = "../animus-adapters", version = "0.1.0" }
+animus-preserves-schema = { path = "../animus-preserves-schema", version = "0.1.0" }
+preserves = "4.996.0"
+serde = { version = "1.0", features = ["derive"] }

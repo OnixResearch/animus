@@ -1,0 +1,9 @@
+# Tasks
+
+- [x] [serial] Inventory existing Preserves payload families, dependencies, coverage tiers, schema identities, compatibility metadata rules, and round-trip fixtures. r[agent_harness_runtime.preserves_bridge_split.schema_catalog]
+- [x] [depends:agent_harness_runtime.preserves_bridge_split.schema_catalog] Define family-specific bridge boundaries for adapter DTOs, runtime events/reports, provenance/session records, and policy-visible DTOs. r[agent_harness_runtime.preserves_bridge_split.family_crates]
+- [x] [depends:agent_harness_runtime.preserves_bridge_split.family_crates] Preserve `animus-preserves` facade exports and add direct family import guidance for new embedders. r[agent_harness_runtime.preserves_bridge_split.facade]
+- [x] [depends:agent_harness_runtime.preserves_bridge_split.family_crates] Add positive text and binary round-trip fixtures for each stable or compatibility bridge family. r[agent_harness_runtime.preserves_bridge_split.verification]
+- [x] [depends:agent_harness_runtime.preserves_bridge_split.family_crates] Add negative fixtures for unsupported schema versions, wrong schema families, missing payloads, unbounded metadata, unsafe raw material, provider JSON, private paths, and compatibility leak attempts. r[agent_harness_runtime.preserves_bridge_split.verification]
+- [x] [depends:agent_harness_runtime.preserves_bridge_split.facade] Update component catalog, Preserves schema docs, runtime facade inventory, README feature guidance, and root `preserves` feature docs. r[agent_harness_runtime.preserves_bridge_split.schema_catalog]
+- [x] [depends:agent_harness_runtime.preserves_bridge_split.verification] Run Preserves family tests, facade parity checks, catalog checks, schema docs drift checks, Cairn validate, and Cairn gates. r[agent_harness_runtime.preserves_bridge_split.verification]

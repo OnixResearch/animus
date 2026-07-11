@@ -190,6 +190,7 @@
                 || baseName == "check-exec-policy"
                 || baseName == "check-packaged-headless-dogfood-smoke"
                 || baseName == "check-plugin-manifest-runtime-neutral"
+                || baseName == "check-preserves-boundary-schemas"
                 || baseName == "check-request-lifecycle"
                 || baseName == "check-router-policy"
                 || baseName == "check-steel-runtime-policy"
@@ -320,6 +321,18 @@
 
           cargo-preserves = cargoCheck "animus-cargo-preserves" [ ] ''
             cargo check -p animus-preserves --locked
+          '';
+
+          cargo-preserves-adapter = cargoCheck "animus-cargo-preserves-adapter" [ ] ''
+            cargo check -p animus-preserves-adapter --locked
+          '';
+
+          cargo-preserves-schema = cargoCheck "animus-cargo-preserves-schema" [ ] ''
+            cargo check -p animus-preserves-schema --locked
+          '';
+
+          preserves-boundary-schemas = cargoCheck "animus-preserves-boundary-schemas" [ ] ''
+            sh scripts/cairn/check-preserves-boundary-schemas --root .
           '';
 
           cargo-preserves-feature = cargoCheck "animus-cargo-preserves-feature" [ ] ''

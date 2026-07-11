@@ -1,4 +1,9 @@
-const INITIAL_SCHEMA_VERSION: u16 = 1;
+pub use animus_preserves_schema::{
+    CoverageTier, SchemaDescriptor, SchemaFamily, SchemaIdentity, WireStatus, schema_catalog,
+};
+
+#[cfg(test)]
+const INITIAL_SCHEMA_VERSION: u16 = animus_preserves_schema::CURRENT_SCHEMA_VERSION;
 const MAX_COMPATIBILITY_FIELDS: usize = 8;
 const MAX_COMPATIBILITY_FIELD_NAME_BYTES: usize = 64;
 const MAX_COMPATIBILITY_FIELD_VALUE_BYTES: usize = 256;
@@ -14,6 +19,7 @@ const PRIVATE_PATH_COMPATIBILITY_FIELD_REASON: &str =
     "compatibility metadata must not preserve full private paths";
 const PROVIDER_JSON_COMPATIBILITY_FIELD_REASON: &str =
     "compatibility metadata must not preserve provider payload JSON";
+#[cfg(test)]
 const SCHEMA_CATALOG_LEN: usize = 8;
 const RAW_PROMPT_FIELD: &str = "raw_prompt";
 const PROMPT_FIELD: &str = "prompt";
@@ -38,194 +44,20 @@ const ASCII_DIGIT_NINE: char = '9';
 const SAFE_FIELD_DASH: char = '-';
 const SAFE_FIELD_UNDERSCORE: char = '_';
 const SAFE_FIELD_DOT: char = '.';
-
-/// Compatibility coverage level for a Preserves payload family.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum CoverageTier {
-    /// Internal typed DTO round trips without external compatibility promises.
-    InternalDtoRoundTrip,
-    /// Stable external wire contract with versioning and positive/negative fixtures.
-    StableExternalWireContract,
-    /// Import/export adapter where compatibility handling is explicit and bounded.
-    CompatibilityImportExportAdapter,
-    /// Review-only fixture shape that documents intent without publishing a wire contract.
-    ReviewOnlyFixture,
-}
-
-impl CoverageTier {
-    /// Returns the stable tier label.
-    #[must_use]
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::InternalDtoRoundTrip => "internal_dto_round_trip",
-            Self::StableExternalWireContract => "stable_external_wire_contract",
-            Self::CompatibilityImportExportAdapter => "compatibility_import_export_adapter",
-            Self::ReviewOnlyFixture => "review_only_fixture",
-        }
-    }
-
-    /// Returns whether this tier requires stable schema-version fixture evidence.
-    #[must_use]
-    pub const fn requires_stable_fixtures(self) -> bool {
-        match self {
-            Self::StableExternalWireContract | Self::CompatibilityImportExportAdapter => true,
-            Self::InternalDtoRoundTrip | Self::ReviewOnlyFixture => false,
-        }
-    }
-}
-
-/// Stable schema family identifier for Preserves boundary payloads.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum SchemaFamily {
-    /// Adapter request/response boundary messages.
-    AdapterMessage,
-    /// Runtime event boundary messages.
-    RuntimeEvent,
-    /// Final runtime report boundary messages.
-    RuntimeReport,
-    /// Error/status payloads embedded in stable reports or compatibility adapters.
-    Error,
-    /// Session/provenance records planned for compatibility import/export boundaries.
-    SessionProvenanceRecord,
-    /// Policy-visible DTOs planned for compatibility import/export boundaries.
-    PolicyVisibleDto,
-    /// Dataset/export rows retained as review fixtures until those exporters stabilize.
-    DatasetExportRow,
-    /// Dataspace scope, assertion, subscription, and orchestration DTO records.
-    DataspaceDto,
-}
-
-impl SchemaFamily {
-    /// Returns the stable schema-family label.
-    #[must_use]
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::AdapterMessage => "adapter_message",
-            Self::RuntimeEvent => "runtime_event",
-            Self::RuntimeReport => "runtime_report",
-            Self::Error => "error",
-            Self::SessionProvenanceRecord => "session_provenance_record",
-            Self::PolicyVisibleDto => "policy_visible_dto",
-            Self::DatasetExportRow => "dataset_export_row",
-            Self::DataspaceDto => "dataspace_dto",
-        }
-    }
-
-    const fn coverage_tier(self) -> CoverageTier {
-        match self {
-            Self::AdapterMessage | Self::RuntimeEvent | Self::RuntimeReport => {
-                CoverageTier::StableExternalWireContract
-            }
-            Self::Error | Self::SessionProvenanceRecord | Self::PolicyVisibleDto => {
-                CoverageTier::CompatibilityImportExportAdapter
-            }
-            Self::DatasetExportRow => CoverageTier::ReviewOnlyFixture,
-            Self::DataspaceDto => CoverageTier::StableExternalWireContract,
-        }
-    }
-}
-
-/// Versioned schema identity bound to one boundary payload family.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
-#[serde(deny_unknown_fields)]
-pub struct SchemaIdentity {
-    family: SchemaFamily,
-    version: u16,
-}
-
-impl SchemaIdentity {
-    /// Builds an explicit schema identity.
-    #[must_use]
-    pub const fn new(family: SchemaFamily, version: u16) -> Self {
-        Self { family, version }
-    }
-
-    /// Builds the current schema identity for a family.
-    #[must_use]
-    pub const fn current(family: SchemaFamily) -> Self {
-        Self::new(family, INITIAL_SCHEMA_VERSION)
-    }
-
-    /// Returns the schema family.
-    #[must_use]
-    pub const fn family(self) -> SchemaFamily {
-        self.family
-    }
-
-    /// Returns the schema version.
-    #[must_use]
-    pub const fn version(self) -> u16 {
-        self.version
-    }
-
-    /// Returns the coverage tier for this identity family.
-    #[must_use]
-    pub const fn coverage_tier(self) -> CoverageTier {
-        self.family.coverage_tier()
-    }
-
-    /// Validates that this schema identity uses the supported version.
-    pub(crate) fn validate_supported(self) -> Result<(), crate::CodecError> {
-        if self.version == INITIAL_SCHEMA_VERSION {
-            return Ok(());
-        }
-
-        Err(crate::CodecError::UnsupportedSchemaVersion {
-            family: self.family.as_str(),
-            version: self.version,
-            supported: INITIAL_SCHEMA_VERSION,
-        })
-    }
-}
-
-/// Catalog entry declaring one Preserves boundary schema family.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct SchemaDescriptor {
-    identity: SchemaIdentity,
-    coverage_tier: CoverageTier,
-}
-
-impl SchemaDescriptor {
-    /// Builds a schema catalog descriptor.
-    #[must_use]
-    pub const fn new(family: SchemaFamily) -> Self {
-        Self {
-            identity: SchemaIdentity::current(family),
-            coverage_tier: family.coverage_tier(),
-        }
-    }
-
-    /// Returns the versioned schema identity.
-    #[must_use]
-    pub const fn identity(self) -> SchemaIdentity {
-        self.identity
-    }
-
-    /// Returns the declared coverage tier.
-    #[must_use]
-    pub const fn coverage_tier(self) -> CoverageTier {
-        self.coverage_tier
-    }
-}
-
-const SCHEMA_CATALOG: [SchemaDescriptor; SCHEMA_CATALOG_LEN] = [
-    SchemaDescriptor::new(SchemaFamily::AdapterMessage),
-    SchemaDescriptor::new(SchemaFamily::RuntimeEvent),
-    SchemaDescriptor::new(SchemaFamily::RuntimeReport),
-    SchemaDescriptor::new(SchemaFamily::Error),
-    SchemaDescriptor::new(SchemaFamily::SessionProvenanceRecord),
-    SchemaDescriptor::new(SchemaFamily::PolicyVisibleDto),
-    SchemaDescriptor::new(SchemaFamily::DatasetExportRow),
-    SchemaDescriptor::new(SchemaFamily::DataspaceDto),
+const UNSAFE_FAMILY_VALUE_REASON: &str = "family payload must not preserve raw prompts, provider payloads, credentials, file bodies, tool bodies, or unbounded output";
+const UNSAFE_FAMILY_VALUE_MARKERS: &[&str] = &[
+    "raw_prompt",
+    "provider_payload",
+    "credential",
+    "file_body",
+    "tool_input",
+    "tool_output",
+    "model_output",
+    "unbounded_output",
+    "unbounded_log",
+    "begin private key",
+    "api_key=",
 ];
-
-/// Returns the declared Preserves schema catalog.
-#[must_use]
-pub const fn schema_catalog() -> &'static [SchemaDescriptor] {
-    &SCHEMA_CATALOG
-}
 
 /// Safe bounded compatibility metadata preserved with a versioned boundary record.
 #[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -336,7 +168,7 @@ impl BoundaryRecord {
     ///
     /// Returns [`crate::CodecError`] when the record is unsupported or unsafe.
     pub fn validate(&self) -> Result<(), crate::CodecError> {
-        self.schema.validate_supported()?;
+        validate_schema_identity(self.schema)?;
         validate_schema_family(self.schema.family(), &self.payload)?;
         validate_metadata(&self.metadata)
     }
@@ -345,6 +177,16 @@ impl BoundaryRecord {
         record.validate()?;
         Ok(record)
     }
+}
+
+pub(crate) fn validate_schema_identity(schema: SchemaIdentity) -> Result<(), crate::CodecError> {
+    schema
+        .validate_supported()
+        .map_err(|error| crate::CodecError::UnsupportedSchemaVersion {
+            family: error.family().as_str(),
+            version: error.version(),
+            supported: error.supported(),
+        })
 }
 
 /// Returns the current schema identity for a typed boundary message.
@@ -379,7 +221,7 @@ fn validate_schema_family(
     })
 }
 
-fn validate_metadata(metadata: &[CompatibilityField]) -> Result<(), crate::CodecError> {
+pub(crate) fn validate_metadata(metadata: &[CompatibilityField]) -> Result<(), crate::CodecError> {
     if metadata.len() > MAX_COMPATIBILITY_FIELDS {
         return Err(crate::CodecError::TooManyCompatibilityFields {
             limit: MAX_COMPATIBILITY_FIELDS,
@@ -410,6 +252,24 @@ fn validate_field_name(name: &str) -> Result<(), crate::CodecError> {
         return Err(compatibility_error(UNSAFE_COMPATIBILITY_FIELD_REASON));
     }
 
+    Ok(())
+}
+
+pub(crate) fn validate_family_value(
+    field: &'static str,
+    value: &str,
+) -> Result<(), crate::CodecError> {
+    validate_field_value(value)?;
+    let normalized = value.to_ascii_lowercase();
+    if UNSAFE_FAMILY_VALUE_MARKERS
+        .iter()
+        .any(|marker| normalized.contains(marker))
+    {
+        return Err(crate::CodecError::UnsafeCompatibilityField {
+            field,
+            reason: UNSAFE_FAMILY_VALUE_REASON,
+        });
+    }
     Ok(())
 }
 
