@@ -122,9 +122,17 @@ dependencies = [
  "animus-adapters",
  "animus-core",
  "animus-runtime",
+ "animus-std-observability",
  "blake3",
  "cap-std",
  "redb",
+]
+
+[[package]]
+name = "animus-std-observability"
+version = "0.1.0"
+dependencies = [
+ "animus-adapter-observability",
 ]
 
 [[package]]

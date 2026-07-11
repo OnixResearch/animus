@@ -78,6 +78,10 @@ const PUBLIC_EXPORT_SOURCES: &[(&str, &str)] = &[
     ("animus-runtime", "crates/animus-runtime/src/exports.rs"),
     ("animus-runtime", "crates/animus-runtime/src/prelude.rs"),
     ("animus-std", "crates/animus-std/src/lib.rs"),
+    (
+        "animus-std-observability",
+        "crates/animus-std-observability/src/lib.rs",
+    ),
     ("animus-steel", "crates/animus-steel/src/lib.rs"),
     ("animus-tui", "crates/animus-tui/src/lib.rs"),
 ];

@@ -16,6 +16,7 @@
 #![forbid(unsafe_code)]
 
 mod adapters;
+mod authority;
 mod config;
 mod context;
 #[cfg(feature = "syndicate-host")]
@@ -27,6 +28,7 @@ mod execution;
 #[cfg(feature = "iroh-host")]
 mod iroh;
 mod modelevidence;
+#[cfg(feature = "observability-host")]
 mod observability;
 mod providers;
 
@@ -37,6 +39,11 @@ pub use adapters::{
 };
 /// Backwards-compatible name for deterministic fixture bundles.
 pub type FixtureAdapters = Fixtures;
+pub use authority::{
+    HostAdapterAvailability, HostAdapterDescriptor, HostAdapterFallback, HostAdapterFamily,
+    HostAdapterPlan, HostAdapterPlanIssue, HostAdapterPlanRequest, HostAdapterPlanStatus,
+    HostAuthority, host_adapter_catalog, plan_host_adapter,
+};
 pub use config::{INTENT_ENV_KEY, load_runtime};
 pub use context::{
     CapabilityRoot, CapabilityRootKind, STD_CONTEXT_DEFAULT_MAX_BYTES,
@@ -80,8 +87,10 @@ pub use iroh::{
     project_orchestration_event_frame,
 };
 /// Root public name for the in-memory observability sink.
+#[cfg(feature = "observability-host")]
 pub type InMemoryObservabilitySink = observability::InMemorySink;
 /// Root public name for the no-op observability sink.
+#[cfg(feature = "observability-host")]
 pub type NoopObservabilitySink = observability::NoopSink;
 pub use providers::{
     ApiKind, CredentialHandle, CredentialRequirement, CredentialSource, EndpointIdentity,

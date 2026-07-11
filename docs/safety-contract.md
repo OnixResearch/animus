@@ -9,7 +9,8 @@ Animus is structured around a functional-core / imperative-shell (FCIS) split. T
 - `crates/animus-preserves` is the optional Preserves serialization bridge. It owns cross-language text/binary encoding for adapter boundary messages and must not become a required dependency of the core or adapter-contract crates.
 - `crates/animus-steel` is the canonical Steel Scheme loop fabric. It owns script evaluation for agent turn selection and must revalidate every selected action through Rust adapter DTOs before calling model, tool, or response boundaries.
 - `crates/animus-runtime` is the reusable agent-loop runtime. It owns pure turn-state transitions, ordered runtime events/reports, max-turn handling, typed workflow command manifest/registry/binding/output contracts, the metadata-only tool catalog and pure executor admission/receipt core, safe provenance ledger/receipt/artifact DTOs, host-injected ledger/session replay and restore planning, bounded worker-team task/report contracts, and thin generic shells that call injected loop fabrics, tool executors, worker services, and model/tool adapters without constructing concrete providers or host services.
-- `crates/animus-std` is the imperative host shell. It owns environment parsing, runtime setup, logging, async work, I/O, default std adapters, and other process-facing concerns.
+- `crates/animus-std` is the imperative host compatibility shell. It owns environment parsing, runtime setup, a pure authority catalog/fail-closed planner, async work, I/O, facade re-exports, and other process-facing concerns.
+- `crates/animus-std-observability` is an authority-scoped std block for deterministic no-op and in-memory sinks. It depends only on observability adapter contracts and owns no filesystem, process, network, credential, clock, terminal, global subscriber, or persistence authority.
 - The root `animus` package is a thin compatibility layer. It must not accumulate non-trivial business logic.
 - `docs/request-lifecycle.md` is the maintained ownership map for runtime input, core state, Steel decisions, adapter dispatch, status decisions, reports, receipts, and future ledger seams.
 - `docs/status-authority.md` owns semantic agent status precedence: host integrations provide typed observations, while reusable runtime selection remains pure and presentation metadata stays visual-only.
@@ -75,6 +76,8 @@ cargo test -p animus-runtime
 cargo test -p animus-runtime tool_executor_kit --locked
 cargo test -p animus-runtime worker_team --locked
 cargo test -p animus-std
+cargo test -p animus-std-observability
+cargo check -p animus-std --no-default-features
 cargo check --workspace --all-targets
 cargo clippy --workspace --all-targets -- -D warnings
 cargo check -p animus --features preserves

@@ -1,0 +1,8 @@
+# Tasks
+
+- [x] [serial] Inventory `animus-std` exports by authority class, owner module, dependency set, feature gate, focused check, and compatibility facade path. r[agent_harness_runtime.std_host_adapter_crates.facade]
+- [x] [depends:agent_harness_runtime.std_host_adapter_crates.facade] Define authority-scoped host adapter crate or feature-pack boundaries for config loading, local context, provider registry, observability sinks, document ingest, model-evidence ingest, optional transports, and smoke/demo shells. r[agent_harness_runtime.std_host_adapter_crates.authority]
+- [x] [depends:agent_harness_runtime.std_host_adapter_crates.authority] Move or gate one low-risk host adapter family first while preserving `animus-std` facade exports and public aliases. r[agent_harness_runtime.std_host_adapter_crates.migration]
+- [x] [depends:agent_harness_runtime.std_host_adapter_crates.authority] Add positive fixtures for admitted explicit host authority and negative fixtures for missing services, disabled features, ambient env discovery, filesystem scans, provider probing, network fallback, and persistence fallback. r[agent_harness_runtime.std_host_adapter_crates.verification]
+- [x] [depends:agent_harness_runtime.std_host_adapter_crates.migration] Update component catalog, request-lifecycle docs, runtime facade inventory, README crate guidance, and focused rail docs for moved host adapters. r[agent_harness_runtime.std_host_adapter_crates.migration]
+- [x] [depends:agent_harness_runtime.std_host_adapter_crates.verification] Run host-adapter tests, facade compatibility checks, catalog checks, request-lifecycle rail, Cairn validate, and Cairn gates. r[agent_harness_runtime.std_host_adapter_crates.verification]

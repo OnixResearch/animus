@@ -13,7 +13,7 @@ This document is the maintained ownership map for request processing. It is a re
 7. **Host status-observation DTOs** are owned by `animus-adapters::AgentStatusObservation`, `HostStatusRequest`, `HostStatusObservationBatch`, and `HostStatusAdapter`. Hosts may detect agent status however they choose, but reusable crates receive only typed observations.
 8. **Reusable status authority selection** is owned by `animus-runtime::select_agent_status`, `AgentStatusSelection`, and `StatusDecisionExplanation`. The selector is pure over a validated target request, logical sequence, and in-memory observations; presentation metadata remains visual-only.
 9. **Reusable runtime dispatch and projection** are owned by `animus-runtime::run_agent_loop`, `LoopFabric`, `ToolDispatchPlan`, `tool_executor_kit`, `RuntimeEvent`, `RunReport`, and `RuntimeStatus` (`crates/animus-runtime/src/`). The runtime shell admits tool calls through active trusted catalog definitions, exact capability labels, current-schema arguments, approval posture, mutation coordination, output policy, and an explicit ready executor binding before calling injected fabrics/adapters. The executor kit records only bounded safe receipts, while raw tool output and all concrete executor authority remain host-owned. Runtime records ordered bounded events, handles stop/final/max-turn/failure statuses, and does not discover providers or credentials.
-10. **Std-shell adapter dispatch** is owned by `animus-std::run_with_model`, `run`, and `SummaryModelAdapter` (`crates/animus-std/src/execution.rs`). The shell wires typed config, core state, and caller-provided adapters without discovering providers or credentials. The legacy **Runtime event/report projection** remains represented by `animus-std::RunReport` and `animus-std::RunError` for this shell path.
+10. **Std-shell adapter dispatch** is owned by `animus-std::run_with_model`, `run`, `SummaryModelAdapter`, and the pure `host_adapter_catalog` / `plan_host_adapter` composition boundary. The shell wires typed config, core state, and caller-provided blocks without ambient fallback or provider/credential discovery. Deterministic observability sinks are owned directly by `animus-std-observability` and remain source-compatible through the default `animus-std/observability-host` facade. The legacy **Runtime event/report projection** remains represented by `animus-std::RunReport` and `animus-std::RunError` for this shell path.
 11. **Safe receipt construction** for ledger/session replay and restore planning is owned by `animus-runtime::session_persistence::LedgerSessionReceiptDraft` plus `validate_ledger_session_receipt`. Evidence summaries must stay bounded: status, issue codes, counts, safe relative labels, BLAKE3 hashes where content identity is needed, explicit redaction markers, and omitted-surface non-claims.
 12. **Host ledger persistence seam** is owned by `animus-runtime::session_persistence`. Hosts inject a `LedgerSessionService` descriptor (the accepted host-owned `LedgerService` marker for this seam) and already-loaded ledger entries; reusable runtime code validates descriptors, plans replay/restore, and validates receipts without discovering stores, reading files, opening databases, contacting networks, using clocks, or writing sessions.
 
@@ -32,7 +32,7 @@ This document is the maintained ownership map for request processing. It is a re
 | Adapter ports | `animus-adapters` | `ComponentAdapter`, `ModelAdapter`, `ToolAdapter`, `HostStatusAdapter` | Concrete host implementation is injected by callers. |
 | Status authority selection | `animus-runtime` | `select_agent_status`, `AgentStatusSelection`, `StatusDecisionExplanation` | Pure selection over typed inputs only. |
 | Runtime dispatch | `animus-runtime` | `run_agent_loop`, `run_with_steel_program`, `ToolDispatchPlan`, `tool_executor_kit`, `RuntimeEvent`, `RunReport`, `RuntimeStatus` | Calls injected fabric/model/tool boundaries only after exact catalog/capability/argument/executor-binding admission; executor receipts omit raw output. |
-| Std dispatch | `animus-std` | `run_with_model`, `run`, `SummaryModelAdapter` | Shell orchestration only; no provider discovery. |
+| Std dispatch | `animus-std` / `animus-std-observability` | `run_with_model`, `run`, `host_adapter_catalog`, `plan_host_adapter`, `NoopSink`, `InMemorySink` | Explicit authority-scoped shell composition only; missing/disabled blocks and ambient fallback fail closed. |
 | Ledger/session receipts | `animus-runtime` | `LedgerSessionReceiptDraft`, `validate_ledger_session_receipt` | Safe labels, counts, hashes, redaction/freshness classes, and non-claims only. |
 | Ledger/session seam | `animus-runtime` | `LedgerSessionService`, `LedgerReplayRequest`, `SessionRestoreRequest`, `LedgerEntry`, `plan_ledger_replay`, `plan_session_restore` | Service descriptors and ledger entries are host-injected; durable storage remains host-owned. |
 
@@ -60,7 +60,7 @@ This document is the maintained ownership map for request processing. It is a re
 
 ### Std-shell boundary
 
-`animus-std` owns process-facing orchestration such as `load_runtime`, but deterministic parsing belongs in testable helpers such as `Runtime::from_env_pairs`. It must not construct provider clients, read provider credentials, open network connections, or perform concrete persistence unless a future adapter contract and Cairn change accepts that surface. Validate with `cargo test -p animus-std`.
+`animus-std` owns process-facing orchestration such as `load_runtime`, but deterministic parsing and authority planning belong in testable helpers such as `Runtime::from_env_pairs` and `plan_host_adapter`. Missing or disabled blocks must not fall back to environment discovery, filesystem scans, provider probing, network defaults, storage creation, process execution, or terminal access. `animus-std-observability` owns only deterministic no-op/in-memory sinks over validated DTOs. Concrete providers, credentials, transports, and persistence require separately admitted host blocks. Validate with `cargo test -p animus-std`, `cargo test -p animus-std-observability`, and `cargo check -p animus-std --no-default-features`.
 
 ### Receipt boundary
 
@@ -81,6 +81,8 @@ cargo test -p animus-steel
 cargo test -p animus-runtime
 cargo test -p animus-runtime tool_executor_kit --locked
 cargo test -p animus-std
+cargo test -p animus-std-observability
+cargo check -p animus-std --no-default-features
 scripts/cairn/check-tool-catalog --root .
 cargo test -p animus-runtime session_persistence --locked
 scripts/cairn/check-request-lifecycle --root .

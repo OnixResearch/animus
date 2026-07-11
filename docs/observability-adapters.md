@@ -20,10 +20,12 @@ Observe-only middleware is delivered newly emitted runtime events in the same or
 
 ## Std sinks
 
-`animus-std` provides deterministic sinks for tests and embedding:
+`animus-std-observability` provides deterministic sinks for tests and embedding. The default `animus-std/observability-host` feature preserves the existing facade names:
 
 - `NoopObservabilitySink` accepts safe records and drops them.
 - `InMemoryObservabilitySink` stores validated metric/log DTOs, with typed unavailable and closed-collector failures.
+
+New embedders that need only these sinks can depend directly on `animus-std-observability`; they do not pull context, provider registry, ingest, transport, credential, persistence, or terminal behavior. See [authority-scoped std host adapters](std-host-adapter-crates.md).
 
 External telemetry backends, JSONL stores, global tracing subscribers, OpenTelemetry, Prometheus, dashboards, network exporters, and durable log stores remain optional host-owned shell work.
 

@@ -8,13 +8,17 @@ Default checks use deterministic fixtures for model, filesystem, process, networ
 
 Before a concrete adapter performs a host effect, the shell plans the effect with `EffectPrerequisites`. Missing provider metadata, missing tool contracts, policy denial, sandbox mismatch, missing receipts/events, absent host approval, missing credentials, malformed output, timeout, or cancellation all fail closed before dispatch.
 
+## Authority-scoped composition
+
+`animus_std::host_adapter_catalog()` records config, context, provider, observability, document-ingest, model-evidence, optional transport, and smoke/demo blocks with explicit authority classes, feature gates, facade paths, direct dependency guidance, and focused checks. `plan_host_adapter` is pure and rejects missing, disabled, denied, or ambient-fallback requests before any shell effect. See [authority-scoped std host adapters](std-host-adapter-crates.md).
+
 ## Context and observability shells
 
 `animus-std` includes deterministic, opt-in context and observability shells:
 
 - `NullContextResolver` denies every context role without fallback authority.
 - `LocalFileContextResolver`, `LocalDirectoryContextResolver`, and `LocalDiffContextResolver` are policy-gated local shells for already-admitted roots and preloaded diff text. They reject path escapes, binary or oversized bodies, missing files, unavailable roots, and denied roles; URL fetching, image decoding, crawlers, credentialed remote handles, and global discovery remain absent by default.
-- `NoopObservabilitySink` and `InMemoryObservabilitySink` accept only validated `MetricSample` and `LogRecord` DTOs. JSONL, `tracing`, OpenTelemetry, Prometheus, dashboards, global subscribers, durable log stores, and network exporters are host-owned optional adapters.
+- `NoopObservabilitySink` and `InMemoryObservabilitySink` remain available through the default `animus-std/observability-host` facade and are owned directly by `animus-std-observability`. They accept only validated `MetricSample` and `LogRecord` DTOs. JSONL, `tracing`, OpenTelemetry, Prometheus, dashboards, global subscribers, durable log stores, and network exporters are host-owned optional adapters.
 
 Runtime observability projection is pure over `RuntimeEvent` and `RunReport`. Observe-only middleware receives events in report order; failures are best-effort by default and add bounded `observe` diagnostics without extra model/tool dispatch.
 

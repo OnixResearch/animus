@@ -48,6 +48,7 @@ let adapters = "crates/animus-adapters/src/lib.rs" in
 let preserves = "crates/animus-preserves/src/lib.rs" in
 let runtime = "crates/animus-runtime/src/lib.rs" in
 let std_shell = "crates/animus-std/src/lib.rs" in
+let std_observability = "crates/animus-std-observability/src/lib.rs" in
 let steel = "crates/animus-steel/src/lib.rs" in
 let tui = "crates/animus-tui/src/lib.rs" in
 let router = "crates/animus-router/src/lib.rs" in
@@ -726,11 +727,24 @@ let entry_values = [
   entry "animus-std::run_with_model" "animus-std" std_shell shell shell_owned stable "std shell injected runner",
   entry "animus-std::RuntimeConfig" "animus-std" std_shell shell shell_owned stable "std shell runtime config",
   entry "animus-std::ConfigError" "animus-std" std_shell shell shell_owned stable "std shell config error",
+  entry "animus-std::HostAdapterAvailability" "animus-std" std_shell reusable none stable "explicit host adapter availability DTO",
+  entry "animus-std::HostAdapterDescriptor" "animus-std" std_shell reusable none stable "metadata-only authority-scoped host adapter descriptor",
+  entry "animus-std::HostAdapterFallback" "animus-std" std_shell reusable none stable "ambient fallback posture DTO",
+  entry "animus-std::HostAdapterFamily" "animus-std" std_shell reusable none stable "authority-scoped host adapter family enum",
+  entry "animus-std::HostAdapterPlan" "animus-std" std_shell reusable none stable "pure host adapter plan DTO",
+  entry "animus-std::HostAdapterPlanIssue" "animus-std" std_shell reusable none stable "host adapter fail-closed issue enum",
+  entry "animus-std::HostAdapterPlanRequest" "animus-std" std_shell reusable none stable "pure host adapter plan request DTO",
+  entry "animus-std::HostAdapterPlanStatus" "animus-std" std_shell reusable none stable "host adapter plan status DTO",
+  entry "animus-std::HostAuthority" "animus-std" std_shell reusable none stable "explicit std host authority class enum",
+  entry "animus-std::host_adapter_catalog" "animus-std" std_shell reusable none stable "metadata-only std host adapter catalog helper",
+  entry "animus-std::plan_host_adapter" "animus-std" std_shell reusable none stable "pure fail-closed host adapter planner",
   entry "animus-std::InMemoryObservabilitySink" "animus-std" std_shell shell shell_owned stable "std shell in-memory observability sink",
   entry "animus-std::LocalDiffContextResolver" "animus-std" std_shell shell shell_owned stable "std shell preloaded diff context resolver",
   entry "animus-std::LocalDirectoryContextResolver" "animus-std" std_shell shell shell_owned stable "std shell local directory context resolver",
   entry "animus-std::LocalFileContextResolver" "animus-std" std_shell shell shell_owned stable "std shell local file context resolver",
   entry "animus-std::NoopObservabilitySink" "animus-std" std_shell shell shell_owned stable "std shell no-op observability sink",
+  entry "animus-std-observability::InMemorySink" "animus-std-observability" std_observability shell shell_owned stable "direct deterministic in-memory observability sink",
+  entry "animus-std-observability::NoopSink" "animus-std-observability" std_observability shell shell_owned stable "direct deterministic no-op observability sink",
   entry "animus-std::NullContextResolver" "animus-std" std_shell shell shell_owned stable "std shell no-op context resolver",
   entry "animus-std::STD_CONTEXT_DEFAULT_MAX_BYTES" "animus-std" std_shell shell shell_owned stable "std shell default context body byte bound",
   entry "animus-std::STD_CONTEXT_DEFAULT_MAX_DIRECTORY_ENTRIES" "animus-std" std_shell shell shell_owned stable "std shell default context directory entry bound",

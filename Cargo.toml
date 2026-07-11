@@ -8,6 +8,7 @@ members = [
   "crates/animus-router",
   "crates/animus-runtime",
   "crates/animus-std",
+  "crates/animus-std-observability",
   "crates/animus-steel",
   "crates/animus-tui",
 ]
@@ -21,6 +22,7 @@ default-members = [
   "crates/animus-router",
   "crates/animus-runtime",
   "crates/animus-std",
+  "crates/animus-std-observability",
   "crates/animus-steel",
   "crates/animus-tui",
 ]

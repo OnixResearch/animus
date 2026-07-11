@@ -1,0 +1,14 @@
+[package]
+name = "animus-std-observability"
+description = "Authority-scoped std observability sinks for animus."
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+animus-adapter-observability = { path = "../animus-adapter-observability", version = "0.1.0" }
