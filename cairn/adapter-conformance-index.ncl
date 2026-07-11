@@ -229,8 +229,8 @@ let case_entries = [
   covered "model-evidence" "leak_rejection" "modelevidence::tests::model_evidence_advisory_receipt_preserves_non_claim_labels",
 
   covered "observability" "happy_path" "animus_std_observability::tests::direct_sinks_accept_validated_records_and_preserve_facade_behavior",
-  covered "observability" "missing_service" "animus_std::authority::tests::missing_disabled_denied_and_fallback_paths_fail_closed",
-  covered "observability" "denied_capability" "animus_std::authority::tests::missing_disabled_denied_and_fallback_paths_fail_closed",
+  covered "observability" "missing_service" "animus_std::hostadapters::tests::missing_disabled_denied_and_fallback_paths_fail_closed",
+  covered "observability" "denied_capability" "animus_std::hostadapters::tests::missing_disabled_denied_and_fallback_paths_fail_closed",
   covered "observability" "unavailable_service" "animus_std_observability::tests::missing_closed_and_unsafe_observability_paths_fail_without_fallback",
   na "observability" "timeout" "observability DTOs own no clock; host sinks map timeouts to sink failure outcomes",
   na "observability" "cancellation" "observability DTOs own no cancellation handle; host sinks map cancellation to sink failure outcomes",

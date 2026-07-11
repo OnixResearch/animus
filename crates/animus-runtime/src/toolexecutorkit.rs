@@ -545,6 +545,10 @@ pub fn plan_tool_execution(request: ToolExecutionPlanRequest<'_>) -> ToolExecuti
     let definition = request.catalog.find(request.request.name());
     let executor = definition.and_then(|current| find_executor(request.executors, current));
     let adapter_definitions = request.catalog.adapter_definitions();
+    debug_assert_eq!(
+        adapter_definitions.len(),
+        request.catalog.definitions().len()
+    );
     let dispatch_plan = crate::plan_tool_dispatch(crate::ToolDispatchPlanRequest {
         request: request.request,
         definitions: adapter_definitions.as_slice(),
@@ -559,6 +563,10 @@ pub fn plan_tool_execution(request: ToolExecutionPlanRequest<'_>) -> ToolExecuti
     } else {
         ToolExecutionPlanStatus::Denied
     };
+    debug_assert_eq!(
+        status == ToolExecutionPlanStatus::Admitted,
+        failure_class.is_none() && dispatch_plan.is_admitted()
+    );
     ToolExecutionPlan {
         status,
         failure_class,
@@ -660,10 +668,14 @@ fn definition_failure(
     request: &animus_adapters::ToolRequest,
     definition: &ToolDefinition,
 ) -> Option<ToolExecutionFailureClass> {
-    if !argument_names_match(request, definition) {
+    let is_argument_name_set_matching = argument_names_match(request, definition);
+    if !is_argument_name_set_matching {
+        debug_assert!(!is_argument_name_set_matching);
         return Some(ToolExecutionFailureClass::MalformedArguments);
     }
-    if request.approval_posture() != definition.approval_posture() {
+    let is_approval_matching = request.approval_posture() == definition.approval_posture();
+    if !is_approval_matching {
+        debug_assert!(!is_approval_matching);
         return Some(ToolExecutionFailureClass::ApprovalDenied);
     }
     if request.output_policy().visible_char_budget > definition.output_policy().max_visible_chars()
@@ -931,6 +943,8 @@ pub fn denied_tool_receipt(
     let Some(failure_class) = plan.failure_class() else {
         return Err(ToolExecutorKitError::InvalidOutput);
     };
+    debug_assert_eq!(plan.status(), ToolExecutionPlanStatus::Denied);
+    debug_assert!(!plan.is_admitted());
     let mut receipt = ToolExecutionReceipt {
         contract_identity: TOOL_EXECUTOR_KIT_CONTRACT_IDENTITY,
         status: ToolExecutionReceiptStatus::Denied,
@@ -964,7 +978,7 @@ fn completed_receipt(
     if contains_unsafe_material(output.body.as_str()) {
         return Err(ToolExecutorKitError::UnsafeMetadata);
     }
-    let output_bytes = usize_to_u64(output.body.len());
+    let output_bytes = usize_to_u64(output.body.len())?;
     if output_bytes > policy.max_output_bytes() {
         return Err(ToolExecutorKitError::OutputTooLarge {
             limit: policy.max_output_bytes(),
@@ -985,6 +999,8 @@ fn completed_receipt(
         },
     )
     .map_err(|_error| ToolExecutorKitError::InvalidOutput)?;
+    debug_assert!(bounded.byte_count() <= policy.max_output_bytes());
+    debug_assert!(bounded.content_hash().is_some());
     let output_hash = bounded
         .content_hash()
         .map(String::from)
@@ -1022,19 +1038,25 @@ pub fn validate_tool_execution_receipt(
     receipt: &ToolExecutionReceipt,
 ) -> Result<(), ToolExecutorKitError> {
     // r[impl agent_harness_runtime.tool_executor_kit.receipts]
-    let status_valid = matches!(
+    let is_status_valid = matches!(
         (receipt.status, receipt.failure_class),
         (ToolExecutionReceiptStatus::Completed, None)
             | (ToolExecutionReceiptStatus::Denied, Some(_))
     );
-    let scalar_labels_safe = receipt.contract_identity == TOOL_EXECUTOR_KIT_CONTRACT_IDENTITY
+    if !is_status_valid {
+        return Err(ToolExecutorKitError::UnsafeReceipt);
+    }
+    let is_scalar_label_set_safe = receipt.contract_identity == TOOL_EXECUTOR_KIT_CONTRACT_IDENTITY
         && is_safe_label(receipt.tool_name.as_str())
         && is_safe_label(receipt.schema_identity.as_str())
         && (receipt.executor_binding.is_empty()
             || is_safe_label(receipt.executor_binding.as_str()))
         && is_safe_label(receipt.output_redaction_class)
         && receipt.redaction_marker == RECEIPT_REDACTION_MARKER;
-    let collection_labels_safe = receipt
+    if !is_scalar_label_set_safe {
+        return Err(ToolExecutorKitError::UnsafeReceipt);
+    }
+    let is_collection_label_set_safe = receipt
         .capability_labels
         .iter()
         .all(|label| is_safe_label(label))
@@ -1042,17 +1064,24 @@ pub fn validate_tool_execution_receipt(
             .mutation_targets
             .iter()
             .all(|label| is_safe_label(label));
-    let reference_safe = receipt
+    if !is_collection_label_set_safe {
+        return Err(ToolExecutorKitError::UnsafeReceipt);
+    }
+    let is_reference_safe = receipt
         .safe_output_reference
         .as_deref()
         .is_none_or(is_safe_reference);
-    let hashes_safe =
-        is_blake3_hex(receipt.output_hash.as_str()) && is_blake3_hex(receipt.receipt_hash.as_str());
-    if status_valid && scalar_labels_safe && collection_labels_safe && reference_safe && hashes_safe
-    {
-        return Ok(());
+    if !is_reference_safe {
+        return Err(ToolExecutorKitError::UnsafeReceipt);
     }
-    Err(ToolExecutorKitError::UnsafeReceipt)
+    let is_hash_set_safe =
+        is_blake3_hex(receipt.output_hash.as_str()) && is_blake3_hex(receipt.receipt_hash.as_str());
+    if !is_hash_set_safe {
+        return Err(ToolExecutorKitError::UnsafeReceipt);
+    }
+    debug_assert!(is_status_valid);
+    debug_assert!(is_hash_set_safe);
+    Ok(())
 }
 
 fn plan_denied_error(plan: &ToolExecutionPlan) -> ToolExecutorKitError {
@@ -1137,8 +1166,8 @@ fn blake3_hash(domain: &str, bytes: &[u8]) -> String {
     hasher.finalize().to_hex().to_string()
 }
 
-fn usize_to_u64(value: usize) -> u64 {
-    u64::try_from(value).unwrap_or(u64::MAX)
+fn usize_to_u64(value: usize) -> Result<u64, ToolExecutorKitError> {
+    u64::try_from(value).map_err(|_error| ToolExecutorKitError::InvalidOutput)
 }
 
 #[cfg(test)]
@@ -1168,7 +1197,7 @@ mod tests {
     const UNSAFE_OUTPUT: &str = "CREDENTIAL: secret";
     const OVERSIZED_FILL: char = 'x';
     const MAX_VISIBLE_CHARS: u32 = 64;
-    const OVER_BUDGET_VISIBLE_CHARS: u32 = MAX_VISIBLE_CHARS + 1;
+    const OVER_BUDGET_VISIBLE_CHARS: u32 = MAX_VISIBLE_CHARS.saturating_add(1);
     const MAX_OUTPUT_BYTES: u64 = 128;
     const OVERSIZED_OUTPUT_BYTES: usize = 129;
     const EXPECTED_EXECUTION_COUNT: usize = 1;
@@ -1293,6 +1322,11 @@ mod tests {
             ToolExecutionFailureClass::MutationConflict,
         );
         let request = tool_request(&[ARGUMENT_NAME], &[]);
+        assert_eq!(
+            read_only.catalog.definitions().len(),
+            EXPECTED_EXECUTION_COUNT
+        );
+        assert!(request.mutation_targets().is_empty());
         let mut mutation_conflict = ToolExecutorAdmission::admitted();
         mutation_conflict.mutation = ToolMutationCoordination::Conflict;
         assert_denied(
@@ -1305,10 +1339,10 @@ mod tests {
             &read_only.plan(&request, cancellation),
             ToolExecutionFailureClass::Cancelled,
         );
-        let mut timeout = ToolExecutorAdmission::admitted();
-        timeout.deadline = ToolExecutorDeadline::TimedOut;
+        let mut timed_out_admission = ToolExecutorAdmission::admitted();
+        timed_out_admission.deadline = ToolExecutorDeadline::TimedOut;
         assert_denied(
-            &read_only.plan(&request, timeout),
+            &read_only.plan(&request, timed_out_admission),
             ToolExecutionFailureClass::TimedOut,
         );
         let mut fallback = ToolExecutorAdmission::admitted();
@@ -1341,11 +1375,11 @@ mod tests {
             execute_admitted_tool(&mut unsafe_body, &plan),
             Err(ToolExecutorKitError::UnsafeMetadata)
         );
-        let oversized: String =
+        let too_large_body: String =
             std::iter::repeat_n(OVERSIZED_FILL, OVERSIZED_OUTPUT_BYTES).collect();
-        let mut oversized_executor = FakeExecutor::succeed(oversized.as_str(), None);
+        let mut too_large_service = FakeExecutor::succeed(too_large_body.as_str(), None);
         assert!(matches!(
-            execute_admitted_tool(&mut oversized_executor, &plan),
+            execute_admitted_tool(&mut too_large_service, &plan),
             Err(ToolExecutorKitError::OutputTooLarge { .. })
         ));
         let mut unsafe_reference = FakeExecutor::succeed(OUTPUT_BODY, Some(PRIVATE_REFERENCE));
@@ -1563,6 +1597,7 @@ mod tests {
                 value: Some(ARGUMENT_VALUE),
             })
             .collect();
+        assert_eq!(fields.len(), argument_names.len());
         let arguments = animus_adapters::tool::PreparedArguments::prepare(
             &animus_adapters::tool::ArgumentPreparationRequest {
                 current_schema_identity: schema_identity,
@@ -1572,6 +1607,7 @@ mod tests {
             },
         )
         .expect("valid arguments");
+        assert_eq!(arguments.fields().len(), argument_names.len());
         animus_adapters::ToolRequest::from_draft(&animus_adapters::tool::RequestDraft {
             name: Some(TOOL_NAME),
             arguments: Some(&arguments),

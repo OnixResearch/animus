@@ -338,24 +338,34 @@ impl HostAdapterPlan {
 #[must_use]
 pub const fn plan_host_adapter(request: HostAdapterPlanRequest) -> HostAdapterPlan {
     // r[impl agent_harness_runtime.std_host_adapter_crates.authority.no_fallback]
-    let issue = if matches!(request.fallback, HostAdapterFallback::Requested) {
-        Some(HostAdapterPlanIssue::AmbientFallbackDenied)
-    } else {
-        match request.availability {
-            HostAdapterAvailability::Available => None,
-            HostAdapterAvailability::Missing => Some(HostAdapterPlanIssue::Missing),
-            HostAdapterAvailability::Disabled => Some(HostAdapterPlanIssue::Disabled),
-            HostAdapterAvailability::Denied => Some(HostAdapterPlanIssue::Denied),
-        }
-    };
+    let issue = plan_issue(request.availability, request.fallback);
     HostAdapterPlan {
         family: request.family,
-        status: if issue.is_none() {
-            HostAdapterPlanStatus::Admitted
-        } else {
-            HostAdapterPlanStatus::Denied
-        },
+        status: plan_status(issue),
         issue,
+    }
+}
+
+const fn plan_issue(
+    availability: HostAdapterAvailability,
+    fallback: HostAdapterFallback,
+) -> Option<HostAdapterPlanIssue> {
+    if matches!(fallback, HostAdapterFallback::Requested) {
+        return Some(HostAdapterPlanIssue::AmbientFallbackDenied);
+    }
+    match availability {
+        HostAdapterAvailability::Available => None,
+        HostAdapterAvailability::Missing => Some(HostAdapterPlanIssue::Missing),
+        HostAdapterAvailability::Disabled => Some(HostAdapterPlanIssue::Disabled),
+        HostAdapterAvailability::Denied => Some(HostAdapterPlanIssue::Denied),
+    }
+}
+
+const fn plan_status(issue: Option<HostAdapterPlanIssue>) -> HostAdapterPlanStatus {
+    if issue.is_none() {
+        HostAdapterPlanStatus::Admitted
+    } else {
+        HostAdapterPlanStatus::Denied
     }
 }
 
@@ -367,7 +377,7 @@ mod tests {
     const EXPECTED_NEGATIVE_CASE_COUNT: usize = 4;
 
     #[test]
-    fn explicit_authority_catalog_and_available_blocks_are_admitted() {
+    fn catalog_entries_and_available_blocks_are_admitted() {
         // r[verify agent_harness_runtime.std_host_adapter_crates.authority]
         // r[verify agent_harness_runtime.std_host_adapter_crates.migration.pure_plans]
         let catalog = host_adapter_catalog();

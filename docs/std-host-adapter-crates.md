@@ -47,7 +47,7 @@ Focused checks:
 
 ```sh
 cargo test -p animus-std-observability --locked
-cargo test -p animus-std authority --locked
+cargo test -p animus-std hostadapters --locked
 cargo test -p animus-std observability --locked
 cargo check -p animus-std --no-default-features --locked
 scripts/cairn/check-component-catalog --root .

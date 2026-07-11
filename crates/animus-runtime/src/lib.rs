@@ -49,6 +49,8 @@ mod dataset_export;
 #[path = "dogfoodshell.rs"]
 pub mod dogfood_shell;
 mod eval_feedback;
+#[path = "toolexecutorkit.rs"]
+mod executionkit;
 mod exports;
 mod fabric;
 mod fresh_context_tasks;
@@ -81,8 +83,10 @@ pub mod subagents;
 mod telemetry;
 #[path = "tooladmission.rs"]
 mod tool_admission;
-#[path = "toolexecutorkit.rs"]
-pub mod tool_executor_kit;
+/// Coherent tool catalog, admission, injected execution, and safe receipt kit.
+pub mod tool_executor_kit {
+    pub use crate::executionkit::*;
+}
 #[path = "toolexecutorpacks.rs"]
 pub mod tool_executor_packs;
 mod transition;

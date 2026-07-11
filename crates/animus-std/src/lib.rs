@@ -16,7 +16,6 @@
 #![forbid(unsafe_code)]
 
 mod adapters;
-mod authority;
 mod config;
 mod context;
 #[cfg(feature = "syndicate-host")]
@@ -25,6 +24,7 @@ mod document;
 #[cfg(feature = "dogfood-smoke")]
 mod dogfood_smoke;
 mod execution;
+mod hostadapters;
 #[cfg(feature = "iroh-host")]
 mod iroh;
 mod modelevidence;
@@ -39,11 +39,6 @@ pub use adapters::{
 };
 /// Backwards-compatible name for deterministic fixture bundles.
 pub type FixtureAdapters = Fixtures;
-pub use authority::{
-    HostAdapterAvailability, HostAdapterDescriptor, HostAdapterFallback, HostAdapterFamily,
-    HostAdapterPlan, HostAdapterPlanIssue, HostAdapterPlanRequest, HostAdapterPlanStatus,
-    HostAuthority, host_adapter_catalog, plan_host_adapter,
-};
 pub use config::{INTENT_ENV_KEY, load_runtime};
 pub use context::{
     CapabilityRoot, CapabilityRootKind, STD_CONTEXT_DEFAULT_MAX_BYTES,
@@ -56,6 +51,11 @@ pub use document::{
 };
 #[cfg(feature = "dogfood-smoke")]
 pub use dogfood_smoke::run_packaged_headless_dogfood_smoke;
+pub use hostadapters::{
+    HostAdapterAvailability, HostAdapterDescriptor, HostAdapterFallback, HostAdapterFamily,
+    HostAdapterPlan, HostAdapterPlanIssue, HostAdapterPlanRequest, HostAdapterPlanStatus,
+    HostAuthority, host_adapter_catalog, plan_host_adapter,
+};
 /// Root public name for the std local diff context resolver.
 pub type LocalDiffContextResolver = context::LocalDiffResolver;
 /// Root public name for the std local directory context resolver.
