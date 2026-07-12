@@ -440,6 +440,59 @@ let change_entries = [
     "agent_harness_runtime.model_router_execution.service_contract",
     "agent_harness_runtime.clankers_safe_receipts.closeout",
   ] ["define-model-router-execution-service", "add-concrete-provider-dispatch-adapter"],
+  change "add-component-catalog" foundation_role "roadmap-sequencing" [
+    "refactor-adapter-crate-maintainability",
+    "agent_harness_runtime.clankers_runtime_facade_inventory.schema",
+    "agent_harness_runtime.clankers_focused_rails.closeout",
+  ] ["split-adapter-family-crates", "split-runtime-kernel-feature-packs", "split-std-host-adapter-crates", "split-preserves-boundary-bridges", "add-tool-executor-kit", "add-ledger-session-adapter-seam"],
+  change "split-adapter-family-crates" core_role "concrete-adapters" [
+    "add-component-catalog",
+    "refactor-adapter-crate-maintainability",
+    "introduce-router-crate-barrier",
+  ] ["split-preserves-boundary-bridges", "add-tool-executor-kit"],
+  change "split-runtime-kernel-feature-packs" core_role "runtime-loop" [
+    "add-component-catalog",
+    "add-runtime-dag-contract-kit",
+    "wire-router-into-runtime-loop",
+  ] ["split-std-host-adapter-crates", "add-ledger-session-adapter-seam", "add-tool-executor-kit"],
+  change "split-std-host-adapter-crates" host_role "concrete-adapters" [
+    "add-component-catalog",
+    "split-runtime-kernel-feature-packs",
+    "agent_harness_runtime.std_runtime_adapters.adapter_families",
+    "adopt-cap-std-context-boundary",
+  ] ["add-tool-executor-kit", "add-ledger-session-adapter-seam"],
+  change "split-preserves-boundary-bridges" core_role "receipt-provenance" [
+    "add-component-catalog",
+    "preserve-router-boundary-dtos",
+    "agent_harness_runtime.clankers_safe_receipts.closeout",
+  ] ["split-adapter-family-crates", "add-ledger-session-adapter-seam"],
+  change "add-tool-executor-kit" host_role "concrete-adapters" [
+    "add-component-catalog",
+    "split-adapter-family-crates",
+    "split-runtime-kernel-feature-packs",
+    "adapt-goose-code-mode-tool-planning",
+  ] ["add-host-tool-executor-capability-packs", "add-fake-backed-headless-dogfood-shell"],
+  change "add-per-model-runtime-profiles" core_role "policy-guidance" [
+    "agent_harness_runtime.model_capability_matrix.negotiation",
+    "agent_harness_runtime.hermes_skill_manifest.progressive_disclosure",
+    "agent_harness_runtime.clankers_prompt_assembly.sources",
+    "agent_harness_runtime.tool_executor_kit.contracts",
+    "agent_harness_runtime.model_router_execution.service_contract",
+  ] ["negotiate-model-capability-matrix", "define-model-router-execution-service", "add-tool-executor-kit", "add-host-tool-executor-capability-packs"],
+  change "add-capability-bound-agent-roles" core_role "policy-guidance" [
+    "add-per-model-runtime-profiles",
+    "agent_harness_runtime.clankers_agent_definitions.capability_ceilings",
+    "agent_harness_runtime.openai_codex_subagent_threads.role_profiles",
+    "agent_harness_runtime.clash_ucan.capability_request",
+    "agent_harness_runtime.tool_executor_kit.admission",
+    "agent_harness_runtime.ornith_trust_boundary.judge_veto",
+  ] ["add-per-model-runtime-profiles", "define-model-router-execution-service", "add-tool-executor-kit"],
+  change "add-ledger-session-adapter-seam" core_role "session-ledger" [
+    "add-component-catalog",
+    "split-runtime-kernel-feature-packs",
+    "adapt-goose-session-branching-controls",
+    "adapt-hermes-vcs-snapshot-ledger",
+  ] ["add-host-session-persistence-adapter", "add-fake-backed-headless-dogfood-shell"],
 ]
 in
 
@@ -490,6 +543,15 @@ let overlap_entries = [
   overlap "cap-std-context-boundary" "adopt-cap-std-context-boundary" ["adapt-hermes-host-asset-reconciliation", "add-host-session-persistence-adapter", "document-ingest-adapter-boundary"],
   overlap "document-ingest-adapter-boundary" "document-ingest-adapter-boundary" ["adopt-cap-std-context-boundary"],
   overlap "ml-evidence-adapter-boundary" "ml-evidence-adapter-boundary" ["define-model-router-execution-service", "add-concrete-provider-dispatch-adapter"],
+  overlap "per-model-runtime-context-composition" "add-per-model-runtime-profiles" ["negotiate-model-capability-matrix", "define-model-router-execution-service", "add-tool-executor-kit", "add-host-tool-executor-capability-packs"],
+  overlap "capability-bound-semantic-agent-roles" "add-capability-bound-agent-roles" ["add-per-model-runtime-profiles", "define-model-router-execution-service", "add-tool-executor-kit"],
+  overlap "component-catalog-lego-map" "add-component-catalog" ["split-adapter-family-crates", "split-runtime-kernel-feature-packs", "split-std-host-adapter-crates", "split-preserves-boundary-bridges", "add-tool-executor-kit", "add-ledger-session-adapter-seam"],
+  overlap "adapter-family-crate-split" "split-adapter-family-crates" ["add-component-catalog", "split-preserves-boundary-bridges", "add-tool-executor-kit"],
+  overlap "runtime-kernel-feature-packs" "split-runtime-kernel-feature-packs" ["add-component-catalog", "split-std-host-adapter-crates", "add-ledger-session-adapter-seam", "add-tool-executor-kit"],
+  overlap "std-host-adapter-authority-split" "split-std-host-adapter-crates" ["add-component-catalog", "split-runtime-kernel-feature-packs", "add-tool-executor-kit", "add-ledger-session-adapter-seam"],
+  overlap "preserves-bridge-family-split" "split-preserves-boundary-bridges" ["add-component-catalog", "split-adapter-family-crates", "add-ledger-session-adapter-seam"],
+  overlap "tool-executor-kit" "add-tool-executor-kit" ["split-adapter-family-crates", "split-runtime-kernel-feature-packs", "add-host-tool-executor-capability-packs"],
+  overlap "ledger-session-adapter-seam" "add-ledger-session-adapter-seam" ["split-runtime-kernel-feature-packs", "split-std-host-adapter-crates", "add-host-session-persistence-adapter"],
 ]
 in
 

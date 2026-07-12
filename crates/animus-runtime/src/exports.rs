@@ -90,6 +90,20 @@ pub use crate::dataset_export::{
     export_rl_trajectory_row, inspect_dataset_exports, render_chat_row_jsonl,
     render_chat_rows_jsonl,
 };
+pub use crate::engine::{
+    ApproachRecord, ApproachState, AuditOutcome, GapStrength, PortfolioAudit,
+    PortfolioAuditFinding, PortfolioAuditRisk, PortfolioBlocker, PortfolioBlockerClass,
+    PortfolioBudget, PortfolioContract, PortfolioDispatch, PortfolioError, PortfolioErrorKind,
+    PortfolioFingerprint, PortfolioPhase, PortfolioReceipt, PortfolioResult, PortfolioState,
+    PortfolioUsage, PortfolioValidationReceipt, PortfolioValidationStatus, ReopenNovelty,
+    begin_adversarial_audit, begin_independent_exploration, begin_synthesis,
+    begin_targeted_redirection, begin_validation, blake3_portfolio_fingerprint, block_approach,
+    block_portfolio, exhaust_portfolio, initialize_portfolio, is_portfolio_budget_exhausted,
+    portfolio_contract_fingerprint, portfolio_evidence_fingerprint, project_portfolio_receipt,
+    record_adversarial_audit, record_portfolio_dispatch, register_approach, reopen_approach,
+    underexplored_live_families, validate_approach_record, validate_portfolio_contract,
+    validate_portfolio_dispatch, validate_portfolio_receipt, validate_portfolio_result,
+};
 pub use crate::eval_feedback::{
     EvalFeedbackCandidate, EvalFeedbackCandidateKind, EvalFeedbackDiagnostic,
     EvalFeedbackDiagnosticKind, EvalFeedbackFingerprint, EvalFeedbackFreshnessDecision,

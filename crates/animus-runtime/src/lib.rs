@@ -48,6 +48,8 @@ mod controller;
 mod dataset_export;
 #[path = "dogfoodshell.rs"]
 pub mod dogfood_shell;
+#[path = "portfolio_search/mod.rs"]
+mod engine;
 mod eval_feedback;
 #[path = "toolexecutorkit.rs"]
 mod executionkit;

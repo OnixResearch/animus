@@ -40,6 +40,10 @@ else
   tmp_parent=${repo_root}/target/tmp
 fi
 mkdir -p "${tmp_parent}"
+TMPDIR=${tmp_parent}
+TMP=${tmp_parent}
+TEMP=${tmp_parent}
+export TMPDIR TMP TEMP
 tmp_dir=$(mktemp -d "${tmp_parent}/animus-router-policy.XXXXXX")
 trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
 

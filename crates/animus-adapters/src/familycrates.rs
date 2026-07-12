@@ -6,8 +6,7 @@ const UNSAFE_LABEL_VALUE: &str = "token=secret";
 const SAFE_RECEIPT_LABEL: &str = "adapter-family-split";
 
 #[test]
-fn observability_direct_crate_and_facade_imports_are_identical()
--> Result<(), crate::ObservabilityError> {
+fn observability_types_match_facade() -> Result<(), crate::ObservabilityError> {
     let labels = [animus_adapter_observability::MetricLabelDraft::new(
         METRIC_LABEL_KEY,
         METRIC_LABEL_VALUE,
@@ -38,7 +37,7 @@ fn observability_direct_crate_and_facade_imports_are_identical()
 }
 
 #[test]
-fn observability_facade_rejects_unsafe_labels_from_direct_family_crate() {
+fn unsafe_metric_labels_are_rejected() {
     let labels = [crate::MetricLabelDraft::new(
         METRIC_LABEL_KEY,
         UNSAFE_LABEL_VALUE,
@@ -56,8 +55,7 @@ fn observability_facade_rejects_unsafe_labels_from_direct_family_crate() {
 }
 
 #[test]
-fn safe_receipt_family_crate_matches_facade_schema_constants()
--> Result<(), animus_adapter_safe::Error> {
+fn receipt_constants_match_facade() -> Result<(), animus_adapter_safe::Error> {
     assert_eq!(crate::SAFE_RECEIPT_SCHEMA, animus_adapter_safe::SCHEMA);
     assert_eq!(
         crate::MAX_SAFE_RECEIPT_LABEL_CHARS,
@@ -83,7 +81,7 @@ fn safe_receipt_family_crate_matches_facade_schema_constants()
 }
 
 #[test]
-fn safe_receipt_family_rejects_unsafe_receipt_labels() {
+fn unsafe_receipt_labels_are_rejected() {
     assert!(matches!(
         animus_adapter_safe::Record::new(
             animus_adapter_safe::Draft::new(

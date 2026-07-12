@@ -50,9 +50,16 @@ mod modelevidence;
 mod multimodal;
 /// Optional OpenClaw-inspired node capability-host DTOs.
 pub mod node;
-pub use animus_adapter_observability as observability;
+/// Compatibility facade for the dedicated observability adapter-family crate.
+pub mod observability {
+    pub use animus_adapter_observability::{
+        DeliveryPolicy, Error, GuardDecision, LogLevel, LogRecord, LogRecordDraft, LoggingAdapter,
+        MetricKind, MetricLabel, MetricLabelDraft, MetricSample, MetricSampleDraft, MetricUnit,
+        MetricsAdapter, SinkFailureClass, SinkOutcome, evaluate_delivery,
+    };
+}
 #[cfg(test)]
-mod adapter_family_crates;
+mod familycrates;
 /// OpenClaw-inspired security audit and plugin guardrail DTOs.
 #[path = "openclaw/guardrails.rs"]
 pub mod openclaw_guardrails;

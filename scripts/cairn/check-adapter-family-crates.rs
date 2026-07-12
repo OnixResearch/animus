@@ -139,7 +139,7 @@ fn validate_family_crates(config: &Config) -> ValidationResult {
 fn validate_facade(config: &Config) -> ValidationResult {
     let adapters_cargo = read_required(config, "crates/animus-adapters/Cargo.toml")?;
     let adapters_lib = read_required(config, "crates/animus-adapters/src/lib.rs")?;
-    let tests = read_required(config, "crates/animus-adapters/src/adapter_family_crates.rs")?;
+    let tests = read_required(config, "crates/animus-adapters/src/familycrates.rs")?;
     let mut errors = Vec::new();
     for family in FAMILY_CRATES {
         require_contains(
@@ -151,19 +151,19 @@ fn validate_facade(config: &Config) -> ValidationResult {
     }
     require_contains(
         &adapters_lib,
-        "pub use animus_adapter_observability as observability;",
-        "ADAPTER_FAMILY_OBSERVABILITY_REEXPORT",
+        "pub mod observability {",
+        "ADAPTER_FAMILY_OBSERVABILITY_FACADE",
         &mut errors,
     );
     require_contains(
         &tests,
-        "observability_direct_crate_and_facade_imports_are_identical",
+        "observability_types_match_facade",
         "ADAPTER_FAMILY_PARITY_TEST_MISSING",
         &mut errors,
     );
     require_contains(
         &tests,
-        "safe_receipt_family_rejects_unsafe_receipt_labels",
+        "unsafe_receipt_labels_are_rejected",
         "ADAPTER_FAMILY_NEGATIVE_TEST_MISSING",
         &mut errors,
     );
