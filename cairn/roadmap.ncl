@@ -475,6 +475,7 @@ let change_entries = [
   change "add-per-model-runtime-profiles" core_role "policy-guidance" [
     "agent_harness_runtime.model_capability_matrix.negotiation",
     "agent_harness_runtime.hermes_skill_manifest.progressive_disclosure",
+    "agent_harness_runtime.openai_codex_opt_in_memories.policy_controls",
     "agent_harness_runtime.clankers_prompt_assembly.sources",
     "agent_harness_runtime.tool_executor_kit.contracts",
     "agent_harness_runtime.model_router_execution.service_contract",
@@ -487,6 +488,25 @@ let change_entries = [
     "agent_harness_runtime.tool_executor_kit.admission",
     "agent_harness_runtime.ornith_trust_boundary.judge_veto",
   ] ["add-per-model-runtime-profiles", "define-model-router-execution-service", "add-tool-executor-kit"],
+  change "receipt-authoritative-agent-completion" core_role "receipt-provenance" [
+    "agent_harness_runtime.clankers_safe_receipts.closeout",
+    "agent_harness_runtime.clankers_continuation_policy.priority",
+    "agent_harness_runtime.clankers_steel_policy.nickel",
+  ] ["adapt-hermes-scoped-validation-planner", "adapt-clankers-controller-continuation-policy", "adapt-clankers-steel-runtime-policy", "add-current-head-release-evidence-index"],
+  change "extract-host-control-protocol" optional_role "optional-references" [
+    "agent_harness_runtime.host_control.transport_neutral",
+    "agent_harness_runtime.host_control.verification",
+  ] ["adapt-host-control-protocol", "split-adapter-family-crates", "add-ratatui-tool-host-surface"],
+  change "add-sandlock-linux-host-adapter" host_role "concrete-adapters" [
+    "agent_harness_runtime.sandlock_sandbox.platform",
+    "agent_harness_runtime.sandlock_sandbox.fail_closed",
+    "agent_harness_runtime.clash_ucan.capability_request",
+  ] ["adapt-sandlock-sandbox-enforcement", "add-concrete-std-runtime-adapters", "split-std-host-adapter-crates"],
+  change "add-branchfs-speculative-host-adapter" host_role "concrete-adapters" [
+    "agent_harness_runtime.branchfs_workspace.adapter",
+    "agent_harness_runtime.branchfs_workspace.fail_closed",
+    "agent_harness_runtime.branchfs_workspace.receipts",
+  ] ["adapt-branchfs-speculative-workspaces", "adapt-git-ai-vcs-neutral-provenance", "split-std-host-adapter-crates"],
   change "add-ledger-session-adapter-seam" core_role "session-ledger" [
     "add-component-catalog",
     "split-runtime-kernel-feature-packs",
@@ -545,6 +565,10 @@ let overlap_entries = [
   overlap "ml-evidence-adapter-boundary" "ml-evidence-adapter-boundary" ["define-model-router-execution-service", "add-concrete-provider-dispatch-adapter"],
   overlap "per-model-runtime-context-composition" "add-per-model-runtime-profiles" ["negotiate-model-capability-matrix", "define-model-router-execution-service", "add-tool-executor-kit", "add-host-tool-executor-capability-packs"],
   overlap "capability-bound-semantic-agent-roles" "add-capability-bound-agent-roles" ["add-per-model-runtime-profiles", "define-model-router-execution-service", "add-tool-executor-kit"],
+  overlap "receipt-authoritative-completion" "receipt-authoritative-agent-completion" ["adapt-hermes-scoped-validation-planner", "add-current-head-release-evidence-index"],
+  overlap "standalone-host-control-protocol" "extract-host-control-protocol" ["split-adapter-family-crates"],
+  overlap "sandlock-linux-host-enforcement" "add-sandlock-linux-host-adapter" ["split-std-host-adapter-crates"],
+  overlap "branchfs-speculative-host-workspaces" "add-branchfs-speculative-host-adapter" ["split-std-host-adapter-crates"],
   overlap "component-catalog-lego-map" "add-component-catalog" ["split-adapter-family-crates", "split-runtime-kernel-feature-packs", "split-std-host-adapter-crates", "split-preserves-boundary-bridges", "add-tool-executor-kit", "add-ledger-session-adapter-seam"],
   overlap "adapter-family-crate-split" "split-adapter-family-crates" ["add-component-catalog", "split-preserves-boundary-bridges", "add-tool-executor-kit"],
   overlap "runtime-kernel-feature-packs" "split-runtime-kernel-feature-packs" ["add-component-catalog", "split-std-host-adapter-crates", "add-ledger-session-adapter-seam", "add-tool-executor-kit"],

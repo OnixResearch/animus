@@ -8,6 +8,7 @@ repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
 target_root=${1:-${repo_root}}
 source_file=${repo_root}/config/repo.ncl
 recipe_source_file=${repo_root}/config/recipe-workflows.ncl
+model_profile_source_file=${repo_root}/config/model-runtime-profiles.ncl
 
 if ! command -v nickel >/dev/null 2>&1; then
   printf '%s\n' 'error: nickel is required to export repo config. Run inside `nix develop`.' >&2
@@ -16,9 +17,11 @@ fi
 
 mkdir -p "${target_root}/.cargo"
 mkdir -p "${target_root}/policy/recipe-workflows/generated"
+mkdir -p "${target_root}/config/generated"
 
 nickel export --format toml --field cargo_config "${source_file}" > "${target_root}/.cargo/config.toml"
 nickel export --format toml --field clippy_config "${source_file}" > "${target_root}/clippy.toml"
 nickel export --format toml --field dylint_config "${source_file}" > "${target_root}/dylint.toml"
 nickel export --format yaml --field pre_commit_config "${source_file}" > "${target_root}/.pre-commit-config.yaml"
 nickel export --format json --field recipe_workflow_catalog "${recipe_source_file}" > "${target_root}/policy/recipe-workflows/generated/recipe-workflows.json"
+nickel export --format json --field model_runtime_profile_set "${model_profile_source_file}" > "${target_root}/config/generated/model-runtime-profiles.json"

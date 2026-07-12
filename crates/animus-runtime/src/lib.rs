@@ -60,6 +60,7 @@ mod headless;
 mod hooks;
 pub mod kernel;
 mod mailbox;
+mod modelprofiles;
 #[path = "nestedsubagentgraphs.rs"]
 pub mod nested_subagent_graphs;
 #[allow(excessive_file_length)]

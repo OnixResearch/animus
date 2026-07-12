@@ -38,6 +38,13 @@ pub use animus_std::{
     load_runtime, run, run_with_model,
 };
 
+/// Re-export of the host-owned generated model-profile configuration loader.
+#[cfg(feature = "model-runtime-profiles")]
+pub use animus_std::{
+    ModelRuntimeProfileConfigError, ModelRuntimeProfileJsonErrorKind, load_model_runtime_profiles,
+    parse_model_runtime_profiles_json,
+};
+
 /// Re-export of the optional host-owned Iroh agent communication adapter seam.
 #[cfg(feature = "iroh-host")]
 pub use animus_std::{

@@ -88,15 +88,21 @@
               trap 'rm -rf "$tmp_dir"' EXIT
 
               mkdir -p "$tmp_dir/.cargo"
+              mkdir -p "$tmp_dir/policy/recipe-workflows/generated"
+              mkdir -p "$tmp_dir/config/generated"
               nickel export --format toml --field cargo_config ${./config/repo.ncl} > "$tmp_dir/.cargo/config.toml"
               nickel export --format toml --field clippy_config ${./config/repo.ncl} > "$tmp_dir/clippy.toml"
               nickel export --format toml --field dylint_config ${./config/repo.ncl} > "$tmp_dir/dylint.toml"
               nickel export --format yaml --field pre_commit_config ${./config/repo.ncl} > "$tmp_dir/.pre-commit-config.yaml"
+              nickel export --format json --field recipe_workflow_catalog ${./config/recipe-workflows.ncl} > "$tmp_dir/policy/recipe-workflows/generated/recipe-workflows.json"
+              nickel export --format json --field model_runtime_profile_set ${./.}/config/model-runtime-profiles.ncl > "$tmp_dir/config/generated/model-runtime-profiles.json"
 
               diff -u ${./.cargo/config.toml} "$tmp_dir/.cargo/config.toml"
               diff -u ${./clippy.toml} "$tmp_dir/clippy.toml"
               diff -u ${./dylint.toml} "$tmp_dir/dylint.toml"
               diff -u ${./.pre-commit-config.yaml} "$tmp_dir/.pre-commit-config.yaml"
+              diff -u ${./policy/recipe-workflows/generated/recipe-workflows.json} "$tmp_dir/policy/recipe-workflows/generated/recipe-workflows.json"
+              diff -u ${./config/generated/model-runtime-profiles.json} "$tmp_dir/config/generated/model-runtime-profiles.json"
             '';
           };
 
@@ -198,6 +204,7 @@
                 || baseName == "check-trellis-verified-core"
                 || baseName == "check-neutral-ledger"
                 || baseName == "check-nickel-policy-contracts"
+                || baseName == "check-model-runtime-profiles"
                 || baseName == "check-injected-services"
                 || baseName == "check-provenance-ledger"
                 || baseName == "check-release-evidence-index"
@@ -422,6 +429,14 @@
             pkgs.b3sum
           ] ''
             sh scripts/cairn/check-nickel-policy-contracts --root .
+          '';
+
+          model-runtime-profiles = cargoCheck "animus-model-runtime-profiles" [
+            pkgs.nickel
+            pkgs.b3sum
+            pkgs.diffutils
+          ] ''
+            sh scripts/cairn/check-model-runtime-profiles --root .
           '';
 
           exec-policy = cargoCheck "animus-exec-policy" [ pkgs.nickel ] ''

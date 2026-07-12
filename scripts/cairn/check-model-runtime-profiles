@@ -1,0 +1,115 @@
+#!/usr/bin/env sh
+# r[verify agent_harness_runtime.model_runtime_profiles.verification]
+set -eu
+
+readonly FAILURE=1
+readonly RECEIPT_SCHEMA='animus.focused-rail-receipt.v1'
+readonly RAIL_NAME='model-runtime-profiles'
+readonly FIXTURE_ROOT='config/model-runtime-profiles/fixtures'
+readonly PROFILE_SOURCE='config/model-runtime-profiles.ncl'
+readonly GENERATED_PROFILE='config/generated/model-runtime-profiles.json'
+readonly RUNTIME_SOURCE='crates/animus-runtime/src/modelprofiles'
+readonly STD_LOADER_SOURCE='crates/animus-std/src/modelprofiles.rs'
+readonly PROFILE_DOC='docs/model-runtime-profiles.md'
+
+root='.'
+if [ "${1:-}" = '--root' ]; then
+  root=${2:-.}
+fi
+cd "${root}"
+
+if ! command -v nickel >/dev/null 2>&1; then
+  printf '%s\n' 'error: nickel is required for model runtime profile checks' >&2
+  exit "${FAILURE}"
+fi
+if ! command -v b3sum >/dev/null 2>&1; then
+  printf '%s\n' 'error: b3sum is required for model runtime profile receipt identity' >&2
+  exit "${FAILURE}"
+fi
+
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/animus-model-profiles.XXXXXX")
+trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
+
+nickel export --format json --field model_runtime_profile_set "${PROFILE_SOURCE}" \
+  > "${tmp_dir}/model-runtime-profiles.json"
+diff -u "${GENERATED_PROFILE}" "${tmp_dir}/model-runtime-profiles.json"
+
+positive_count=0
+negative_count=0
+for fixture in "${FIXTURE_ROOT}"/*.ncl; do
+  case "${fixture}" in
+    */valid-*)
+      nickel eval --field fixture "${fixture}" >/dev/null
+      positive_count=$((positive_count + 1))
+      ;;
+    *)
+      if nickel eval --field fixture "${fixture}" \
+        >"${tmp_dir}/fixture.out" 2>"${tmp_dir}/fixture.err"
+      then
+        printf 'error: negative fixture unexpectedly passed: %s\n' "${fixture}" >&2
+        exit "${FAILURE}"
+      fi
+      expected_issue=$(nickel export --format raw --field expected_issue "${fixture}" 2>/dev/null)
+      if ! grep -F "${expected_issue}" "${tmp_dir}/fixture.err" >/dev/null; then
+        printf 'error: fixture %s missed issue %s\n' "${fixture}" "${expected_issue}" >&2
+        exit "${FAILURE}"
+      fi
+      negative_count=$((negative_count + 1))
+      ;;
+  esac
+done
+
+if [ "${positive_count}" -eq 0 ] || [ "${negative_count}" -eq 0 ]; then
+  printf '%s\n' 'error: model profile fixtures require positive and negative cases' >&2
+  exit "${FAILURE}"
+fi
+
+if ! grep -F 'ModelMemoryAccessMode' "${RUNTIME_SOURCE}/types.rs" >/dev/null \
+  || ! grep -F 'OptInMemoryPolicy' "${RUNTIME_SOURCE}/composition.rs" >/dev/null
+then
+  printf '%s\n' 'error: exact existing memory-policy composition markers are incomplete' >&2
+  exit "${FAILURE}"
+fi
+
+if ! grep -F 'parse_model_runtime_profiles_json' "${STD_LOADER_SOURCE}" >/dev/null \
+  || ! grep -F 'load_model_runtime_profiles' "${STD_LOADER_SOURCE}" >/dev/null \
+  || ! grep -F 'serde(deny_unknown_fields)' "${STD_LOADER_SOURCE}" >/dev/null
+then
+  printf '%s\n' 'error: std host profile loader markers are incomplete' >&2
+  exit "${FAILURE}"
+fi
+if ! grep -E 'Runtime code never evaluates Nickel|without runtime Nickel evaluation' \
+  "${PROFILE_DOC}" >/dev/null
+then
+  printf '%s\n' 'error: runtime Nickel non-evaluation boundary is undocumented' >&2
+  exit "${FAILURE}"
+fi
+
+cargo test -p animus-runtime --locked modelprofiles
+cargo test -p animus-std --locked --features model-runtime-profiles modelprofiles
+
+if grep -R -E 'std::fs|std::process|Command::new|std::env|TcpStream|UdpSocket|SystemTime::now|Instant::now' \
+  "${RUNTIME_SOURCE}" --include='*.rs' >/dev/null 2>&1
+then
+  printf '%s\n' 'error: model profile pure core gained ambient host authority' >&2
+  exit "${FAILURE}"
+fi
+
+profile_source_hash=$(b3sum "${PROFILE_SOURCE}" | cut -d ' ' -f 1)
+generated_hash=$(b3sum "${GENERATED_PROFILE}" | cut -d ' ' -f 1)
+mkdir -p target/cairn/focused-rails
+receipt_path=target/cairn/focused-rails/${RAIL_NAME}.md
+cat > "${receipt_path}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+profile_source_blake3: ${profile_source_hash}
+generated_profile_blake3: ${generated_hash}
+positive_fixtures: ${positive_count}
+negative_fixtures: ${negative_count}
+claims: typed-profile-contract,generated-json-host-loading,deterministic-resolution,pure-prompt-skill-memory-tool-composition,exact-dispatch-binding,metadata-only-receipts
+non_claims: runtime-nickel-evaluation,provider-execution,tool-execution,filesystem-discovery,credential-access,verifier-soundness,whole-system-correctness
+EOF
+
+printf '%s\n' 'focused rail model-runtime-profiles: pass'
+printf 'receipt: %s\n' "${receipt_path}"

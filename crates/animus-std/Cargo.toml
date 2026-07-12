@@ -13,6 +13,7 @@ workspace = true
 [features]
 default = ["observability-host"]
 dogfood-smoke = ["dep:animus-runtime"]
+model-runtime-profiles = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 observability-host = ["dep:animus-std-observability"]
 iroh-host = []
 syndicate-host = []
@@ -30,3 +31,5 @@ animus-std-observability = { path = "../animus-std-observability", version = "0.
 blake3 = { version = "1.8.5", default-features = false }
 cap-std = "3.4"
 redb = "2.6.3"
+serde = { version = "1.0.228", features = ["derive"], optional = true }
+serde_json = { version = "1.0.150", optional = true }

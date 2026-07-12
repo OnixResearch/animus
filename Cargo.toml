@@ -77,6 +77,7 @@ workspace = true
 default = ["std"]
 std = ["dep:animus-std"]
 iroh-host = ["std", "animus-std/iroh-host"]
+model-runtime-profiles = ["std", "animus-std/model-runtime-profiles"]
 basalt-reference = ["dep:basalt"]
 cairn-reference = ["dep:cairn_core"]
 trellis-reference = ["dep:trellis"]

@@ -28,6 +28,8 @@ mod hostadapters;
 #[cfg(feature = "iroh-host")]
 mod iroh;
 mod modelevidence;
+#[cfg(feature = "model-runtime-profiles")]
+mod modelprofiles;
 #[cfg(feature = "observability-host")]
 mod observability;
 mod providers;
@@ -68,6 +70,11 @@ pub use modelevidence::{
     ModelEvidenceIngestError, ModelEvidenceIngestHost, ModelEvidenceIngestPlan,
     ModelEvidenceIngestRequest, ModelEvidenceIngestServiceState, ModelEvidenceSource,
     plan_model_evidence_ingest, validate_model_evidence_at_shell,
+};
+#[cfg(feature = "model-runtime-profiles")]
+pub use modelprofiles::{
+    ModelRuntimeProfileConfigError, ModelRuntimeProfileJsonErrorKind, load_model_runtime_profiles,
+    parse_model_runtime_profiles_json,
 };
 /// Root public name for std context resolver policy.
 pub type StdContextPolicy = context::Policy;

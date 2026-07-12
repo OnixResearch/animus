@@ -1,3 +1,6 @@
+#![allow(unknown_lints)]
+#![cfg_attr(animus_octet, allow(tigerstyle::non_trait_imports))]
+
 use serde::Deserialize;
 
 const GENERATED_PROCESS_POLICY_JSON: &str =
@@ -334,6 +337,8 @@ fn tool_catalog_from_generated(
 fn tool_definition_from_generated(
     descriptor: &GeneratedToolDescriptor,
 ) -> crate::tool_executor_kit::ToolDefinition {
+    assert!(!descriptor.name.is_empty());
+    assert!(!descriptor.capabilities.is_empty());
     let capability_labels = descriptor
         .capabilities
         .iter()

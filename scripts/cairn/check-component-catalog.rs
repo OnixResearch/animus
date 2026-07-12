@@ -80,6 +80,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "dataset-export",
     "headless",
     "loop",
+    "model-runtime-profiles",
     "policy",
     "provenance",
     "quality",
