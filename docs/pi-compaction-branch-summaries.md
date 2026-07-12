@@ -24,6 +24,8 @@ The reusable surface lives in `animus-runtime::pi_compaction` and is re-exported
 
 When a single turn crosses the kept-recent boundary, the plan records `split_turn_prefix_entry_ids` separately from the kept suffix. This makes lossy split-turn compaction explicit instead of pretending a clean turn boundary exists.
 
+Compaction does not repair an assistant call that lacks a result. Before compaction or provider continuation, the selected active branch must be clean or durably repaired through `animus_runtime::interrupted_tool_repair`. Synthetic failures then participate in cut-point validation as committed terminal results; an in-memory-only or partially applied plan cannot satisfy the invariant.
+
 ## Branch handoff summaries
 
 `prepare_pi_branch_handoff_summary` plans host-requested branch handoff summaries from an old leaf, target leaf, parent links, and a request mode. It identifies the common ancestor, abandoned old-branch span, and target branch span without reading or writing storage.

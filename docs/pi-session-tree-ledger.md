@@ -20,6 +20,11 @@ Animus adapts Pi's branchable session history as a neutral, in-memory runtime co
 5. Summary entries replace earlier model-visible context on the active branch and then emit bounded summary text.
 6. Labels are metadata only and never enter model-visible context unless a host explicitly injects them.
 7. Missing ledger service, missing session, and unavailable service states are typed fail-closed errors.
+8. Before provider continuation, the host projects the selected replay into `animus_runtime::interrupted_tool_repair`. Orphaned results remain structural errors; unmatched assistant calls may produce only an append-only synthetic-failure plan. The original ledger does not infer cancellation or rerun a tool.
+
+## Interrupted-call recovery integration
+
+The neutral ledger owns active-leaf selection and replay ordering. Interrupted-tool repair owns exact call/result diagnosis and an append-only application request over the host-supplied active branch. The host must durably append the complete plan, move the active leaf, and rerun ledger plus repair validation before provider dispatch. Sibling branches remain unchanged.
 
 ## Non-claims
 

@@ -60,6 +60,12 @@ mod fabric;
 mod fresh_context_tasks;
 mod headless;
 mod hooks;
+#[path = "interrupted_tool_repair/mod.rs"]
+mod session_recovery;
+/// Pure active-branch diagnosis and append-only interrupted tool-call repair.
+pub mod interrupted_tool_repair {
+    pub use super::session_recovery::*;
+}
 pub mod kernel;
 mod mailbox;
 mod modelprofiles;

@@ -1,0 +1,85 @@
+#!/usr/bin/env sh
+# r[impl agent_harness_runtime.tau_tool_repair.verification]
+# r[verify agent_harness_runtime.tau_tool_repair.verification]
+set -eu
+
+readonly FAILURE=1
+readonly RECEIPT_SCHEMA='animus.focused-rail-receipt.v1'
+readonly RAIL_NAME='interrupted-tool-repair'
+readonly RUNTIME_SOURCE='crates/animus-runtime/src/interrupted_tool_repair'
+readonly RUNTIME_ROOT='crates/animus-runtime/src/lib.rs'
+readonly CONTRACT_DOC='docs/interrupted-tool-call-repair.md'
+
+root='.'
+if [ "${1:-}" = '--root' ]; then
+  root=${2:-.}
+fi
+cd "${root}"
+
+if ! command -v cargo >/dev/null 2>&1; then
+  printf '%s\n' 'error: cargo is required for interrupted-tool repair checks' >&2
+  exit "${FAILURE}"
+fi
+if ! command -v b3sum >/dev/null 2>&1; then
+  printf '%s\n' 'error: b3sum is required for interrupted-tool repair identity' >&2
+  exit "${FAILURE}"
+fi
+
+for marker in \
+  'diagnose_interrupted_tool_branch' \
+  'plan_interrupted_tool_repair' \
+  'evaluate_interrupted_tool_repair_application' \
+  'evaluate_interrupted_tool_provider_gate' \
+  'project_interrupted_tool_repair_results' \
+  'project_interrupted_tool_repair_receipt'
+do
+  if ! grep -R -F "${marker}" "${RUNTIME_SOURCE}" --include='*.rs' >/dev/null; then
+    printf 'error: interrupted-tool repair marker is missing: %s\n' "${marker}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+if ! grep -F 'pub mod interrupted_tool_repair {' "${RUNTIME_ROOT}" >/dev/null; then
+  printf '%s\n' 'error: interrupted-tool repair public module is missing' >&2
+  exit "${FAILURE}"
+fi
+if ! grep -F 'no repair type can construct a tool request' "${CONTRACT_DOC}" >/dev/null; then
+  printf '%s\n' 'error: tool non-reexecution boundary is undocumented' >&2
+  exit "${FAILURE}"
+fi
+
+if grep -R -E 'std::fs|std::process|Command::new|std::env|TcpStream|UdpSocket|SystemTime::now|Instant::now|execute_admitted_tool' \
+  "${RUNTIME_SOURCE}" --include='*.rs' >/dev/null 2>&1
+then
+  printf '%s\n' 'error: interrupted-tool repair pure core gained ambient host or executor authority' >&2
+  exit "${FAILURE}"
+fi
+
+cargo test -p animus-runtime --locked session_recovery
+cargo test -p animus-runtime --locked pi_compaction
+cargo test -p animus-runtime --locked session_persistence
+cargo test -p animus-runtime --locked composition_conformance
+cargo test -p animus-adapters --locked canonical
+sh scripts/cairn/check-adapter-conformance-index --root .
+
+source_hash=$(
+  b3sum \
+    "${RUNTIME_SOURCE}/mod.rs" \
+    "${RUNTIME_SOURCE}/data.rs" \
+    "${RUNTIME_SOURCE}/core.rs" \
+    "${RUNTIME_SOURCE}/receipt.rs" \
+    "${RUNTIME_SOURCE}/tests.rs" | b3sum | cut -d ' ' -f 1
+)
+mkdir -p target/cairn/focused-rails
+receipt_path=target/cairn/focused-rails/${RAIL_NAME}.md
+cat > "${receipt_path}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+source_blake3: ${source_hash}
+claims: exact-active-branch-binding,evidence-bound-reasons,append-only-repair-plan,durable-provider-gate,idempotent-application,canonical-synthetic-result-projection,metadata-only-receipt
+non_claims: interruption-cause,tool-non-effect,exactly-once-effects,provider-acceptance,store-correctness,filesystem-recovery,production-readiness
+EOF
+
+printf '%s\n' 'focused rail interrupted-tool-repair: pass'
+printf 'receipt: %s\n' "${receipt_path}"

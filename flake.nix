@@ -209,6 +209,7 @@
                 || baseName == "check-model-runtime-profiles"
                 || baseName == "check-agent-role-profiles"
                 || baseName == "check-injected-services"
+                || baseName == "check-interrupted-tool-repair"
                 || baseName == "check-provenance-ledger"
                 || baseName == "check-release-evidence-index"
                 || baseName == "check-runtime-facade-inventory"
@@ -448,6 +449,13 @@
             pkgs.diffutils
           ] ''
             sh scripts/cairn/check-agent-role-profiles --root .
+          '';
+
+          interrupted-tool-repair = cargoCheck "animus-interrupted-tool-repair" [
+            pkgs.b3sum
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-interrupted-tool-repair --root .
           '';
 
           exec-policy = cargoCheck "animus-exec-policy" [ pkgs.nickel ] ''
