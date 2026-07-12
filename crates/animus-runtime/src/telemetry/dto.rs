@@ -59,6 +59,11 @@ pub enum RuntimeEvent {
         /// Safe failure reason.
         reason: String,
     },
+    /// Provider-neutral progress for a bounded same-plan retry.
+    ProviderRetryProgress {
+        /// Safe retry progress metadata, never assistant transcript content.
+        progress: crate::provider_retry::ProviderRetryProgressEvent,
+    },
     /// The model adapter returned a validated response.
     ModelResponded {
         /// Validated model response.
@@ -204,6 +209,7 @@ impl RuntimeEvent {
             Self::ModelStreamFrame { .. } => super::RuntimeEventKind::ModelStreamFrame,
             Self::ModelStreamEnded { .. } => super::RuntimeEventKind::ModelStreamEnded,
             Self::ModelStreamFailed { .. } => super::RuntimeEventKind::ModelStreamFailed,
+            Self::ProviderRetryProgress { .. } => super::RuntimeEventKind::ProviderRetryProgress,
             Self::ModelResponded { .. } => super::RuntimeEventKind::ModelResponded,
             Self::ModelDenied { .. } => super::RuntimeEventKind::ModelDenied,
             Self::ToolRequested { .. } => super::RuntimeEventKind::ToolRequested,

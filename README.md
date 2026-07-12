@@ -32,6 +32,8 @@ See [docs/portfolio-search.md](docs/portfolio-search.md) for the pure bounded po
 
 See [docs/interrupted-tool-call-repair.md](docs/interrupted-tool-call-repair.md) for exact active-branch tool binding, evidence-bound synthetic failures, append-only repair planning, durable provider gating, idempotence, and metadata-only receipts.
 
+See [docs/provider-retry-execution.md](docs/provider-retry-execution.md) for typed provider-failure classification, bounded same-plan retry, semantic-stream replay denial, injected cancellable timers, provider-neutral progress, and metadata-only receipts.
+
 See [docs/nickel-policy-contracts.md](docs/nickel-policy-contracts.md) for shared authoring-time contracts, checked policy projections, Rust DTO parity, authority ownership, and projection non-claims.
 
 ## Development shell
@@ -106,12 +108,14 @@ cargo check -p animus --features steel
 cargo check -p animus --features runtime
 cargo check -p animus --features model-runtime-profiles
 cargo check -p animus --features agent-role-profiles
+cargo check -p animus --features provider-retry
 cargo check -p animus --features tui
 cargo tigerstyle check
 check-nickel-configs
 scripts/cairn/check-nickel-policy-contracts --root .
 scripts/cairn/check-model-runtime-profiles --root .
 scripts/cairn/check-agent-role-profiles --root .
+scripts/cairn/check-provider-retry --root .
 scripts/cairn/check-clankers-product-surfaces --root .
 scripts/cairn/check-dogfood-readiness --root .
 scripts/cairn/check-packaged-headless-dogfood-smoke --root .

@@ -4,7 +4,7 @@ Animus exposes Pi-inspired lifecycle facts as typed Rust DTOs in `animus-runtime
 
 ## Event stream
 
-`RuntimeEvent` is mode-neutral and can be consumed by direct SDK embedders, headless RPC streams, safe receipts, or future UI shells. Events carry typed requests/responses, safe labels, summaries, boundary classes, and terminal status classes. They do not carry terminal component state or require a TUI to interpret.
+`RuntimeEvent` is mode-neutral and can be consumed by direct SDK embedders, headless RPC streams, safe receipts, or future UI shells. Events carry typed requests/responses, safe labels, summaries, boundary classes, and terminal status classes. They do not carry terminal component state or require a TUI to interpret. Provider retry additionally exposes a provider-neutral progress DTO that admitted headless, SDK, and TUI hosts may forward through their event sink; the optional Preserves runtime bridge revalidates the same metadata before round-tripping it. Retry progress remains distinct from assistant transcript messages and raw provider diagnostics.
 
 The current loop emits runtime start, context replay, compatibility loop start, turn start, loop decision, adapter request/response or denial, final response/stop/failure, and shutdown events in deterministic order. DTO variants also reserve cancellation and compaction boundaries for hosts that wire those surfaces.
 

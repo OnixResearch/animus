@@ -18,7 +18,7 @@ Step outcomes and receipts record status classes, bounded counts, selected safe 
 
 ## Fallback and repair
 
-Fallback and repair execution is policy-bound. Hosts must evaluate failures against `BudgetLedger`, `FallbackChain`, and the selected fallback policy before retrying or falling back. Provider-side fallback, health-check fallback, and ambient model-registry fallback are denied unless the materialized chain explicitly authorizes the target.
+Fallback and repair execution is policy-bound. Hosts must evaluate failures against `BudgetLedger`, `FallbackChain`, and the selected fallback policy before falling back. Ordinary automatic provider retry is a narrower [same-invocation provider retry contract](provider-retry-execution.md): it cannot select a fallback target and requires fresh router/profile composition for any changed provider, model, authority, prompt, tool, credential, or policy identity. Provider-side fallback, health-check fallback, and ambient model-registry fallback are denied unless the materialized chain explicitly authorizes the target.
 
 ## Round-robin rotation
 

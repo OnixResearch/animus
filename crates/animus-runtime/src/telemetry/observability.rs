@@ -152,6 +152,7 @@ fn event_specific_labels(
         | super::RuntimeEvent::ModelStreamFrame { .. }
         | super::RuntimeEvent::ModelStreamEnded { .. }
         | super::RuntimeEvent::ModelStreamFailed { .. }
+        | super::RuntimeEvent::ProviderRetryProgress { .. }
         | super::RuntimeEvent::Stopped
         | super::RuntimeEvent::MaxTurnsExceeded { .. }
         | super::RuntimeEvent::FabricError { .. }
@@ -187,6 +188,7 @@ fn level_for_event(event: &super::RuntimeEvent) -> animus_adapters::LogLevel {
         | super::RuntimeEvent::ModelStreamStarted { .. }
         | super::RuntimeEvent::ModelStreamFrame { .. }
         | super::RuntimeEvent::ModelStreamEnded { .. }
+        | super::RuntimeEvent::ProviderRetryProgress { .. }
         | super::RuntimeEvent::ModelResponded { .. }
         | super::RuntimeEvent::ToolRequested { .. }
         | super::RuntimeEvent::ToolResponded { .. }

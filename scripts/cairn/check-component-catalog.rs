@@ -82,6 +82,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "loop",
     "model-runtime-profiles",
     "agent-role-profiles",
+    "provider-retry",
     "policy",
     "provenance",
     "quality",

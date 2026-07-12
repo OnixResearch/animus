@@ -34,6 +34,8 @@ mod modelevidence;
 mod modelprofiles;
 #[cfg(feature = "observability-host")]
 mod observability;
+#[cfg(feature = "provider-retry")]
+mod providerretry;
 mod providers;
 
 pub use adapters::{
@@ -106,6 +108,13 @@ pub type InMemoryObservabilitySink = observability::InMemorySink;
 /// Root public name for the no-op observability sink.
 #[cfg(feature = "observability-host")]
 pub type NoopObservabilitySink = observability::NoopSink;
+#[cfg(feature = "provider-retry")]
+pub use providerretry::{
+    ProviderRetryConfigError, ProviderRetryDispatchError, ProviderRetryDispatchInput,
+    ProviderRetryJsonErrorKind, ProviderRetryTimerService, dispatch_provider_retry_exact,
+    execute_provider_retry_wait, load_provider_retry_policy, parse_provider_retry_policy_json,
+    retry_model_request_hash,
+};
 pub use providers::{
     ApiKind, CredentialHandle, CredentialRequirement, CredentialSource, EndpointIdentity,
     InputModality, MissingCredentialDiagnostic, ModelCapabilities, ModelCapabilitiesDraft,

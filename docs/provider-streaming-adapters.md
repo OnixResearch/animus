@@ -2,7 +2,7 @@
 
 Concrete provider streaming is optional and host-owned. Animus reusable crates keep the stable stream-frame DTOs, validation, capability metadata, and runtime event projection contracts; `animus-std` owns the fixture-backed concrete parser seams for provider families that a host chooses to enable.
 
-The parser entrypoints consume already-admitted raw provider chunks and emit canonical `ModelStreamFrame` values. They do not create clients, read credentials, discover endpoints, open networks, retry calls, or expose provider-native raw streams as runtime API.
+The parser entrypoints consume already-admitted raw provider chunks and emit canonical `ModelStreamFrame` values. They do not create clients, read credentials, discover endpoints, open networks, retry calls, or expose provider-native raw streams as runtime API. The separate [provider retry contract](provider-retry-execution.md) consumes only canonical stream-commit state and a safe versioned failure class; raw chunks and provider diagnostics never enter retry planning.
 
 ## Supported fixture-backed families
 
@@ -11,7 +11,7 @@ The current checked-in parser support covers raw event-stream fixtures for:
 - OpenAI-compatible Responses stream events;
 - Anthropic-compatible Messages stream events.
 
-Each parser maps provider content deltas, reasoning/thought deltas, tool-call deltas, usage records, finish events, cancellation events, and provider error events into canonical frame kinds. The same parser entrypoint handles fragmented chunks, so tests exercise the production parser core rather than helper-only fixture paths.
+Each parser maps provider content deltas, reasoning/thought deltas, tool-call deltas, usage records, finish events, cancellation events, and provider error events into canonical frame kinds. The same parser entrypoint handles fragmented chunks, so tests exercise the production parser core rather than helper-only fixture paths. Retry tracking treats accepted content, thought, tool-call, and usage semantics as committed and denies ordinary automatic replay after any such frame; fragmented transport before semantic acceptance can remain eligible.
 
 Local HTTP and mock providers intentionally have no concrete provider-streaming claim in this module. Hosts may add those later as separate adapter implementations with their own fixtures and evidence.
 

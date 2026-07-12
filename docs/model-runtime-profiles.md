@@ -60,7 +60,7 @@ Role-bound native tool calls pass `validate_model_tool_call_binding` first and a
 
 ## Dispatch, fallback, and returned calls
 
-`bind_model_dispatch_plan` requires both existing provider-neutral dispatch admission and a composed invocation plan in required mode. Router fallback returns `RecomposeForTarget`; the host must resolve and compose the new target from current explicit inputs. Same-target retry, resume, and replay may reuse only an exact immutable identity snapshot. Any target, profile, prompt, skill, memory, capability, tool catalog, tool plan, policy, or plan identity change requires explicit recomposition.
+`bind_model_dispatch_plan` requires both existing provider-neutral dispatch admission and a composed invocation plan in required mode. Router fallback returns `RecomposeForTarget`; the host must resolve and compose the new target from current explicit inputs. [Provider retry](provider-retry-execution.md) may reuse only an exact immutable provider/model/request/profile/prompt/tool/format/reasoning/stream/credential/policy snapshot before semantic stream commitment. Resume and replay remain separate contracts. Any target, profile, prompt, skill, memory, capability, tool catalog, tool plan, policy, or plan identity change requires explicit recomposition.
 
 `validate_model_tool_call_binding` checks every returned native call against the exact advertised tool and all invocation-plan identities before the existing tool executor kit performs final argument, capability, approval, mutation, timeout, output, and executor admission.
 

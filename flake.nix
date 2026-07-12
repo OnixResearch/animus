@@ -97,6 +97,7 @@
               nickel export --format json --field recipe_workflow_catalog ${./config/recipe-workflows.ncl} > "$tmp_dir/policy/recipe-workflows/generated/recipe-workflows.json"
               nickel export --format json --field model_runtime_profile_set ${./.}/config/model-runtime-profiles.ncl > "$tmp_dir/config/generated/model-runtime-profiles.json"
               nickel export --format json --field agent_role_catalog ${./.}/config/agent-role-profiles.ncl > "$tmp_dir/config/generated/agent-role-profiles.json"
+              nickel export --format json --field provider_retry_policy ${./.}/config/provider-retry-policy.ncl > "$tmp_dir/config/generated/provider-retry-policy.json"
 
               diff -u ${./.cargo/config.toml} "$tmp_dir/.cargo/config.toml"
               diff -u ${./clippy.toml} "$tmp_dir/clippy.toml"
@@ -105,6 +106,7 @@
               diff -u ${./policy/recipe-workflows/generated/recipe-workflows.json} "$tmp_dir/policy/recipe-workflows/generated/recipe-workflows.json"
               diff -u ${./config/generated/model-runtime-profiles.json} "$tmp_dir/config/generated/model-runtime-profiles.json"
               diff -u ${./config/generated/agent-role-profiles.json} "$tmp_dir/config/generated/agent-role-profiles.json"
+              diff -u ${./config/generated/provider-retry-policy.json} "$tmp_dir/config/generated/provider-retry-policy.json"
             '';
           };
 
@@ -210,6 +212,7 @@
                 || baseName == "check-agent-role-profiles"
                 || baseName == "check-injected-services"
                 || baseName == "check-interrupted-tool-repair"
+                || baseName == "check-provider-retry"
                 || baseName == "check-provenance-ledger"
                 || baseName == "check-release-evidence-index"
                 || baseName == "check-runtime-facade-inventory"
@@ -456,6 +459,14 @@
             pkgs.nickel
           ] ''
             sh scripts/cairn/check-interrupted-tool-repair --root .
+          '';
+
+          provider-retry = cargoCheck "animus-provider-retry" [
+            pkgs.b3sum
+            pkgs.clippy
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-provider-retry --root .
           '';
 
           exec-policy = cargoCheck "animus-exec-policy" [ pkgs.nickel ] ''

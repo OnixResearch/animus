@@ -21,6 +21,7 @@ const RUNTIME_LIFECYCLE_REDACTION_FIELD: &str = "lifecycle_redaction";
 const RUNTIME_STREAM_FIELD: &str = "model_stream";
 const RUNTIME_STREAM_KIND_FIELD: &str = "model_stream_kind";
 const RUNTIME_STREAM_VISIBILITY_FIELD: &str = "model_stream_visibility";
+const RUNTIME_PROVIDER_RETRY_FIELD: &str = "provider_retry_progress";
 const RUNTIME_MAX_TURNS_ZERO_REASON: &str = "max turns must be at least one";
 const MODEL_COMPONENT: &str = "model";
 const TOOL_COMPONENT: &str = "tool";
@@ -61,6 +62,9 @@ const UNKNOWN_STREAM_VISIBILITY_REASON: &str = "unknown model stream visibility"
 const INVALID_STREAM_USAGE_REASON: &str =
     "model stream usage requires both input and output counts";
 const INVALID_STREAM_FRAME_REASON: &str = "invalid model stream frame";
+const UNKNOWN_PROVIDER_RETRY_REASON: &str = "unknown provider retry reason";
+const UNKNOWN_PROVIDER_RETRY_STATUS: &str = "unknown provider retry status";
+const INVALID_PROVIDER_RETRY_EVENT: &str = "invalid provider retry progress event";
 const UNKNOWN_EXEC_DECISION_REASON: &str = "unknown exec policy decision";
 const UNKNOWN_REDACTION_REASON: &str = "unknown runtime redaction marker";
 const UNKNOWN_TERMINAL_REASON: &str = "unknown runtime terminal status";
@@ -510,6 +514,23 @@ pub enum Envelope {
         /// Safe failure reason.
         reason: String,
     },
+    /// Runtime provider-retry progress payload.
+    RuntimeProviderRetryProgress {
+        /// Stable run identity.
+        run_id: String,
+        /// Current or next attempt count.
+        attempt_count: u32,
+        /// Maximum total attempt count.
+        max_attempt_count: u32,
+        /// Planned delay in milliseconds when applicable.
+        delay_ms: Option<u64>,
+        /// Canonical provider-neutral reason class.
+        reason: String,
+        /// Provider-neutral progress status.
+        status: String,
+        /// Exact invocation identity.
+        exact_plan_hash: String,
+    },
     /// Runtime model-responded event payload.
     RuntimeModelResponded {
         /// Model response message.
@@ -694,6 +715,7 @@ impl Envelope {
             | Self::RuntimeModelStreamFrame { .. }
             | Self::RuntimeModelStreamEnded { .. }
             | Self::RuntimeModelStreamFailed { .. }
+            | Self::RuntimeProviderRetryProgress { .. }
             | Self::RuntimeModelResponded { .. }
             | Self::RuntimeModelDenied { .. }
             | Self::RuntimeToolRequested { .. }
@@ -910,6 +932,7 @@ fn runtime_event_group(event: &animus_runtime::RuntimeEvent) -> RuntimeEventGrou
         | animus_runtime::RuntimeEvent::ModelStreamFrame { .. }
         | animus_runtime::RuntimeEvent::ModelStreamEnded { .. }
         | animus_runtime::RuntimeEvent::ModelStreamFailed { .. }
+        | animus_runtime::RuntimeEvent::ProviderRetryProgress { .. }
         | animus_runtime::RuntimeEvent::ModelResponded { .. }
         | animus_runtime::RuntimeEvent::ModelDenied { .. }
         | animus_runtime::RuntimeEvent::ToolRequested { .. }
@@ -944,6 +967,7 @@ fn runtime_envelope_group(envelope: &Envelope) -> Option<RuntimeEventGroup> {
         | Envelope::RuntimeModelStreamFrame { .. }
         | Envelope::RuntimeModelStreamEnded { .. }
         | Envelope::RuntimeModelStreamFailed { .. }
+        | Envelope::RuntimeProviderRetryProgress { .. }
         | Envelope::RuntimeModelResponded { .. }
         | Envelope::RuntimeModelDenied { .. }
         | Envelope::RuntimeToolRequested { .. }
@@ -1072,6 +1096,17 @@ fn encode_adapter_event(event: &animus_runtime::RuntimeEvent) -> Envelope {
             Envelope::RuntimeModelStreamFailed {
                 call_id: String::from(call_id.as_str()),
                 reason: reason.clone(),
+            }
+        }
+        animus_runtime::RuntimeEvent::ProviderRetryProgress { progress } => {
+            Envelope::RuntimeProviderRetryProgress {
+                run_id: progress.run_id.clone(),
+                attempt_count: progress.attempt_count,
+                max_attempt_count: progress.max_attempt_count,
+                delay_ms: progress.delay_ms,
+                reason: String::from(progress.reason.as_str()),
+                status: String::from(progress.status.as_str()),
+                exact_plan_hash: progress.exact_plan_hash.clone(),
             }
         }
         animus_runtime::RuntimeEvent::ModelResponded { response } => {
@@ -1334,6 +1369,26 @@ fn decode_adapter_event(
     envelope: Envelope,
 ) -> Result<animus_runtime::RuntimeEvent, crate::CodecError> {
     match envelope {
+        model_envelope @ (Envelope::RuntimeModelRequested { .. }
+        | Envelope::RuntimeModelStreamStarted { .. }
+        | Envelope::RuntimeModelStreamFrame { .. }
+        | Envelope::RuntimeModelStreamEnded { .. }
+        | Envelope::RuntimeModelStreamFailed { .. }
+        | Envelope::RuntimeProviderRetryProgress { .. }
+        | Envelope::RuntimeModelResponded { .. }
+        | Envelope::RuntimeModelDenied { .. }) => decode_model_adapter_event(model_envelope),
+        tool_envelope @ (Envelope::RuntimeToolRequested { .. }
+        | Envelope::RuntimeToolResponded { .. }
+        | Envelope::RuntimeToolDenied { .. }
+        | Envelope::RuntimeSandboxEscalation { .. }) => decode_tool_adapter_event(tool_envelope),
+        _other => unreachable!("runtime envelope group mismatch"),
+    }
+}
+
+fn decode_model_adapter_event(
+    envelope: Envelope,
+) -> Result<animus_runtime::RuntimeEvent, crate::CodecError> {
+    match envelope {
         Envelope::RuntimeModelRequested { prompt } => {
             Ok(animus_runtime::RuntimeEvent::ModelRequested {
                 request: animus_adapters::ModelRequest::new(&prompt)?,
@@ -1382,6 +1437,23 @@ fn decode_adapter_event(
                 reason,
             })
         }
+        Envelope::RuntimeProviderRetryProgress {
+            run_id,
+            attempt_count,
+            max_attempt_count,
+            delay_ms,
+            reason,
+            status,
+            exact_plan_hash,
+        } => decode_provider_retry_progress(ProviderRetryProgressParts {
+            run_id,
+            attempt_count,
+            max_attempt_count,
+            delay_ms,
+            reason,
+            status,
+            exact_plan_hash,
+        }),
         Envelope::RuntimeModelResponded { message } => {
             Ok(animus_runtime::RuntimeEvent::ModelResponded {
                 response: animus_adapters::ModelResponse::new(&message)?,
@@ -1393,6 +1465,14 @@ fn decode_adapter_event(
                 reason,
             })
         }
+        _other => unreachable!("runtime model envelope group mismatch"),
+    }
+}
+
+fn decode_tool_adapter_event(
+    envelope: Envelope,
+) -> Result<animus_runtime::RuntimeEvent, crate::CodecError> {
+    match envelope {
         Envelope::RuntimeToolRequested { request } => {
             Ok(animus_runtime::RuntimeEvent::ToolRequested {
                 request: request.into_tool_request()?,
@@ -1426,7 +1506,7 @@ fn decode_adapter_event(
             escalation_reason: &escalation_reason,
             redaction_marker: &redaction_marker,
         }),
-        _other => unreachable!("runtime envelope group mismatch"),
+        _other => unreachable!("runtime tool envelope group mismatch"),
     }
 }
 
@@ -1856,6 +1936,52 @@ fn model_stream_error(error: animus_adapters::ModelStreamError) -> crate::CodecE
     }
 }
 
+struct ProviderRetryProgressParts {
+    run_id: String,
+    attempt_count: u32,
+    max_attempt_count: u32,
+    delay_ms: Option<u64>,
+    reason: String,
+    status: String,
+    exact_plan_hash: String,
+}
+
+fn decode_provider_retry_progress(
+    parts: ProviderRetryProgressParts,
+) -> Result<animus_runtime::RuntimeEvent, crate::CodecError> {
+    let reason = animus_runtime::provider_retry::ProviderRetryFailureClass::parse(&parts.reason)
+        .ok_or(crate::CodecError::InvalidRuntimePayload {
+            field: RUNTIME_PROVIDER_RETRY_FIELD,
+            reason: UNKNOWN_PROVIDER_RETRY_REASON,
+        })?;
+    let status = animus_runtime::provider_retry::ProviderRetryProgressStatus::parse(&parts.status)
+        .ok_or(crate::CodecError::InvalidRuntimePayload {
+            field: RUNTIME_PROVIDER_RETRY_FIELD,
+            reason: UNKNOWN_PROVIDER_RETRY_STATUS,
+        })?;
+    let progress = animus_runtime::provider_retry::ProviderRetryProgressEvent {
+        run_id: parts.run_id,
+        attempt_count: parts.attempt_count,
+        max_attempt_count: parts.max_attempt_count,
+        delay_ms: parts.delay_ms,
+        reason,
+        status,
+        exact_plan_hash: parts.exact_plan_hash,
+    };
+    let progress = animus_runtime::provider_retry::validate_provider_retry_progress_event(progress)
+        .map_err(provider_retry_error)?;
+    Ok(animus_runtime::RuntimeEvent::ProviderRetryProgress { progress })
+}
+
+fn provider_retry_error(
+    _error: animus_runtime::provider_retry::ProviderRetryError,
+) -> crate::CodecError {
+    crate::CodecError::InvalidRuntimePayload {
+        field: RUNTIME_PROVIDER_RETRY_FIELD,
+        reason: INVALID_PROVIDER_RETRY_EVENT,
+    }
+}
+
 struct SandboxEscalationParts<'a> {
     decision: &'a str,
     rule_ids: Vec<String>,
@@ -1972,6 +2098,12 @@ mod tests {
     const STREAM_CALL_ID: &str = "call-1";
     const STREAM_BODY: &str = "hello";
     const STREAM_ORDER: u64 = 1;
+    const RETRY_RUN_ID: &str = "run.retry";
+    const RETRY_ATTEMPT_COUNT: u32 = 2;
+    const RETRY_MAX_ATTEMPT_COUNT: u32 = 4;
+    const RETRY_DELAY_MS: u64 = 250;
+    const RETRY_EXACT_PLAN_HASH: &str =
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     const MAX_TURNS: usize = 2;
 
     fn steel_policy_denied_event() -> animus_runtime::RuntimeEvent {
@@ -2029,6 +2161,20 @@ mod tests {
                 failure_class: None,
             });
         animus_runtime::RuntimeEvent::LifecycleHookOutcome { outcome }
+    }
+
+    fn provider_retry_progress_event() -> animus_runtime::RuntimeEvent {
+        animus_runtime::RuntimeEvent::ProviderRetryProgress {
+            progress: animus_runtime::provider_retry::ProviderRetryProgressEvent {
+                run_id: String::from(RETRY_RUN_ID),
+                attempt_count: RETRY_ATTEMPT_COUNT,
+                max_attempt_count: RETRY_MAX_ATTEMPT_COUNT,
+                delay_ms: Some(RETRY_DELAY_MS),
+                reason: animus_runtime::provider_retry::ProviderRetryFailureClass::RateLimited,
+                status: animus_runtime::provider_retry::ProviderRetryProgressStatus::Scheduled,
+                exact_plan_hash: String::from(RETRY_EXACT_PLAN_HASH),
+            },
+        }
     }
 
     fn tool_request() -> animus_adapters::ToolRequest {
@@ -2147,6 +2293,73 @@ mod tests {
             .expect("runtime event should convert");
 
         assert_eq!(decoded, event);
+    }
+
+    #[test]
+    fn provider_retry_progress_round_trips_without_transcript_material() {
+        let event = provider_retry_progress_event();
+        let envelope = Envelope::from_runtime_event(&event);
+        let rendered = format!("{envelope:?}");
+        let decoded = envelope
+            .try_into_runtime_event()
+            .expect("retry progress should convert");
+
+        assert_eq!(decoded, event);
+        assert!(!rendered.contains(MODEL_PROMPT));
+        assert!(!rendered.contains(MODEL_MESSAGE));
+    }
+
+    #[test]
+    fn provider_retry_progress_rejects_unknown_and_unsafe_metadata() {
+        let unknown_reason = Envelope::RuntimeProviderRetryProgress {
+            run_id: String::from(RETRY_RUN_ID),
+            attempt_count: RETRY_ATTEMPT_COUNT,
+            max_attempt_count: RETRY_MAX_ATTEMPT_COUNT,
+            delay_ms: Some(RETRY_DELAY_MS),
+            reason: String::from("provider-native-secret"),
+            status: String::from("scheduled"),
+            exact_plan_hash: String::from(RETRY_EXACT_PLAN_HASH),
+        };
+        let unknown_status = Envelope::RuntimeProviderRetryProgress {
+            run_id: String::from(RETRY_RUN_ID),
+            attempt_count: RETRY_ATTEMPT_COUNT,
+            max_attempt_count: RETRY_MAX_ATTEMPT_COUNT,
+            delay_ms: Some(RETRY_DELAY_MS),
+            reason: String::from("rate_limited"),
+            status: String::from("provider-native-status"),
+            exact_plan_hash: String::from(RETRY_EXACT_PLAN_HASH),
+        };
+        let unsafe_identity = Envelope::RuntimeProviderRetryProgress {
+            run_id: String::from("raw private run identity"),
+            attempt_count: RETRY_ATTEMPT_COUNT,
+            max_attempt_count: RETRY_MAX_ATTEMPT_COUNT,
+            delay_ms: Some(RETRY_DELAY_MS),
+            reason: String::from("rate_limited"),
+            status: String::from("scheduled"),
+            exact_plan_hash: String::from(RETRY_EXACT_PLAN_HASH),
+        };
+
+        assert!(matches!(
+            unknown_reason.try_into_runtime_event(),
+            Err(crate::CodecError::InvalidRuntimePayload {
+                field: RUNTIME_PROVIDER_RETRY_FIELD,
+                reason: UNKNOWN_PROVIDER_RETRY_REASON,
+            })
+        ));
+        assert!(matches!(
+            unknown_status.try_into_runtime_event(),
+            Err(crate::CodecError::InvalidRuntimePayload {
+                field: RUNTIME_PROVIDER_RETRY_FIELD,
+                reason: UNKNOWN_PROVIDER_RETRY_STATUS,
+            })
+        ));
+        assert!(matches!(
+            unsafe_identity.try_into_runtime_event(),
+            Err(crate::CodecError::InvalidRuntimePayload {
+                field: RUNTIME_PROVIDER_RETRY_FIELD,
+                reason: INVALID_PROVIDER_RETRY_EVENT,
+            })
+        ));
     }
 
     #[test]

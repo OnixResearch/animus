@@ -99,6 +99,7 @@ impl ConversationRenderModel {
                     reason: bounded_reason(reason),
                 });
             }
+            animus_runtime::RuntimeEvent::ProviderRetryProgress { .. } => {}
             animus_runtime::RuntimeEvent::ModelResponded { response }
             | animus_runtime::RuntimeEvent::FinalResponse { response } => {
                 self.flush_pending();

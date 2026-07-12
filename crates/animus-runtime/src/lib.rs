@@ -82,6 +82,12 @@ mod prelude;
 pub mod production_memory_policy;
 mod provenance;
 mod provider_hardening;
+#[path = "resilience/mod.rs"]
+mod resilience;
+/// Pure bounded same-plan provider retry contracts.
+pub mod provider_retry {
+    pub use super::resilience::*;
+}
 mod quality_records;
 mod researchspec;
 #[path = "researchspecpromotiondag.rs"]

@@ -12,6 +12,7 @@ Animus rejects malformed human-authored runtime policy before projection while r
 | Process jobs | `policy/process-jobs/policy.ncl` | `policy/process-jobs/generated/process-job-profile-policy.json` and `sample-profile-manifest.json` | `animus-runtime::background` pure profile resolution; hosts own discovery, process/queue execution, clocks, storage, and notifications | `scripts/cairn/check-process-job-profiles --root .` and `scripts/cairn/check-nickel-policy-contracts --root .` |
 | Steel runtime | `policy/steel-runtime/policy.ncl` | `policy/steel-runtime/generated/steel-runtime-policy.json` | `animus-steel` profile activation plus `animus-runtime` adapter-boundary dispatch; hosts own model/tool effects | `scripts/cairn/check-steel-runtime-policy --root .` and `scripts/cairn/check-nickel-policy-contracts --root .` |
 | Tool catalog | `policy/tool-catalog/catalog.ncl` | `policy/tool-catalog/generated/tool-catalog-schema.json` and `tool-catalog.json` | `animus-adapters::tool` metadata validation and `animus-runtime::tool_executor_kit` final admission; hosts inject executors | `scripts/cairn/check-tool-catalog --root .` and `scripts/cairn/check-nickel-policy-contracts --root .` |
+| Provider retry | `config/provider-retry-policy.ncl` | `config/generated/provider-retry-policy.json` | `animus-runtime::provider_retry` pure revalidation/classification/admission and `animus-std` explicit loader/injected timer/dispatch shell | `scripts/cairn/check-provider-retry --root .` and `scripts/config/check-nickel-configs` |
 
 ## Checked projection identity
 
@@ -37,6 +38,7 @@ The checked sidecar is `policy/generated/policy-projection-receipts.json`. The f
 - Process jobs require one execution form, admitted backends, confined lexical paths, allowed unique environment and metadata keys, positive bounded resources, and deterministic profile identity.
 - Steel runtime requires unique profile and script identities, exactly one enabled default, positive turn budgets, closed host actions, fail-closed fallback, hash-only receipts, safe script paths, and lowercase BLAKE3 script identities.
 - Tool catalogs require closed vocabularies, unique names and capabilities, schema references, effect/capability consistency, prompt-or-deny approval for dangerous capabilities, and redaction for secret-adjacent tools.
+- Provider retry requires bounded positive attempts, a complete bounded deterministic delay schedule, versioned unique provider mappings to canonical classes, terminal-by-default unknown classes, required cancellation posture, deny-after-semantic stream posture, and lowercase BLAKE3 identity.
 
 ## Authority boundary and non-claims
 

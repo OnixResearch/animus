@@ -154,6 +154,20 @@ impl RuntimeProjection {
                 tool_call_id: None,
                 summary: safe_text("model_stream_failure", reason)?,
             }),
+            crate::RuntimeEvent::ProviderRetryProgress { progress } => {
+                let delay_ms = progress
+                    .delay_ms
+                    .map_or_else(|| "none".to_string(), |value| value.to_string());
+                let summary = format!(
+                    "{} attempt={}/{} delay_ms={} reason={}",
+                    progress.status.as_str(),
+                    progress.attempt_count,
+                    progress.max_attempt_count,
+                    delay_ms,
+                    progress.reason.as_str()
+                );
+                Self::summary_checked("provider_retry_progress", summary.as_str())
+            }
             crate::RuntimeEvent::ModelRequested { .. } => Ok(Self::summary(MODEL_REQUEST_SUMMARY)),
             crate::RuntimeEvent::ModelResponded { .. } => Ok(Self::summary(MODEL_RESPONSE_SUMMARY)),
             crate::RuntimeEvent::ModelDenied { reason, .. } => {

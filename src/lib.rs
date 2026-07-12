@@ -52,6 +52,15 @@ pub use animus_std::{
     parse_model_runtime_profiles_json,
 };
 
+/// Re-export of host-owned provider retry policy and injected effect seams.
+#[cfg(feature = "provider-retry")]
+pub use animus_std::{
+    ProviderRetryConfigError, ProviderRetryDispatchError, ProviderRetryDispatchInput,
+    ProviderRetryJsonErrorKind, ProviderRetryTimerService, dispatch_provider_retry_exact,
+    execute_provider_retry_wait, load_provider_retry_policy, parse_provider_retry_policy_json,
+    retry_model_request_hash,
+};
+
 /// Re-export of the optional host-owned Iroh agent communication adapter seam.
 #[cfg(feature = "iroh-host")]
 pub use animus_std::{

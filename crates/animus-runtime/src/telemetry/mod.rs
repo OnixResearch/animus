@@ -132,6 +132,8 @@ pub enum RuntimeEventKind {
     ModelStreamEnded,
     /// Model stream-failure event.
     ModelStreamFailed,
+    /// Provider-neutral retry progress event.
+    ProviderRetryProgress,
     /// Model response event.
     ModelResponded,
     /// Model denial event.
@@ -187,6 +189,7 @@ impl RuntimeEventKind {
             Self::ModelStreamFrame => "model_stream_frame",
             Self::ModelStreamEnded => "model_stream_ended",
             Self::ModelStreamFailed => "model_stream_failed",
+            Self::ProviderRetryProgress => "provider_retry_progress",
             Self::ModelResponded => "model_responded",
             Self::ModelDenied => "model_denied",
             Self::ToolRequested => "tool_requested",

@@ -18,6 +18,24 @@ fn user_message_produces_transcript_entry() {
 }
 
 #[test]
+fn provider_retry_progress_does_not_become_transcript_content() {
+    let mut model = ConversationRenderModel::new();
+    model.apply_runtime_event(&animus_runtime::RuntimeEvent::ProviderRetryProgress {
+        progress: animus_runtime::provider_retry::ProviderRetryProgressEvent {
+            run_id: String::from("run.retry"),
+            attempt_count: 1,
+            max_attempt_count: 1,
+            delay_ms: None,
+            reason: animus_runtime::provider_retry::ProviderRetryFailureClass::RateLimited,
+            status: animus_runtime::provider_retry::ProviderRetryProgressStatus::Terminal,
+            exact_plan_hash: String::from(TEST_RETRY_EXACT_PLAN_HASH),
+        },
+    });
+
+    assert_eq!(render_conversation_snapshot(&model), "(empty transcript)");
+}
+
+#[test]
 fn model_response_produces_assistant_entry() {
     let mut model = ConversationRenderModel::new();
     model.apply_runtime_event(&animus_runtime::RuntimeEvent::ModelResponded {
@@ -285,6 +303,8 @@ fn make_finish(
     .expect("finish frame should validate")
 }
 
+const TEST_RETRY_EXACT_PLAN_HASH: &str =
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const TEST_TOOL_SCHEMA: &str = "schema.conversation-tool.v1";
 const TEST_TOOL_ARGUMENT: &str = "query";
 const TEST_TOOL_CALL_ID: &str = "tool-call-conversation";
