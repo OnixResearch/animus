@@ -4,9 +4,9 @@ Animus cost-aware routing is a pure policy contract over host-supplied task sign
 
 ## Policy
 
-Routing policy is authored as Nickel in `policy/model-routing/policy.ncl` and validated in Rust checked fixtures. It defines role labels, score thresholds, complexity weights, downgrade targets, missing-price behavior, budget behavior, and policy hash.
+Routing policy is authored as Nickel in `policy/model-routing/policy.ncl`, projected to `policy/model-routing/generated/model-routing-policy.json`, and revalidated by Rust checked fixtures. It defines role labels, score thresholds, complexity weights, downgrade targets, missing-price behavior, budget behavior, and policy hash.
 
-Policy validation rejects duplicate roles, negative weights, unordered thresholds, unknown downgrade targets, unspecified missing-price behavior, empty roles, zero schema versions, and unordered budgets.
+The Nickel contract rejects duplicate or unordered roles, negative or fractional weights, unordered thresholds, dangling, upward, or cyclic downgrade edges, unknown behavior values, empty roles, unsupported schema versions, and malformed lowercase BLAKE3 identities before export. `scripts/cairn/check-nickel-policy-contracts --root .` verifies source fixtures, projection identity, and normalized `ModelRoutingPolicy` parity; runtime Rust still performs final admission for loaded external data.
 
 ## Inputs
 

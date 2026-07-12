@@ -1,0 +1,124 @@
+#!/usr/bin/env sh
+# r[verify agent_harness_runtime.nickel_policy_contracts.fixtures]
+# r[verify agent_harness_runtime.nickel_policy_contracts.projection_freshness]
+set -eu
+
+readonly FAILURE=1
+readonly RAIL_NAME=nickel-policy-contracts
+readonly RECEIPT_SCHEMA=animus.focused-rail.v1
+readonly RECEIPT_DIR=target/cairn/focused-rails
+readonly PROJECTION_RECEIPT=policy/generated/policy-projection-receipts.json
+readonly PRELUDE_FIXTURES=policy/contracts/fixtures
+readonly MODEL_FIXTURES=policy/model-routing/fixtures
+readonly PROCESS_FIXTURES=policy/process-jobs/fixtures
+readonly STEEL_FIXTURES=policy/steel-runtime/fixtures
+readonly TOOL_FIXTURES=policy/tool-catalog/fixtures
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+
+if [ "${1:-}" = "--root" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  repo_root=$(CDPATH= cd -- "$2" && pwd)
+fi
+
+if ! command -v cargo >/dev/null 2>&1; then
+  printf '%s\n' 'error: cargo is required. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+if ! command -v nickel >/dev/null 2>&1; then
+  printf '%s\n' 'error: nickel is required. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+if ! command -v b3sum >/dev/null 2>&1; then
+  printf '%s\n' 'error: b3sum is required. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+
+cd "${repo_root}"
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/animus-nickel-policy-contracts.XXXXXX")
+trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
+
+positive_count=0
+negative_count=0
+
+check_fixture_directory() {
+  fixture_dir=$1
+  for fixture in "${fixture_dir}"/valid-*.ncl; do
+    if [ ! -e "${fixture}" ]; then
+      continue
+    fi
+    expected=$(nickel export --format raw --field expected_issue "${fixture}")
+    if [ "${expected}" != "OK" ]; then
+      printf 'error: positive fixture %s has expectation %s\n' "${fixture}" "${expected}" >&2
+      exit "${FAILURE}"
+    fi
+    nickel export --format json --field fixture "${fixture}" > /dev/null
+    positive_count=$((positive_count + 1))
+  done
+
+  for fixture in "${fixture_dir}"/negative-*.ncl; do
+    if [ ! -e "${fixture}" ]; then
+      continue
+    fi
+    expected=$(nickel export --format raw --field expected_issue "${fixture}")
+    diagnostic=${tmp_dir}/$(basename -- "${fixture}").err
+    if nickel export --format json --field fixture "${fixture}" > /dev/null 2> "${diagnostic}"; then
+      printf 'error: negative fixture exported successfully: %s\n' "${fixture}" >&2
+      exit "${FAILURE}"
+    fi
+    if ! grep -F "${expected}" "${diagnostic}" >/dev/null 2>&1; then
+      printf 'error: negative fixture %s did not emit %s\n' "${fixture}" "${expected}" >&2
+      exit "${FAILURE}"
+    fi
+    negative_count=$((negative_count + 1))
+  done
+}
+
+sh scripts/config/export-policy-projections --check
+check_fixture_directory "${PRELUDE_FIXTURES}"
+check_fixture_directory "${MODEL_FIXTURES}"
+check_fixture_directory "${PROCESS_FIXTURES}"
+check_fixture_directory "${STEEL_FIXTURES}"
+check_fixture_directory "${TOOL_FIXTURES}"
+
+cargo test -p animus-adapters --locked generated_model_routing
+cargo test -p animus-runtime --locked generated_process
+cargo test -p animus-runtime --locked generated_tool
+cargo test -p animus-steel --locked generated_policy_export
+
+if grep -R -E 'Command::new\("nickel"\)|std::process::Command[^\n]*nickel|nickel export' crates --include='*.rs' >/dev/null 2>&1; then
+  printf '%s\n' 'error: reusable Rust crates must not execute Nickel at runtime' >&2
+  exit "${FAILURE}"
+fi
+
+projection_receipt_hash=$(b3sum "${PROJECTION_RECEIPT}" | cut -d ' ' -f 1)
+mkdir -p "${RECEIPT_DIR}"
+receipt_path=${RECEIPT_DIR}/${RAIL_NAME}.md
+cat > "${receipt_path}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+boundary: typed Nickel policy source, checked projections, and Rust DTO parity
+projection_receipt: ${PROJECTION_RECEIPT}
+projection_receipt_blake3: ${projection_receipt_hash}
+positive_fixture_count: ${positive_count}
+negative_fixture_count: ${negative_count}
+positive_fixtures:
+- shared primitive contracts accept exact schema, bounded integer, enum, lowercase BLAKE3, safe path, and unique values
+- model-routing, process-job, Steel-runtime, and tool-catalog checked projections deserialize and normalize through Rust DTO tests
+negative_fixtures:
+- malformed bounds, enums, hashes, paths, duplicate identities, dangling or cyclic routing references, conflicting process forms, invalid Steel defaults, and unsafe tool combinations fail closed
+safe_evidence:
+- receipt stores source/output identities, fixture counts, stable issue classes, and BLAKE3 hashes only
+- raw policy payloads, credentials, environment values, tool bodies, prompts, provider payloads, and host paths are omitted
+non_claims:
+- Nickel contract success proves reviewed source shape and declared invariants only
+- runtime admission, authorization, effects, clocks, external artifact validation, and durable execution receipts remain Rust and host owned
+EOF
+
+printf 'focused rail %s: pass\n' "${RAIL_NAME}"
+printf 'receipt: %s\n' "${receipt_path}"

@@ -30,6 +30,8 @@ See [docs/goose-message-queue-interrupts.md](docs/goose-message-queue-interrupts
 
 See [docs/portfolio-search.md](docs/portfolio-search.md) for the pure bounded portfolio state machine, mechanism registry, delayed cross-pollination, gap-strength gates, adversarial audit, honest terminal outcomes, and safe receipt boundary.
 
+See [docs/nickel-policy-contracts.md](docs/nickel-policy-contracts.md) for shared authoring-time contracts, checked policy projections, Rust DTO parity, authority ownership, and projection non-claims.
+
 ## Development shell
 
 Enter the pinned Nix development shell:
@@ -103,6 +105,7 @@ cargo check -p animus --features runtime
 cargo check -p animus --features tui
 cargo tigerstyle check
 check-nickel-configs
+scripts/cairn/check-nickel-policy-contracts --root .
 scripts/cairn/check-clankers-product-surfaces --root .
 scripts/cairn/check-dogfood-readiness --root .
 scripts/cairn/check-packaged-headless-dogfood-smoke --root .

@@ -197,6 +197,7 @@
                 || baseName == "check-syndicate-dataspace-isolation"
                 || baseName == "check-trellis-verified-core"
                 || baseName == "check-neutral-ledger"
+                || baseName == "check-nickel-policy-contracts"
                 || baseName == "check-injected-services"
                 || baseName == "check-provenance-ledger"
                 || baseName == "check-release-evidence-index"
@@ -204,6 +205,7 @@
                 || baseName == "check-runtime-kernel-split"
                 || baseName == "check-safe-receipts-artifacts"
                 || baseName == "check-wasm-surface"
+                || baseName == "export-policy-projections"
                 || baseName == "generate-current-head-release-evidence-index"
                 || pkgs.lib.hasSuffix ".json" baseName
                 || pkgs.lib.hasSuffix ".ncl" baseName
@@ -413,6 +415,13 @@
 
           steel-runtime-policy = cargoCheck "animus-steel-runtime-policy" [ pkgs.nickel ] ''
             sh scripts/cairn/check-steel-runtime-policy --root .
+          '';
+
+          nickel-policy-contracts = cargoCheck "animus-nickel-policy-contracts" [
+            pkgs.nickel
+            pkgs.b3sum
+          ] ''
+            sh scripts/cairn/check-nickel-policy-contracts --root .
           '';
 
           exec-policy = cargoCheck "animus-exec-policy" [ pkgs.nickel ] ''

@@ -24,7 +24,7 @@ Each descriptor has:
 
 ## Validation rules
 
-Catalog validation rejects duplicate names, collisions with built-in names, unknown runtime kinds, invalid schema references, inactive or untrusted definitions, executor-less dispatch definitions, dangerous capabilities without prompt-or-deny approval, and secret-adjacent capabilities without redaction. Safe descriptors normalize deterministically by name. Runtime dispatch requires each tool's exact declared capability identity; a broad `default-tool` capability does not authorize a tool when the per-tool label is absent.
+The Nickel whole-value contract rejects duplicate names or capabilities, collisions with built-in names, unknown runtime, capability, side-effect, approval, and redaction values, invalid schema references, inconsistent side-effect/capability combinations, dangerous capabilities without prompt-or-deny approval, and secret-adjacent capabilities without redaction. Checked schema and catalog projections live under `policy/tool-catalog/generated/`; `scripts/cairn/check-nickel-policy-contracts --root .` verifies projection identity and normalized Rust DTO parity. Runtime admission still rejects inactive or untrusted definitions, executor-less dispatch definitions, and missing exact capabilities. Each call remains bound to its exact declared capability identity; a broad `default-tool` capability does not authorize a tool when the per-tool label is absent.
 
 ## Runtime-neutrality
 

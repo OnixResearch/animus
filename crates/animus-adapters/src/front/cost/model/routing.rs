@@ -27,4 +27,5 @@ mod tests {
     include!("routing/tests/tests001.rs");
     include!("routing/tests/tests002.rs");
     include!("routing/tests/tests003.rs");
+    include!("routing/tests/tests004.rs");
 }

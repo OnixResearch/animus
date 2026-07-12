@@ -68,6 +68,7 @@ Run the focused rail after changing this profile or its Steel policy binding:
 
 ```sh
 scripts/cairn/check-steel-runtime-policy --root .
+scripts/cairn/check-nickel-policy-contracts --root .
 ```
 
 Run both drain helper self-tests through Pi's Steel tool after changing their respective surfaces:

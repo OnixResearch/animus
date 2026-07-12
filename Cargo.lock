@@ -81,6 +81,8 @@ dependencies = [
  "animus-core",
  "animus-router",
  "blake3",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -132,6 +134,8 @@ dependencies = [
  "animus-core",
  "animus-steel",
  "blake3",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

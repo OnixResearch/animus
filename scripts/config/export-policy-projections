@@ -1,0 +1,198 @@
+#!/usr/bin/env sh
+# r[impl agent_harness_runtime.nickel_policy_contracts.projection_freshness]
+set -eu
+
+readonly FAILURE=1
+readonly MODE_CHECK=--check
+readonly MODE_EXECUTE=--execute
+readonly FILE_MODE=0644
+readonly EVALUATOR_PROFILE=nickel-json-export-v1
+readonly EVALUATOR_VERSION=1.17.0
+readonly PRELUDE=policy/contracts/primitives.ncl
+readonly MODEL_SOURCE=policy/model-routing/policy.ncl
+readonly MODEL_FIELD=model_routing_policy
+readonly MODEL_OUTPUT=policy/model-routing/generated/model-routing-policy.json
+readonly PROCESS_SOURCE=policy/process-jobs/policy.ncl
+readonly PROCESS_POLICY_FIELD=process_job_profile_policy
+readonly PROCESS_POLICY_OUTPUT=policy/process-jobs/generated/process-job-profile-policy.json
+readonly PROCESS_MANIFEST_FIELD=sample_profile_manifest
+readonly PROCESS_MANIFEST_OUTPUT=policy/process-jobs/generated/sample-profile-manifest.json
+readonly STEEL_SOURCE=policy/steel-runtime/policy.ncl
+readonly STEEL_FIELD=steel_runtime_policy
+readonly STEEL_OUTPUT=policy/steel-runtime/generated/steel-runtime-policy.json
+readonly TOOL_SOURCE=policy/tool-catalog/catalog.ncl
+readonly TOOL_SCHEMA_FIELD=catalog_schema
+readonly TOOL_SCHEMA_OUTPUT=policy/tool-catalog/generated/tool-catalog-schema.json
+readonly TOOL_CATALOG_FIELD=sample_catalog
+readonly TOOL_CATALOG_OUTPUT=policy/tool-catalog/generated/tool-catalog.json
+readonly RECEIPT_OUTPUT=policy/generated/policy-projection-receipts.json
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+mode=${1:-${MODE_EXECUTE}}
+
+if [ "${mode}" != "${MODE_CHECK}" ] && [ "${mode}" != "${MODE_EXECUTE}" ]; then
+  printf 'error: expected %s or %s\n' "${MODE_CHECK}" "${MODE_EXECUTE}" >&2
+  exit "${FAILURE}"
+fi
+
+if ! command -v nickel >/dev/null 2>&1; then
+  printf '%s\n' 'error: nickel is required. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+if ! command -v b3sum >/dev/null 2>&1; then
+  printf '%s\n' 'error: b3sum is required. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+if ! nickel --version | grep -F "nickel ${EVALUATOR_VERSION}" >/dev/null 2>&1; then
+  printf 'error: expected Nickel evaluator version %s\n' "${EVALUATOR_VERSION}" >&2
+  exit "${FAILURE}"
+fi
+
+cd "${repo_root}"
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/animus-policy-projections.XXXXXX")
+trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
+
+export_json() {
+  source_path=$1
+  field=$2
+  temporary_name=$3
+  nickel export --format json --field "${field}" "${source_path}" > "${tmp_dir}/${temporary_name}"
+}
+
+hash_file() {
+  b3sum "$1" | cut -d ' ' -f 1
+}
+
+export_json "${MODEL_SOURCE}" "${MODEL_FIELD}" model-routing-policy.json
+export_json "${PROCESS_SOURCE}" "${PROCESS_POLICY_FIELD}" process-job-profile-policy.json
+export_json "${PROCESS_SOURCE}" "${PROCESS_MANIFEST_FIELD}" sample-profile-manifest.json
+export_json "${STEEL_SOURCE}" "${STEEL_FIELD}" steel-runtime-policy.json
+export_json "${TOOL_SOURCE}" "${TOOL_SCHEMA_FIELD}" tool-catalog-schema.json
+export_json "${TOOL_SOURCE}" "${TOOL_CATALOG_FIELD}" tool-catalog.json
+
+prelude_hash=$(hash_file "${PRELUDE}")
+model_source_hash=$(hash_file "${MODEL_SOURCE}")
+process_source_hash=$(hash_file "${PROCESS_SOURCE}")
+steel_source_hash=$(hash_file "${STEEL_SOURCE}")
+tool_source_hash=$(hash_file "${TOOL_SOURCE}")
+model_output_hash=$(hash_file "${tmp_dir}/model-routing-policy.json")
+process_policy_output_hash=$(hash_file "${tmp_dir}/process-job-profile-policy.json")
+process_manifest_output_hash=$(hash_file "${tmp_dir}/sample-profile-manifest.json")
+steel_output_hash=$(hash_file "${tmp_dir}/steel-runtime-policy.json")
+tool_schema_output_hash=$(hash_file "${tmp_dir}/tool-catalog-schema.json")
+tool_catalog_output_hash=$(hash_file "${tmp_dir}/tool-catalog.json")
+
+cat > "${tmp_dir}/policy-projection-receipts.json" <<EOF
+{
+  "artifacts": [
+    {
+      "evaluator_profile": "${EVALUATOR_PROFILE}",
+      "family": "model-routing",
+      "family_contract_blake3": "${model_source_hash}",
+      "field": "${MODEL_FIELD}",
+      "output": "${MODEL_OUTPUT}",
+      "output_blake3": "${model_output_hash}",
+      "runtime_owner": "animus-adapters:model-routing",
+      "source": "${MODEL_SOURCE}",
+      "source_blake3": "${model_source_hash}"
+    },
+    {
+      "evaluator_profile": "${EVALUATOR_PROFILE}",
+      "family": "process-jobs",
+      "family_contract_blake3": "${process_source_hash}",
+      "field": "${PROCESS_POLICY_FIELD}",
+      "output": "${PROCESS_POLICY_OUTPUT}",
+      "output_blake3": "${process_policy_output_hash}",
+      "runtime_owner": "animus-runtime:background-policy",
+      "source": "${PROCESS_SOURCE}",
+      "source_blake3": "${process_source_hash}"
+    },
+    {
+      "evaluator_profile": "${EVALUATOR_PROFILE}",
+      "family": "process-jobs",
+      "family_contract_blake3": "${process_source_hash}",
+      "field": "${PROCESS_MANIFEST_FIELD}",
+      "output": "${PROCESS_MANIFEST_OUTPUT}",
+      "output_blake3": "${process_manifest_output_hash}",
+      "runtime_owner": "animus-runtime:background-profile",
+      "source": "${PROCESS_SOURCE}",
+      "source_blake3": "${process_source_hash}"
+    },
+    {
+      "evaluator_profile": "${EVALUATOR_PROFILE}",
+      "family": "steel-runtime",
+      "family_contract_blake3": "${steel_source_hash}",
+      "field": "${STEEL_FIELD}",
+      "output": "${STEEL_OUTPUT}",
+      "output_blake3": "${steel_output_hash}",
+      "runtime_owner": "animus-steel:policy",
+      "source": "${STEEL_SOURCE}",
+      "source_blake3": "${steel_source_hash}"
+    },
+    {
+      "evaluator_profile": "${EVALUATOR_PROFILE}",
+      "family": "tool-catalog",
+      "family_contract_blake3": "${tool_source_hash}",
+      "field": "${TOOL_SCHEMA_FIELD}",
+      "output": "${TOOL_SCHEMA_OUTPUT}",
+      "output_blake3": "${tool_schema_output_hash}",
+      "runtime_owner": "animus-runtime:tool-catalog-schema",
+      "source": "${TOOL_SOURCE}",
+      "source_blake3": "${tool_source_hash}"
+    },
+    {
+      "evaluator_profile": "${EVALUATOR_PROFILE}",
+      "family": "tool-catalog",
+      "family_contract_blake3": "${tool_source_hash}",
+      "field": "${TOOL_CATALOG_FIELD}",
+      "output": "${TOOL_CATALOG_OUTPUT}",
+      "output_blake3": "${tool_catalog_output_hash}",
+      "runtime_owner": "animus-runtime:tool-catalog",
+      "source": "${TOOL_SOURCE}",
+      "source_blake3": "${tool_source_hash}"
+    }
+  ],
+  "evaluator": "nickel-${EVALUATOR_VERSION}",
+  "schema": "animus.policy-projection-receipts.v1",
+  "shared_prelude": "${PRELUDE}",
+  "shared_prelude_blake3": "${prelude_hash}"
+}
+EOF
+
+check_projection() {
+  generated_path=$1
+  temporary_name=$2
+  if ! cmp -s "${generated_path}" "${tmp_dir}/${temporary_name}"; then
+    printf 'error: generated policy projection drift: %s\n' "${generated_path}" >&2
+    diff -u "${generated_path}" "${tmp_dir}/${temporary_name}" >&2 || true
+    exit "${FAILURE}"
+  fi
+}
+
+install_projection() {
+  generated_path=$1
+  temporary_name=$2
+  mkdir -p "$(dirname -- "${generated_path}")"
+  install -m "${FILE_MODE}" "${tmp_dir}/${temporary_name}" "${generated_path}"
+}
+
+if [ "${mode}" = "${MODE_CHECK}" ]; then
+  check_projection "${MODEL_OUTPUT}" model-routing-policy.json
+  check_projection "${PROCESS_POLICY_OUTPUT}" process-job-profile-policy.json
+  check_projection "${PROCESS_MANIFEST_OUTPUT}" sample-profile-manifest.json
+  check_projection "${STEEL_OUTPUT}" steel-runtime-policy.json
+  check_projection "${TOOL_SCHEMA_OUTPUT}" tool-catalog-schema.json
+  check_projection "${TOOL_CATALOG_OUTPUT}" tool-catalog.json
+  check_projection "${RECEIPT_OUTPUT}" policy-projection-receipts.json
+  printf '%s\n' 'policy projections: fresh'
+else
+  install_projection "${MODEL_OUTPUT}" model-routing-policy.json
+  install_projection "${PROCESS_POLICY_OUTPUT}" process-job-profile-policy.json
+  install_projection "${PROCESS_MANIFEST_OUTPUT}" sample-profile-manifest.json
+  install_projection "${STEEL_OUTPUT}" steel-runtime-policy.json
+  install_projection "${TOOL_SCHEMA_OUTPUT}" tool-catalog-schema.json
+  install_projection "${TOOL_CATALOG_OUTPUT}" tool-catalog.json
+  install_projection "${RECEIPT_OUTPUT}" policy-projection-receipts.json
+  printf '%s\n' 'policy projections: exported'
+fi

@@ -66,6 +66,8 @@ pub mod nested_subagent_graphs;
 #[path = "kanban.rs"]
 mod orchestration;
 mod pi_compaction;
+#[cfg(test)]
+mod policyprojectiontests;
 mod prelude;
 #[path = "productionmemorypolicy.rs"]
 pub mod production_memory_policy;

@@ -21,6 +21,7 @@ A focused rail MAY print bounded stdout instead of writing a receipt when it is 
 | Boundary | Command | Fixtures/evidence | Nix check |
 | --- | --- | --- | --- |
 | Lifecycle ownership map | `scripts/cairn/check-request-lifecycle --root .` | Positive and negative fixtures in `cairn/request-lifecycle-fixtures/`; marker diagnostics only | `checks.x86_64-linux.request-lifecycle` |
+| Nickel runtime-policy contracts | `scripts/cairn/check-nickel-policy-contracts --root .` | Shared primitive plus model-routing, process-job, Steel-runtime, and tool-catalog positive/negative fixtures; checked JSON and projection-receipt freshness; Rust DTO parity; receipt in `target/cairn/focused-rails/nickel-policy-contracts.md` | `checks.x86_64-linux.nickel-policy-contracts` |
 | Nickel-governed Steel runtime policy | `scripts/cairn/check-steel-runtime-policy --root .` | Nickel export drift check, generated-policy activation fixture, invalid-policy fixtures, Rust positive/negative Steel program fixtures, optional `CAIRN_POLICY_SOURCE` drift check; receipt in `target/cairn/focused-rails/steel-runtime-policy.md` | `checks.x86_64-linux.steel-runtime-policy` |
 | Safe receipts and artifacts | `scripts/cairn/check-safe-receipts-artifacts --root .` | Adapter receipt leak fixtures, BLAKE3 artifact determinism, redaction-class tests | `checks.x86_64-linux.safe-receipts-artifacts` |
 | Neutral ledger replay | `scripts/cairn/check-neutral-ledger --root .` | Positive replay tests, unsupported-entry tests, missing-ledger-service tests | `checks.x86_64-linux.neutral-ledger` |

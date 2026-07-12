@@ -220,7 +220,7 @@ pub(crate) fn validate_resources(
     policy: &super::ProcessJobProfilePolicy,
 ) -> Result<(), super::ProcessJobProfileError> {
     debug_assert!(!profile_name.is_empty());
-    debug_assert!(policy.max_timeout_seconds != Some(0));
+    debug_assert_ne!(policy.max_timeout_seconds, Some(0));
     for (field, actual, maximum) in [
         (
             "timeout_seconds",

@@ -55,6 +55,7 @@ fn dispatch(disclosed_approach_ids: Vec<String>) -> PortfolioDispatch {
     }
 }
 
+#[derive(Clone, Copy)]
 struct ApproachFixture<'a> {
     approach_id: &'a str,
     family: &'a str,

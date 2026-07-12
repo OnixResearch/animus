@@ -6,7 +6,7 @@ Resolving a profile is pure: Animus accepts already-loaded profile sources and p
 
 ## Policy
 
-The policy source is `policy/process-jobs/policy.ncl`. Nickel owns the schema for backend choices, command/program shape, args, cwd, writable paths, environment allowlists, timeout/memory/CPU/log limits, notification defaults, and safe identity metadata. Checked JSON fixtures live under `policy/process-jobs/generated/` and are verified by `scripts/cairn/check-process-job-profiles`.
+The policy source is `policy/process-jobs/policy.ncl`. Shared contracts in `policy/contracts/primitives.ncl` and a family whole-value validator reject unknown backends, conflicting command/program forms, unsafe paths, duplicate names or keys, disallowed environment prefixes, and non-positive or excessive resource limits before projection. Checked JSON lives under `policy/process-jobs/generated/` and is verified by `scripts/cairn/check-process-job-profiles` plus `scripts/cairn/check-nickel-policy-contracts`. Rust tests deserialize the checked policy and manifest and compare their normalized `animus-runtime::background` DTO meaning without evaluating Nickel at runtime.
 
 ## Resolution rules
 
