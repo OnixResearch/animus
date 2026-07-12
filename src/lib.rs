@@ -38,6 +38,13 @@ pub use animus_std::{
     load_runtime, run, run_with_model,
 };
 
+/// Re-export of the host-owned generated semantic role configuration loader.
+#[cfg(feature = "agent-role-profiles")]
+pub use animus_std::{
+    AgentRoleConfigError, AgentRoleJsonErrorKind, load_agent_role_profiles,
+    parse_agent_role_profiles_json,
+};
+
 /// Re-export of the host-owned generated model-profile configuration loader.
 #[cfg(feature = "model-runtime-profiles")]
 pub use animus_std::{

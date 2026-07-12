@@ -112,6 +112,7 @@ fn action_from_label(value: &str) -> Option<super::super::super::GuardedAction> 
         "exec" => Some(super::super::super::GuardedAction::Exec),
         "network" => Some(super::super::super::GuardedAction::Network),
         "steel" => Some(super::super::super::GuardedAction::Steel),
+        "agent_role" => Some(super::super::super::GuardedAction::AgentRole),
         _ => None,
     }
 }

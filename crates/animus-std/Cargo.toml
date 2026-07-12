@@ -12,6 +12,7 @@ workspace = true
 
 [features]
 default = ["observability-host"]
+agent-role-profiles = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 dogfood-smoke = ["dep:animus-runtime"]
 model-runtime-profiles = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 observability-host = ["dep:animus-std-observability"]

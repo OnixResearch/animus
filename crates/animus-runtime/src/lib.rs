@@ -30,6 +30,8 @@
 #![forbid(unsafe_code)]
 
 mod admission;
+#[path = "agentroles/mod.rs"]
+pub mod agent_roles;
 mod background;
 #[allow(excessive_file_length)]
 mod batch;
@@ -85,6 +87,7 @@ pub mod session_persistence;
 mod shell;
 mod status;
 pub mod subagents;
+pub use subagents::{TypedSubagentCapability, subagent_capability_receipt_label};
 mod telemetry;
 #[path = "tooladmission.rs"]
 mod tool_admission;

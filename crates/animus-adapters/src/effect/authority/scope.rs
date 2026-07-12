@@ -13,6 +13,8 @@ pub enum GuardedAction {
     Network,
     /// Steel evaluation.
     Steel,
+    /// Semantic agent-role assignment, activation, handoff, or output influence.
+    AgentRole,
 }
 
 impl GuardedAction {
@@ -26,6 +28,7 @@ impl GuardedAction {
             Self::Exec => "exec",
             Self::Network => "network",
             Self::Steel => "steel",
+            Self::AgentRole => "agent_role",
         }
     }
 }

@@ -23,7 +23,7 @@ Descriptors use safe labels and hashes instead of raw hidden paths, verifier bod
 
 The monitor evaluates planned or observed action descriptors before evidence can count as success. Exact denials include withheld-path reads, verifier modification, unsanctioned tools, sandbox weakening, approval suppression, evidence-policy bypass, oracle copying, hardcoded expected outputs, visible-test overfitting, and allowed-tool intent gaming.
 
-Monitor denials are final. Optional judge output is reject-only: a judge may veto suspicious trajectories, but judge approval cannot override deterministic monitor denial, grant a tool, weaken sandboxing, suppress approval, or mark denied evidence successful.
+Monitor denials are final. Optional judge output is reject-only: a judge may veto suspicious trajectories, but judge approval cannot override deterministic monitor denial, grant a tool, weaken sandboxing, suppress approval, or mark denied evidence successful. When represented as a semantic agent role, that judge additionally requires a rubric-bound `animus_runtime::agent_roles` assignment, explicit separation, immutable subject/evidence identities, and its own judgment or veto capability; the router/display label alone has no influence.
 
 ## Receipt safety
 

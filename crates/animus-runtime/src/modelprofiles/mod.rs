@@ -47,4 +47,4 @@ pub use types::{
 pub use validation::blake3_model_runtime_profile_identity;
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;

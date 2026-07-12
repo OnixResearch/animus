@@ -513,6 +513,41 @@ let change_entries = [
     "adapt-goose-session-branching-controls",
     "adapt-hermes-vcs-snapshot-ledger",
   ] ["add-host-session-persistence-adapter", "add-fake-backed-headless-dogfood-shell"],
+  change "define-spacewasm-embedded-compatibility-profile" host_role "concrete-adapters" [
+    "agent_harness_runtime.wasm_compile.surface",
+    "agent_harness_runtime.wasm_compile.shell_isolation",
+    "agent_harness_runtime.component_catalog.source",
+  ] ["add-component-catalog", "split-runtime-kernel-feature-packs"],
+  change "adapt-tau-interrupted-tool-call-repair" core_role "session-ledger" [
+    "agent_harness_runtime.pi_session_tree.ledger_contract",
+    "agent_harness_runtime.pi_tool_contracts.failure_classes",
+    "agent_harness_runtime.session_persistence_adapter.failures",
+  ] ["add-durable-session-store-host", "add-coding-session-host-facade", "add-ledger-session-adapter-seam"],
+  change "add-durable-session-store-host" host_role "concrete-adapters" [
+    "adapt-tau-interrupted-tool-call-repair",
+    "add-ledger-session-adapter-seam",
+    "agent_harness_runtime.session_persistence_adapter.service",
+    "agent_harness_runtime.session_persistence_adapter.admission",
+  ] ["add-host-session-persistence-adapter", "add-coding-session-host-facade", "add-redacted-session-tree-export"],
+  change "add-coding-session-host-facade" product_role "ui-headless" [
+    "adapt-tau-interrupted-tool-call-repair",
+    "add-durable-session-store-host",
+    "agent_harness_runtime.pi_headless_protocol.command_response",
+    "agent_harness_runtime.pi_headless_protocol.queueing",
+    "agent_harness_runtime.pi_event_lifecycle.mode_neutral",
+  ] ["add-fake-backed-headless-dogfood-shell", "add-tui-app-shell-and-event-loop", "add-redacted-session-tree-export"],
+  change "adapt-tau-provider-retry-execution" host_role "concrete-adapters" [
+    "add-concrete-provider-dispatch-adapter",
+    "agent_harness_runtime.provider_dispatch_adapter.plan",
+    "agent_harness_runtime.model_streaming.adapter_contract",
+    "agent_harness_runtime.model_runtime_profiles.dispatch_binding.retry",
+  ] ["add-concrete-provider-streaming-adapters", "add-coding-session-host-facade"],
+  change "add-redacted-session-tree-export" product_role "export-surfaces" [
+    "add-durable-session-store-host",
+    "add-coding-session-host-facade",
+    "agent_harness_runtime.pi_session_tree.ledger_contract",
+    "agent_harness_runtime.hf_dataset_export.policy",
+  ] ["add-current-head-release-evidence-index", "add-host-session-persistence-adapter"],
 ]
 in
 
@@ -576,6 +611,12 @@ let overlap_entries = [
   overlap "preserves-bridge-family-split" "split-preserves-boundary-bridges" ["add-component-catalog", "split-adapter-family-crates", "add-ledger-session-adapter-seam"],
   overlap "tool-executor-kit" "add-tool-executor-kit" ["split-adapter-family-crates", "split-runtime-kernel-feature-packs", "add-host-tool-executor-capability-packs"],
   overlap "ledger-session-adapter-seam" "add-ledger-session-adapter-seam" ["split-runtime-kernel-feature-packs", "split-std-host-adapter-crates", "add-host-session-persistence-adapter"],
+  overlap "spacewasm-diagnostic-host-and-wasm-surface" "define-spacewasm-embedded-compatibility-profile" ["add-component-catalog", "split-runtime-kernel-feature-packs"],
+  overlap "interrupted-tool-call-transcript-repair" "adapt-tau-interrupted-tool-call-repair" ["add-durable-session-store-host", "add-coding-session-host-facade", "add-ledger-session-adapter-seam"],
+  overlap "durable-session-store-host" "add-durable-session-store-host" ["add-host-session-persistence-adapter", "add-ledger-session-adapter-seam", "add-coding-session-host-facade", "add-redacted-session-tree-export"],
+  overlap "coding-session-host-facade" "add-coding-session-host-facade" ["add-fake-backed-headless-dogfood-shell", "add-tui-app-shell-and-event-loop", "add-durable-session-store-host"],
+  overlap "provider-retry-execution" "adapt-tau-provider-retry-execution" ["add-concrete-provider-dispatch-adapter", "add-concrete-provider-streaming-adapters"],
+  overlap "redacted-session-tree-export" "add-redacted-session-tree-export" ["add-durable-session-store-host", "add-coding-session-host-facade", "add-current-head-release-evidence-index"],
 ]
 in
 

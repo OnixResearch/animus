@@ -35,6 +35,72 @@
       "action": "steel",
       "contract": "animus.runtime",
       "resource_prefix": "steel:"
+    },
+    {
+      "ability": "assign",
+      "action": "agent_role",
+      "contract": "animus.runtime",
+      "resource_prefix": "role:"
+    },
+    {
+      "ability": "activate",
+      "action": "agent_role",
+      "contract": "animus.runtime",
+      "resource_prefix": "role:"
+    },
+    {
+      "ability": "handoff",
+      "action": "agent_role",
+      "contract": "animus.runtime",
+      "resource_prefix": "role:"
+    },
+    {
+      "ability": "emit_candidate",
+      "action": "agent_role",
+      "contract": "animus.runtime",
+      "resource_prefix": "role:"
+    },
+    {
+      "ability": "emit_review",
+      "action": "agent_role",
+      "contract": "animus.runtime",
+      "resource_prefix": "role:"
+    },
+    {
+      "ability": "emit_verification",
+      "action": "agent_role",
+      "contract": "animus.runtime",
+      "resource_prefix": "role:"
+    },
+    {
+      "ability": "emit_judgment",
+      "action": "agent_role",
+      "contract": "animus.runtime",
+      "resource_prefix": "role:"
+    },
+    {
+      "ability": "emit_coordination",
+      "action": "agent_role",
+      "contract": "animus.runtime",
+      "resource_prefix": "role:"
+    },
+    {
+      "ability": "emit_observation",
+      "action": "agent_role",
+      "contract": "animus.runtime",
+      "resource_prefix": "role:"
+    },
+    {
+      "ability": "select",
+      "action": "agent_role",
+      "contract": "animus.runtime",
+      "resource_prefix": "role:"
+    },
+    {
+      "ability": "veto",
+      "action": "agent_role",
+      "contract": "animus.runtime",
+      "resource_prefix": "role:"
     }
   ],
   "schema": "animus.capability-policy.v1"

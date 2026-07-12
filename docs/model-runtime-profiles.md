@@ -52,6 +52,12 @@ Memory-disabled mode carries no active policy object. Read-only and read-write m
 
 Disabled tool mode emits no declarations. Optional mode emits only the admitted native intersection. Capability-required mode needs model support and a non-empty admitted intersection. Required tools fail when catalog trust/status, exact capabilities, approval, schema, executor readiness, or budget policy is absent. Prompt-emulated calls are never an alternative.
 
+## Semantic role composition
+
+`animus_runtime::agent_roles::compose_agent_role_model_plan` reuses this composition path and adds one semantic role as another independent ceiling. It also requires separate host admission for the role's output contract, named finite budget, and workspace scopes. A role cannot replace the selected model profile, borrow a prior target's prompts/skills/memory/tools, or convert required resources into grants.
+
+Role-bound native tool calls pass `validate_model_tool_call_binding` first and are then bound to the immutable role plan and effective typed tool capability by `bind_agent_role_tool_action` before executor admission. Role or model fallback returns an explicit recomposition decision; it does not downgrade the role or retain stale role-only resources. See [capability-bound semantic agent roles](agent-role-profiles.md).
+
 ## Dispatch, fallback, and returned calls
 
 `bind_model_dispatch_plan` requires both existing provider-neutral dispatch admission and a composed invocation plan in required mode. Router fallback returns `RecomposeForTarget`; the host must resolve and compose the new target from current explicit inputs. Same-target retry, resume, and replay may reuse only an exact immutable identity snapshot. Any target, profile, prompt, skill, memory, capability, tool catalog, tool plan, policy, or plan identity change requires explicit recomposition.

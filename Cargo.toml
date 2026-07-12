@@ -75,6 +75,7 @@ workspace = true
 
 [features]
 default = ["std"]
+agent-role-profiles = ["std", "animus-std/agent-role-profiles"]
 std = ["dep:animus-std"]
 iroh-host = ["std", "animus-std/iroh-host"]
 model-runtime-profiles = ["std", "animus-std/model-runtime-profiles"]

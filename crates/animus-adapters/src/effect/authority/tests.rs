@@ -18,12 +18,14 @@ const NETWORK_PREFIX: &str = "net:";
 const NETWORK_ABILITY: &str = "connect";
 const STEEL_PREFIX: &str = "steel:";
 const STEEL_ABILITY: &str = "evaluate";
+const AGENT_ROLE_PREFIX: &str = "role:";
+const AGENT_ROLE_ABILITY: &str = "activate";
 const OTHER_ABILITY: &str = "delete";
 const EMPTY_FIELD: &str = " ";
 const VALID_HASH: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const SAFE_RECEIPT_TEXT: &str = "status=allowed issue=none resource_hash=abc redaction=hash-only";
 const LEAKING_RECEIPT_TEXT: &str = "status=allowed RAW_PROMPT=send credential=secret";
-const GUARDED_ACTION_COUNT: usize = 6;
+const GUARDED_ACTION_COUNT: usize = 7;
 
 macro_rules! capability_request {
     ($action:expr, $resource:expr, $ability:expr) => {

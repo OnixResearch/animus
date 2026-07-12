@@ -174,7 +174,8 @@ fn read_only_outcome(action: super::super::GuardedAction) -> super::Outcome {
         super::super::GuardedAction::Filesystem
         | super::super::GuardedAction::Exec
         | super::super::GuardedAction::Network
-        | super::super::GuardedAction::Steel => super::Outcome::Ask,
+        | super::super::GuardedAction::Steel
+        | super::super::GuardedAction::AgentRole => super::Outcome::Ask,
     }
 }
 
@@ -185,7 +186,8 @@ fn guarded_outcome(action: super::super::GuardedAction) -> super::Outcome {
         | super::super::GuardedAction::Filesystem
         | super::super::GuardedAction::Exec
         | super::super::GuardedAction::Network
-        | super::super::GuardedAction::Steel => super::Outcome::Ask,
+        | super::super::GuardedAction::Steel
+        | super::super::GuardedAction::AgentRole => super::Outcome::Ask,
     }
 }
 
@@ -195,8 +197,8 @@ fn standard_outcome(action: super::super::GuardedAction) -> super::Outcome {
         | super::super::GuardedAction::Tool
         | super::super::GuardedAction::Filesystem
         | super::super::GuardedAction::Steel => super::Outcome::Allow,
-        super::super::GuardedAction::Exec | super::super::GuardedAction::Network => {
-            super::Outcome::Ask
-        }
+        super::super::GuardedAction::Exec
+        | super::super::GuardedAction::Network
+        | super::super::GuardedAction::AgentRole => super::Outcome::Ask,
     }
 }

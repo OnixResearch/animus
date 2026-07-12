@@ -96,6 +96,7 @@
               nickel export --format yaml --field pre_commit_config ${./config/repo.ncl} > "$tmp_dir/.pre-commit-config.yaml"
               nickel export --format json --field recipe_workflow_catalog ${./config/recipe-workflows.ncl} > "$tmp_dir/policy/recipe-workflows/generated/recipe-workflows.json"
               nickel export --format json --field model_runtime_profile_set ${./.}/config/model-runtime-profiles.ncl > "$tmp_dir/config/generated/model-runtime-profiles.json"
+              nickel export --format json --field agent_role_catalog ${./.}/config/agent-role-profiles.ncl > "$tmp_dir/config/generated/agent-role-profiles.json"
 
               diff -u ${./.cargo/config.toml} "$tmp_dir/.cargo/config.toml"
               diff -u ${./clippy.toml} "$tmp_dir/clippy.toml"
@@ -103,6 +104,7 @@
               diff -u ${./.pre-commit-config.yaml} "$tmp_dir/.pre-commit-config.yaml"
               diff -u ${./policy/recipe-workflows/generated/recipe-workflows.json} "$tmp_dir/policy/recipe-workflows/generated/recipe-workflows.json"
               diff -u ${./config/generated/model-runtime-profiles.json} "$tmp_dir/config/generated/model-runtime-profiles.json"
+              diff -u ${./config/generated/agent-role-profiles.json} "$tmp_dir/config/generated/agent-role-profiles.json"
             '';
           };
 
@@ -205,6 +207,7 @@
                 || baseName == "check-neutral-ledger"
                 || baseName == "check-nickel-policy-contracts"
                 || baseName == "check-model-runtime-profiles"
+                || baseName == "check-agent-role-profiles"
                 || baseName == "check-injected-services"
                 || baseName == "check-provenance-ledger"
                 || baseName == "check-release-evidence-index"
@@ -437,6 +440,14 @@
             pkgs.diffutils
           ] ''
             sh scripts/cairn/check-model-runtime-profiles --root .
+          '';
+
+          agent-role-profiles = cargoCheck "animus-agent-role-profiles" [
+            pkgs.nickel
+            pkgs.b3sum
+            pkgs.diffutils
+          ] ''
+            sh scripts/cairn/check-agent-role-profiles --root .
           '';
 
           exec-policy = cargoCheck "animus-exec-policy" [ pkgs.nickel ] ''

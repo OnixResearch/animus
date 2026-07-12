@@ -81,6 +81,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "headless",
     "loop",
     "model-runtime-profiles",
+    "agent-role-profiles",
     "policy",
     "provenance",
     "quality",
@@ -103,6 +104,7 @@ const ALLOWED_AUTHORITIES: &[&str] = &[
 
 const ALLOWED_FAMILIES: &[&str] = &[
     "adapter-contracts",
+    "agent-role",
     "compatibility",
     "batch",
     "compaction",

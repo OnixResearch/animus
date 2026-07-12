@@ -16,6 +16,8 @@
 #![forbid(unsafe_code)]
 
 mod adapters;
+#[cfg(feature = "agent-role-profiles")]
+mod agentroles;
 mod config;
 mod context;
 #[cfg(feature = "syndicate-host")]
@@ -38,6 +40,11 @@ pub use adapters::{
     AdapterDescriptor, AdapterFamily, AdapterIssue, AdapterPlan, AdapterVerdict, CredentialState,
     EffectExposure, EffectPrerequisites, FixtureKind, FixtureModelAdapter, FixtureOutput,
     FixtureToolAdapter, Fixtures, GateState, OutputState, TerminationState, plan_adapter_effect,
+};
+#[cfg(feature = "agent-role-profiles")]
+pub use agentroles::{
+    AgentRoleConfigError, AgentRoleJsonErrorKind, load_agent_role_profiles,
+    parse_agent_role_profiles_json,
 };
 /// Backwards-compatible name for deterministic fixture bundles.
 pub type FixtureAdapters = Fixtures;

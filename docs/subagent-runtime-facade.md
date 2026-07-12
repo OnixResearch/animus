@@ -8,6 +8,12 @@ The facade normalizes recipe-backed subagents, fresh-context investigations, rea
 
 Host execution remains injected. `SubagentService` is a caller-supplied port for enqueue, status, cancel, and collect operations. Missing or denied services fail closed and never cause a fallback scheduler, shell, provider, or external CLI to be constructed by reusable runtime code.
 
+## Semantic role ceiling
+
+`animus_runtime::agent_roles` is a separate semantic axis layered over this facade. The subagent resolver now accepts semantic role as an independent ceiling source, but a child `role` label, router `Judge` step, model role, prompt mode, or UI label does not create an `AgentRoleAssignment`. Assignment and activation require exact `GuardedAction::AgentRole` capabilities; later model, tool, workspace, mutation, review, verification, judgment, handoff, and output actions remain separately authorized.
+
+Concurrent child assignments never union role capabilities. Role changes rebuild context from admitted bounded subject/evidence records and drop prior role-only prompts, skill bodies, tools, pending calls, approvals, grants, hidden reasoning, and transcripts. See [capability-bound semantic agent roles](agent-role-profiles.md).
+
 ## Pure reducers
 
 The module includes deterministic reducers for:
@@ -31,6 +37,8 @@ Focused verification lives in `crates/animus-runtime/src/subagents.rs` unit test
 
 ```sh
 cargo test -p animus-runtime subagents --locked
+cargo test -p animus-runtime agent_roles --locked
+scripts/cairn/check-agent-role-profiles --root .
 cargo clippy -p animus-runtime --all-targets --no-deps -- -D warnings
 ```
 

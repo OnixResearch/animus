@@ -39,6 +39,11 @@ fn policy_fixtures_cover_guarded_action_taxonomy() {
         policy_contract!(GuardedAction::Exec, EXEC_PREFIX, EXEC_ABILITY),
         policy_contract!(GuardedAction::Network, NETWORK_PREFIX, NETWORK_ABILITY),
         policy_contract!(GuardedAction::Steel, STEEL_PREFIX, STEEL_ABILITY),
+        policy_contract!(
+            GuardedAction::AgentRole,
+            AGENT_ROLE_PREFIX,
+            AGENT_ROLE_ABILITY
+        ),
     ];
 
     assert_eq!(fixtures.len(), GUARDED_ACTION_COUNT);

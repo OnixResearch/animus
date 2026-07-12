@@ -1,0 +1,122 @@
+#!/usr/bin/env sh
+# r[verify agent_harness_runtime.agent_role_profiles.verification]
+set -eu
+
+readonly FAILURE=1
+readonly RECEIPT_SCHEMA='animus.focused-rail-receipt.v1'
+readonly RAIL_NAME='agent-role-profiles'
+readonly FIXTURE_ROOT='config/agent-role-profiles/fixtures'
+readonly PROFILE_SOURCE='config/agent-role-profiles.ncl'
+readonly GENERATED_PROFILE='config/generated/agent-role-profiles.json'
+readonly RUNTIME_SOURCE='crates/animus-runtime/src/agentroles'
+readonly STD_LOADER_SOURCE='crates/animus-std/src/agentroles.rs'
+readonly PROFILE_DOC='docs/agent-role-profiles.md'
+
+root='.'
+if [ "${1:-}" = '--root' ]; then
+  root=${2:-.}
+fi
+cd "${root}"
+
+if ! command -v nickel >/dev/null 2>&1; then
+  printf '%s\n' 'error: nickel is required for semantic agent-role checks' >&2
+  exit "${FAILURE}"
+fi
+if ! command -v b3sum >/dev/null 2>&1; then
+  printf '%s\n' 'error: b3sum is required for semantic role receipt identity' >&2
+  exit "${FAILURE}"
+fi
+
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/animus-agent-roles.XXXXXX")
+trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
+
+nickel export --format json --field agent_role_catalog "${PROFILE_SOURCE}" \
+  > "${tmp_dir}/agent-role-profiles.json"
+diff -u "${GENERATED_PROFILE}" "${tmp_dir}/agent-role-profiles.json"
+
+positive_count=0
+negative_count=0
+for fixture in "${FIXTURE_ROOT}"/*.ncl; do
+  case "${fixture}" in
+    */valid-*)
+      nickel eval --field fixture "${fixture}" >/dev/null
+      positive_count=$((positive_count + 1))
+      ;;
+    *)
+      if nickel eval --field fixture "${fixture}" \
+        >"${tmp_dir}/fixture.out" 2>"${tmp_dir}/fixture.err"
+      then
+        printf 'error: negative fixture unexpectedly passed: %s\n' "${fixture}" >&2
+        exit "${FAILURE}"
+      fi
+      expected_issue=$(nickel export --format raw --field expected_issue "${fixture}" 2>/dev/null)
+      if ! grep -F "${expected_issue}" "${tmp_dir}/fixture.err" >/dev/null; then
+        printf 'error: fixture %s missed issue %s\n' "${fixture}" "${expected_issue}" >&2
+        exit "${FAILURE}"
+      fi
+      negative_count=$((negative_count + 1))
+      ;;
+  esac
+done
+
+if [ "${positive_count}" -eq 0 ] || [ "${negative_count}" -eq 0 ]; then
+  printf '%s\n' 'error: semantic role fixtures require positive and negative cases' >&2
+  exit "${FAILURE}"
+fi
+
+for marker in \
+  'resolve_agent_role_capabilities' \
+  'compose_agent_role_model_plan' \
+  'evaluate_agent_role_separation' \
+  'evaluate_agent_role_transition' \
+  'admit_agent_role_output' \
+  'project_agent_role_receipt'
+do
+  if ! grep -R -F "${marker}" "${RUNTIME_SOURCE}" --include='*.rs' >/dev/null; then
+    printf 'error: semantic role runtime marker is missing: %s\n' "${marker}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+if ! grep -F 'parse_agent_role_profiles_json' "${STD_LOADER_SOURCE}" >/dev/null \
+  || ! grep -F 'load_agent_role_profiles' "${STD_LOADER_SOURCE}" >/dev/null \
+  || ! grep -F 'serde(deny_unknown_fields)' "${STD_LOADER_SOURCE}" >/dev/null
+then
+  printf '%s\n' 'error: std host semantic role loader markers are incomplete' >&2
+  exit "${FAILURE}"
+fi
+if ! grep -E 'Runtime code never evaluates Nickel|without runtime Nickel evaluation' \
+  "${PROFILE_DOC}" >/dev/null
+then
+  printf '%s\n' 'error: runtime Nickel non-evaluation boundary is undocumented' >&2
+  exit "${FAILURE}"
+fi
+
+cargo test -p animus-runtime --locked agent_roles
+cargo test -p animus-std --locked --features agent-role-profiles agentroles
+
+if grep -R -E 'std::fs|std::process|Command::new|std::env|TcpStream|UdpSocket|SystemTime::now|Instant::now' \
+  "${RUNTIME_SOURCE}" --include='*.rs' >/dev/null 2>&1
+then
+  printf '%s\n' 'error: semantic role pure core gained ambient host authority' >&2
+  exit "${FAILURE}"
+fi
+
+profile_source_hash=$(b3sum "${PROFILE_SOURCE}" | cut -d ' ' -f 1)
+generated_hash=$(b3sum "${GENERATED_PROFILE}" | cut -d ' ' -f 1)
+mkdir -p target/cairn/focused-rails
+receipt_path=target/cairn/focused-rails/${RAIL_NAME}.md
+cat > "${receipt_path}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+profile_source_blake3: ${profile_source_hash}
+generated_profile_blake3: ${generated_hash}
+positive_fixtures: ${positive_count}
+negative_fixtures: ${negative_count}
+claims: typed-role-contract,canonical-profile-identities,exact-authority-intersection,role-model-resource-composition,separation-of-duty,immutable-transition-binding,metadata-only-handoffs-and-outputs
+non_claims: runtime-nickel-evaluation,capability-minting,provider-execution,tool-execution,filesystem-discovery,credential-access,verifier-soundness,human-independence,authoritative-completion,whole-system-correctness
+EOF
+
+printf '%s\n' 'focused rail agent-role-profiles: pass'
+printf 'receipt: %s\n' "${receipt_path}"

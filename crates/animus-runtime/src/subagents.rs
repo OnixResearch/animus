@@ -16,7 +16,7 @@ const MAX_PACKET_ITEMS: u16 = 32;
 const MAX_PACKET_TOKENS: u32 = 8_192;
 const MAX_EVIDENCE_REFS: usize = 16;
 const MAX_CAPABILITY_CATALOG_ENTRIES: usize = 128;
-const CAPABILITY_CEILING_COUNT: usize = 4;
+const CAPABILITY_CEILING_COUNT: usize = 5;
 const CONTEXT_PACKET_HASH_PREFIX_PARTS: usize = 2;
 const MAX_FANOUT_CHILDREN: u16 = 16;
 const MAX_FANOUT_CONCURRENCY: u16 = 8;
@@ -367,6 +367,8 @@ pub enum SubagentCapabilityCeilingSource {
     ParentPolicy,
     /// Recipe or profile ceiling did not admit the request.
     RecipeOrProfile,
+    /// Semantic agent-role ceiling did not admit the request.
+    SemanticRole,
     /// Workspace scope did not admit the request.
     WorkspaceScope,
     /// Host admission did not admit the request.
@@ -391,6 +393,8 @@ pub struct SubagentCapabilityResolutionInput {
     pub recipe_or_profile: Vec<TypedSubagentCapability>,
     /// Capabilities requested by the child run.
     pub request: Vec<TypedSubagentCapability>,
+    /// Capabilities allowed by the independently admitted semantic role.
+    pub semantic_role: Vec<TypedSubagentCapability>,
     /// Capabilities allowed by workspace scope.
     pub workspace_scope: Vec<TypedSubagentCapability>,
     /// Capabilities admitted by host policy.
@@ -456,6 +460,7 @@ pub fn resolve_typed_subagent_capabilities(
     ensure_unique_capabilities(&input.parent_policy, "parent_policy")?;
     ensure_unique_capabilities(&input.recipe_or_profile, "recipe_or_profile")?;
     ensure_unique_capabilities(&input.request, "request")?;
+    ensure_unique_capabilities(&input.semantic_role, "semantic_role")?;
     ensure_unique_capabilities(&input.workspace_scope, "workspace_scope")?;
     ensure_unique_capabilities(&input.host_admission, "host_admission")?;
     let denial_slots = input.request.len().saturating_mul(CAPABILITY_CEILING_COUNT);
@@ -2348,12 +2353,15 @@ fn missing_capability_sources(
     input: &SubagentCapabilityResolutionInput,
     capability: &TypedSubagentCapability,
 ) -> Vec<SubagentCapabilityCeilingSource> {
-    let mut sources = Vec::new();
+    let mut sources = Vec::with_capacity(CAPABILITY_CEILING_COUNT);
     if !input.parent_policy.contains(capability) {
         sources.push(SubagentCapabilityCeilingSource::ParentPolicy);
     }
     if !input.recipe_or_profile.contains(capability) {
         sources.push(SubagentCapabilityCeilingSource::RecipeOrProfile);
+    }
+    if !input.semantic_role.contains(capability) {
+        sources.push(SubagentCapabilityCeilingSource::SemanticRole);
     }
     if !input.workspace_scope.contains(capability) {
         sources.push(SubagentCapabilityCeilingSource::WorkspaceScope);
@@ -2948,6 +2956,7 @@ mod tests {
         let resolution = resolve_typed_subagent_capabilities(&SubagentCapabilityResolutionInput {
             parent_policy: request.clone(),
             recipe_or_profile: request.clone(),
+            semantic_role: request.clone(),
             request,
             workspace_scope: denied_workspace,
             host_admission: conversion.capabilities.clone(),

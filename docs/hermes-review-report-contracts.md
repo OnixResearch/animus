@@ -2,6 +2,8 @@
 
 Animus adapts the Hermes review-report pattern as an Animus-owned, pure adapter contract. The parser operates over in-memory markdown only; hosts own file reads, storage, timestamps, and append-only persistence.
 
+When a host attributes a report to a semantic reviewer, the separate `animus_runtime::agent_roles` assignment must be subject-read-only, independently capability-authorized for review emission, bound to an immutable subject/model/policy/separation plan, and limited to advisory/tighten-only effects. Parsing a review report or naming a reviewer does not create that assignment, prove independence, override deterministic denials, grant mutation, or authorize completion. See [capability-bound semantic agent roles](agent-role-profiles.md).
+
 ## Grammar
 
 A report must contain a `VERDICT: PASS | WARN | FAIL` line. Optional `##` sections are parsed as bounded section metadata with line counts and BLAKE3 body hashes.

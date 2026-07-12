@@ -2,6 +2,8 @@
 
 Animus adapts dedicated Codex-style review as a read-only, diff-scoped runtime profile. The reusable adapter contract is data-only: hosts provide a validated change-set selector, source labels, model/tool services, and prior review state; reusable logic validates requests, policy decisions, findings, evidence bounds, and rerun state without reading files, invoking version control, mutating workspaces, opening pull requests, or escalating approvals.
 
+A diff-review profile is not itself a capability-bearing semantic reviewer. Hosts that need attributed role evidence must separately activate an `animus_runtime::agent_roles` reviewer assignment, satisfy its exact capability intersection and separation policy, bind the immutable subject, and authorize review output. The role remains unable to import raw diffs into durable output, mutate the subject, approve itself, grant authority, or establish completion.
+
 ## Request shape
 
 A review request uses a version-control-neutral selector:

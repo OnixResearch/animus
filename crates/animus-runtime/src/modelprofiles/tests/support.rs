@@ -419,7 +419,7 @@ pub(super) fn ceiling() -> ModelResourceCeiling<'static> {
     }
 }
 
-pub(super) fn admitted_dispatch_plan() -> crate::ModelDispatchPlan {
+pub(crate) fn admitted_dispatch_plan() -> crate::ModelDispatchPlan {
     let request =
         animus_adapters::ModelRequest::new("bounded test prompt").expect("valid model request");
     let registry = crate::RuntimeCapabilityRegistry::compatibility_model_tool()
@@ -432,7 +432,7 @@ pub(super) fn admitted_dispatch_plan() -> crate::ModelDispatchPlan {
     })
 }
 
-pub(super) fn composed_plan(
+pub(crate) fn composed_plan(
     mode: NativeToolCallingMode,
     posture: ModelSkillResourcePosture,
     native_tool_calls: bool,
@@ -478,7 +478,81 @@ pub(super) fn composed_plan(
     Ok((resolved, plan))
 }
 
-pub(super) fn tool_call_draft(plan: &ModelInvocationPlan) -> ModelToolCallBindingDraft<'_> {
+pub(crate) fn role_composed_plan(
+    profile: &crate::agent_roles::AgentRoleProfile,
+) -> Result<crate::agent_roles::AgentRoleBoundModelPlan, crate::agent_roles::AgentRoleError> {
+    let output_contracts = [profile.output_contract()];
+    let budget_policies = [profile.budget_policy_ref()];
+    let workspace_scopes = profile
+        .workspace_scopes()
+        .iter()
+        .map(String::as_str)
+        .collect::<Vec<_>>();
+    role_composed_plan_with_admission(
+        profile,
+        &output_contracts,
+        &budget_policies,
+        workspace_scopes.as_slice(),
+    )
+}
+
+pub(crate) fn role_composed_plan_with_admission(
+    profile: &crate::agent_roles::AgentRoleProfile,
+    admitted_output_contracts: &[&str],
+    admitted_budget_policies: &[&str],
+    admitted_workspace_scopes: &[&str],
+) -> Result<crate::agent_roles::AgentRoleBoundModelPlan, crate::agent_roles::AgentRoleError> {
+    let set = composition_profile_set(
+        NativeToolCallingMode::CapabilityRequired,
+        ModelSkillResourcePosture::MetadataOnly,
+    );
+    let resolved = resolved_composition_profile(&set);
+    let prompts = prompt_sources();
+    let prompt_policy = prompt_policy();
+    let manifest = skill_manifest(animus_adapters::SkillManifestTrustStatus::Trusted);
+    let skill_resources = [ModelSkillCompositionResource {
+        manifest: &manifest,
+        selected_body: None,
+        selection_profile_hash: None,
+        selection_target_hash: None,
+        invocation_admitted: true,
+        dependencies_admitted: true,
+        budget_admitted: true,
+    }];
+    let memory_policy = memory_policy();
+    let catalog = tool_catalog();
+    let executors = executor_bindings();
+    let capabilities = capability_matrix(true);
+    let capability_decision = capability_decision();
+    let ceilings = [ceiling()];
+    crate::agent_roles::compose_agent_role_model_plan(
+        crate::agent_roles::AgentRoleModelCompositionInput {
+            profile,
+            model: ModelInvocationCompositionInput {
+                resolved: &resolved,
+                capabilities: &capabilities,
+                capability_decision: &capability_decision,
+                prompt_sources: &prompts,
+                prompt_policy: &prompt_policy,
+                skills: &skill_resources,
+                memory_policy: Some(&memory_policy),
+                tool_catalog: &catalog,
+                executor_bindings: &executors,
+                tool_catalog_identity: CATALOG_HASH,
+                authority: ModelInvocationAuthority {
+                    ceilings: &ceilings,
+                    approved_tools: &[],
+                    policy_hash: POLICY_HASH,
+                },
+            },
+            admitted_output_contracts,
+            admitted_budget_policies,
+            admitted_workspace_scopes,
+        },
+    )
+}
+
+pub(crate) fn tool_call_draft(plan: &ModelInvocationPlan) -> ModelToolCallBindingDraft<'_> {
     ModelToolCallBindingDraft {
         tool_name: TOOL_NAME,
         invocation_plan_hash: plan.plan_hash(),
