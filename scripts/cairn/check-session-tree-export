@@ -1,0 +1,132 @@
+#!/usr/bin/env sh
+# r[impl agent_harness_runtime.session_tree_export.verification]
+# r[verify agent_harness_runtime.session_tree_export.verification]
+set -eu
+
+readonly FAILURE=1
+readonly RECEIPT_SCHEMA='animus.focused-rail-receipt.v1'
+readonly RAIL_NAME='session-tree-export'
+readonly POLICY_SOURCE='config/session-tree-export-policy.ncl'
+readonly GENERATED_POLICY='config/generated/session-tree-export-policy.json'
+readonly POLICY_FIXTURES='config/session-tree-export-policy/fixtures'
+readonly RUNTIME_SOURCE='crates/animus-runtime/src/sessionexport'
+readonly RUNTIME_ROOT='crates/animus-runtime/src/lib.rs'
+readonly STD_SOURCE='crates/animus-std/src/sessiontreeexport.rs'
+readonly STD_TEST_SOURCE='crates/animus-std/src/sessiontreeexport/tests.rs'
+readonly STD_ROOT='crates/animus-std/src/lib.rs'
+readonly CONTRACT_DOC='docs/redacted-session-tree-export.md'
+
+root='.'
+if [ "${1:-}" = '--root' ]; then
+  root=${2:-.}
+fi
+cd "${root}"
+
+for command_name in cargo nickel b3sum diff; do
+  if ! command -v "${command_name}" >/dev/null 2>&1; then
+    printf 'error: %s is required for session-tree-export checks\n' "${command_name}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+for marker in \
+  'validate_session_tree_export_policy' \
+  'project_session_tree_export' \
+  'render_session_tree_export' \
+  'project_session_tree_export_receipt' \
+  'SessionTreeExportWriteEvidence'
+do
+  if ! grep -R -F "${marker}" "${RUNTIME_SOURCE}" --include='*.rs' >/dev/null; then
+    printf 'error: session-tree-export marker is missing: %s\n' "${marker}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+for marker in \
+  'SessionTreeExportWriteService' \
+  'execute_session_tree_export_write' \
+  'project_session_tree_export_write_evidence'
+do
+  if ! grep -F "${marker}" "${STD_SOURCE}" >/dev/null; then
+    printf 'error: session-tree-export host marker is missing: %s\n' "${marker}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+if ! grep -F 'pub mod session_tree_export {' "${RUNTIME_ROOT}" >/dev/null; then
+  printf '%s\n' 'error: session-tree-export public module is missing' >&2
+  exit "${FAILURE}"
+fi
+if ! grep -F 'not a raw journal backup, training dataset, or release-evidence export' "${CONTRACT_DOC}" >/dev/null; then
+  printf '%s\n' 'error: session-tree-export non-overlap boundary is undocumented' >&2
+  exit "${FAILURE}"
+fi
+
+if grep -R -E 'std::fs|std::process|Command::new|std::env|TcpStream|UdpSocket|SystemTime::now|Instant::now|thread::sleep|tokio::time|reqwest|hyper::' \
+  "${RUNTIME_SOURCE}" --include='*.rs' >/dev/null 2>&1
+then
+  printf '%s\n' 'error: session-tree-export pure core gained ambient host authority' >&2
+  exit "${FAILURE}"
+fi
+
+policy_export=$(mktemp)
+fixture_error=$(mktemp)
+trap 'rm -f "${policy_export}" "${fixture_error}"' EXIT HUP INT TERM
+nickel export --format json --field session_tree_export_policy "${POLICY_SOURCE}" > "${policy_export}"
+diff -u "${GENERATED_POLICY}" "${policy_export}"
+nickel export --format json --field fixture "${POLICY_FIXTURES}/valid-minimal.ncl" >/dev/null
+for fixture in "${POLICY_FIXTURES}"/negative-*.ncl; do
+  expected_issue=$(nickel export --format raw --field expected_issue "${fixture}")
+  if nickel export --format json --field fixture "${fixture}" >/dev/null 2>"${fixture_error}"; then
+    printf 'error: negative session-tree-export fixture unexpectedly passed: %s\n' "${fixture}" >&2
+    exit "${FAILURE}"
+  fi
+  if ! grep -F "${expected_issue}" "${fixture_error}" >/dev/null; then
+    printf 'error: session-tree-export fixture missed issue %s: %s\n' "${expected_issue}" "${fixture}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+cargo test -p animus-runtime --locked redactedview
+cargo test -p animus-std --features session-tree-export --locked redactedwriter
+cargo test -p animus-runtime --locked dataset_export
+cargo test -p animus-runtime --locked session_persistence
+cargo test -p animus-runtime --locked pi_compaction
+cargo test -p animus-runtime --locked session_recovery
+cargo clippy -p animus-runtime --all-targets --locked -- -D warnings
+cargo clippy -p animus-std --all-targets --features session-tree-export --locked -- -D warnings
+cargo check -p animus --features session-tree-export --locked
+cargo check -p animus-runtime --no-default-features --locked
+cargo check -p animus-std --no-default-features --locked
+cargo check -p animus --no-default-features --locked
+
+source_hash=$(
+  b3sum \
+    "${POLICY_SOURCE}" \
+    "${POLICY_FIXTURES}"/*.ncl \
+    "${GENERATED_POLICY}" \
+    "${RUNTIME_SOURCE}/mod.rs" \
+    "${RUNTIME_SOURCE}/data.rs" \
+    "${RUNTIME_SOURCE}/core.rs" \
+    "${RUNTIME_SOURCE}/render.rs" \
+    "${RUNTIME_SOURCE}/receipt.rs" \
+    "${RUNTIME_SOURCE}/tests.rs" \
+    "${RUNTIME_ROOT}" \
+    "${STD_SOURCE}" \
+    "${STD_TEST_SOURCE}" \
+    "${STD_ROOT}" \
+    "${CONTRACT_DOC}" | b3sum | cut -d ' ' -f 1
+)
+mkdir -p target/cairn/focused-rails
+receipt_path=target/cairn/focused-rails/${RAIL_NAME}.md
+cat > "${receipt_path}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+source_blake3: ${source_hash}
+claims: generated-policy-revalidation,validated-metadata-source,topology-and-storage-order,stale-repair-rejection,redaction-first-projection,escaped-script-free-html,safe-lines,byte-determinism,explicit-destination-write,exact-write-evidence,metadata-only-receipt
+non_claims: raw-journal-backup,training-dataset,release-evidence,session-correctness,omitted-content-completeness,exactly-once-effects,filesystem-durability,interactive-web-serving,production-readiness
+EOF
+
+printf '%s\n' 'focused rail session-tree-export: pass'
+printf 'receipt: %s\n' "${receipt_path}"

@@ -25,3 +25,4 @@ diff -u policy/recipe-workflows/generated/recipe-workflows.json "${tmp_dir}/poli
 diff -u config/generated/model-runtime-profiles.json "${tmp_dir}/config/generated/model-runtime-profiles.json"
 diff -u config/generated/agent-role-profiles.json "${tmp_dir}/config/generated/agent-role-profiles.json"
 diff -u config/generated/provider-retry-policy.json "${tmp_dir}/config/generated/provider-retry-policy.json"
+diff -u config/generated/session-tree-export-policy.json "${tmp_dir}/config/generated/session-tree-export-policy.json"

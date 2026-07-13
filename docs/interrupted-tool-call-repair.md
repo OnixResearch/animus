@@ -45,6 +45,8 @@ Repair receipts contain only schema, mode/status/reason classes, old/new leaf ha
 
 A passing repair receipt establishes only that supplied metadata describes a complete append-only repair and clean replay for the bound branch. It does not prove the interruption cause, that an external side effect did not occur, exactly-once behavior, provider acceptance, store or kernel correctness, arbitrary provider transcript compatibility, or production recovery.
 
+[Redacted session-tree export](redacted-session-tree-export.md) can display a repair marker and its exact prior-entry target only after the repaired session metadata validates. A missing, self, or future repair target blocks rendering. Export neither applies repair nor upgrades repair evidence into session-correctness proof.
+
 ## Verification
 
 ```text

@@ -61,6 +61,16 @@ pub use animus_std::{
     retry_model_request_hash,
 };
 
+/// Re-export of host-owned redacted session-tree export loading and writing seams.
+#[cfg(feature = "session-tree-export")]
+pub use animus_std::{
+    SessionTreeExportConfigError, SessionTreeExportJsonErrorKind, SessionTreeExportWriteCall,
+    SessionTreeExportWriteError, SessionTreeExportWriteOutcome, SessionTreeExportWriteRequest,
+    SessionTreeExportWriteService, execute_session_tree_export_write,
+    load_session_tree_export_policy, parse_session_tree_export_policy_json,
+    project_session_tree_export_write_evidence,
+};
+
 /// Re-export of the optional host-owned Iroh agent communication adapter seam.
 #[cfg(feature = "iroh-host")]
 pub use animus_std::{

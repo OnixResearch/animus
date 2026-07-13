@@ -37,6 +37,9 @@ mod observability;
 #[cfg(feature = "provider-retry")]
 mod providerretry;
 mod providers;
+#[cfg(feature = "session-tree-export")]
+#[path = "sessiontreeexport.rs"]
+mod redactedwriter;
 
 pub use adapters::{
     AdapterDescriptor, AdapterFamily, AdapterIssue, AdapterPlan, AdapterVerdict, CredentialState,
@@ -138,6 +141,14 @@ pub use providers::{
     render_openai_responses_request_fixture, resolve_credential_from_env_pairs,
     validate_provider_dispatch_constructor_inventory, validate_provider_dispatch_receipt,
     validate_provider_dispatch_shared_field_matrix,
+};
+#[cfg(feature = "session-tree-export")]
+pub use redactedwriter::{
+    SessionTreeExportConfigError, SessionTreeExportJsonErrorKind, SessionTreeExportWriteCall,
+    SessionTreeExportWriteError, SessionTreeExportWriteOutcome, SessionTreeExportWriteRequest,
+    SessionTreeExportWriteService, execute_session_tree_export_write,
+    load_session_tree_export_policy, parse_session_tree_export_policy_json,
+    project_session_tree_export_write_evidence,
 };
 
 /// Public runtime configuration type.

@@ -26,6 +26,10 @@ Animus adapts Pi's branchable session history as a neutral, in-memory runtime co
 
 The neutral ledger owns active-leaf selection and replay ordering. Interrupted-tool repair owns exact call/result diagnosis and an append-only application request over the host-supplied active branch. The host must durably append the complete plan, move the active leaf, and rerun ledger plus repair validation before provider dispatch. Sibling branches remain unchanged.
 
+## Redacted human export
+
+The ledger remains the owner of validated topology, storage order, and active-leaf selection. [Redacted session-tree export](redacted-session-tree-export.md) consumes a separate safe metadata projection after ledger/replay validation; it never opens the ledger store or promotes sibling entries into model-visible replay. Raw journal administration and dataset export remain separate products.
+
 ## Non-claims
 
-This is not Pi's JSONL file format, a database API, a TUI branch navigator, or a persistence implementation. Hosts choose storage and ID generation; reusable Animus code validates and replays caller-supplied snapshots only.
+This is not Pi's JSONL file format, a database API, a TUI branch navigator, a human export renderer, or a persistence implementation. Hosts choose storage and ID generation; reusable Animus code validates and replays caller-supplied snapshots only.

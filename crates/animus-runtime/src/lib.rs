@@ -89,11 +89,17 @@ pub mod provider_retry {
     pub use super::resilience::*;
 }
 mod quality_records;
+#[path = "sessionexport/mod.rs"]
+mod redactedview;
 mod researchspec;
 #[path = "researchspecpromotiondag.rs"]
 pub mod researchspec_promotion_dag;
 mod runtime_dag;
 mod scaffold;
+/// Pure redaction-first session-tree export contracts.
+pub mod session_tree_export {
+    pub use super::redactedview::*;
+}
 #[path = "sessionpersistence.rs"]
 pub mod session_persistence;
 mod shell;

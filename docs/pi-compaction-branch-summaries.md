@@ -47,3 +47,5 @@ nix develop -c cargo test -p animus-runtime pi_compaction
 ```
 
 The tests cover enabled/disabled/under-budget/over-budget/missing-estimate trigger decisions, safe tool-call/result cut points, split-turn prefix planning, branch handoff spans, missing summarizer fail-closed behavior, ready summarizer dispatch, valid redacted metadata, and unsafe raw metadata rejection.
+
+[Redacted session-tree export](redacted-session-tree-export.md) may display admitted compaction and branch-summary markers after replay validation. It does not invoke summarizers, recover dropped content, or treat a summary as proof that omitted history is complete.
