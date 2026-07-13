@@ -100,8 +100,14 @@ mod scaffold;
 pub mod session_tree_export {
     pub use super::redactedview::*;
 }
+#[path = "sessionstore/mod.rs"]
+mod durablelog;
 #[path = "sessionpersistence.rs"]
 pub mod session_persistence;
+/// Pure durable local session-store framing, recovery, and receipt contracts.
+pub mod durable_session_store {
+    pub use super::durablelog::*;
+}
 mod shell;
 mod status;
 pub mod subagents;

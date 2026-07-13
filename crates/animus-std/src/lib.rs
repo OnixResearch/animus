@@ -25,6 +25,9 @@ mod dataspace;
 mod document;
 #[cfg(feature = "dogfood-smoke")]
 mod dogfood_smoke;
+#[cfg(feature = "durable-session-store")]
+#[path = "sessionstore.rs"]
+mod durablefile;
 mod execution;
 mod hostadapters;
 #[cfg(feature = "iroh-host")]
@@ -111,6 +114,14 @@ pub type InMemoryObservabilitySink = observability::InMemorySink;
 /// Root public name for the no-op observability sink.
 #[cfg(feature = "observability-host")]
 pub type NoopObservabilitySink = observability::NoopSink;
+#[cfg(feature = "durable-session-store")]
+pub use durablefile::{
+    DurableSessionCommitOutcome, DurableSessionHostError, DurableSessionHostIssue,
+    DurableSessionLocalStore, DurableSessionStoreConfigError, DurableSessionStoreJsonErrorKind,
+    DurableSessionStoreLocation, DurableSessionStoreOpenRequest, DurableSessionSynchronizer,
+    FileSynchronizer, load_durable_session_store_policy, open_durable_session_store,
+    parse_durable_session_store_policy_json, read_durable_session_snapshot,
+};
 #[cfg(feature = "provider-retry")]
 pub use providerretry::{
     ProviderRetryConfigError, ProviderRetryDispatchError, ProviderRetryDispatchInput,

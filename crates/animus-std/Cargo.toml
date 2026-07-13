@@ -14,6 +14,7 @@ workspace = true
 default = ["observability-host"]
 agent-role-profiles = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 dogfood-smoke = ["dep:animus-runtime"]
+durable-session-store = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 model-runtime-profiles = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 provider-retry = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 session-tree-export = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]

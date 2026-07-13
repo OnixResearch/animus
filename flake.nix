@@ -99,6 +99,7 @@
               nickel export --format json --field agent_role_catalog ${./.}/config/agent-role-profiles.ncl > "$tmp_dir/config/generated/agent-role-profiles.json"
               nickel export --format json --field provider_retry_policy ${./.}/config/provider-retry-policy.ncl > "$tmp_dir/config/generated/provider-retry-policy.json"
               nickel export --format json --field session_tree_export_policy ${./.}/config/session-tree-export-policy.ncl > "$tmp_dir/config/generated/session-tree-export-policy.json"
+              nickel export --format json --field durable_session_store_policy ${./.}/config/durable-session-store-policy.ncl > "$tmp_dir/config/generated/durable-session-store-policy.json"
 
               diff -u ${./.cargo/config.toml} "$tmp_dir/.cargo/config.toml"
               diff -u ${./clippy.toml} "$tmp_dir/clippy.toml"
@@ -109,6 +110,7 @@
               diff -u ${./config/generated/agent-role-profiles.json} "$tmp_dir/config/generated/agent-role-profiles.json"
               diff -u ${./config/generated/provider-retry-policy.json} "$tmp_dir/config/generated/provider-retry-policy.json"
               diff -u ${./config/generated/session-tree-export-policy.json} "$tmp_dir/config/generated/session-tree-export-policy.json"
+              diff -u ${./config/generated/durable-session-store-policy.json} "$tmp_dir/config/generated/durable-session-store-policy.json"
             '';
           };
 

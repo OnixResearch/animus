@@ -61,6 +61,16 @@ pub use animus_std::{
     retry_model_request_hash,
 };
 
+/// Re-export of the capability-scoped durable local session-store host.
+#[cfg(feature = "durable-session-store")]
+pub use animus_std::{
+    DurableSessionCommitOutcome, DurableSessionHostError, DurableSessionHostIssue,
+    DurableSessionLocalStore, DurableSessionStoreConfigError, DurableSessionStoreJsonErrorKind,
+    DurableSessionStoreLocation, DurableSessionStoreOpenRequest, DurableSessionSynchronizer,
+    FileSynchronizer, load_durable_session_store_policy, open_durable_session_store,
+    parse_durable_session_store_policy_json, read_durable_session_snapshot,
+};
+
 /// Re-export of host-owned redacted session-tree export loading and writing seams.
 #[cfg(feature = "session-tree-export")]
 pub use animus_std::{
