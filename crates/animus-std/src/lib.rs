@@ -32,6 +32,9 @@ mod execution;
 mod hostadapters;
 #[cfg(feature = "iroh-host")]
 mod iroh;
+// r[impl agent_harness_runtime.syndicate_iroh_bridge.feature]
+#[cfg(feature = "iroh-syndicate-host")]
+mod irohsyndicate;
 mod modelevidence;
 #[cfg(feature = "model-runtime-profiles")]
 mod modelprofiles;
@@ -116,6 +119,8 @@ pub use iroh::{
     iroh_route_receipt, project_assertion_frame, project_iroh_frame,
     project_orchestration_event_frame,
 };
+#[cfg(feature = "iroh-syndicate-host")]
+pub use irohsyndicate::{IrohSyndicatePacketSession, IrohSyndicatePacketTransport};
 #[cfg(feature = "syndicate-host")]
 pub use syndicate::{
     DEFAULT_SYNDICATE_MAX_PACKET_BYTES, SyndicateHandleState, SyndicatePacketTransport,

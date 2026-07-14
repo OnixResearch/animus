@@ -40,7 +40,7 @@ The caller-owned session must provide:
 - one self-delimiting Preserves packet per adapter call; and
 - session reset or reconciliation after ambiguous send failures.
 
-Iroh can satisfy the transport role when the host binds this profile during route admission and records its own endpoint, key, relay, retry, and session evidence.
+Iroh can satisfy the transport role through the explicit [`iroh-syndicate-host` composition](iroh-syndicate-composition.md) when the host binds this profile during route admission and records its own endpoint, key, relay, retry, and session evidence. The bridge preserves one turn packet per effect and does not wrap it as a legacy direct agent-comms frame.
 
 ## Capability boundary
 

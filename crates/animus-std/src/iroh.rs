@@ -1013,7 +1013,7 @@ mod tests {
         })
         .expect_err("missing redaction should fail");
         let receipt_leak =
-            animus_adapters::AgentCommsReceipt::new(animus_adapters::AgentCommsReceiptDraft {
+            animus_adapters::AgentCommsReceipt::new(&animus_adapters::AgentCommsReceiptDraft {
                 route_label: RAW_TICKET_NODE,
                 transport_family: animus_adapters::AgentCommsTransportFamily::Iroh.as_str(),
                 scope: scope(WORKSPACE),

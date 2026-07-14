@@ -20,6 +20,7 @@ provider-retry = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 session-tree-export = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 observability-host = ["dep:animus-std-observability"]
 iroh-host = []
+iroh-syndicate-host = ["iroh-host", "syndicate-host"]
 syndicate-host = ["dep:animus-preserves"]
 
 [[bin]]

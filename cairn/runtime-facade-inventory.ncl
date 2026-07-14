@@ -212,6 +212,8 @@ let entry_values = [
   entry "animus::project_assertion_frame" "animus" root shell shell_owned stable "root Iroh shell assertion frame projector reexport",
   entry "animus::project_iroh_frame" "animus" root shell shell_owned stable "root Iroh shell frame projector reexport",
   entry "animus::project_orchestration_event_frame" "animus" root shell shell_owned stable "root Iroh shell orchestration event frame projector reexport",
+  entry "animus::IrohSyndicatePacketSession" "animus" root injection injected stable "root caller-owned Iroh Syndicate packet session port reexport",
+  entry "animus::IrohSyndicatePacketTransport" "animus" root shell shell_owned stable "root Iroh Syndicate packet transport bridge reexport",
   syndicate_record "animus::DEFAULT_SYNDICATE_MAX_PACKET_BYTES" "animus" root reusable none "root Syndicate packet bound reexport",
   syndicate_record "animus::MAX_SYNDICATE_TURN_EVENTS" "animus" root reusable none "root Syndicate turn event bound reexport",
   syndicate_record "animus::SYNDICATE_PROTOCOL_PROFILE" "animus" root reusable none "root Syndicate protocol profile label reexport",
@@ -983,6 +985,8 @@ let entry_values = [
   syndicate_record "animus-std::plan_syndicate_handle_transition" "animus-std" std_shell reusable none "pure Syndicate handle transition planner",
   syndicate_record "animus-std::to_syndicate_turn_bytes" "animus-std" std_shell reusable none "Syndicate binary encoder reexport",
   syndicate_record "animus-std::to_syndicate_turn_text" "animus-std" std_shell reusable none "Syndicate text encoder reexport",
+  entry "animus-std::IrohSyndicatePacketSession" "animus-std" std_shell injection injected optional_stability "caller-owned Iroh Syndicate packet session port",
+  entry "animus-std::IrohSyndicatePacketTransport" "animus-std" std_shell shell shell_owned optional_stability "feature-gated Iroh Syndicate packet transport bridge",
 
   entry "animus-steel::LoopDecision" "animus-steel" steel reusable none optional_stability "Steel loop decision DTO",
   entry "animus-steel::LoopError" "animus-steel" steel reusable none optional_stability "Steel loop error",

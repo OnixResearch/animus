@@ -4,7 +4,7 @@
 //! variables, opens files, starts processes, contacts networks, inspects
 //! credentials, persists state, or accesses terminal state.
 
-const HOST_ADAPTER_DESCRIPTOR_COUNT: usize = 9;
+const HOST_ADAPTER_DESCRIPTOR_COUNT: usize = 10;
 const NO_HOST_EFFECT: &[HostAuthority] = &[HostAuthority::NoHostEffect];
 const ENVIRONMENT_AUTHORITY: &[HostAuthority] = &[HostAuthority::EnvironmentRead];
 const FILESYSTEM_AUTHORITY: &[HostAuthority] = &[HostAuthority::FilesystemRead];
@@ -75,6 +75,8 @@ pub enum HostAdapterFamily {
     IrohTransport,
     /// Optional Syndicate transport seam.
     SyndicateTransport,
+    /// Optional composition of Iroh transport and Syndicate turn packets.
+    IrohSyndicateTransport,
     /// Packaged smoke and demonstration shell.
     SmokeDemo,
 }
@@ -92,6 +94,7 @@ impl HostAdapterFamily {
             Self::ModelEvidenceIngest => "model_evidence_ingest",
             Self::IrohTransport => "iroh_transport",
             Self::SyndicateTransport => "syndicate_transport",
+            Self::IrohSyndicateTransport => "iroh_syndicate_transport",
             Self::SmokeDemo => "smoke_demo",
         }
     }
@@ -225,6 +228,15 @@ const HOST_ADAPTER_DESCRIPTORS: [HostAdapterDescriptor; HOST_ADAPTER_DESCRIPTOR_
         facade_path: "animus_std::{SyndicateHostDataspaceAdapter,SyndicateProtocolAdapter}",
         direct_dependency: "animus-std/syndicate-host",
         focused_check: "cargo test -p animus-std --features syndicate-host --locked",
+    },
+    HostAdapterDescriptor {
+        family: HostAdapterFamily::IrohSyndicateTransport,
+        owner: "animus-std::irohsyndicate",
+        feature_gate: "iroh-syndicate-host",
+        required_authority: TRANSPORT_AUTHORITY,
+        facade_path: "animus_std::IrohSyndicatePacketTransport",
+        direct_dependency: "animus-std/iroh-syndicate-host",
+        focused_check: "cargo test -p animus-std --features iroh-syndicate-host irohsyndicate --locked",
     },
     HostAdapterDescriptor {
         family: HostAdapterFamily::SmokeDemo,

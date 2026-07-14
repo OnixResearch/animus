@@ -13,6 +13,8 @@ The public seam is split into a pure validation/projector core and a thin impera
 
 Raw Iroh tickets, node-address bodies, relay URLs, private keys, authorization headers, prompts, provider payloads, credentials, file bodies, tool payloads, model outputs, and unbounded logs are rejected before transport effects. Hosts that want live Iroh networking must supply their own endpoint, ticket handling, authentication, relay selection, persistence, retry policy, and smoke-test evidence.
 
+For Syndicate coordination, use the explicit [`iroh-syndicate-host` composition](iroh-syndicate-composition.md). Do not mix this direct assertion/event compatibility seam and Syndicate turn packets on one logical session.
+
 Focused rail:
 
 ```sh

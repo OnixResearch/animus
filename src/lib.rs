@@ -91,6 +91,10 @@ pub use animus_std::{
     project_orchestration_event_frame,
 };
 
+/// Re-export of the optional Iroh transport composition for Syndicate turn packets.
+#[cfg(feature = "iroh-syndicate-host")]
+pub use animus_std::{IrohSyndicatePacketSession, IrohSyndicatePacketTransport};
+
 /// Re-export of the optional host-owned Syndicate turn protocol adapter.
 #[cfg(feature = "syndicate-host")]
 pub use animus_std::{
