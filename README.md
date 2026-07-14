@@ -197,6 +197,10 @@ pre-commit install
 
 The `nickel-configs` hook runs `scripts/config/check-nickel-configs` before each commit to reject generated-config drift. The `octet-lints` hook runs `scripts/hooks/octet-lints`; that wrapper invokes the pinned flake app with `nix run .#cargo-tigerstyle -- check` when Nix is available, then falls back to `cargo tigerstyle check`.
 
+## License
+
+Repository-owned Animus crates are `MIT OR Apache-2.0`; complete texts are in [LICENSES](LICENSES). Optional AGPL dependencies and integrations retain their own terms and are not enabled by default. The reusable core/adapters must not acquire accidental AGPL coupling. Third-party code and generated material containing upstream source retain upstream terms.
+
 ## References
 
 - [Basalt](https://github.com/OnixResearch/basalt) — hardened UCAN contract boundaries for Nickel policy artifacts and Steel DTO evaluation backends. Added as the optional Cargo feature `basalt-reference` through the SSH-pinned `basalt` package and as a flake source input.
