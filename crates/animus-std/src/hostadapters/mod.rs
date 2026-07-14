@@ -219,10 +219,10 @@ const HOST_ADAPTER_DESCRIPTORS: [HostAdapterDescriptor; HOST_ADAPTER_DESCRIPTOR_
     },
     HostAdapterDescriptor {
         family: HostAdapterFamily::SyndicateTransport,
-        owner: "animus-std::dataspace",
+        owner: "animus-std::{dataspace,syndicate}",
         feature_gate: "syndicate-host",
         required_authority: TRANSPORT_AUTHORITY,
-        facade_path: "animus_std::SyndicateHostDataspaceAdapter",
+        facade_path: "animus_std::{SyndicateHostDataspaceAdapter,SyndicateProtocolAdapter}",
         direct_dependency: "animus-std/syndicate-host",
         focused_check: "cargo test -p animus-std --features syndicate-host --locked",
     },

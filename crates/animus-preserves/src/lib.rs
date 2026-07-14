@@ -17,6 +17,7 @@ mod error;
 mod family_codec;
 mod message;
 mod schema;
+mod syndicate;
 
 /// Policy-visible compatibility records with owning DTO revalidation.
 pub mod policy;
@@ -44,6 +45,11 @@ pub use message::{RuntimeFailureEnvelope, RuntimeReportStatus};
 pub use schema::{
     BoundaryRecord, CompatibilityField, CoverageTier, SchemaDescriptor, SchemaFamily,
     SchemaIdentity, WireStatus, schema_catalog, schema_identity_for_message,
+};
+pub use syndicate::{
+    MAX_SYNDICATE_TURN_EVENTS, SYNDICATE_PROTOCOL_PROFILE, SyndicateEvent, SyndicateEventKind,
+    SyndicateTurn, SyndicateTurnEvent, from_syndicate_turn_bytes, from_syndicate_turn_text,
+    to_syndicate_turn_bytes, to_syndicate_turn_text,
 };
 
 /// Error returned by Preserves bridge operations.

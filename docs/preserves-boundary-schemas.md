@@ -13,6 +13,7 @@ The broad `animus-preserves` package remains a compatibility facade. New adapter
 | session/provenance | `animus_preserves::provenance` | schema primitives, `animus-runtime`, `preserves`, `serde` | compatibility import/export | safe session labels and hash identities only; stack-owned producers should use BLAKE3; no transcript or storage bodies | `preserves.session-provenance.compat.v1`; `cargo test -p animus-preserves provenance` |
 | policy-visible DTO | `animus_preserves::policy` | `animus-adapters`, schema primitives, `preserves`, `serde` | compatibility import/export | safe policy hashes, decision classes, reason classes, and bounded metadata only | `preserves.policy-visible.compat.v1`; `cargo test -p animus-preserves policy` |
 | dataspace DTO | `animus_preserves::dataspace` | `animus-adapters`, schema primitives, `preserves`, `serde` | stable text and binary wire | bounded scope IDs, assertion labels, counts, leases, hashes, and redaction markers | `preserves.dataspace.v1`; `cargo test -p animus-preserves dataspace` |
+| Syndicate turn | `animus_preserves::syndicate` | `animus-adapters`, schema primitives, `preserves`, `serde` | stable capability-free `A`/`R`/`M` turn profile | validated dataspace record bodies, non-negative OIDs/handles, bounded event count; no WireRefs, sync, caveats, extensions, errors, or arbitrary bodies | `preserves.syndicate-turn.v1`; `cargo test -p animus-preserves syndicate` |
 | dataset/export row | `animus_preserves::review` | schema primitives only at the declaration layer | Review-only | fixture metadata is review evidence only | `preserves.dataset.review.v1`; no encoder or compatibility importer |
 
 `animus_preserves::schema_catalog()` records owner, family identity, coverage tier, dependency set, safe-metadata policy, wire status, and fixture-set identity for every row.
@@ -67,6 +68,7 @@ Unknown fields are never ambiently accepted. Safe future metadata survives only 
 ## Core-isolation invariants
 
 - `animus-core`, adapter contracts, and runtime decision cores do not parse or write `preserves::value` directly.
+- The Syndicate turn codec uses `preserves::value` only inside the family boundary to preserve exact top-level sequence and `A`/`R`/`M` record shapes.
 - Codec calls remain in family boundary crates/modules.
 - Adapter-only Preserves users do not gain runtime dependencies.
 - Decoded DTOs pass their owning constructors before behavior decisions run.
@@ -78,6 +80,7 @@ Run the focused rail:
 
 ```console
 nix develop -c cargo test -p animus-preserves-schema -p animus-preserves-adapter -p animus-preserves
+nix develop -c cargo test -p animus-preserves syndicate --locked
 nix develop -c cargo clippy -p animus-preserves-schema -p animus-preserves-adapter -p animus-preserves --all-targets -- -D warnings
 nix develop -c scripts/cairn/check-preserves-boundary-schemas --root .
 ```

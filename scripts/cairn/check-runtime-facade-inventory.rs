@@ -113,6 +113,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "router",
     "scaffold",
     "status",
+    "syndicate-host",
     "worker-team",
 ];
 
@@ -146,6 +147,7 @@ const ALLOWED_FAMILIES: &[&str] = &[
     "worker-team",
     "steel",
     "orchestration",
+    "preserves",
 ];
 
 const AMBIENT_AUTHORITY_MARKERS: &[&str] = &[

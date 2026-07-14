@@ -5,7 +5,7 @@
 
 /// Current supported version for every cataloged schema family.
 pub const CURRENT_SCHEMA_VERSION: u16 = 1;
-const SCHEMA_CATALOG_LEN: usize = 8;
+const SCHEMA_CATALOG_LEN: usize = 9;
 
 const ADAPTER_OWNER: &str = "animus-preserves-adapter";
 const RUNTIME_OWNER: &str = "animus-preserves::runtime";
@@ -13,6 +13,7 @@ const PROVENANCE_OWNER: &str = "animus-preserves::provenance";
 const POLICY_OWNER: &str = "animus-preserves::policy";
 const REVIEW_OWNER: &str = "animus-preserves::review";
 const DATASPACE_OWNER: &str = "animus-preserves::dataspace";
+const SYNDICATE_TURN_OWNER: &str = "animus-preserves::syndicate";
 
 const ADAPTER_DEPENDENCIES: &[&str] = &[
     "animus-adapters",
@@ -42,6 +43,12 @@ const POLICY_DEPENDENCIES: &[&str] = &[
 ];
 const REVIEW_DEPENDENCIES: &[&str] = &["animus-preserves-schema", "preserves", "serde"];
 const DATASPACE_DEPENDENCIES: &[&str] = &[
+    "animus-adapters",
+    "animus-preserves-schema",
+    "preserves",
+    "serde",
+];
+const SYNDICATE_TURN_DEPENDENCIES: &[&str] = &[
     "animus-adapters",
     "animus-preserves-schema",
     "preserves",
@@ -109,6 +116,8 @@ pub enum SchemaFamily {
     DatasetExportRow,
     /// Dataspace scope, assertion, subscription, and orchestration DTO records.
     DataspaceDto,
+    /// Capability-free Syndicate Protocol turn packets over dataspace records.
+    SyndicateTurn,
 }
 
 impl SchemaFamily {
@@ -124,6 +133,7 @@ impl SchemaFamily {
             Self::PolicyVisibleDto => "policy_visible_dto",
             Self::DatasetExportRow => "dataset_export_row",
             Self::DataspaceDto => "dataspace_dto",
+            Self::SyndicateTurn => "syndicate_turn",
         }
     }
 
@@ -134,7 +144,8 @@ impl SchemaFamily {
             Self::AdapterMessage
             | Self::RuntimeEvent
             | Self::RuntimeReport
-            | Self::DataspaceDto => CoverageTier::StableExternalWireContract,
+            | Self::DataspaceDto
+            | Self::SyndicateTurn => CoverageTier::StableExternalWireContract,
             Self::Error | Self::SessionProvenanceRecord | Self::PolicyVisibleDto => {
                 CoverageTier::CompatibilityImportExportAdapter
             }
@@ -330,6 +341,7 @@ const fn owner(family: SchemaFamily) -> &'static str {
         SchemaFamily::PolicyVisibleDto => POLICY_OWNER,
         SchemaFamily::DatasetExportRow => REVIEW_OWNER,
         SchemaFamily::DataspaceDto => DATASPACE_OWNER,
+        SchemaFamily::SyndicateTurn => SYNDICATE_TURN_OWNER,
     }
 }
 
@@ -343,6 +355,7 @@ const fn dependencies(family: SchemaFamily) -> &'static [&'static str] {
         SchemaFamily::PolicyVisibleDto => POLICY_DEPENDENCIES,
         SchemaFamily::DatasetExportRow => REVIEW_DEPENDENCIES,
         SchemaFamily::DataspaceDto => DATASPACE_DEPENDENCIES,
+        SchemaFamily::SyndicateTurn => SYNDICATE_TURN_DEPENDENCIES,
     }
 }
 
@@ -355,7 +368,8 @@ const fn metadata_policy(family: SchemaFamily) -> &'static str {
         | SchemaFamily::Error
         | SchemaFamily::SessionProvenanceRecord
         | SchemaFamily::PolicyVisibleDto
-        | SchemaFamily::DataspaceDto => BOUNDED_SAFE_METADATA_POLICY,
+        | SchemaFamily::DataspaceDto
+        | SchemaFamily::SyndicateTurn => BOUNDED_SAFE_METADATA_POLICY,
     }
 }
 
@@ -379,6 +393,7 @@ const fn fixture_set(family: SchemaFamily) -> &'static str {
         SchemaFamily::PolicyVisibleDto => "preserves.policy-visible.compat.v1",
         SchemaFamily::DatasetExportRow => "preserves.dataset.review.v1",
         SchemaFamily::DataspaceDto => "preserves.dataspace.v1",
+        SchemaFamily::SyndicateTurn => "preserves.syndicate-turn.v1",
     }
 }
 
@@ -391,6 +406,7 @@ const SCHEMA_CATALOG: [SchemaDescriptor; SCHEMA_CATALOG_LEN] = [
     SchemaDescriptor::new(SchemaFamily::PolicyVisibleDto),
     SchemaDescriptor::new(SchemaFamily::DatasetExportRow),
     SchemaDescriptor::new(SchemaFamily::DataspaceDto),
+    SchemaDescriptor::new(SchemaFamily::SyndicateTurn),
 ];
 
 /// Returns the declared Preserves schema catalog.
@@ -420,6 +436,10 @@ mod tests {
         assert!(!adapter.safe_metadata_policy().is_empty());
         assert_eq!(adapter.wire_status(), WireStatus::Stable);
         assert_eq!(adapter.fixture_set(), "preserves.adapter.v1");
+        let syndicate = catalog[SchemaFamily::SyndicateTurn as usize];
+        assert_eq!(syndicate.owner(), "animus-preserves::syndicate");
+        assert_eq!(syndicate.wire_status(), WireStatus::Stable);
+        assert_eq!(syndicate.fixture_set(), "preserves.syndicate-turn.v1");
         for descriptor in catalog {
             assert!(!descriptor.owner().is_empty());
             assert!(!descriptor.dependencies().is_empty());

@@ -43,6 +43,8 @@ mod providers;
 #[cfg(feature = "session-tree-export")]
 #[path = "sessiontreeexport.rs"]
 mod redactedwriter;
+#[cfg(feature = "syndicate-host")]
+mod syndicate;
 
 pub use adapters::{
     AdapterDescriptor, AdapterFamily, AdapterIssue, AdapterPlan, AdapterVerdict, CredentialState,
@@ -94,6 +96,12 @@ pub use modelprofiles::{
 /// Root public name for std context resolver policy.
 pub type StdContextPolicy = context::Policy;
 #[cfg(feature = "syndicate-host")]
+pub use animus_preserves::{
+    MAX_SYNDICATE_TURN_EVENTS, SYNDICATE_PROTOCOL_PROFILE, SyndicateEvent, SyndicateEventKind,
+    SyndicateTurn, SyndicateTurnEvent, from_syndicate_turn_bytes, from_syndicate_turn_text,
+    to_syndicate_turn_bytes, to_syndicate_turn_text,
+};
+#[cfg(feature = "syndicate-host")]
 pub use dataspace::{
     SyndicateAdapterError, SyndicateHostDataspaceAdapter, SyndicateObservationDraft,
     SyndicateObservationKind, SyndicateTransport, admit_scoped_orchestration,
@@ -107,6 +115,11 @@ pub use iroh::{
     IrohRouteDescriptor, IrohRouteDescriptorDraft, admit_iroh_scope, iroh_frame_receipt,
     iroh_route_receipt, project_assertion_frame, project_iroh_frame,
     project_orchestration_event_frame,
+};
+#[cfg(feature = "syndicate-host")]
+pub use syndicate::{
+    DEFAULT_SYNDICATE_MAX_PACKET_BYTES, SyndicateHandleState, SyndicatePacketTransport,
+    SyndicateProtocolAdapter, SyndicateProtocolError, plan_syndicate_handle_transition,
 };
 /// Root public name for the in-memory observability sink.
 #[cfg(feature = "observability-host")]

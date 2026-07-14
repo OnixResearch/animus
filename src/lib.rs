@@ -91,6 +91,16 @@ pub use animus_std::{
     project_orchestration_event_frame,
 };
 
+/// Re-export of the optional host-owned Syndicate turn protocol adapter.
+#[cfg(feature = "syndicate-host")]
+pub use animus_std::{
+    DEFAULT_SYNDICATE_MAX_PACKET_BYTES, MAX_SYNDICATE_TURN_EVENTS, SYNDICATE_PROTOCOL_PROFILE,
+    SyndicateEvent, SyndicateEventKind, SyndicateHandleState, SyndicatePacketTransport,
+    SyndicateProtocolAdapter, SyndicateProtocolError, SyndicateTurn, SyndicateTurnEvent,
+    from_syndicate_turn_bytes, from_syndicate_turn_text, plan_syndicate_handle_transition,
+    to_syndicate_turn_bytes, to_syndicate_turn_text,
+};
+
 /// Re-export of the optional Basalt UCAN contract-boundary dependency.
 #[cfg(feature = "basalt-reference")]
 pub use basalt;

@@ -84,6 +84,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "agent-role-profiles",
     "provider-retry",
     "session-tree-export",
+    "syndicate-host",
     "policy",
     "provenance",
     "quality",

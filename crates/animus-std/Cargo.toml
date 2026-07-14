@@ -20,7 +20,7 @@ provider-retry = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 session-tree-export = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 observability-host = ["dep:animus-std-observability"]
 iroh-host = []
-syndicate-host = []
+syndicate-host = ["dep:animus-preserves"]
 
 [[bin]]
 name = "animus-dogfood-smoke"
@@ -30,6 +30,7 @@ required-features = ["dogfood-smoke"]
 [dependencies]
 animus-adapters = { path = "../animus-adapters", version = "0.1.0" }
 animus-core = { path = "../animus-core", version = "0.1.0" }
+animus-preserves = { path = "../animus-preserves", version = "0.1.0", optional = true }
 animus-runtime = { path = "../animus-runtime", version = "0.1.0", default-features = false, optional = true }
 animus-std-observability = { path = "../animus-std-observability", version = "0.1.0", optional = true }
 blake3 = { version = "1.8.5", default-features = false }

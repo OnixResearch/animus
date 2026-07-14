@@ -1,6 +1,8 @@
 # Optional Syndicate host dataspace adapter
 
-`animus-std` provides a feature-gated host seam for Syndicate-compatible dataspace coordination behind the non-default `syndicate-host` feature. Reusable `animus-core`, `animus-adapters`, and `animus-runtime` do not construct live Syndicate clients, require daemon availability, read credentials, or add network transport dependencies.
+`animus-std` provides feature-gated host seams for Syndicate-compatible dataspace coordination behind the non-default `syndicate-host` feature. Reusable `animus-core`, `animus-adapters`, and `animus-runtime` do not construct live Syndicate clients, require daemon availability, read credentials, or add network transport dependencies.
+
+The original `SyndicateHostDataspaceAdapter<T>` remains the typed dataspace-service seam. Hosts that need Preserves network packets can additionally use the capability-free `SyndicateProtocolAdapter<T>` described in [syndicate-turn-protocol-adapter.md](syndicate-turn-protocol-adapter.md). The protocol adapter does not replace the typed service contract or supply a live transport.
 
 The public seam is split into a pure projection core and a thin imperative shell:
 
@@ -15,4 +17,5 @@ Focused rail:
 
 ```sh
 cargo test -p animus-std --features syndicate-host dataspace --locked
+cargo test -p animus-std --features syndicate-host syndicate --locked
 ```

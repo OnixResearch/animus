@@ -20,7 +20,7 @@ const PRIVATE_PATH_COMPATIBILITY_FIELD_REASON: &str =
 const PROVIDER_JSON_COMPATIBILITY_FIELD_REASON: &str =
     "compatibility metadata must not preserve provider payload JSON";
 #[cfg(test)]
-const SCHEMA_CATALOG_LEN: usize = 8;
+const SCHEMA_CATALOG_LEN: usize = 9;
 const RAW_PROMPT_FIELD: &str = "raw_prompt";
 const PROMPT_FIELD: &str = "prompt";
 const CREDENTIAL_FIELD: &str = "credential";

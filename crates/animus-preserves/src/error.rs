@@ -53,6 +53,11 @@ pub enum Failure {
         /// Human-readable validation reason.
         reason: &'static str,
     },
+    /// Syndicate packet shape or bounded profile validation failed.
+    InvalidSyndicatePacket {
+        /// Safe failure reason without rejected packet content.
+        reason: &'static str,
+    },
     /// Too many compatibility metadata fields were supplied.
     TooManyCompatibilityFields {
         /// Maximum number of safe metadata fields.
@@ -161,6 +166,9 @@ impl std::fmt::Display for Failure {
                     formatter,
                     "unsafe Preserves dataspace field {field}: {reason}"
                 )
+            }
+            Self::InvalidSyndicatePacket { reason } => {
+                write!(formatter, "invalid Syndicate packet: {reason}")
             }
             Self::TooManyCompatibilityFields { limit } => write!(
                 formatter,
