@@ -1,0 +1,102 @@
+#!/usr/bin/env sh
+# r[impl agent_harness_runtime.durable_session_store.verification]
+set -eu
+
+readonly FAILURE=1
+readonly POLICY_SOURCE=config/durable-session-store-policy.ncl
+readonly POLICY_EXPORT=config/generated/durable-session-store-policy.json
+readonly POSITIVE_FIXTURE=config/durable-session-store-policy/fixtures/valid-minimal.ncl
+readonly RECEIPT_DIR=target/cairn/focused-rails
+readonly RECEIPT_PATH=${RECEIPT_DIR}/durable-session-store.md
+readonly RECEIPT_SCHEMA=animus.focused-rail.v1
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+if [ "${1:-}" = "--root" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  repo_root=$(CDPATH= cd -- "$2" && pwd)
+fi
+cd "${repo_root}"
+
+for command in cargo nickel b3sum diff grep; do
+  if ! command -v "${command}" >/dev/null 2>&1; then
+    printf 'error: %s is required\n' "${command}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/animus-durable-session-store.XXXXXX")
+trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
+
+nickel export --format json --field durable_session_store_policy "${POLICY_SOURCE}" > "${tmp_dir}/policy.json"
+diff -u "${POLICY_EXPORT}" "${tmp_dir}/policy.json"
+nickel export --format json "${POSITIVE_FIXTURE}" > "${tmp_dir}/positive.json"
+negative_count=0
+for fixture in config/durable-session-store-policy/fixtures/negative-*.ncl; do
+  if nickel export --format json "${fixture}" > "${tmp_dir}/negative.json" 2> "${tmp_dir}/negative.err"; then
+    printf 'error: negative durable-session policy fixture unexpectedly passed: %s\n' "${fixture}" >&2
+    exit "${FAILURE}"
+  fi
+  negative_count=$((negative_count + 1))
+done
+
+cargo tree -p animus-std --no-default-features --locked > "${tmp_dir}/std-default-tree.txt"
+if grep -F 'animus-runtime' "${tmp_dir}/std-default-tree.txt" >/dev/null; then
+  printf '%s\n' 'error: durable session runtime entered the animus-std no-default dependency tree' >&2
+  exit "${FAILURE}"
+fi
+if grep -F 'redb ' "${tmp_dir}/std-default-tree.txt" >/dev/null; then
+  printf '%s\n' 'error: unused database authority entered the animus-std no-default dependency tree' >&2
+  exit "${FAILURE}"
+fi
+if grep -E 'std::fs|std::env|std::process|std::time|cap_std' crates/animus-runtime/src/sessionstore/*.rs > "${tmp_dir}/runtime-authority.txt"; then
+  printf '%s\n' 'error: host authority entered the reusable session-store core' >&2
+  exit "${FAILURE}"
+fi
+
+cargo test -p animus-runtime --locked sessionstore::tests --no-fail-fast
+cargo test -p animus-std --features durable-session-store --locked durablefile::tests --no-fail-fast
+cargo test -p animus-std --features durable-session-store --locked --test durable-session-restart --no-fail-fast
+cargo clippy -p animus-runtime --all-targets --locked -- -D warnings
+cargo clippy -p animus-std --features durable-session-store --all-targets --locked -- -D warnings
+
+policy_blake3=$(b3sum "${POLICY_EXPORT}" | cut -d ' ' -f 1)
+runtime_blake3=$(b3sum crates/animus-runtime/src/sessionstore/core.rs | cut -d ' ' -f 1)
+host_blake3=$(b3sum crates/animus-std/src/sessionstore.rs | cut -d ' ' -f 1)
+mkdir -p "${RECEIPT_DIR}"
+cat > "${RECEIPT_PATH}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: durable-session-store
+status: pass
+policy_source: ${POLICY_SOURCE}
+policy_export: ${POLICY_EXPORT}
+policy_blake3: ${policy_blake3}
+policy_positive_fixtures: 1
+policy_negative_fixtures: ${negative_count}
+runtime_core_blake3: ${runtime_blake3}
+file_host_blake3: ${host_blake3}
+crate_isolation: pass
+fake_file_conformance: pass
+child_process_restart: pass
+uncommitted_tail_visibility: rejected
+committed_corruption: rejected
+conflicting_writer: rejected
+failed_lock_setup_cleanup: pass
+permission_failure: rejected
+sync_failure: rejected
+required_encryption_without_service: rejected
+receipt_private_data_leak: rejected
+durability: sync_all_each_commit
+non_claims:
+- no encryption or key-discovery claim
+- no filesystem or kernel correctness claim
+- no power-loss proof
+- no backup, replication, daemon, multi-host, or multi-writer claim
+- no production or release-readiness claim
+EOF
+
+printf '%s\n' 'focused rail durable-session-store: pass'
+printf 'receipt: %s\n' "${RECEIPT_PATH}"

@@ -131,6 +131,9 @@ pub fn recover_durable_session_log(
         let record_type = bytes[state.offset];
         state.offset = state.offset.saturating_add(1);
         let body_bytes = read_u32_at(bytes, &mut state.offset)?;
+        if u64::from(body_bytes) > policy.max_file_bytes {
+            return Err(wire_error(DurableSessionStoreIssue::BoundExceeded));
+        }
         let body_len = usize::try_from(body_bytes)
             .map_err(|_error| wire_error(DurableSessionStoreIssue::BoundExceeded))?;
         let Some(body_end) = state.offset.checked_add(body_len) else {
@@ -199,6 +202,19 @@ impl RecoveryState {
                 previous.frame_hash.as_str()
             });
         if frame.previous_frame_hash != expected_previous {
+            return Err(wire_error(DurableSessionStoreIssue::IntegrityMismatch));
+        }
+        let expected_parent = self
+            .pending_frames
+            .last()
+            .map(|previous| previous.entry_id.as_str())
+            .or(self.active_leaf_id.as_deref());
+        let is_entry_duplicate = self
+            .committed_frames
+            .iter()
+            .chain(self.pending_frames.iter())
+            .any(|existing| existing.entry_id == frame.entry_id);
+        if frame.parent_id.as_deref() != expected_parent || is_entry_duplicate {
             return Err(wire_error(DurableSessionStoreIssue::IntegrityMismatch));
         }
         if self.pending_start.is_none() {
@@ -287,6 +303,7 @@ fn encode_frame_body(frame: &DurableSessionFrame) -> Result<Vec<u8>, DurableSess
     body.extend_from_slice(&frame.sequence.to_be_bytes());
     body.push(frame.kind.wire_code());
     push_text(&mut body, frame.branch_id.as_str())?;
+    push_text(&mut body, frame.entry_id.as_str())?;
     push_optional_text(&mut body, frame.parent_id.as_deref())?;
     let payload_bytes = u32::try_from(frame.payload.len())
         .map_err(|_error| wire_error(DurableSessionStoreIssue::BoundExceeded))?;
@@ -312,6 +329,7 @@ fn decode_frame_body(
     let kind = DurableSessionRecordKind::from_wire_code(cursor.read_u8()?)
         .ok_or_else(|| wire_error(DurableSessionStoreIssue::InvalidFrame))?;
     let branch_id = cursor.read_text()?;
+    let entry_id = cursor.read_text()?;
     let parent_text = cursor.read_text()?;
     let parent_id = if parent_text.is_empty() {
         None
@@ -331,6 +349,7 @@ fn decode_frame_body(
         schema_version,
         sequence,
         branch_id,
+        entry_id,
         parent_id,
         kind,
         payload,
@@ -397,6 +416,7 @@ fn validate_frame(
     frame: &DurableSessionFrame,
 ) -> Result<(), DurableSessionStoreError> {
     super::core::safe_label(frame.branch_id.as_str(), FIELD_WIRE)?;
+    super::core::safe_label(frame.entry_id.as_str(), FIELD_WIRE)?;
     if let Some(parent_id) = &frame.parent_id {
         super::core::safe_label(parent_id.as_str(), FIELD_WIRE)?;
     }
@@ -416,6 +436,7 @@ fn validate_frame(
             descriptor.session_id.as_bytes(),
             descriptor.branch_id.as_bytes(),
             sequence.as_bytes(),
+            frame.entry_id.as_bytes(),
             frame.kind.as_str().as_bytes(),
             parent.as_bytes(),
             payload_bytes.as_bytes(),
@@ -448,6 +469,9 @@ fn validate_commit(
         return Err(wire_error(DurableSessionStoreIssue::IntegrityMismatch));
     }
     super::core::safe_label(commit.active_leaf_id.as_str(), FIELD_WIRE)?;
+    if frames.last().map(|frame| frame.entry_id.as_str()) != Some(commit.active_leaf_id.as_str()) {
+        return Err(wire_error(DurableSessionStoreIssue::IntegrityMismatch));
+    }
     let mut transaction_parts = vec![
         descriptor.session_id.as_bytes(),
         descriptor.branch_id.as_bytes(),

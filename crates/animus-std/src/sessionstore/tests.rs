@@ -4,6 +4,7 @@ const GENERATED_POLICY_JSON: &str =
     include_str!("../../../../config/generated/durable-session-store-policy.json");
 const POLICY_HASH: &str = "cb51ed6a1173d80feeac2e39011cc74ad0a5f51b52df2082b8b5af9643b5e68c";
 const JOURNAL_NAME: &str = "session.journal";
+const INVALID_JOURNAL_DIRECTORY: &str = "journal.directory";
 const LOCK_NAME: &str = "session.lock";
 const FIRST_LEASE: &str = "lease.first";
 const SECOND_LEASE: &str = "lease.second";
@@ -100,6 +101,55 @@ fn conflicting_and_stale_writer_leases_fail_before_append() {
 }
 
 #[test]
+fn failed_lock_setup_removes_the_unowned_lease() {
+    let root = TestRoot::new("lock-setup-failure");
+    let policy = policy();
+    let descriptor = descriptor();
+    let failure = open_store(
+        (&root.dir, &policy, &descriptor),
+        (FIRST_LEASE, TestSynchronizer::failing_on(LOCK_SYNC_CALL)),
+    )
+    .expect_err("lock synchronization failure");
+
+    assert_eq!(
+        failure.issue(),
+        DurableSessionHostIssue::SynchronizationFailed
+    );
+    let missing_lock = root.dir.metadata(LOCK_NAME).expect_err("lease removed");
+    assert_eq!(missing_lock.kind(), std::io::ErrorKind::NotFound);
+    let reopened = open_store(
+        (&root.dir, &policy, &descriptor),
+        (SECOND_LEASE, TestSynchronizer::passing()),
+    )
+    .expect("lock can be reacquired");
+    reopened.close().expect("close reacquired lock");
+
+    root.dir
+        .create_dir(INVALID_JOURNAL_DIRECTORY)
+        .expect("invalid journal directory fixture");
+    let open_failure = open_durable_session_store(
+        &DurableSessionStoreOpenRequest {
+            policy: &policy,
+            descriptor: &descriptor,
+            location: DurableSessionStoreLocation {
+                root: &root.dir,
+                journal_name: INVALID_JOURNAL_DIRECTORY,
+                lock_name: LOCK_NAME,
+            },
+            lease_id: "lease.open-failure",
+        },
+        TestSynchronizer::passing(),
+    )
+    .expect_err("journal open failure");
+    assert_eq!(open_failure.issue(), DurableSessionHostIssue::IoFailure);
+    let missing_lock = root
+        .dir
+        .metadata(LOCK_NAME)
+        .expect_err("open failure lease removed");
+    assert_eq!(missing_lock.kind(), std::io::ErrorKind::NotFound);
+}
+
+#[test]
 fn uncommitted_file_tail_is_ignored_but_committed_corruption_fails() {
     // r[verify agent_harness_runtime.durable_session_store.recovery]
     let root = TestRoot::new("recovery");
@@ -163,10 +213,7 @@ fn synchronization_encryption_location_and_permission_failures_are_bounded() {
         sync_failure.issue(),
         DurableSessionHostIssue::SynchronizationFailed
     );
-    drop(store);
-    root.dir
-        .remove_file(LOCK_NAME)
-        .expect("remove stranded test lock");
+    store.close().expect("release lock after failed commit");
 
     let unsafe_location = open_durable_session_store(
         &DurableSessionStoreOpenRequest {
@@ -274,11 +321,13 @@ fn transaction(
 ) -> DurableSessionTransaction {
     let entries = [
         animus_runtime::durable_session_store::DurableSessionPrivateEntryDraft {
+            entry_id: "entry.user",
             parent_id: None,
             kind: animus_runtime::durable_session_store::DurableSessionRecordKind::User,
             payload: PRIVATE_USER,
         },
         animus_runtime::durable_session_store::DurableSessionPrivateEntryDraft {
+            entry_id: "entry.assistant",
             parent_id: Some("entry.user"),
             kind: animus_runtime::durable_session_store::DurableSessionRecordKind::Assistant,
             payload: PRIVATE_ASSISTANT,
@@ -289,6 +338,7 @@ fn transaction(
         &animus_runtime::durable_session_store::DurableSessionTransactionDraft {
             descriptor,
             prior_head_hash: animus_runtime::durable_session_store::DURABLE_SESSION_EMPTY_HEAD_HASH,
+            prior_active_leaf_id: None,
             first_sequence: FIRST_SEQUENCE,
             active_leaf_id: "entry.assistant",
             entries: &entries,
@@ -304,6 +354,7 @@ fn next_transaction(
 ) -> DurableSessionTransaction {
     let entries = [
         animus_runtime::durable_session_store::DurableSessionPrivateEntryDraft {
+            entry_id: "entry.repair",
             parent_id: Some("entry.assistant"),
             kind: animus_runtime::durable_session_store::DurableSessionRecordKind::Repair,
             payload: b"private repair",
@@ -314,6 +365,7 @@ fn next_transaction(
         &animus_runtime::durable_session_store::DurableSessionTransactionDraft {
             descriptor,
             prior_head_hash,
+            prior_active_leaf_id: Some("entry.assistant"),
             first_sequence: THIRD_SEQUENCE,
             active_leaf_id: "entry.repair",
             entries: &entries,

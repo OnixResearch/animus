@@ -88,7 +88,9 @@ Receipt and evidence code must not embed raw prompts, credentials, provider payl
 
 ### Host ledger persistence seam
 
-The ledger/session service is host-injected through `animus-runtime::session_persistence`. `LedgerSessionService` is the concrete `LedgerService` marker for the accepted seam. Reusable crates validate descriptors, plan replay/restore over already-loaded entries, and reject unsafe receipts; they must not discover sessions, read host persistence, create default global stores, or resume conversations by ambient global state. Durable backends, locking, freshness collection, writes, and migrations remain host-owned implementation work.
+The ledger/session service is host-injected through `animus-runtime::session_persistence`. `LedgerSessionService` is the concrete `LedgerService` marker for the accepted safe-ledger seam. Reusable crates validate descriptors, plan replay/restore over already-loaded entries, and reject unsafe receipts; they must not discover sessions, read host persistence, create default global stores, or resume conversations by ambient global state.
+
+The separate `animus_runtime::durable_session_store` core plans and validates replay-private framing, parent/sequence/hash chains, atomic active-leaf commits, recovery, and metadata-only receipts without host effects. The non-default `animus-std/durable-session-store` block alone opens explicit capability-rooted journals, acquires one writer lease, applies restrictive permissions, synchronizes each committed group, and reopens snapshots. Provider or tool continuation may treat a write as durable only after that host returns successful synchronization. See [durable local session store](durable-session-store.md).
 
 ## Validation commands
 
@@ -105,6 +107,7 @@ scripts/cairn/check-model-runtime-profiles --root .
 cargo test -p animus-runtime agent_roles --locked
 scripts/cairn/check-agent-role-profiles --root .
 cargo test -p animus-std
+scripts/cairn/check-durable-session-store --root .
 cargo test -p animus-std-observability
 cargo check -p animus-std --no-default-features
 scripts/cairn/check-tool-catalog --root .

@@ -170,7 +170,6 @@ dependencies = [
  "animus-std-observability",
  "blake3",
  "cap-std",
- "redb",
  "sandlock-core",
  "serde",
  "serde_json",

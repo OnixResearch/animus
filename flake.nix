@@ -198,6 +198,7 @@
                 || baseName == "README.md"
                 || baseName == "check-clankers-product-surfaces"
                 || baseName == "check-dogfood-readiness"
+                || baseName == "check-durable-session-store"
                 || baseName == "check-adapter-conformance-index"
                 || baseName == "check-adapter-family-crates"
                 || baseName == "check-ast-grep-agent-boundary-audits"
@@ -514,6 +515,15 @@
           ] ''
             unset ANIMUS_SANDLOCK_LINUX_LIVE
             sh scripts/cairn/check-sandlock-host --root .
+          '';
+
+          durable-session-store = cargoCheck "animus-durable-session-store" [
+            pkgs.b3sum
+            pkgs.clippy
+            pkgs.diffutils
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-durable-session-store --root .
           '';
 
           exec-policy = cargoCheck "animus-exec-policy" [ pkgs.nickel ] ''

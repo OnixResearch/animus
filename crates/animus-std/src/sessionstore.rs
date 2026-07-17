@@ -248,32 +248,32 @@ where
     validate_open_request(request)?;
     let mut synchronizer = synchronizer;
     let lock_file = acquire_writer_lease(request, &mut synchronizer)?;
-    let journal_result = open_journal(request);
-    let mut journal = match journal_result {
+    let mut journal = match open_journal(request) {
         Ok(file) => file,
         Err(error) => {
-            let _ignored = request
-                .location
-                .root
-                .remove_file(request.location.lock_name);
+            drop(lock_file);
+            cleanup_writer_lease(request)?;
             return Err(error);
         }
     };
-    let recovery_result = read_and_recover(request.policy, request.descriptor, &mut journal);
-    let recovery = match recovery_result {
+    let recovery = match read_and_recover(request.policy, request.descriptor, &mut journal) {
         Ok(report) => report,
         Err(error) => {
-            let _ignored = request
-                .location
-                .root
-                .remove_file(request.location.lock_name);
+            drop(lock_file);
+            cleanup_writer_lease(request)?;
             return Err(error);
         }
     };
-    let journal_bytes = journal
-        .metadata()
-        .map_err(|_error| DurableSessionHostError::new(DurableSessionHostIssue::IoFailure))?
-        .len();
+    let journal_bytes = match journal.metadata() {
+        Ok(metadata) => metadata.len(),
+        Err(_error) => {
+            drop(lock_file);
+            cleanup_writer_lease(request)?;
+            return Err(DurableSessionHostError::new(
+                DurableSessionHostIssue::IoFailure,
+            ));
+        }
+    };
     debug_assert!(journal_bytes <= request.policy.max_file_bytes());
     debug_assert!(!request.lease_id.is_empty());
     Ok(DurableSessionLocalStore {
@@ -356,7 +356,14 @@ where
             ));
         }
         let prior_head_hash = self.recovery.committed_head_hash();
-        if transaction.commit().prior_head_hash() != prior_head_hash {
+        let prior_active_leaf_id = self.recovery.active_leaf_id();
+        let transaction_parent_id = transaction
+            .frames()
+            .first()
+            .and_then(|frame| frame.parent_id());
+        if transaction.commit().prior_head_hash() != prior_head_hash
+            || transaction_parent_id != prior_active_leaf_id
+        {
             return Err(DurableSessionHostError::new(
                 DurableSessionHostIssue::StaleHead,
             ));
@@ -427,6 +434,7 @@ where
                 DurableSessionHostIssue::StaleLease,
             ));
         }
+        drop(self.lock_file);
         self.root
             .remove_file(self.lock_name.as_str())
             .map_err(|_error| DurableSessionHostError::new(DurableSessionHostIssue::IoFailure))
@@ -503,13 +511,20 @@ fn acquire_writer_lease(
         .open_with(request.location.lock_name, &options)
     {
         Ok(mut file) => {
-            file.write_all(request.lease_id.as_bytes())
-                .map_err(|_error| {
-                    DurableSessionHostError::new(DurableSessionHostIssue::IoFailure)
-                })?;
-            synchronizer.synchronize(&file).map_err(|_error| {
-                DurableSessionHostError::new(DurableSessionHostIssue::SynchronizationFailed)
-            })?;
+            if file.write_all(request.lease_id.as_bytes()).is_err() {
+                drop(file);
+                cleanup_writer_lease(request)?;
+                return Err(DurableSessionHostError::new(
+                    DurableSessionHostIssue::IoFailure,
+                ));
+            }
+            if synchronizer.synchronize(&file).is_err() {
+                drop(file);
+                cleanup_writer_lease(request)?;
+                return Err(DurableSessionHostError::new(
+                    DurableSessionHostIssue::SynchronizationFailed,
+                ));
+            }
             Ok(file)
         }
         Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
@@ -520,6 +535,16 @@ fn acquire_writer_lease(
             DurableSessionHostIssue::IoFailure,
         )),
     }
+}
+
+fn cleanup_writer_lease(
+    request: &DurableSessionStoreOpenRequest<'_>,
+) -> Result<(), DurableSessionHostError> {
+    request
+        .location
+        .root
+        .remove_file(request.location.lock_name)
+        .map_err(|_error| DurableSessionHostError::new(DurableSessionHostIssue::IoFailure))
 }
 
 fn classify_existing_lease(

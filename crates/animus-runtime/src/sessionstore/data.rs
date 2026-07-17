@@ -130,6 +130,16 @@ pub enum DurableSessionDurability {
     SyncAllEachCommit,
 }
 
+impl DurableSessionDurability {
+    /// Returns the stable durability claim label.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::SyncAllEachCommit => "sync_all_each_commit",
+        }
+    }
+}
+
 /// Declared local writer lock policy.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum DurableSessionLockPolicy {
@@ -263,6 +273,8 @@ impl DurableSessionRecordKind {
 /// One caller-supplied private transaction entry.
 #[derive(Clone, Copy)]
 pub struct DurableSessionPrivateEntryDraft<'a> {
+    /// Stable entry identity within the committed branch lineage.
+    pub entry_id: &'a str,
     /// Optional parent entry identity.
     pub parent_id: Option<&'a str>,
     /// Private record kind.
@@ -278,6 +290,8 @@ pub struct DurableSessionTransactionDraft<'a> {
     pub descriptor: &'a DurableSessionStoreDescriptor,
     /// Prior committed head identity, or the zero hash for a new store.
     pub prior_head_hash: &'a str,
+    /// Prior committed active leaf, absent only for a new branch journal.
+    pub prior_active_leaf_id: Option<&'a str>,
     /// First logical sequence in the group.
     pub first_sequence: u64,
     /// Proposed active leaf identity after commit.
@@ -292,6 +306,7 @@ pub struct DurableSessionFrame {
     pub(super) schema_version: u16,
     pub(super) sequence: u64,
     pub(super) branch_id: String,
+    pub(super) entry_id: String,
     pub(super) parent_id: Option<String>,
     pub(super) kind: DurableSessionRecordKind,
     pub(super) payload: Vec<u8>,
@@ -307,6 +322,7 @@ impl core::fmt::Debug for DurableSessionFrame {
             .field("schema_version", &self.schema_version)
             .field("sequence", &self.sequence)
             .field("branch_id", &self.branch_id)
+            .field("entry_id", &self.entry_id)
             .field("parent_id", &self.parent_id)
             .field("kind", &self.kind)
             .field("payload_bytes", &self.payload.len())
@@ -322,6 +338,18 @@ impl DurableSessionFrame {
     #[must_use]
     pub const fn sequence(&self) -> u64 {
         self.sequence
+    }
+
+    /// Returns the committed entry identity.
+    #[must_use]
+    pub fn entry_id(&self) -> &str {
+        self.entry_id.as_str()
+    }
+
+    /// Returns the optional parent entry identity.
+    #[must_use]
+    pub fn parent_id(&self) -> Option<&str> {
+        self.parent_id.as_deref()
     }
 
     /// Returns the record kind.
@@ -354,6 +382,8 @@ impl DurableSessionFrame {
 pub struct DurableSessionSafeSidecar {
     /// Logical sequence.
     pub sequence: u64,
+    /// Safe entry identity.
+    pub entry_id: String,
     /// Safe kind.
     pub kind: DurableSessionRecordKind,
     /// Bounded payload byte count.
@@ -607,10 +637,14 @@ pub struct DurableSessionStoreSensitiveDraft<'a> {
 /// Metadata-only receipt projection input.
 #[derive(Clone, Copy, Debug)]
 pub struct DurableSessionStoreReceiptInput<'a> {
-    /// Validated descriptor.
+    /// Validated generated policy.
+    pub policy: &'a DurableSessionStorePolicy,
+    /// Descriptor revalidated against the generated policy.
     pub descriptor: &'a DurableSessionStoreDescriptor,
     /// Operation class.
     pub operation: DurableSessionStoreOperation,
+    /// Declared durability class bound to the operation.
+    pub durability: DurableSessionDurability,
     /// Safe operation status.
     pub status: &'a str,
     /// Prior committed head identity.
@@ -642,6 +676,8 @@ pub struct DurableSessionStoreReceipt {
     pub branch_id: String,
     /// Operation class.
     pub operation: DurableSessionStoreOperation,
+    /// Declared durability class.
+    pub durability: DurableSessionDurability,
     /// Safe status.
     pub status: String,
     /// Prior committed head.

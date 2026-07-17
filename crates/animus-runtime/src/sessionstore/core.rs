@@ -197,6 +197,7 @@ pub fn plan_durable_session_transaction(
             FIELD_TRANSACTION,
         ));
     }
+    validate_transaction_lineage(draft)?;
     if draft.first_sequence == 0 {
         return Err(error(
             DurableSessionStoreIssue::SequenceGap,
@@ -248,6 +249,7 @@ struct FrameBuildInput<'a> {
 fn build_frame(
     input: &FrameBuildInput<'_>,
 ) -> Result<DurableSessionFrame, DurableSessionStoreError> {
+    safe_label(input.entry.entry_id, FIELD_FRAME)?;
     if let Some(parent_id) = input.entry.parent_id {
         safe_label(parent_id, FIELD_FRAME)?;
     }
@@ -267,6 +269,7 @@ fn build_frame(
             input.descriptor.session_id.as_bytes(),
             input.descriptor.branch_id.as_bytes(),
             sequence.as_bytes(),
+            input.entry.entry_id.as_bytes(),
             kind.as_bytes(),
             parent.as_bytes(),
             payload_bytes.to_string().as_bytes(),
@@ -280,6 +283,7 @@ fn build_frame(
         schema_version: SUPPORTED_FRAME_SCHEMA,
         sequence: input.sequence,
         branch_id: input.descriptor.branch_id.clone(),
+        entry_id: String::from(input.entry.entry_id),
         parent_id: input.entry.parent_id.map(String::from),
         kind: input.entry.kind,
         payload: input.entry.payload.to_vec(),
@@ -342,6 +346,7 @@ fn project_sidecar(
         SIDECAR_HASH_DOMAIN,
         &[
             sequence.as_bytes(),
+            frame.entry_id.as_bytes(),
             frame.kind.as_str().as_bytes(),
             payload_bytes_text.as_bytes(),
             frame.payload_hash.as_bytes(),
@@ -353,6 +358,7 @@ fn project_sidecar(
     debug_assert!(!sidecar_hash.is_empty());
     Ok(DurableSessionSafeSidecar {
         sequence: frame.sequence,
+        entry_id: frame.entry_id.clone(),
         kind: frame.kind,
         payload_bytes,
         payload_hash: frame.payload_hash.clone(),
@@ -360,6 +366,47 @@ fn project_sidecar(
         sidecar_hash,
         redaction_marker: String::from(super::data::REDACTION_MARKER),
     })
+}
+
+fn validate_transaction_lineage(
+    draft: &DurableSessionTransactionDraft<'_>,
+) -> Result<(), DurableSessionStoreError> {
+    let is_empty_head = draft.prior_head_hash == super::data::DURABLE_SESSION_EMPTY_HEAD_HASH;
+    if is_empty_head != draft.prior_active_leaf_id.is_none() {
+        return Err(error(
+            DurableSessionStoreIssue::StaleHead,
+            FIELD_TRANSACTION,
+        ));
+    }
+    if let Some(prior_active_leaf_id) = draft.prior_active_leaf_id {
+        safe_label(prior_active_leaf_id, FIELD_TRANSACTION)?;
+    }
+    let mut expected_parent = draft.prior_active_leaf_id;
+    let mut seen_entry_ids = Vec::with_capacity(draft.entries.len());
+    for entry in draft.entries {
+        safe_label(entry.entry_id, FIELD_TRANSACTION)?;
+        if seen_entry_ids
+            .iter()
+            .any(|entry_id| entry_id == &entry.entry_id)
+            || entry.parent_id != expected_parent
+        {
+            return Err(error(
+                DurableSessionStoreIssue::IntegrityMismatch,
+                FIELD_TRANSACTION,
+            ));
+        }
+        seen_entry_ids.push(entry.entry_id);
+        expected_parent = Some(entry.entry_id);
+    }
+    if expected_parent != Some(draft.active_leaf_id) {
+        return Err(error(
+            DurableSessionStoreIssue::IntegrityMismatch,
+            FIELD_TRANSACTION,
+        ));
+    }
+    debug_assert_eq!(seen_entry_ids.len(), draft.entries.len());
+    debug_assert_eq!(expected_parent, Some(draft.active_leaf_id));
+    Ok(())
 }
 
 fn validate_policy_shape(

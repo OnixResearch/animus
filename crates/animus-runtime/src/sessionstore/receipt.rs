@@ -21,6 +21,13 @@ pub fn project_durable_session_store_receipt(
     input: &DurableSessionStoreReceiptInput<'_>,
 ) -> Result<DurableSessionStoreReceipt, DurableSessionStoreError> {
     reject_sensitive(input.sensitive)?;
+    super::core::validate_durable_session_store_descriptor(input.policy, input.descriptor)?;
+    if input.durability != input.descriptor.durability {
+        return Err(DurableSessionStoreError::new(
+            DurableSessionStoreIssue::InvalidDescriptor,
+            FIELD_RECEIPT,
+        ));
+    }
     super::core::safe_label(input.status, RECEIPT_FIELD)?;
     super::core::safe_label(input.lock_status, RECEIPT_FIELD)?;
     super::core::lowercase_blake3(input.prior_head_hash, RECEIPT_FIELD)?;
@@ -35,6 +42,7 @@ pub fn project_durable_session_store_receipt(
             input.descriptor.session_id.as_bytes(),
             input.descriptor.branch_id.as_bytes(),
             input.operation.as_str().as_bytes(),
+            input.durability.as_str().as_bytes(),
             input.status.as_bytes(),
             input.prior_head_hash.as_bytes(),
             input.new_head_hash.as_bytes(),
@@ -54,6 +62,7 @@ pub fn project_durable_session_store_receipt(
         session_id: input.descriptor.session_id.clone(),
         branch_id: input.descriptor.branch_id.clone(),
         operation: input.operation,
+        durability: input.durability,
         status: String::from(input.status),
         prior_head_hash: String::from(input.prior_head_hash),
         new_head_hash: String::from(input.new_head_hash),

@@ -15,7 +15,7 @@ The catalog distinguishes these classes explicitly:
 - `persistence`; and
 - `terminal_access`.
 
-Current family records cover config loading, local context, provider registry and credential diagnostics, observability, document ingest, model-evidence ingest, optional Iroh and Syndicate transports, and the packaged smoke/demo shell. An authority label describes a possible shell effect; it does not grant authority by itself.
+Current family records cover config loading, local context, provider registry and credential diagnostics, observability, document ingest, model-evidence ingest, optional Iroh and Syndicate transports, optional Sandlock enforcement, the non-default durable local session store, and the packaged smoke/demo shell. An authority label describes a possible shell effect; it does not grant authority by itself.
 
 `plan_host_adapter` is pure over an explicit family, availability state, and fallback posture. Missing, disabled, or denied blocks return typed denied plans. Any request to discover an ambient environment, filesystem, provider, network, credential, or persistence fallback is denied even if another block is available.
 
@@ -43,6 +43,10 @@ The non-default Linux-only `sandlock-host` feature adds the `animus_std::sandloc
 
 The catalog labels this block with filesystem-read, process-execution, and network-transport authority. Those labels describe possible effects after admission; they do not authorize the action or permit ambient root, command, credential, or adapter discovery.
 
+## Optional durable local session store
+
+The non-default `durable-session-store` feature adds the persistence-authority block exported as `animus_std::{DurableSessionLocalStore, open_durable_session_store}`. It requires an explicit capability directory, relative journal/lock names, generated-policy-bound descriptor, and lease identity. `animus-runtime` owns the pure bounded framing, lineage, identity, recovery, and receipt core; the std block alone owns file permissions, exclusive lease creation, append, `sync_all`, and reopen effects. It never selects an ambient or global store. See [durable local session store](durable-session-store.md).
+
 ## Functional core and shell
 
 Deterministic config parsing, provider selection, context planning, document/model-evidence ingest planning, observability record validation, and host adapter admission remain pure over explicit values. Filesystem opens, environment reads, process calls, transport calls, credential lookup, durable storage, terminal access, and other effects stay in thin owner shells after a plan is admitted.
@@ -58,6 +62,7 @@ cargo test -p animus-std observability --locked
 cargo check -p animus-std --no-default-features --locked
 cargo test -p animus-std --features sandlock-host sandlock_host --locked
 scripts/cairn/check-sandlock-host --root .
+scripts/cairn/check-durable-session-store --root .
 scripts/cairn/check-component-catalog --root .
 scripts/cairn/check-runtime-facade-inventory --root .
 scripts/cairn/check-request-lifecycle --root .

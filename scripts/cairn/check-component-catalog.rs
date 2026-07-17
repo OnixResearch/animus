@@ -85,6 +85,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "provider-retry",
     "sandlock-host",
     "session-tree-export",
+    "durable-session-store",
     "iroh-host",
     "syndicate-host",
     "iroh-syndicate-host",

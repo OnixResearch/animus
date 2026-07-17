@@ -1,0 +1,59 @@
+schema: animus.durable-session-store-closeout.v1
+change: add-durable-session-store-host
+date: 2026-07-17
+status: pass
+
+implemented:
+- non-default animus-std durable-session-store authority block
+- pure generated-policy, framing, lineage, commit, recovery, identity, and receipt core
+- capability-rooted private journal with restrictive permissions and exclusive writer lease
+- sync_all_each_commit durability boundary
+- explicit entry and parent identities with final-entry active-leaf binding
+- lock cleanup after setup, journal-open, recovery, and metadata failures
+- metadata-only sidecars and receipts with generated-policy revalidation
+- real child-process committed restart and uncommitted-tail exclusion evidence
+
+checks_passed:
+- scripts/cairn/check-durable-session-store --root .
+- cargo fmt --all -- --check
+- cargo test --workspace --locked --no-fail-fast
+- cargo clippy --workspace --all-targets --locked -- -D warnings
+- cargo tigerstyle check
+- scripts/config/check-nickel-configs
+- scripts/cairn/check-safe-receipts-artifacts --root .
+- scripts/cairn/check-neutral-ledger --root .
+- scripts/cairn/check-composition-conformance --root .
+- scripts/cairn/check-dogfood-readiness --root .
+- scripts/cairn/check-component-catalog --root .
+- nix build .#checks.x86_64-linux.durable-session-store --no-link -L
+- cairn gate proposal add-durable-session-store-host --root .
+- cairn gate design add-durable-session-store-host --root .
+- cairn gate tasks add-durable-session-store-host --root .
+- cairn validate --root .
+
+focused_receipt_blake3: f529a834f16ec79c37e49ebdadd7683b9508646ddce9aabead01b1eb228637b2
+focused_receipt_status: pass
+filesystem_tier: local-linux-pass
+permission_fixture: pass
+synchronization_failure_fixture: pass
+child_process_restart_fixture: pass
+uncommitted_child_restart_tail: excluded
+
+accepted_spec_sync:
+- automated dry-run was blocked before mutation by four unrelated accepted_identity_cardinality diagnostics
+- reviewed manual merge added exactly nine durable_session_store requirements
+- post-merge Cairn validation is valid
+- post-merge Tracey has 739 referenced IDs across 2257 requirements
+- no durable_session_store ID remains dangling
+
+bounded_existing_debt:
+- global Tracey remains invalid from unrelated lifecycle coverage debt
+- runtime-facade inventory remains invalid for 23 unrelated Aeneas, authoritative-completion, and Sandlock exports
+- durable-session runtime/std/root exports are classified and no durable-session export remains in that diagnostic set
+
+non_claims:
+- no encryption, authentication, or key-discovery claim
+- no filesystem, kernel, or power-loss correctness proof
+- no backup, replication, retention, daemon, multi-host, or multi-writer claim
+- no packaged coding-session persistence claim
+- no production readiness or release eligibility claim
