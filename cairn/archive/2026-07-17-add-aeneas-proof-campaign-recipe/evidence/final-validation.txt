@@ -1,0 +1,35 @@
+Aeneas proof campaign recipe final validation
+Date: 2026-07-17
+
+Baseline
+- `nix develop -c cargo test -p animus-runtime agent_roles`: PASS before campaign runtime changes.
+- Cairn proposal, design, and tasks gates: PASS before implementation.
+
+Focused campaign rail
+- `scripts/cairn/check-aeneas-proof-campaign --root .`: PASS.
+- Focused Rust tests: 20 passed, 0 failed, 465 filtered out.
+- Nickel fixtures: 1 positive and 11 negative cases.
+- Deterministic receipt identity: d53361a3c28d6058a8b75e8eaa71675709dbc11b4ff225ca82809ece1b2012e2
+- Generated profile BLAKE3: bc982d423a26381009c6c284facd2fd6ee9130923f59ee1123d625537987d8e8
+- Canonical skill BLAKE3: f8f4d41384958e468c952289e8a548d78b7f6e69616abedd0ed629dfec327492
+- Pure runtime BLAKE3: 65dd2b93c5c9ae6c30ee0d59ca389cf0d5580e62788821b1719baca4a66ff83b
+- Receipt authoritative_completion: false.
+
+Rust and policy checks
+- `cargo test --workspace --locked`: PASS, including doc tests.
+- `cargo clippy --workspace --all-targets --locked -- -D warnings`: PASS.
+- `cargo tigerstyle check` with local Nix builders/signing disabled: PASS with no Tiger Style findings. Cached Dylint remote-ref and experimental Wasm feature warnings were non-fatal.
+- `nix build .#checks.x86_64-linux.aeneas-proof-campaign -L`: PASS; 20 campaign tests and all profile/skill freshness checks passed in the Nix sandbox.
+- `nix run .#check-nickel-configs`: PASS.
+- Relevant existing rails passed: agent-role profiles, model-runtime profiles, injected services, tool catalog, and safe-receipt artifacts.
+
+Lifecycle checks
+- `cairn validate --root .`: PASS.
+- `cairn gate proposal add-aeneas-proof-campaign-recipe --root .`: PASS.
+- `cairn gate design add-aeneas-proof-campaign-recipe --root .`: PASS.
+- `cairn gate tasks add-aeneas-proof-campaign-recipe --root .`: PASS.
+
+Boundaries and blockers
+- The campaign intentionally does not execute an external theorem target. Aeneas generation, proof execution, artifact verification, measurement, cancellation, and storage remain host-owned injected services. The focused rail proves campaign-profile and pure admission/reduction conformance; it does not claim theorem truth, provider or verifier soundness, source/model equivalence, reviewer independence, product correctness, release readiness, or authoritative completion.
+- Full repository Tracey coverage remains globally blocked by pre-existing lifecycle debt. The pre-sync run reported 671 referenced IDs across 2,189 requirements and `valid=false`; campaign implementation references were temporarily dangling while the delta remained active. After sync, all 10 campaign requirements landed in `cairn/specs/agent-harness-runtime/spec.md`, the report advanced to 681 referenced IDs across 2,199 requirements, and no campaign ID remained dangling or uncovered. Unrelated global uncovered/dangling IDs keep the aggregate report at `valid=false` outside this change.
+- No nondeterministic elapsed-time fields were recorded.

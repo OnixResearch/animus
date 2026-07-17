@@ -30,6 +30,9 @@
 #![forbid(unsafe_code)]
 
 mod admission;
+#[allow(excessive_file_length)]
+#[path = "aeneasproofcampaign.rs"]
+pub mod aeneas_proof_campaign;
 #[path = "agentroles/mod.rs"]
 pub mod agent_roles;
 mod background;

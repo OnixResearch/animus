@@ -1,0 +1,97 @@
+#!/usr/bin/env sh
+# r[verify agent_harness_runtime.aeneas_proof_campaign.verification]
+# r[verify agent_harness_runtime.aeneas_proof_campaign.profile]
+# r[verify agent_harness_runtime.aeneas_proof_campaign.skill_source]
+set -eu
+
+readonly FAILURE=1
+readonly RECEIPT_SCHEMA='animus.aeneas-proof-campaign-check.v1'
+readonly PROFILE_SOURCE='config/aeneas-proof-campaign.ncl'
+readonly GENERATED_PROFILE='config/generated/aeneas-proof-campaign.json'
+readonly FIXTURE_ROOT='config/aeneas-proof-campaign/fixtures'
+readonly SKILL_SOURCE='skills/aeneas-proof-campaign/SKILL.md'
+readonly RUNTIME_SOURCE='crates/animus-runtime/src/aeneasproofcampaign.rs'
+
+root='.'
+if [ "${1:-}" = '--root' ]; then
+  root=${2:-.}
+fi
+cd "${root}"
+
+for command_name in nickel b3sum cargo; do
+  if ! command -v "${command_name}" >/dev/null 2>&1; then
+    printf 'error: %s is required for the Aeneas campaign check\n' "${command_name}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/animus-aeneas-campaign.XXXXXX")
+trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
+
+nickel export --format json --field aeneas_proof_campaign_bundle "${PROFILE_SOURCE}" \
+  > "${tmp_dir}/aeneas-proof-campaign.json"
+diff -u "${GENERATED_PROFILE}" "${tmp_dir}/aeneas-proof-campaign.json"
+
+expected_skill_hash=$(nickel export --format raw \
+  --field aeneas_proof_campaign_bundle.skill_manifest.source_blake3 \
+  "${PROFILE_SOURCE}")
+observed_skill_hash=$(b3sum "${SKILL_SOURCE}" | cut -d ' ' -f 1)
+if [ "${expected_skill_hash}" != "${observed_skill_hash}" ]; then
+  printf 'error: canonical campaign skill hash is stale: expected %s observed %s\n' \
+    "${expected_skill_hash}" "${observed_skill_hash}" >&2
+  exit "${FAILURE}"
+fi
+
+positive_count=0
+negative_count=0
+for fixture in "${FIXTURE_ROOT}"/*.ncl; do
+  case "${fixture}" in
+    */valid-*)
+      nickel eval --field fixture "${fixture}" >/dev/null
+      positive_count=$((positive_count + 1))
+      ;;
+    *)
+      if nickel eval --field fixture "${fixture}" \
+        >"${tmp_dir}/fixture.out" 2>"${tmp_dir}/fixture.err"
+      then
+        printf 'error: negative fixture unexpectedly passed: %s\n' "${fixture}" >&2
+        exit "${FAILURE}"
+      fi
+      expected_issue=$(nickel export --format raw --field expected_issue "${fixture}" 2>/dev/null)
+      if ! grep -F "${expected_issue}" "${tmp_dir}/fixture.err" >/dev/null; then
+        printf 'error: fixture %s missed declared issue %s\n' "${fixture}" "${expected_issue}" >&2
+        exit "${FAILURE}"
+      fi
+      negative_count=$((negative_count + 1))
+      ;;
+  esac
+done
+
+if [ "${positive_count}" -eq 0 ] || [ "${negative_count}" -eq 0 ]; then
+  printf '%s\n' 'error: campaign profile requires positive and negative fixtures' >&2
+  exit "${FAILURE}"
+fi
+
+for marker in \
+  'validate_campaign_plan' \
+  'evaluate_campaign_separation' \
+  'approve_campaign_statement' \
+  'admit_proof_service_request' \
+  'validate_proof_service_observation' \
+  'evaluate_campaign_terminal' \
+  'project_campaign_receipt'
+do
+  if ! grep -F "${marker}" "${RUNTIME_SOURCE}" >/dev/null; then
+    printf 'error: campaign runtime marker is missing: %s\n' "${marker}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+cargo test -p animus-runtime --locked aeneas_proof_campaign
+
+profile_hash=$(b3sum "${GENERATED_PROFILE}" | cut -d ' ' -f 1)
+runtime_hash=$(b3sum "${RUNTIME_SOURCE}" | cut -d ' ' -f 1)
+receipt_identity=$(printf '%s\n%s\n%s\n' "${profile_hash}" "${observed_skill_hash}" "${runtime_hash}" | b3sum | cut -d ' ' -f 1)
+printf '{"schema":"%s","receipt_identity":"%s","profile_blake3":"%s","skill_blake3":"%s","runtime_blake3":"%s","positive_fixtures":%s,"negative_fixtures":%s,"authoritative_completion":false}\n' \
+  "${RECEIPT_SCHEMA}" "${receipt_identity}" "${profile_hash}" "${observed_skill_hash}" \
+  "${runtime_hash}" "${positive_count}" "${negative_count}"
