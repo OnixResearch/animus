@@ -1,0 +1,121 @@
+#!/usr/bin/env sh
+# r[impl agent_harness_runtime.authoritative_completion.verification]
+set -eu
+
+readonly FAILURE=1
+readonly REGISTRY_SOURCE=config/agent-check-registry.ncl
+readonly REGISTRY_EXPORT=config/generated/agent-check-registry.json
+readonly REGISTRY_FIELD=agent_check_registry
+readonly POSITIVE_FIXTURE=config/agent-check-registry/fixtures/valid-baseline.ncl
+readonly CONTRACT_FIXTURE=fixtures/authoritative-completion/cairn-contract.json
+readonly RESULTS_FIXTURE=fixtures/authoritative-completion/cairn-results.json
+readonly SAVED_POSITIVE_RECEIPT=fixtures/authoritative-completion/cairn-positive-receipt.json
+readonly SAVED_NEGATIVE_RECEIPT=fixtures/authoritative-completion/cairn-stale-subject-receipt.json
+readonly CURRENT_SUBJECT=cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+readonly STALE_SUBJECT=dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+readonly RECEIPT_DIR=target/cairn/focused-rails
+readonly RECEIPT_PATH=${RECEIPT_DIR}/authoritative-completion.md
+readonly RECEIPT_SCHEMA=animus.authoritative-completion-check.v1
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+if [ "${1:-}" = "--root" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  repo_root=$(CDPATH= cd -- "$2" && pwd)
+fi
+cd "${repo_root}"
+
+for command in cargo nickel b3sum grep; do
+  if ! command -v "${command}" >/dev/null 2>&1; then
+    printf 'error: %s is required\n' "${command}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/animus-authoritative-completion.XXXXXX")
+trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
+
+nickel export --format json --field "${REGISTRY_FIELD}" config/repo.ncl > "${tmp_dir}/agent-check-registry.json"
+diff -u "${REGISTRY_EXPORT}" "${tmp_dir}/agent-check-registry.json"
+nickel export --format json "${POSITIVE_FIXTURE}" > "${tmp_dir}/positive.json"
+negative_count=0
+for fixture in config/agent-check-registry/fixtures/negative-*.ncl; do
+  if nickel export --format json "${fixture}" > "${tmp_dir}/negative.json" 2> "${tmp_dir}/negative.err"; then
+    printf 'error: negative registry fixture unexpectedly passed: %s\n' "${fixture}" >&2
+    exit "${FAILURE}"
+  fi
+  negative_count=$((negative_count + 1))
+done
+
+cargo test -p animus-runtime --locked authoritative_completion --no-fail-fast
+cargo test -p animus-adapters --locked validationplanner --no-fail-fast
+cargo test -p animus-steel --locked --no-fail-fast
+cargo test -p animus-std --features authoritative-completion --locked authoritativecompletion --no-fail-fast
+cargo test -p animus-runtime --locked empty_queue_waits_when_authoritative_completion_is_required --no-fail-fast
+
+run_cairn_completion() {
+  subject=$1
+  output=$2
+  if [ "${CAIRN_COMPLETION_MODE:-live}" = "saved" ]; then
+    if [ "${subject}" = "${CURRENT_SUBJECT}" ]; then
+      cp "${SAVED_POSITIVE_RECEIPT}" "${output}"
+    else
+      cp "${SAVED_NEGATIVE_RECEIPT}" "${output}"
+    fi
+  elif [ -n "${CAIRN_COMPLETION_BIN:-}" ]; then
+    "${CAIRN_COMPLETION_BIN}" agent-receipt complete \
+      --contract "${CONTRACT_FIXTURE}" \
+      --results "${RESULTS_FIXTURE}" \
+      --subject-hash "${subject}" > "${output}"
+  else
+    nix run --option builders '' --option secret-key-files '' .#cairn -- \
+      agent-receipt complete \
+      --contract "${CONTRACT_FIXTURE}" \
+      --results "${RESULTS_FIXTURE}" \
+      --subject-hash "${subject}" > "${output}"
+  fi
+}
+
+run_cairn_completion "${CURRENT_SUBJECT}" "${tmp_dir}/cairn-positive.json"
+grep -F '"valid": true' "${tmp_dir}/cairn-positive.json" >/dev/null
+grep -F '"verdict": "PASS"' "${tmp_dir}/cairn-positive.json" >/dev/null
+grep -F '"checks_executed": false' "${tmp_dir}/cairn-positive.json" >/dev/null
+run_cairn_completion "${STALE_SUBJECT}" "${tmp_dir}/cairn-negative.json"
+grep -F 'verification_contract.subject_stale' "${tmp_dir}/cairn-negative.json" >/dev/null
+grep -F '"valid": false' "${tmp_dir}/cairn-negative.json" >/dev/null
+
+registry_blake3=$(b3sum "${REGISTRY_EXPORT}" | cut -d ' ' -f 1)
+steel_blake3=$(b3sum policy/steel-runtime/scripts/ralph-loop.scm | cut -d ' ' -f 1)
+cairn_receipt_hash=$(grep -F '"completion_receipt_hash"' "${tmp_dir}/cairn-positive.json" | head -n 1 | cut -d '"' -f 4)
+mkdir -p "${RECEIPT_DIR}"
+cat > "${RECEIPT_PATH}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+status: pass
+registry_source: ${REGISTRY_SOURCE}
+registry_export: ${REGISTRY_EXPORT}
+registry_blake3: ${registry_blake3}
+steel_script_blake3: ${steel_blake3}
+positive_nickel_fixtures: 1
+negative_nickel_fixtures: ${negative_count}
+runtime_positive_and_negative_tests: pass
+pass_only_status_matrix: pass
+exact_completion_candidate: pass
+incidental_complete_substrings: rejected
+continuation_empty_queue: awaits-authoritative-evidence
+cairn_schema: cairn.agent-completion.v2
+cairn_checks_executed: false
+cairn_positive_receipt_hash: ${cairn_receipt_hash}
+cairn_stale_subject_fixture: rejected
+authoritative_completion: bounded-selected-scope-only
+non_claims:
+- no check-oracle soundness claim
+- no honest-execution claim beyond supplied host evidence
+- no model or whole-product correctness claim
+- no production, release, push, or pull-request authority
+EOF
+
+printf 'focused rail authoritative-agent-completion: pass\n'
+printf 'receipt: %s\n' "${RECEIPT_PATH}"

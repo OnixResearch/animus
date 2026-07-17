@@ -98,6 +98,11 @@ pub enum RuntimeEvent {
         /// Validated final model response.
         response: animus_adapters::ModelResponse,
     },
+    /// The loop fabric requested host-owned completion evaluation.
+    CompletionCandidateRequested {
+        /// BLAKE3 identity of the exact request spelling.
+        request_hash: String,
+    },
     /// The loop fabric selected a stop decision without a final response.
     Stopped,
     /// The configured maximum-turn limit was reached before completion.
@@ -216,6 +221,9 @@ impl RuntimeEvent {
             Self::ToolResponded { .. } => super::RuntimeEventKind::ToolResponded,
             Self::ToolDenied { .. } => super::RuntimeEventKind::ToolDenied,
             Self::FinalResponse { .. } => super::RuntimeEventKind::FinalResponse,
+            Self::CompletionCandidateRequested { .. } => {
+                super::RuntimeEventKind::CompletionCandidateRequested
+            }
             Self::Stopped => super::RuntimeEventKind::Stopped,
             Self::MaxTurnsExceeded { .. } => super::RuntimeEventKind::MaxTurnsExceeded,
             Self::AdapterOutcomeClassified { .. } => {

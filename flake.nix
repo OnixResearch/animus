@@ -14,7 +14,7 @@
       flake = false;
     };
     cairn = {
-      url = "git+ssh://git@github.com/OnixResearch/cairn.git?rev=fb1a7403a7897f7fa161e0b3c5d86b4cf19e52f8";
+      url = "git+ssh://git@github.com/OnixResearch/cairn.git?rev=cf5c4a5c10361ca20a13addf14954407d6857028";
       flake = false;
     };
     trellis = {
@@ -90,10 +90,11 @@
               mkdir -p "$tmp_dir/.cargo"
               mkdir -p "$tmp_dir/policy/recipe-workflows/generated"
               mkdir -p "$tmp_dir/config/generated"
-              nickel export --format toml --field cargo_config ${./config/repo.ncl} > "$tmp_dir/.cargo/config.toml"
-              nickel export --format toml --field clippy_config ${./config/repo.ncl} > "$tmp_dir/clippy.toml"
-              nickel export --format toml --field dylint_config ${./config/repo.ncl} > "$tmp_dir/dylint.toml"
-              nickel export --format yaml --field pre_commit_config ${./config/repo.ncl} > "$tmp_dir/.pre-commit-config.yaml"
+              nickel export --format toml --field cargo_config ${./.}/config/repo.ncl > "$tmp_dir/.cargo/config.toml"
+              nickel export --format toml --field clippy_config ${./.}/config/repo.ncl > "$tmp_dir/clippy.toml"
+              nickel export --format toml --field dylint_config ${./.}/config/repo.ncl > "$tmp_dir/dylint.toml"
+              nickel export --format yaml --field pre_commit_config ${./.}/config/repo.ncl > "$tmp_dir/.pre-commit-config.yaml"
+              nickel export --format json --field agent_check_registry ${./.}/config/repo.ncl > "$tmp_dir/config/generated/agent-check-registry.json"
               nickel export --format json --field recipe_workflow_catalog ${./config/recipe-workflows.ncl} > "$tmp_dir/policy/recipe-workflows/generated/recipe-workflows.json"
               nickel export --format json --field model_runtime_profile_set ${./.}/config/model-runtime-profiles.ncl > "$tmp_dir/config/generated/model-runtime-profiles.json"
               nickel export --format json --field agent_role_catalog ${./.}/config/agent-role-profiles.ncl > "$tmp_dir/config/generated/agent-role-profiles.json"
@@ -106,6 +107,7 @@
               diff -u ${./clippy.toml} "$tmp_dir/clippy.toml"
               diff -u ${./dylint.toml} "$tmp_dir/dylint.toml"
               diff -u ${./.pre-commit-config.yaml} "$tmp_dir/.pre-commit-config.yaml"
+              diff -u ${./config/generated/agent-check-registry.json} "$tmp_dir/config/generated/agent-check-registry.json"
               diff -u ${./policy/recipe-workflows/generated/recipe-workflows.json} "$tmp_dir/policy/recipe-workflows/generated/recipe-workflows.json"
               diff -u ${./config/generated/model-runtime-profiles.json} "$tmp_dir/config/generated/model-runtime-profiles.json"
               diff -u ${./config/generated/agent-role-profiles.json} "$tmp_dir/config/generated/agent-role-profiles.json"
@@ -133,7 +135,7 @@
 
               command="''${1:-}"
               case "$command" in
-                doctor|validate|release-readiness|policy|probe|steel-orchestration|migrate|gate|sync|archive)
+                agent-receipt|doctor|validate|release-readiness|policy|probe|steel-orchestration|tracey|migrate|gate|sync|archive)
                   if [ "$has_policy_arg" = false ]; then
                     exec nix run "$source_flake#cairn" -- "$@" --policy "$policy_path"
                   fi
@@ -217,6 +219,7 @@
                 || baseName == "check-model-runtime-profiles"
                 || baseName == "check-agent-role-profiles"
                 || baseName == "check-aeneas-proof-campaign"
+                || baseName == "check-authoritative-agent-completion"
                 || baseName == "check-injected-services"
                 || baseName == "check-interrupted-tool-repair"
                 || baseName == "check-provider-retry"
@@ -468,6 +471,15 @@
             pkgs.diffutils
           ] ''
             sh scripts/cairn/check-aeneas-proof-campaign --root .
+          '';
+
+          authoritative-agent-completion = cargoCheck "animus-authoritative-agent-completion" [
+            pkgs.nickel
+            pkgs.b3sum
+            pkgs.diffutils
+          ] ''
+            export CAIRN_COMPLETION_MODE=saved
+            sh scripts/cairn/check-authoritative-agent-completion --root .
           '';
 
           interrupted-tool-repair = cargoCheck "animus-interrupted-tool-repair" [

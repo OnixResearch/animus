@@ -6,6 +6,7 @@ const FABRIC_PRELUDE: &str = "\
 (define (animus-tool name schema arguments correlation-id visible-budget mutation-targets capabilities approval)\n\
   (list 'tool name schema arguments correlation-id visible-budget mutation-targets capabilities approval))\n\
 (define (animus-respond message) (list 'respond message))\n\
+(define (animus-completion-candidate request) (list 'completion-candidate request))\n\
 (define (animus-stop) (list 'stop))\n";
 const DECIDE_CALL: &str = "(animus-decide)";
 

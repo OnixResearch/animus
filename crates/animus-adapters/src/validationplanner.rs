@@ -135,8 +135,47 @@ pub enum ValidationResultStatus {
     Passed,
     /// Validation failed.
     Failed,
+    /// Validation was blocked by policy or prerequisites.
+    Blocked,
     /// Validation was skipped.
     Skipped,
+    /// Validation was explicitly deferred.
+    Deferred,
+    /// Validation exceeded its finite deadline.
+    TimedOut,
+    /// Validation was cancelled.
+    Cancelled,
+    /// Validation produced a dry-run plan only.
+    DryRun,
+    /// Validation process-group cleanup failed.
+    CleanupFailed,
+    /// Host validation infrastructure failed.
+    InfrastructureError,
+    /// Registry selection did not select the row.
+    NotSelected,
+    /// Producer supplied an unknown status.
+    Unknown,
+}
+
+impl ValidationResultStatus {
+    /// Returns the stable pass-only status label.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Passed => "passed",
+            Self::Failed => "failed",
+            Self::Blocked => "blocked",
+            Self::Skipped => "skipped",
+            Self::Deferred => "deferred",
+            Self::TimedOut => "timed_out",
+            Self::Cancelled => "cancelled",
+            Self::DryRun => "dry_run",
+            Self::CleanupFailed => "cleanup_failed",
+            Self::InfrastructureError => "infrastructure_error",
+            Self::NotSelected => "not_selected",
+            Self::Unknown => "unknown",
+        }
+    }
 }
 
 /// Follow-up intent status.
@@ -692,26 +731,28 @@ pub fn validate_validation_result_summary(
     })
 }
 
-/// Reduces validation result summaries to advisory follow-up intents only.
+/// Reduces validation result summaries with pass-only semantics.
 #[must_use]
 pub fn reduce_validation_follow_up(result: &ValidationResultSummary) -> ValidationFollowUpIntent {
-    match result.status() {
-        ValidationResultStatus::Passed | ValidationResultStatus::Skipped => {
-            ValidationFollowUpIntent {
-                status: ValidationFollowUpStatus::None,
-                profile_label: Text::from(result.profile_label()),
-                reason: None,
-                output_hash: Text::from(result.output_hash()),
-                truncated: result.truncated(),
-            }
-        }
-        ValidationResultStatus::Failed => ValidationFollowUpIntent {
-            status: ValidationFollowUpStatus::Advisory,
+    if result.status() == ValidationResultStatus::Passed {
+        return ValidationFollowUpIntent {
+            status: ValidationFollowUpStatus::None,
             profile_label: Text::from(result.profile_label()),
-            reason: result.failure_summary().map(Text::from),
+            reason: None,
             output_hash: Text::from(result.output_hash()),
             truncated: result.truncated(),
-        },
+        };
+    }
+    let reason = match result.failure_summary() {
+        Some(summary) => summary,
+        None => result.status().as_str(),
+    };
+    ValidationFollowUpIntent {
+        status: ValidationFollowUpStatus::Advisory,
+        profile_label: Text::from(result.profile_label()),
+        reason: Some(Text::from(reason)),
+        output_hash: Text::from(result.output_hash()),
+        truncated: result.truncated(),
     }
 }
 
@@ -1256,6 +1297,34 @@ mod tests {
         assert_eq!(follow_up.profile_label(), PROFILE_RUST);
         assert_eq!(follow_up.output_hash(), HASH_A);
         assert_eq!(no_follow_up.status(), ValidationFollowUpStatus::None);
+
+        let non_passing_statuses = [
+            ValidationResultStatus::Failed,
+            ValidationResultStatus::Blocked,
+            ValidationResultStatus::Skipped,
+            ValidationResultStatus::Deferred,
+            ValidationResultStatus::TimedOut,
+            ValidationResultStatus::Cancelled,
+            ValidationResultStatus::DryRun,
+            ValidationResultStatus::CleanupFailed,
+            ValidationResultStatus::InfrastructureError,
+            ValidationResultStatus::NotSelected,
+            ValidationResultStatus::Unknown,
+        ];
+        for status in non_passing_statuses {
+            let result = validate_validation_result_summary(&ValidationResultSummaryDraft {
+                item_id: "artifact-rust:cargo-test-adapters",
+                profile_label: PROFILE_RUST,
+                status,
+                failure_summary: None,
+                output_hash: HASH_A,
+                truncated: false,
+            })
+            .expect("bounded status should validate");
+            let follow_up = reduce_validation_follow_up(&result);
+            assert_eq!(follow_up.status(), ValidationFollowUpStatus::Advisory);
+            assert_eq!(follow_up.reason(), Some(status.as_str()));
+        }
     }
 
     #[test]

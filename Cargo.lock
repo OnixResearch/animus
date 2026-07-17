@@ -388,10 +388,12 @@ checksum = "c8efb64bd706a16a1bdde310ae86b351e4d21550d98d056f22f8a7f7a2183fec"
 [[package]]
 name = "cairn-core"
 version = "0.1.0"
-source = "git+ssh://git@github.com/OnixResearch/cairn.git?rev=fb1a7403a7897f7fa161e0b3c5d86b4cf19e52f8#fb1a7403a7897f7fa161e0b3c5d86b4cf19e52f8"
+source = "git+ssh://git@github.com/OnixResearch/cairn.git?rev=cf5c4a5c10361ca20a13addf14954407d6857028#cf5c4a5c10361ca20a13addf14954407d6857028"
 dependencies = [
  "blake3",
+ "iddqd",
  "preserves",
+ "serde",
  "serde_json",
 ]
 
@@ -1219,6 +1221,18 @@ dependencies = [
  "zerofrom",
  "zerotrie",
  "zerovec",
+]
+
+[[package]]
+name = "iddqd"
+version = "0.4.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d7cf7e72dd082126bd727c1f8bd2d5229c2780258c0b3c7bc33eaf0f4ea5f0fa"
+dependencies = [
+ "allocator-api2",
+ "equivalent",
+ "foldhash",
+ "hashbrown 0.16.1",
 ]
 
 [[package]]

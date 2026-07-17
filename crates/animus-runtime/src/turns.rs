@@ -19,9 +19,12 @@ const MODEL_PROMPT_FIELD: FieldName = FieldName::new("model_prompt");
 const TOOL_NAME_FIELD: FieldName = FieldName::new("tool_name");
 const TOOL_INPUT_FIELD: FieldName = FieldName::new("tool_input");
 const RESPONSE_MESSAGE_FIELD: FieldName = FieldName::new("response_message");
+const COMPLETION_REQUEST_FIELD: FieldName = FieldName::new("completion_request");
 const MODEL_KIND: &str = "model";
 const TOOL_KIND: &str = "tool";
 const RESPOND_KIND: &str = "respond";
+const COMPLETION_CANDIDATE_KIND: &str = "completion_candidate";
+const EXACT_COMPLETION_REQUEST: &str = "COMPLETE";
 const STOP_KIND: &str = "stop";
 const NUL_CHARACTER: char = '\0';
 
@@ -77,7 +80,7 @@ impl RuntimeLoopTurn {
 /// Borrowed neutral decision draft produced by a loop fabric before validation.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct RuntimeLoopDecisionDraft<'a> {
-    /// Decision kind label: `model`, `tool`, `respond`, or `stop`.
+    /// Decision kind label: `model`, `tool`, `respond`, `completion_candidate`, or `stop`.
     pub kind: &'a str,
     /// Model prompt for `model` decisions.
     pub model_prompt: Option<&'a str>,
@@ -87,6 +90,8 @@ pub struct RuntimeLoopDecisionDraft<'a> {
     pub tool_input: Option<&'a str>,
     /// Final response message for `respond` decisions.
     pub response_message: Option<&'a str>,
+    /// Exact advisory request for `completion_candidate` decisions.
+    pub completion_request: Option<&'a str>,
 }
 
 impl<'a> RuntimeLoopDecisionDraft<'a> {
@@ -99,6 +104,7 @@ impl<'a> RuntimeLoopDecisionDraft<'a> {
             tool_name: None,
             tool_input: None,
             response_message: None,
+            completion_request: None,
         }
     }
 
@@ -111,6 +117,7 @@ impl<'a> RuntimeLoopDecisionDraft<'a> {
             tool_name: Some(name),
             tool_input: Some(input),
             response_message: None,
+            completion_request: None,
         }
     }
 
@@ -123,6 +130,20 @@ impl<'a> RuntimeLoopDecisionDraft<'a> {
             tool_name: None,
             tool_input: None,
             response_message: Some(message),
+            completion_request: None,
+        }
+    }
+
+    /// Builds an advisory completion-candidate decision draft.
+    #[must_use]
+    pub const fn completion_candidate(request: &'a str) -> Self {
+        Self {
+            kind: COMPLETION_CANDIDATE_KIND,
+            model_prompt: None,
+            tool_name: None,
+            tool_input: None,
+            response_message: None,
+            completion_request: Some(request),
         }
     }
 
@@ -135,7 +156,22 @@ impl<'a> RuntimeLoopDecisionDraft<'a> {
             tool_name: None,
             tool_input: None,
             response_message: None,
+            completion_request: None,
         }
+    }
+}
+
+/// Runtime-owned advisory completion request.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RuntimeCompletionCandidate {
+    request: String,
+}
+
+impl RuntimeCompletionCandidate {
+    /// Returns the exact admitted request spelling.
+    #[must_use]
+    pub fn request(&self) -> &str {
+        self.request.as_str()
     }
 }
 
@@ -157,6 +193,11 @@ pub enum RuntimeLoopDecision {
         /// Validated final response.
         response: animus_adapters::ModelResponse,
     },
+    /// Request host-owned completion evaluation without a final response.
+    CompletionCandidate {
+        /// Validated advisory candidate.
+        candidate: RuntimeCompletionCandidate,
+    },
     /// Stop without producing a final response.
     Stop,
 }
@@ -175,6 +216,7 @@ impl RuntimeLoopDecision {
             MODEL_KIND => from_model_draft(draft),
             TOOL_KIND => from_tool_draft(draft),
             RESPOND_KIND => from_respond_draft(draft),
+            COMPLETION_CANDIDATE_KIND => from_completion_candidate_draft(draft),
             STOP_KIND => Ok(Self::Stop),
             other => Err(RuntimeLoopContractError::UnsupportedDecisionKind {
                 field: DECISION_KIND_FIELD.as_str(),
@@ -190,6 +232,7 @@ impl RuntimeLoopDecision {
             Self::CallModel { .. } => MODEL_KIND,
             Self::CallTool { .. } => TOOL_KIND,
             Self::Respond { .. } => RESPOND_KIND,
+            Self::CompletionCandidate { .. } => COMPLETION_CANDIDATE_KIND,
             Self::Stop => STOP_KIND,
         }
     }
@@ -202,6 +245,13 @@ impl From<animus_steel::LoopDecision> for RuntimeLoopDecision {
             animus_steel::LoopDecision::CallModel { request } => Self::CallModel { request },
             animus_steel::LoopDecision::CallTool { request } => Self::CallTool { request },
             animus_steel::LoopDecision::Respond { response } => Self::Respond { response },
+            animus_steel::LoopDecision::CompletionCandidate { candidate } => {
+                Self::CompletionCandidate {
+                    candidate: RuntimeCompletionCandidate {
+                        request: candidate.request().to_string(),
+                    },
+                }
+            }
             animus_steel::LoopDecision::Stop => Self::Stop,
         }
     }
@@ -332,6 +382,23 @@ fn from_respond_draft(
         .map_err(|error| adapter_error(RESPONSE_MESSAGE_FIELD, &error))
 }
 
+fn from_completion_candidate_draft(
+    draft: RuntimeLoopDecisionDraft<'_>,
+) -> Result<RuntimeLoopDecision, RuntimeLoopContractError> {
+    let request = required_payload(COMPLETION_REQUEST_FIELD, draft.completion_request)?;
+    if request != EXACT_COMPLETION_REQUEST {
+        return Err(RuntimeLoopContractError::UnsupportedDecisionKind {
+            field: COMPLETION_REQUEST_FIELD.as_str(),
+            value: String::from(request),
+        });
+    }
+    Ok(RuntimeLoopDecision::CompletionCandidate {
+        candidate: RuntimeCompletionCandidate {
+            request: String::from(request),
+        },
+    })
+}
+
 fn normalized_kind(kind: &str) -> Result<&str, RuntimeLoopContractError> {
     validate_required_text(DECISION_KIND_FIELD, kind)?;
     Ok(kind.trim())
@@ -427,19 +494,24 @@ mod tests {
     }
 
     #[test]
-    fn neutral_decision_accepts_model_response_and_stop_variants() {
+    fn neutral_decision_accepts_model_response_candidate_and_stop_variants() {
         let decisions = [
             RuntimeLoopDecision::from_draft(RuntimeLoopDecisionDraft::model(SUMMARY))
                 .expect("model decision should build"),
             RuntimeLoopDecision::from_draft(RuntimeLoopDecisionDraft::respond(MODEL_MESSAGE))
                 .expect("response decision should build"),
+            RuntimeLoopDecision::from_draft(RuntimeLoopDecisionDraft::completion_candidate(
+                EXACT_COMPLETION_REQUEST,
+            ))
+            .expect("candidate decision should build"),
             RuntimeLoopDecision::from_draft(RuntimeLoopDecisionDraft::stop())
                 .expect("stop decision should build"),
         ];
 
         assert_eq!(decisions[0].kind(), MODEL_KIND);
         assert_eq!(decisions[1].kind(), RESPOND_KIND);
-        assert_eq!(decisions[2].kind(), STOP_KIND);
+        assert_eq!(decisions[2].kind(), COMPLETION_CANDIDATE_KIND);
+        assert_eq!(decisions[3].kind(), STOP_KIND);
     }
 
     #[test]
@@ -465,6 +537,7 @@ mod tests {
             tool_name: None,
             tool_input: None,
             response_message: None,
+            completion_request: None,
         })
         .expect_err("unsupported kind should fail");
         let response_payload = "x"
@@ -473,6 +546,10 @@ mod tests {
             response_payload.as_str(),
         ))
         .expect_err("oversized response should fail");
+        let incidental = RuntimeLoopDecision::from_draft(
+            RuntimeLoopDecisionDraft::completion_candidate("not COMPLETE"),
+        )
+        .expect_err("incidental marker must fail");
 
         assert!(matches!(empty, RuntimeLoopContractError::EmptyField { .. }));
         assert!(matches!(
@@ -483,6 +560,10 @@ mod tests {
             too_long,
             RuntimeLoopContractError::AdapterContract { .. }
                 | RuntimeLoopContractError::FieldTooLong { .. }
+        ));
+        assert!(matches!(
+            incidental,
+            RuntimeLoopContractError::UnsupportedDecisionKind { .. }
         ));
     }
 }

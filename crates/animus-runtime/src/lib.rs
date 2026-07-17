@@ -35,6 +35,9 @@ mod admission;
 pub mod aeneas_proof_campaign;
 #[path = "agentroles/mod.rs"]
 pub mod agent_roles;
+#[allow(excessive_file_length)]
+#[path = "authoritativecompletion/mod.rs"]
+pub mod authoritative_completion;
 mod background;
 #[allow(excessive_file_length)]
 mod batch;

@@ -144,6 +144,7 @@ fn event_specific_labels(
         | super::RuntimeEvent::ToolResponded { .. }
         | super::RuntimeEvent::ToolDenied { .. }
         | super::RuntimeEvent::FinalResponse { .. }
+        | super::RuntimeEvent::CompletionCandidateRequested { .. }
         | super::RuntimeEvent::RuntimeStarted { .. }
         | super::RuntimeEvent::LoopStarted { .. }
         | super::RuntimeEvent::ContextReplayed { .. }
@@ -193,6 +194,7 @@ fn level_for_event(event: &super::RuntimeEvent) -> animus_adapters::LogLevel {
         | super::RuntimeEvent::ToolRequested { .. }
         | super::RuntimeEvent::ToolResponded { .. }
         | super::RuntimeEvent::FinalResponse { .. }
+        | super::RuntimeEvent::CompletionCandidateRequested { .. }
         | super::RuntimeEvent::Stopped
         | super::RuntimeEvent::LifecycleHookOutcome { .. }
         | super::RuntimeEvent::SandboxEscalation { .. }

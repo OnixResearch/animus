@@ -4,7 +4,7 @@ Animus keeps post-turn continuation selection in a pure runtime core. The core d
 
 ## State contract
 
-Continuation state stores typed work IDs for queued prompts, active loop continuations, validation follow-ups, busy prompt work, cancellation, pending dispatch, and completion acknowledgements. Work IDs are opaque safe labels; receipts and completion records expose BLAKE3 hashes instead of raw IDs.
+Continuation state stores typed work IDs for queued prompts, active loop continuations, validation follow-ups, busy prompt work, cancellation, pending dispatch, completion candidates, required authoritative evidence, and completion acknowledgements. Work IDs are opaque safe labels; receipts and completion records expose BLAKE3 hashes instead of raw IDs. A completion candidate is an observation, not evidence that selected checks passed.
 
 ## Priority contract
 
@@ -13,7 +13,9 @@ The default priority is:
 1. queued user prompt replay;
 2. active loop continuation;
 3. validation or auto-test follow-up;
-4. completion when no work remains.
+4. completion only when no work remains and required authoritative evidence is present.
+
+If no dispatchable work remains but authoritative evidence is required and absent, the controller returns `WaitForAuthoritativeEvidence` rather than completing. Candidate text, process exit, empty queues, task deltas, and archive appearance do not satisfy this state.
 
 Callers may provide an explicit `ContinuationPriority` to reorder the three dispatchable work classes. Duplicate priority entries are rejected.
 

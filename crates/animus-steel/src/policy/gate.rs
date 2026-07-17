@@ -7,6 +7,7 @@ pub const DEFAULT_RUNTIME_HOST_ACTIONS: &[super::HostAction] = &[
     super::HostAction::Model,
     super::HostAction::Tool,
     super::HostAction::Respond,
+    super::HostAction::CompletionCandidate,
     super::HostAction::Stop,
 ];
 

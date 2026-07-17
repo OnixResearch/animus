@@ -36,7 +36,8 @@ const EXPECTED_DEFAULT_PROFILE_COUNT: usize = 1;
 const RALPH_TASK_STATE: &str = "branch: ralph/example\nstory: S1 passes false";
 const RALPH_INCOMPLETE_MESSAGE: &str = "implemented S1; S2 remains";
 const RALPH_COMPLETION_PROMISE: &str = "COMPLETE";
-const RALPH_COMPLETE_MESSAGE: &str = "all stories pass\nCOMPLETE";
+const RALPH_COMPLETE_MESSAGE: &str = "COMPLETE";
+const RALPH_INCIDENTAL_COMPLETE_MESSAGE: &str = "not COMPLETE; checks remain";
 const RALPH_PROMPT_MARKER: &str = "complete one unfinished Ralph story";
 
 #[test]
@@ -143,17 +144,34 @@ fn ralph_script_reprompts_until_completion_promise() {
         &["Previous iteration summary", RALPH_INCOMPLETE_MESSAGE],
     );
 
+    let incidental_turn = crate::LoopTurn::new(
+        RALPH_TASK_STATE,
+        Some(RALPH_INCIDENTAL_COMPLETE_MESSAGE),
+        None,
+    )
+    .expect("ralph incidental turn should validate");
+    let incidental_decision =
+        crate::SteelLoopFabric::decide_once(EXPORTED_RALPH_SCRIPT, &incidental_turn)
+            .expect("incidental COMPLETE must reprompt");
+    assert_model_prompt_contains(
+        incidental_decision,
+        &[
+            "Previous iteration summary",
+            RALPH_INCIDENTAL_COMPLETE_MESSAGE,
+        ],
+    );
+
     let complete_turn = crate::LoopTurn::new(RALPH_TASK_STATE, Some(RALPH_COMPLETE_MESSAGE), None)
         .expect("ralph complete turn should validate");
     let complete_decision =
         crate::SteelLoopFabric::decide_once(EXPORTED_RALPH_SCRIPT, &complete_turn)
-            .expect("ralph complete turn should produce final response");
+            .expect("ralph complete turn should produce a candidate");
 
     match complete_decision {
-        crate::LoopDecision::Respond { response } => {
-            assert_eq!(response.message(), RALPH_COMPLETE_MESSAGE);
+        crate::LoopDecision::CompletionCandidate { candidate } => {
+            assert_eq!(candidate.request(), RALPH_COMPLETE_MESSAGE);
         }
-        other => panic!("expected ralph final response, got {other:?}"),
+        other => panic!("expected ralph completion candidate, got {other:?}"),
     }
 }
 
@@ -485,7 +503,7 @@ fn with_valid_draft(
         script_label: SCRIPT_LABEL,
         script_hash: computed_hash.as_str(),
         max_turns: ONE_TURN_BUDGET,
-        allowed_host_actions: &["model", "tool", "respond", "stop"],
+        allowed_host_actions: &["model", "tool", "respond", "completion-candidate", "stop"],
         fallback_mode: "block",
         receipt_redaction: "hash-only",
     })

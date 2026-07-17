@@ -50,6 +50,29 @@ fn runtime_events_reduce_to_tool_snapshot() {
 }
 
 #[test]
+fn completion_candidate_waits_for_evidence_instead_of_rendering_finished() {
+    let mut model = crate::ToolRenderModel::new();
+
+    model.apply_runtime_event(&animus_runtime::RuntimeEvent::CompletionCandidateRequested {
+        request_hash: String::from(COMPLETION_REQUEST_HASH),
+    });
+    assert_eq!(
+        model.status(),
+        crate::ToolSessionStatus::WaitingForCompletionEvidence
+    );
+    assert!(model.final_output().is_none());
+
+    model.apply_runtime_event(&animus_runtime::RuntimeEvent::Shutdown {
+        status: animus_runtime::RuntimeTerminalKind::CompletionCandidate,
+    });
+    assert_eq!(
+        model.status(),
+        crate::ToolSessionStatus::WaitingForCompletionEvidence
+    );
+    assert_ne!(model.status(), crate::ToolSessionStatus::Finished);
+}
+
+#[test]
 fn runtime_denial_renders_failure_without_terminal_backend() {
     // r[verify agent_harness_runtime.ratatui_tool_host.render_model.test_backend]
     let request = tool_request();

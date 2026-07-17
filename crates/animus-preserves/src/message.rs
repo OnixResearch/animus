@@ -22,6 +22,9 @@ const RUNTIME_STREAM_FIELD: &str = "model_stream";
 const RUNTIME_STREAM_KIND_FIELD: &str = "model_stream_kind";
 const RUNTIME_STREAM_VISIBILITY_FIELD: &str = "model_stream_visibility";
 const RUNTIME_PROVIDER_RETRY_FIELD: &str = "provider_retry_progress";
+const RUNTIME_COMPLETION_CANDIDATE_FIELD: &str = "completion_candidate_request_hash";
+const INVALID_COMPLETION_CANDIDATE_HASH_REASON: &str = "expected lowercase BLAKE3 hex";
+const INVALID_COMPLETION_CANDIDATE_REQUEST_REASON: &str = "expected exact COMPLETE request";
 const RUNTIME_MAX_TURNS_ZERO_REASON: &str = "max turns must be at least one";
 const MODEL_COMPONENT: &str = "model";
 const TOOL_COMPONENT: &str = "tool";
@@ -50,6 +53,7 @@ const EXEC_DECISION_PROMPT: &str = "prompt";
 const EXEC_DECISION_FORBID: &str = "forbid";
 const COMMAND_HASH_ONLY_REDACTION: &str = "command_hash_only";
 const TERMINAL_FINAL_RESPONSE: &str = "final_response";
+const TERMINAL_COMPLETION_CANDIDATE: &str = "completion_candidate";
 const TERMINAL_STOPPED: &str = "stopped";
 const TERMINAL_MAX_TURNS_EXCEEDED: &str = "max_turns_exceeded";
 const TERMINAL_FAILED: &str = "failed";
@@ -370,6 +374,11 @@ pub enum RuntimeReportStatus {
         /// Final response message.
         message: String,
     },
+    /// Runtime requested host-owned completion evaluation.
+    CompletionCandidate {
+        /// Exact admitted compatibility request.
+        request: String,
+    },
     /// Runtime stopped without a final response.
     Stopped,
     /// Runtime exhausted its max-turn limit.
@@ -390,6 +399,11 @@ impl RuntimeReportStatus {
             animus_runtime::RuntimeStatus::FinalResponse { response } => Self::FinalResponse {
                 message: String::from(response.message()),
             },
+            animus_runtime::RuntimeStatus::CompletionCandidate { candidate } => {
+                Self::CompletionCandidate {
+                    request: String::from(candidate.request()),
+                }
+            }
             animus_runtime::RuntimeStatus::Stopped => Self::Stopped,
             animus_runtime::RuntimeStatus::MaxTurnsExceeded { max_turns } => {
                 Self::MaxTurnsExceeded {
@@ -407,6 +421,11 @@ impl RuntimeReportStatus {
             Self::FinalResponse { message } => Ok(animus_runtime::RuntimeStatus::FinalResponse {
                 response: animus_adapters::ModelResponse::new(&message)?,
             }),
+            Self::CompletionCandidate { request } => {
+                Ok(animus_runtime::RuntimeStatus::CompletionCandidate {
+                    candidate: completion_candidate_from_request(&request)?,
+                })
+            }
             Self::Stopped => Ok(animus_runtime::RuntimeStatus::Stopped),
             Self::MaxTurnsExceeded { max_turns } => {
                 let max_turns = max_turns_from_count(max_turns)?;
@@ -565,6 +584,11 @@ pub enum Envelope {
         /// Final response message.
         message: String,
     },
+    /// Runtime completion-candidate request event payload.
+    RuntimeCompletionCandidateRequested {
+        /// BLAKE3 identity of the exact request spelling.
+        request_hash: String,
+    },
     /// Runtime stopped event payload.
     RuntimeStopped,
     /// Runtime max-turn exhaustion event payload.
@@ -722,6 +746,7 @@ impl Envelope {
             | Self::RuntimeToolResponded { .. }
             | Self::RuntimeToolDenied { .. }
             | Self::RuntimeFinalResponse { .. }
+            | Self::RuntimeCompletionCandidateRequested { .. }
             | Self::RuntimeStopped
             | Self::RuntimeMaxTurnsExceeded { .. }
             | Self::RuntimeAdapterOutcomeClassified { .. }
@@ -940,6 +965,7 @@ fn runtime_event_group(event: &animus_runtime::RuntimeEvent) -> RuntimeEventGrou
         | animus_runtime::RuntimeEvent::ToolDenied { .. }
         | animus_runtime::RuntimeEvent::SandboxEscalation { .. } => RuntimeEventGroup::Adapter,
         animus_runtime::RuntimeEvent::FinalResponse { .. }
+        | animus_runtime::RuntimeEvent::CompletionCandidateRequested { .. }
         | animus_runtime::RuntimeEvent::Stopped
         | animus_runtime::RuntimeEvent::MaxTurnsExceeded { .. }
         | animus_runtime::RuntimeEvent::Shutdown { .. } => RuntimeEventGroup::Completion,
@@ -975,6 +1001,7 @@ fn runtime_envelope_group(envelope: &Envelope) -> Option<RuntimeEventGroup> {
         | Envelope::RuntimeToolDenied { .. }
         | Envelope::RuntimeSandboxEscalation { .. } => Some(RuntimeEventGroup::Adapter),
         Envelope::RuntimeFinalResponse { .. }
+        | Envelope::RuntimeCompletionCandidateRequested { .. }
         | Envelope::RuntimeStopped
         | Envelope::RuntimeMaxTurnsExceeded { .. }
         | Envelope::RuntimeShutdown { .. } => Some(RuntimeEventGroup::Completion),
@@ -1160,6 +1187,11 @@ fn encode_completion_event(event: &animus_runtime::RuntimeEvent) -> Envelope {
         animus_runtime::RuntimeEvent::FinalResponse { response } => {
             Envelope::RuntimeFinalResponse {
                 message: String::from(response.message()),
+            }
+        }
+        animus_runtime::RuntimeEvent::CompletionCandidateRequested { request_hash } => {
+            Envelope::RuntimeCompletionCandidateRequested {
+                request_hash: request_hash.clone(),
             }
         }
         animus_runtime::RuntimeEvent::Stopped => Envelope::RuntimeStopped,
@@ -1519,6 +1551,10 @@ fn decode_completion_event(
                 response: animus_adapters::ModelResponse::new(&message)?,
             })
         }
+        Envelope::RuntimeCompletionCandidateRequested { request_hash } => {
+            validate_completion_candidate_hash(&request_hash)?;
+            Ok(animus_runtime::RuntimeEvent::CompletionCandidateRequested { request_hash })
+        }
         Envelope::RuntimeStopped => Ok(animus_runtime::RuntimeEvent::Stopped),
         Envelope::RuntimeMaxTurnsExceeded { max_turns } => {
             let max_turns = max_turns_from_count(max_turns)?;
@@ -1611,6 +1647,36 @@ fn component_to_string(component: animus_runtime::AdapterComponent) -> String {
         animus_runtime::AdapterComponent::Model => String::from(MODEL_COMPONENT),
         animus_runtime::AdapterComponent::Tool => String::from(TOOL_COMPONENT),
     }
+}
+
+fn completion_candidate_from_request(
+    request: &str,
+) -> Result<animus_runtime::RuntimeCompletionCandidate, crate::CodecError> {
+    let decision = animus_runtime::RuntimeLoopDecision::from_draft(
+        animus_runtime::RuntimeLoopDecisionDraft::completion_candidate(request),
+    )
+    .map_err(|_error| crate::CodecError::InvalidRuntimePayload {
+        field: RUNTIME_COMPLETION_CANDIDATE_FIELD,
+        reason: INVALID_COMPLETION_CANDIDATE_REQUEST_REASON,
+    })?;
+    match decision {
+        animus_runtime::RuntimeLoopDecision::CompletionCandidate { candidate } => Ok(candidate),
+        _other => unreachable!("completion-candidate draft must preserve its decision kind"),
+    }
+}
+
+fn validate_completion_candidate_hash(request_hash: &str) -> Result<(), crate::CodecError> {
+    if request_hash.len() == animus_adapters::SAFE_HASH_HEX_CHARS
+        && request_hash
+            .bytes()
+            .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
+    {
+        return Ok(());
+    }
+    Err(crate::CodecError::InvalidRuntimePayload {
+        field: RUNTIME_COMPLETION_CANDIDATE_FIELD,
+        reason: INVALID_COMPLETION_CANDIDATE_HASH_REASON,
+    })
 }
 
 fn component_from_str(
@@ -2045,6 +2111,9 @@ fn terminal_from_str(
 ) -> Result<animus_runtime::RuntimeTerminalKind, crate::CodecError> {
     match status {
         TERMINAL_FINAL_RESPONSE => Ok(animus_runtime::RuntimeTerminalKind::FinalResponse),
+        TERMINAL_COMPLETION_CANDIDATE => {
+            Ok(animus_runtime::RuntimeTerminalKind::CompletionCandidate)
+        }
         TERMINAL_STOPPED => Ok(animus_runtime::RuntimeTerminalKind::Stopped),
         TERMINAL_MAX_TURNS_EXCEEDED => Ok(animus_runtime::RuntimeTerminalKind::MaxTurnsExceeded),
         TERMINAL_FAILED => Ok(animus_runtime::RuntimeTerminalKind::Failed),
@@ -2086,6 +2155,8 @@ mod tests {
     const EXEC_COMMAND_HASH: &str =
         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     const BAD_COMMAND_HASH: &str = "not-a-blake3-hash";
+    const COMPLETION_REQUEST: &str = "COMPLETE";
+    const INVALID_COMPLETION_REQUEST: &str = "COMPLETE later";
     const LIFECYCLE_HOOK_ID: &str = "audit_hook";
     const LIFECYCLE_EVENT_ID: &str = "event-1";
     const LIFECYCLE_EVENT_KIND: &str = "pre_tool_use";
@@ -2517,6 +2588,79 @@ mod tests {
             Err(crate::CodecError::InvalidRuntimePayload {
                 field: RUNTIME_LIFECYCLE_SCOPE_FIELD,
                 reason: INVALID_LIFECYCLE_SCOPE_REASON,
+            })
+        ));
+    }
+
+    #[test]
+    fn completion_candidate_request_round_trips_with_hash_only_evidence() {
+        let event = animus_runtime::RuntimeEvent::CompletionCandidateRequested {
+            request_hash: String::from(STEEL_SCRIPT_HASH),
+        };
+        let message = Envelope::from_runtime_event(&event);
+        let decoded = message
+            .try_into_runtime_event()
+            .expect("completion candidate request should convert");
+
+        assert_eq!(decoded, event);
+    }
+
+    #[test]
+    fn completion_candidate_request_rejects_non_hash_evidence() {
+        let message = Envelope::RuntimeCompletionCandidateRequested {
+            request_hash: String::from(BAD_COMMAND_HASH),
+        };
+
+        assert!(matches!(
+            message.try_into_runtime_event(),
+            Err(crate::CodecError::InvalidRuntimePayload {
+                field: RUNTIME_COMPLETION_CANDIDATE_FIELD,
+                reason: INVALID_COMPLETION_CANDIDATE_HASH_REASON,
+            })
+        ));
+    }
+
+    #[test]
+    fn completion_candidate_report_round_trips_through_contract() {
+        let candidate = completion_candidate_from_request(COMPLETION_REQUEST)
+            .expect("exact completion candidate should validate");
+        let report = animus_runtime::RunReport::new(
+            vec![animus_runtime::RuntimeEvent::CompletionCandidateRequested {
+                request_hash: String::from(STEEL_SCRIPT_HASH),
+            }],
+            animus_runtime::RuntimeStatus::CompletionCandidate { candidate },
+        );
+        let message = Envelope::from_runtime_report(&report);
+        let decoded = message
+            .try_into_runtime_report()
+            .expect("completion candidate report should convert");
+
+        assert_eq!(decoded, report);
+
+        let shutdown = Envelope::RuntimeShutdown {
+            status: String::from(TERMINAL_COMPLETION_CANDIDATE),
+        }
+        .try_into_runtime_event()
+        .expect("completion candidate terminal status should convert");
+        assert_eq!(
+            shutdown,
+            animus_runtime::RuntimeEvent::Shutdown {
+                status: animus_runtime::RuntimeTerminalKind::CompletionCandidate,
+            }
+        );
+    }
+
+    #[test]
+    fn completion_candidate_report_rejects_incidental_substring() {
+        let status = RuntimeReportStatus::CompletionCandidate {
+            request: String::from(INVALID_COMPLETION_REQUEST),
+        };
+
+        assert!(matches!(
+            status.into_runtime_status(),
+            Err(crate::CodecError::InvalidRuntimePayload {
+                field: RUNTIME_COMPLETION_CANDIDATE_FIELD,
+                reason: INVALID_COMPLETION_CANDIDATE_REQUEST_REASON,
             })
         ));
     }

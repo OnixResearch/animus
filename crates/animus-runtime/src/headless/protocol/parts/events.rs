@@ -128,32 +128,10 @@ impl RuntimeProjection {
                 turn_index,
                 decision,
             } => Ok(Self::summary_with_turn(decision.as_str(), *turn_index)),
-            crate::RuntimeEvent::ModelStreamStarted { call_id } => Ok(Self::summary_with_model(
-                event.kind().as_str(),
-                call_id.as_str(),
-            )?),
-            crate::RuntimeEvent::ModelStreamFrame { frame } => {
-                let model_call_id = Some(safe_text("model_call_id", frame.call_id().as_str())?);
-                let tool_call_id = frame
-                    .tool_call_id()
-                    .map(|tool_call_id| safe_text("tool_call_id", tool_call_id.as_str()))
-                    .transpose()?;
-                Ok(Self {
-                    turn_id: None,
-                    model_call_id,
-                    tool_call_id,
-                    summary: Text::from(frame.kind().as_str()),
-                })
-            }
-            crate::RuntimeEvent::ModelStreamEnded { call_id, status } => {
-                Ok(Self::summary_with_model(status.as_str(), call_id.as_str())?)
-            }
-            crate::RuntimeEvent::ModelStreamFailed { call_id, reason } => Ok(Self {
-                turn_id: None,
-                model_call_id: Some(safe_text("model_call_id", call_id.as_str())?),
-                tool_call_id: None,
-                summary: safe_text("model_stream_failure", reason)?,
-            }),
+            crate::RuntimeEvent::ModelStreamStarted { .. }
+            | crate::RuntimeEvent::ModelStreamFrame { .. }
+            | crate::RuntimeEvent::ModelStreamEnded { .. }
+            | crate::RuntimeEvent::ModelStreamFailed { .. } => Self::from_stream_event(event),
             crate::RuntimeEvent::ProviderRetryProgress { progress } => {
                 let delay_ms = progress
                     .delay_ms
@@ -184,6 +162,9 @@ impl RuntimeProjection {
                 Ok(projection)
             }
             crate::RuntimeEvent::FinalResponse { .. } => Ok(Self::summary(FINAL_RESPONSE_SUMMARY)),
+            crate::RuntimeEvent::CompletionCandidateRequested { .. } => {
+                Ok(Self::summary(COMPLETION_CANDIDATE_SUMMARY))
+            }
             crate::RuntimeEvent::Stopped => Ok(Self::summary(STOPPED_SUMMARY)),
             crate::RuntimeEvent::Shutdown { status } => Ok(Self::summary(status.as_str())),
             crate::RuntimeEvent::RuntimeStarted { summary }
@@ -219,6 +200,43 @@ impl RuntimeProjection {
             crate::RuntimeEvent::MaxTurnsExceeded { max_turns } => {
                 Ok(Self::summary(max_turns.to_string().as_str()))
             }
+        }
+    }
+
+    fn from_stream_event(event: &crate::RuntimeEvent) -> Result<Self, HeadlessProtocolError> {
+        match event {
+            crate::RuntimeEvent::ModelStreamStarted { call_id } => Self::summary_with_model(
+                event.kind().as_str(),
+                call_id.as_str(),
+            ),
+            crate::RuntimeEvent::ModelStreamFrame { frame } => {
+                let model_call_id = Some(safe_text("model_call_id", frame.call_id().as_str())?);
+                let tool_call_id = frame
+                    .tool_call_id()
+                    .map(|tool_call_id| safe_text("tool_call_id", tool_call_id.as_str()))
+                    .transpose()?;
+                Ok(Self {
+                    turn_id: None,
+                    model_call_id,
+                    tool_call_id,
+                    summary: Text::from(frame.kind().as_str()),
+                })
+            }
+            crate::RuntimeEvent::ModelStreamEnded { call_id, status } => {
+                Self::summary_with_model(status.as_str(), call_id.as_str())
+            }
+            crate::RuntimeEvent::ModelStreamFailed { call_id, reason } => Ok(Self {
+                turn_id: None,
+                model_call_id: Some(safe_text("model_call_id", call_id.as_str())?),
+                tool_call_id: None,
+                summary: safe_text("model_stream_failure", reason)?,
+            }),
+            _other => Err(HeadlessProtocolError::bounded(
+                None,
+                HeadlessProtocolErrorKind::RuntimeFailure,
+                "stream projection requires a model-stream event",
+            )
+            .unwrap_or_else(core::convert::identity)),
         }
     }
 

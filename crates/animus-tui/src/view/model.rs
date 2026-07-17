@@ -45,6 +45,10 @@ impl ToolRenderModel {
             }
             animus_runtime::RuntimeEvent::ToolResponded { response } => self.finish(response.output()),
             animus_runtime::RuntimeEvent::ToolDenied { reason, .. } => self.deny_tool(reason),
+            animus_runtime::RuntimeEvent::CompletionCandidateRequested { .. } => {
+                self.status = ToolSessionStatus::WaitingForCompletionEvidence;
+                self.final_output = None;
+            }
             animus_runtime::RuntimeEvent::Cancelled { reason } => self.cancel(reason),
             animus_runtime::RuntimeEvent::AdapterError { component, message }
                 if *component == animus_runtime::AdapterComponent::Tool =>

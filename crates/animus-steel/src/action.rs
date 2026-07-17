@@ -1,11 +1,29 @@
+// r[impl agent_harness_runtime.authoritative_completion.candidate]
 const MODEL_TAG: &str = "model";
 const TOOL_TAG: &str = "tool";
 const RESPOND_TAG: &str = "respond";
+const COMPLETION_CANDIDATE_TAG: &str = "completion-candidate";
 const STOP_TAG: &str = "stop";
 const MODEL_ARITY: usize = 2;
 const TOOL_ARITY: usize = 9;
 const RESPOND_ARITY: usize = 2;
+const COMPLETION_CANDIDATE_ARITY: usize = 2;
 const STOP_ARITY: usize = 1;
+const EXACT_COMPLETION_REQUEST: &str = "COMPLETE";
+
+/// Validated advisory completion request returned by Steel.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CompletionCandidate {
+    request: String,
+}
+
+impl CompletionCandidate {
+    /// Returns the exact bounded request spelling.
+    #[must_use]
+    pub fn request(&self) -> &str {
+        self.request.as_str()
+    }
+}
 
 /// Next action selected by the Steel loop fabric.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -25,6 +43,11 @@ pub enum Decision {
         /// Validated response message.
         response: animus_adapters::ModelResponse,
     },
+    /// Request host-owned completion evaluation without finalizing a response.
+    CompletionCandidate {
+        /// Validated advisory request.
+        candidate: CompletionCandidate,
+    },
     /// Stop the loop without producing another adapter request.
     Stop,
 }
@@ -37,6 +60,7 @@ impl Decision {
             MODEL_TAG => from_model_items(&items),
             TOOL_TAG => from_tool_items(&items),
             RESPOND_TAG => from_respond_items(&items),
+            COMPLETION_CANDIDATE_TAG => from_completion_candidate_items(&items),
             STOP_TAG => from_stop_items(&items),
             other => Err(crate::LoopError::InvalidDecision {
                 reason: format!("unknown decision tag {other}"),
@@ -59,6 +83,7 @@ const ARGUMENT_NAME_INDEX: usize = 0;
 const ARGUMENT_VALUE_INDEX: usize = 1;
 const ARGUMENT_PAIR_ARITY: usize = 2;
 const RESPONSE_MESSAGE_INDEX: usize = 1;
+const COMPLETION_REQUEST_INDEX: usize = 1;
 
 fn from_model_items(items: &[steel::SteelVal]) -> Result<Decision, crate::LoopError> {
     validate_arity(items, MODEL_TAG, MODEL_ARITY)?;
@@ -109,6 +134,25 @@ fn from_respond_items(items: &[steel::SteelVal]) -> Result<Decision, crate::Loop
     let message = required_string(items, RESPONSE_MESSAGE_INDEX)?;
     Ok(Decision::Respond {
         response: animus_adapters::ModelResponse::new(message)?,
+    })
+}
+
+fn from_completion_candidate_items(
+    items: &[steel::SteelVal],
+) -> Result<Decision, crate::LoopError> {
+    validate_arity(items, COMPLETION_CANDIDATE_TAG, COMPLETION_CANDIDATE_ARITY)?;
+    let request = required_string(items, COMPLETION_REQUEST_INDEX)?;
+    let request = animus_adapters::normalized_adapter_field(
+        animus_adapters::FieldName::new("steel_completion_request"),
+        request,
+    )?;
+    if request != EXACT_COMPLETION_REQUEST {
+        return Err(crate::LoopError::InvalidDecision {
+            reason: "completion candidate must use the exact compatibility request".to_string(),
+        });
+    }
+    Ok(Decision::CompletionCandidate {
+        candidate: CompletionCandidate { request },
     })
 }
 
@@ -283,6 +327,7 @@ mod tests {
     const TOOL_APPROVAL: &str = "pre_approved";
     const LEGACY_TOOL_INPUT: &str = "query";
     const RESPONSE_MESSAGE: &str = "done";
+    const COMPLETION_REQUEST: &str = "COMPLETE";
     const BLANK_TEXT: &str = "   ";
 
     #[test]
@@ -323,6 +368,21 @@ mod tests {
         let decision = Decision::from_value(value).expect("response decision should parse");
 
         assert!(matches!(decision, Decision::Respond { .. }));
+    }
+
+    #[test]
+    fn parses_completion_candidate_decision() {
+        let value = steel::list!(
+            steel::SteelVal::SymbolV(COMPLETION_CANDIDATE_TAG.into()),
+            COMPLETION_REQUEST
+        );
+        let decision = Decision::from_value(value).expect("candidate decision should parse");
+
+        assert!(matches!(
+            decision,
+            Decision::CompletionCandidate { candidate }
+                if candidate.request() == COMPLETION_REQUEST
+        ));
     }
 
     #[test]

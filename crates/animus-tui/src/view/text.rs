@@ -68,6 +68,9 @@ const fn terminal_status(status: animus_runtime::RuntimeTerminalKind) -> ToolSes
     match status {
         animus_runtime::RuntimeTerminalKind::FinalResponse
         | animus_runtime::RuntimeTerminalKind::Stopped => ToolSessionStatus::Finished,
+        animus_runtime::RuntimeTerminalKind::CompletionCandidate => {
+            ToolSessionStatus::WaitingForCompletionEvidence
+        }
         animus_runtime::RuntimeTerminalKind::MaxTurnsExceeded
         | animus_runtime::RuntimeTerminalKind::Failed => ToolSessionStatus::Failed,
     }
@@ -95,6 +98,8 @@ pub enum ToolSessionStatus {
     Running,
     /// A host approval prompt is waiting for a command.
     WaitingForApproval,
+    /// A completion candidate is waiting for authoritative evidence.
+    WaitingForCompletionEvidence,
     /// A tool or runtime event completed successfully.
     Finished,
     /// A tool or runtime event was cancelled.
@@ -111,6 +116,7 @@ impl ToolSessionStatus {
             Self::Idle => "idle",
             Self::Running => "running",
             Self::WaitingForApproval => "waiting_for_approval",
+            Self::WaitingForCompletionEvidence => "waiting_for_completion_evidence",
             Self::Finished => "finished",
             Self::Cancelled => "cancelled",
             Self::Failed => "failed",

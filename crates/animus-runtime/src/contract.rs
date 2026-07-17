@@ -242,6 +242,11 @@ pub enum RuntimeStatus {
         /// Validated final response.
         response: animus_adapters::ModelResponse,
     },
+    /// The loop requested host-owned completion evaluation without finalizing.
+    CompletionCandidate {
+        /// Validated advisory completion request.
+        candidate: crate::RuntimeCompletionCandidate,
+    },
     /// The loop stopped without a final response.
     Stopped,
     /// The runtime reached its configured max-turn budget and failed closed.

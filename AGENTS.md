@@ -21,6 +21,7 @@
 - Rust core or adapter edits: run the focused existing test before changes when practical, then after changes run at least `cargo test -p <crate>`; widen to `cargo check --workspace --all-targets` and clippy when the touched surface warrants it.
 - Nickel config edits: change `config/repo.ncl`, regenerate with `scripts/config/export-nickel-configs`, then run `check-nickel-configs` or `nix run .#check-nickel-configs`.
 - Steel policy or Ralph profile edits: run `scripts/cairn/check-steel-runtime-policy --root .`. For `scripts/ralph-drain-cairns.scm`, use Pi's Steel runner with `args: ["--self-test"]`. The sibling-stack helper is workspace-local at `../ralph-drain-stack.scm`; run its self-test from the workspace root and omit `--run` for plan checks.
+- Agent completion edits: run `scripts/cairn/check-authoritative-agent-completion --root .`. Treat exact `COMPLETE`, process exit, queue emptiness, task deltas, and archive appearance as non-authoritative until current selected checks and a matching passing Cairn completion receipt bind the final subject.
 - Release, dogfood, receipt, and conformance surfaces have named rails in `README.md`; run the smallest relevant rail and record concrete blockers instead of widening claims.
 
 ## Commit hygiene

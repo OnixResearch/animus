@@ -331,7 +331,8 @@ pub use crate::trust_boundary::{
     validate_trust_boundary_receipt,
 };
 pub use crate::turns::{
-    RuntimeLoopContractError, RuntimeLoopDecision, RuntimeLoopDecisionDraft, RuntimeLoopTurn,
+    RuntimeCompletionCandidate, RuntimeLoopContractError, RuntimeLoopDecision,
+    RuntimeLoopDecisionDraft, RuntimeLoopTurn,
 };
 pub use crate::workcmd::{
     WorkflowCommandArgumentType, WorkflowCommandArgumentValue, WorkflowCommandArgumentValueDraft,

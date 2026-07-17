@@ -226,6 +226,9 @@ pub fn apply_decision(state: TurnState, decision: crate::RuntimeLoopDecision) ->
                 report: state.complete(crate::RuntimeStatus::FinalResponse { response }),
             }
         }
+        crate::RuntimeLoopDecision::CompletionCandidate { candidate } => {
+            complete_candidate(state, candidate)
+        }
         crate::RuntimeLoopDecision::Stop => {
             let turn_index = state.turns_completed();
             let state = state
@@ -238,6 +241,25 @@ pub fn apply_decision(state: TurnState, decision: crate::RuntimeLoopDecision) ->
                 report: state.complete(crate::RuntimeStatus::Stopped),
             }
         }
+    }
+}
+
+fn complete_candidate(
+    state: TurnState,
+    candidate: crate::RuntimeCompletionCandidate,
+) -> DecisionStep {
+    let turn_index = state.turns_completed();
+    let request_hash = blake3::hash(candidate.request().as_bytes())
+        .to_hex()
+        .to_string();
+    let state = state
+        .with_event(crate::RuntimeEvent::LoopDecision {
+            turn_index,
+            decision: crate::LoopDecisionKind::CompletionCandidate,
+        })
+        .with_event(crate::RuntimeEvent::CompletionCandidateRequested { request_hash });
+    DecisionStep::Complete {
+        report: state.complete(crate::RuntimeStatus::CompletionCandidate { candidate }),
     }
 }
 

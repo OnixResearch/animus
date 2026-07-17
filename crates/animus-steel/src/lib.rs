@@ -22,6 +22,9 @@ mod turn;
 /// Next action selected by the Steel loop fabric.
 pub type LoopDecision = action::Decision;
 
+/// Validated advisory completion request returned by Steel.
+pub type SteelCompletionCandidate = action::CompletionCandidate;
+
 /// Error returned by Steel loop fabric operations.
 pub type LoopError = error::Failure;
 

@@ -28,6 +28,8 @@ const SNAPSHOT_CHOICES: &str = "choices: approve,deny";
 const SNAPSHOT_FINAL: &str = "final: tool ";
 const SNAPSHOT_FAILURE_DENIED: &str = "failure: denied:denied by policy";
 const DENIED_REASON: &str = "denied by policy";
+const COMPLETION_REQUEST_HASH: &str =
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const VISIBLE_TOOL_OUTPUT: &str = "tool ";
 const TOOL_ARGUMENT_COUNT: usize = 1;
 const EXPECTED_CHOICE_COUNT: usize = 2;

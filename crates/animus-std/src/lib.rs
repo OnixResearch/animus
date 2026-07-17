@@ -18,6 +18,9 @@
 mod adapters;
 #[cfg(feature = "agent-role-profiles")]
 mod agentroles;
+#[cfg(feature = "authoritative-completion")]
+#[path = "authoritativecompletion.rs"]
+mod authoritativecompletion;
 mod config;
 mod context;
 #[cfg(feature = "syndicate-host")]
@@ -58,6 +61,16 @@ pub use adapters::{
 pub use agentroles::{
     AgentRoleConfigError, AgentRoleJsonErrorKind, load_agent_role_profiles,
     parse_agent_role_profiles_json,
+};
+#[cfg(feature = "authoritative-completion")]
+pub use authoritativecompletion::{
+    AgentCheckExecutionRequest, AgentCheckExecutionService, AgentCheckRegistryConfigError,
+    CairnCompletionSummary, CairnCompletionValidationRequest, CairnCompletionValidationService,
+    ChangedArtifactObservationRequest, ChangedArtifactObservationService,
+    CompletionArtifactPersistenceRequest, CompletionArtifactPersistenceService,
+    FinalSubjectHashRequest, FinalSubjectHashService, HostArtifactObservation,
+    HostCheckExecutionObservation, ObservedChangedArtifact, load_agent_check_registry,
+    parse_agent_check_registry_json,
 };
 /// Backwards-compatible name for deterministic fixture bundles.
 pub type FixtureAdapters = Fixtures;

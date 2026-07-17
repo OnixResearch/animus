@@ -1,6 +1,7 @@
 const ACTION_MODEL: &str = "model";
 const ACTION_TOOL: &str = "tool";
 const ACTION_RESPOND: &str = "respond";
+const ACTION_COMPLETION_CANDIDATE: &str = "completion-candidate";
 const ACTION_STOP: &str = "stop";
 const FALLBACK_BLOCK: &str = "block";
 const FALLBACK_STOP: &str = "stop";
@@ -16,6 +17,8 @@ pub enum HostAction {
     Tool,
     /// Permit Steel to return a final response.
     Respond,
+    /// Permit Steel to request host-owned completion evaluation.
+    CompletionCandidate,
     /// Permit Steel to stop without a final response.
     Stop,
 }
@@ -31,6 +34,7 @@ impl HostAction {
             ACTION_MODEL => Ok(Self::Model),
             ACTION_TOOL => Ok(Self::Tool),
             ACTION_RESPOND => Ok(Self::Respond),
+            ACTION_COMPLETION_CANDIDATE => Ok(Self::CompletionCandidate),
             ACTION_STOP => Ok(Self::Stop),
             _unknown => Err(Error::new(
                 DenyReason::UnknownHostAction,
@@ -46,6 +50,7 @@ impl HostAction {
             Self::Model => ACTION_MODEL,
             Self::Tool => ACTION_TOOL,
             Self::Respond => ACTION_RESPOND,
+            Self::CompletionCandidate => ACTION_COMPLETION_CANDIDATE,
             Self::Stop => ACTION_STOP,
         }
     }

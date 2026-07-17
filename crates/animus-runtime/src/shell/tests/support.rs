@@ -375,7 +375,7 @@ fn policy_profile_for_program(program: &str, max_turns: u32) -> animus_steel::St
         script_label: STEEL_POLICY_SCRIPT,
         script_hash: script_hash.as_str(),
         max_turns,
-        allowed_host_actions: &["model", "tool", "respond", "stop"],
+        allowed_host_actions: &["model", "tool", "respond", "completion-candidate", "stop"],
         fallback_mode: "block",
         receipt_redaction: "hash-only",
     })

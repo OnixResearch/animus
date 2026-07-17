@@ -27,6 +27,7 @@ nickel export --format toml --field cargo_config "${source_file}" > "${target_ro
 nickel export --format toml --field clippy_config "${source_file}" > "${target_root}/clippy.toml"
 nickel export --format toml --field dylint_config "${source_file}" > "${target_root}/dylint.toml"
 nickel export --format yaml --field pre_commit_config "${source_file}" > "${target_root}/.pre-commit-config.yaml"
+nickel export --format json --field agent_check_registry "${source_file}" > "${target_root}/config/generated/agent-check-registry.json"
 nickel export --format json --field recipe_workflow_catalog "${recipe_source_file}" > "${target_root}/policy/recipe-workflows/generated/recipe-workflows.json"
 nickel export --format json --field model_runtime_profile_set "${model_profile_source_file}" > "${target_root}/config/generated/model-runtime-profiles.json"
 nickel export --format json --field agent_role_catalog "${agent_role_source_file}" > "${target_root}/config/generated/agent-role-profiles.json"

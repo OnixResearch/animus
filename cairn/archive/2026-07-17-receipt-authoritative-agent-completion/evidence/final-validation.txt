@@ -1,0 +1,61 @@
+receipt-authoritative-agent-completion final validation
+=======================================================
+
+Status: PASS for the bounded selected Animus contract.
+
+Pinned authority
+----------------
+Cairn revision: cf5c4a5c10361ca20a13addf14954407d6857028
+Cairn schema: cairn.agent-completion.v2
+Cairn policy BLAKE3: b8f81a80716eb7427dacdcd4dac9c01c1599d2bee79cdeb0a6e444525377da59
+Positive Cairn completion receipt: ea388ca71bc87663d36127a0dbcc2f1d5bcb60fea62921094f23bdc72946109b
+Cairn command: agent-receipt complete
+Cairn positive verdict: PASS, valid=true, checks_executed=false
+Cairn negative verdict: FAIL with verification_contract.subject_stale
+
+Focused receipt
+---------------
+Schema: animus.authoritative-completion-check.v1
+Registry export file BLAKE3: a289b1f1353cbfa26fd13c6e897e989af6a617bff338cc4c2bcadaec0a89020c
+Steel Ralph script BLAKE3: c49363bf4ab5ecd8dd519138acb3ca3b251edb0646f3ac4e98b9393c9ac93a88
+Nickel fixtures: 1 positive, 4 negative
+Pass-only status matrix: pass
+Exact COMPLETE candidate: pass
+Incidental COMPLETE substrings: rejected
+Empty continuation queue: awaits authoritative evidence
+Receipt path: target/cairn/focused-rails/authoritative-completion.md
+
+Validation evidence
+-------------------
+PASS cargo fmt --all -- --check
+PASS cargo test -p animus-runtime --locked authoritative_completion --no-fail-fast (15 matching tests, including continuation and workspace non-authority coverage)
+PASS cargo test -p animus-preserves --locked completion_candidate --no-fail-fast
+PASS cargo test -p animus-tui --locked completion_candidate --no-fail-fast
+PASS cargo test --workspace --locked
+PASS cargo clippy --workspace --all-targets --locked -- -D warnings
+PASS cargo tigerstyle check (no findings; cached Dylint remote-ref and wasm-builtin warnings were non-fatal)
+PASS scripts/config/check-nickel-configs with local builder/signing overrides
+PASS scripts/cairn/check-steel-runtime-policy --root .
+PASS scripts/cairn/check-nickel-policy-contracts --root .
+PASS scripts/cairn/check-authoritative-agent-completion --root .
+PASS nix build .#checks.x86_64-linux.authoritative-agent-completion -L with local builder/signing overrides
+PASS scripts/ralph-drain-cairns.scm --self-test through Pi Steel
+PASS nix run .#ralph-drain-stack -- --self-test from the workspace root
+PASS real pinned Cairn positive and stale-subject fixture executions
+PASS pure-core effect scan: no filesystem, environment, process, time, network, async, print, or command APIs in crates/animus-runtime/src/authoritativecompletion/
+PASS git diff --cached --check
+BOUNDED global Tracey result remains invalid because of unrelated lifecycle debt: 723 referenced IDs across 2,241 requirements, valid=false. All 42 authoritative_completion IDs are covered after accepted-spec sync; none appears in missing or dangling output.
+
+Host and review limits
+----------------------
+The pinned positive Cairn fixture truthfully records checks_executed=false because it validates saved synthetic host results. It is a schema/parity fixture, not evidence that production checks ran. Production hosts must execute the current repository selection for the current final subject and persist linked evidence before invoking Cairn.
+
+VibeThinker consultations failed to fetch or timed out and supplied no accepted evidence. No live provider, daemon, TUI backend, remote executor, credential, deployment, release, signing, push, or pull-request action was exercised.
+
+Non-claims
+----------
+This evidence does not prove check-oracle soundness, honest command execution beyond supplied host evidence, model correctness, whole-product correctness, cross-repository dependency satisfaction, production readiness, performance, deployment safety, or release eligibility outside the selected contract. It grants no ambient shell, filesystem, VCS, network, clock, provider, credential, release, push, pull-request, or signing authority.
+
+Lifecycle closeout
+------------------
+Cairn sync was blocked by unrelated accepted-spec cardinality debt in older requirements, so the 42 new requirement IDs were merged manually and verified present before archive. All 42 are referenced after sync. Archive plan receipt: 02f90e38e28b4ccbe17a38b0b3768d04c039df93289f6fe822b9979c8b0921be. Post-archive Cairn validation: valid=true.

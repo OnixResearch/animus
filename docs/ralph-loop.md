@@ -6,10 +6,10 @@ Animus includes `ralph-loop` as a bounded Steel runtime policy profile inspired 
 
 - Policy profile: `ralph-loop`
 - Script binding: `policy/steel-runtime/scripts/ralph-loop.scm`
-- Completion promise: `COMPLETE`
+- Completion-candidate promise: exact trimmed `COMPLETE`
 - Policy turn ceiling: ten runtime turns
 
-The script calls the model with compact Ralph instructions and the runtime input summary as task state. On later turns, it checks the previous model message. If the message contains `COMPLETE`, the script returns that message as the final response. Otherwise, it calls the model again with the original task state plus the previous iteration summary.
+The script calls the model with compact Ralph instructions and the runtime input summary as task state. On later turns, it accepts only an exact trimmed `COMPLETE` response as a non-authoritative completion candidate. Incidental substrings, negations, surrounding prose, process exit, and queue emptiness cannot establish completion. The controller waits for the repository-selected passing evidence and matching Cairn completion receipt before a host may project verified completion. Otherwise, the script calls the model again with the original task state plus the previous iteration summary.
 
 ## Project-facing loop state
 
@@ -69,6 +69,7 @@ Run the focused rail after changing this profile or its Steel policy binding:
 ```sh
 scripts/cairn/check-steel-runtime-policy --root .
 scripts/cairn/check-nickel-policy-contracts --root .
+scripts/cairn/check-authoritative-agent-completion --root .
 ```
 
 Run both drain helper self-tests through Pi's Steel tool after changing their respective surfaces:

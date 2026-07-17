@@ -63,10 +63,15 @@ fn steel_policy_runtime_allows_matching_profile_before_dispatch() {
         &mut tool,
     );
 
-    assert!(matches!(
-        result.status(),
-        crate::RuntimeStatus::FinalResponse { response } if response.message() == super::support::MODEL_MESSAGE
-    ));
+    assert!(
+        matches!(
+            result.status(),
+            crate::RuntimeStatus::FinalResponse { response }
+                if response.message() == super::support::MODEL_MESSAGE
+        ),
+        "unexpected policy runtime status: {:?}",
+        result.status()
+    );
     assert_eq!(model.calls, super::support::EXPECTED_ADAPTER_CALLS);
     assert_eq!(tool.calls, super::support::NO_ADAPTER_CALLS);
 }
