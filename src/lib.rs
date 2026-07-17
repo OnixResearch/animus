@@ -61,6 +61,10 @@ pub use animus_std::{
     retry_model_request_hash,
 };
 
+/// Re-export of the optional Linux-only Sandlock host adapter.
+#[cfg(feature = "sandlock-host")]
+pub use animus_std::sandlock_host;
+
 /// Re-export of the capability-scoped durable local session-store host.
 #[cfg(feature = "durable-session-store")]
 pub use animus_std::{

@@ -4,7 +4,7 @@
 //! variables, opens files, starts processes, contacts networks, inspects
 //! credentials, persists state, or accesses terminal state.
 
-const HOST_ADAPTER_DESCRIPTOR_COUNT: usize = 10;
+const HOST_ADAPTER_DESCRIPTOR_COUNT: usize = 11;
 const NO_HOST_EFFECT: &[HostAuthority] = &[HostAuthority::NoHostEffect];
 const ENVIRONMENT_AUTHORITY: &[HostAuthority] = &[HostAuthority::EnvironmentRead];
 const FILESYSTEM_AUTHORITY: &[HostAuthority] = &[HostAuthority::FilesystemRead];
@@ -17,6 +17,11 @@ const INGEST_AUTHORITY: &[HostAuthority] = &[
     HostAuthority::ProcessExecution,
 ];
 const TRANSPORT_AUTHORITY: &[HostAuthority] = &[HostAuthority::NetworkTransport];
+const SANDBOX_AUTHORITY: &[HostAuthority] = &[
+    HostAuthority::FilesystemRead,
+    HostAuthority::ProcessExecution,
+    HostAuthority::NetworkTransport,
+];
 
 /// Explicit host authority class for a std adapter block.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -77,6 +82,8 @@ pub enum HostAdapterFamily {
     SyndicateTransport,
     /// Optional composition of Iroh transport and Syndicate turn packets.
     IrohSyndicateTransport,
+    /// Optional Linux Sandlock process-enforcement shell.
+    SandlockEnforcement,
     /// Packaged smoke and demonstration shell.
     SmokeDemo,
 }
@@ -95,6 +102,7 @@ impl HostAdapterFamily {
             Self::IrohTransport => "iroh_transport",
             Self::SyndicateTransport => "syndicate_transport",
             Self::IrohSyndicateTransport => "iroh_syndicate_transport",
+            Self::SandlockEnforcement => "sandlock_enforcement",
             Self::SmokeDemo => "smoke_demo",
         }
     }
@@ -237,6 +245,15 @@ const HOST_ADAPTER_DESCRIPTORS: [HostAdapterDescriptor; HOST_ADAPTER_DESCRIPTOR_
         facade_path: "animus_std::IrohSyndicatePacketTransport",
         direct_dependency: "animus-std/iroh-syndicate-host",
         focused_check: "cargo test -p animus-std --features iroh-syndicate-host irohsyndicate --locked",
+    },
+    HostAdapterDescriptor {
+        family: HostAdapterFamily::SandlockEnforcement,
+        owner: "animus-std::sandlock_host",
+        feature_gate: "sandlock-host",
+        required_authority: SANDBOX_AUTHORITY,
+        facade_path: "animus_std::sandlock_host",
+        direct_dependency: "animus-std/sandlock-host",
+        focused_check: "scripts/cairn/check-sandlock-host --root .",
     },
     HostAdapterDescriptor {
         family: HostAdapterFamily::SmokeDemo,

@@ -83,6 +83,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "model-runtime-profiles",
     "agent-role-profiles",
     "provider-retry",
+    "sandlock-host",
     "session-tree-export",
     "iroh-host",
     "syndicate-host",

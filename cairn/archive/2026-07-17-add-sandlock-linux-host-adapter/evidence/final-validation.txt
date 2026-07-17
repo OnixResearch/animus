@@ -1,0 +1,51 @@
+Sandlock Linux host adapter final validation
+Date: 2026-07-17
+Change: add-sandlock-linux-host-adapter
+
+Reviewed cohort
+- sandlock-core version: 0.7.0
+- upstream revision: e8c4cc0ef58e3fc145c4d147a61b889b4f291a10
+- license: Apache-2.0
+- Nix vendor hash: sha256-pAFP4xo7ClmQBFi+kHoQ+xauXZEJvg0D6cGpkZNkAGQ=
+- Cargo.lock BLAKE3: 71dd3fd66824acf4a27133ff03eb405b4be4b61c83739689aab7a06ac5f4ef23
+
+Implementation evidence
+- `sandlock-host` is non-default and the `sandlock-core` dependency is Linux-target-scoped.
+- Reusable core/runtime/adapter crates contain no Sandlock dependency.
+- Pure launch planning binds current allowed authorization, action, subject, target, descriptor, policy, command, confined roots, exact required mechanisms, cohort, and a deterministic BLAKE3 plan identity.
+- The Linux shell canonicalizes capability roots, builds the typed upstream policy, requires one reviewed functional command per requested mechanism, launches only the authorized target command, bounds output/time/cancellation, and emits metadata-only facts.
+- Missing, duplicate, failed, partial, stale, widened, unsafe, and best-effort inputs fail closed.
+- Upstream COW commit/abort completion errors are not exposed, so commit is rejected. Dry-run execution records bounded before/after workdir manifests and passes only when the workdir is restored after sandbox teardown.
+- `cleanup=complete` is bounded to child termination/reaping and observed COW workdir restoration; upstream-private temporary storage cleanup is an explicit non-claim.
+
+Positive and negative checks
+- `cargo test -p animus-adapters --locked sandbox --no-fail-fast`: 13 passed.
+- `cargo test -p animus-std --features sandlock-host --locked sandlock_host --no-fail-fast`: 10 passed.
+- Feature/default/non-Linux dependency isolation, no-default build, facade build, source/provenance markers, and receipt-safety checks passed through `scripts/cairn/check-sandlock-host`.
+- Opt-in real Linux rail passed with `ANIMUS_SANDLOCK_LINUX_LIVE=1`: filesystem read denial, live loopback network denial, clean environment, dry-run COW discard with restored-manifest evidence, resource/process denial, and missing-mechanism blocking.
+- Focused receipt: `target/cairn/focused-rails/sandlock-host.md`, status `passed`, live_linux_behavior `passed`.
+- `cargo test --workspace --locked --no-fail-fast`: passed.
+- `cargo clippy --workspace --all-targets --locked -- -D warnings`: passed.
+- `cargo clippy -p animus-std --all-targets --features sandlock-host --locked -- -D warnings`: passed.
+- `cargo tigerstyle check`: passed.
+- `nix build --option builders '' --option secret-key-files '' .#checks.x86_64-linux.sandlock-host -L`: passed.
+- `cargo fmt --all`: passed; the standalone focused checker was formatted with Rust 2021 rustfmt.
+
+Lifecycle evidence
+- Cairn proposal gate: passed.
+- Cairn design gate: passed.
+- Cairn tasks gate: passed before task completion and is rerun during closeout.
+- Cairn validation: `valid=true`.
+- Automated sync dry-run was correctly non-mutating and blocked by unrelated accepted-spec identity-cardinality debt in four pre-existing requirements. The seven reviewed Sandlock requirement blocks were merged manually and are revalidated below.
+- Pre-sync Tracey coverage remained globally invalid from unrelated accepted-spec and active-change debt. All seven Sandlock requirement IDs were referenced by implementation/verification markers and appeared only as expected pre-sync dangling IDs before accepted-spec promotion.
+- Post-merge Cairn validation passed with `valid=true`. Tracey increased to 730 referenced IDs across 2,248 requirements; global `valid=false` remains unrelated debt, and no `sandlock_host_adapter` ID is missing or dangling.
+
+Adversarial review
+- A secondary review challenged COW cleanup and generic setup probes. The implementation was tightened to reject unauditable COW commit, compare bounded workdir manifests after teardown, disclose upstream-private cleanup as a non-claim, and require one exact functional command for every requested mechanism. The opt-in Linux rail exercises those commands under the exact target policy.
+
+Boundaries
+This evidence does not prove authorization beyond the supplied current binding, kernel correctness, complete containment, upstream-private storage cleanup, build hermeticity, cross-platform parity, production readiness, or release eligibility.
+
+Archive evidence
+- Archive path: `cairn/archive/2026-07-17-add-sandlock-linux-host-adapter/`.
+- Cairn archive receipt: `eb3f7f7c65c7d7907d878aab2963637a3a02690fcefb08dec39e7bab9c1b5aa0`.

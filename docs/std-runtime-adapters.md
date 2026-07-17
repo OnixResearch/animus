@@ -10,7 +10,7 @@ Before a concrete adapter performs a host effect, the shell plans the effect wit
 
 ## Authority-scoped composition
 
-`animus_std::host_adapter_catalog()` records config, context, provider, observability, document-ingest, model-evidence, optional transport, and smoke/demo blocks with explicit authority classes, feature gates, facade paths, direct dependency guidance, and focused checks. `plan_host_adapter` is pure and rejects missing, disabled, denied, or ambient-fallback requests before any shell effect. See [authority-scoped std host adapters](std-host-adapter-crates.md).
+`animus_std::host_adapter_catalog()` records config, context, provider, observability, document-ingest, model-evidence, optional transport, optional Linux Sandlock enforcement, and smoke/demo blocks with explicit authority classes, feature gates, facade paths, direct dependency guidance, and focused checks. `plan_host_adapter` is pure and rejects missing, disabled, denied, or ambient-fallback requests before any shell effect. See [authority-scoped std host adapters](std-host-adapter-crates.md).
 
 ## Context and observability shells
 

@@ -49,6 +49,9 @@ mod providers;
 #[cfg(feature = "session-tree-export")]
 #[path = "sessiontreeexport.rs"]
 mod redactedwriter;
+#[cfg(feature = "sandlock-host")]
+#[path = "sandlockhost/mod.rs"]
+pub mod sandlock_host;
 #[cfg(feature = "syndicate-host")]
 mod syndicate;
 

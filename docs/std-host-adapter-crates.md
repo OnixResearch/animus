@@ -37,6 +37,12 @@ use animus_std_observability::{InMemorySink, NoopSink};
 
 Building `animus-std` with `--no-default-features` omits the observability sink facade. The pure authority catalog remains available so composition code can return a typed `Disabled` or `Missing` plan instead of discovering an ambient sink.
 
+## Optional Sandlock enforcement
+
+The non-default Linux-only `sandlock-host` feature adds the `animus_std::sandlock_host` authority block. Its pure planner binds prior authorization, normalized sandbox intent, safe relative capability-root bindings, exact command and policy identities, required mechanisms, and BLAKE3 plan/receipt identities. Its Linux shell alone resolves concrete paths, probes the exact pinned `sandlock-core` cohort, launches a process, drains bounded output, observes timeout/cancellation, and classifies COW and cleanup. Unsupported platforms and unavailable mechanisms fail closed without fallback.
+
+The catalog labels this block with filesystem-read, process-execution, and network-transport authority. Those labels describe possible effects after admission; they do not authorize the action or permit ambient root, command, credential, or adapter discovery.
+
 ## Functional core and shell
 
 Deterministic config parsing, provider selection, context planning, document/model-evidence ingest planning, observability record validation, and host adapter admission remain pure over explicit values. Filesystem opens, environment reads, process calls, transport calls, credential lookup, durable storage, terminal access, and other effects stay in thin owner shells after a plan is admitted.
@@ -50,6 +56,8 @@ cargo test -p animus-std-observability --locked
 cargo test -p animus-std hostadapters --locked
 cargo test -p animus-std observability --locked
 cargo check -p animus-std --no-default-features --locked
+cargo test -p animus-std --features sandlock-host sandlock_host --locked
+scripts/cairn/check-sandlock-host --root .
 scripts/cairn/check-component-catalog --root .
 scripts/cairn/check-runtime-facade-inventory --root .
 scripts/cairn/check-request-lifecycle --root .

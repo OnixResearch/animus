@@ -223,6 +223,7 @@
                 || baseName == "check-injected-services"
                 || baseName == "check-interrupted-tool-repair"
                 || baseName == "check-provider-retry"
+                || baseName == "check-sandlock-host"
                 || baseName == "check-session-tree-export"
                 || baseName == "check-provenance-ledger"
                 || baseName == "check-release-evidence-index"
@@ -269,6 +270,7 @@
               "cairn-core-0.1.0" = "sha256-Xv9uAhYI+byXcKbqR+A4rESDYmmX44ZWhDLARgqbv5k=";
               "rat-chrome-0.1.0" = "sha256-Ct58ZfWnIe7KJ6q/a+gUMVCa4ylTuSv7ZnjI1IYHzgY=";
               "rat-widgets-0.1.0" = "sha256-Ct58ZfWnIe7KJ6q/a+gUMVCa4ylTuSv7ZnjI1IYHzgY=";
+              "sandlock-core-0.7.0" = "sha256-pAFP4xo7ClmQBFi+kHoQ+xauXZEJvg0D6cGpkZNkAGQ=";
               "ucan-0.1.0" = "sha256-Hn0sK7y/lnGNKWxGuqiPOlqni4OTfh+aqhMxXNZ0oTI=";
               "ucan-core-0.1.0" = "sha256-Hn0sK7y/lnGNKWxGuqiPOlqni4OTfh+aqhMxXNZ0oTI=";
               "verified-logic-0.1.0" = "sha256-Hn0sK7y/lnGNKWxGuqiPOlqni4OTfh+aqhMxXNZ0oTI=";
@@ -504,6 +506,14 @@
             pkgs.nickel
           ] ''
             sh scripts/cairn/check-session-tree-export --root .
+          '';
+
+          sandlock-host = cargoCheck "animus-sandlock-host" [
+            pkgs.b3sum
+            pkgs.clippy
+          ] ''
+            unset ANIMUS_SANDLOCK_LINUX_LIVE
+            sh scripts/cairn/check-sandlock-host --root .
           '';
 
           exec-policy = cargoCheck "animus-exec-policy" [ pkgs.nickel ] ''

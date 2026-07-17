@@ -18,6 +18,7 @@ dogfood-smoke = ["dep:animus-runtime"]
 durable-session-store = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 model-runtime-profiles = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 provider-retry = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
+sandlock-host = ["dep:sandlock-core", "dep:tokio"]
 session-tree-export = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 observability-host = ["dep:animus-std-observability"]
 iroh-host = []
@@ -28,6 +29,11 @@ syndicate-host = ["dep:animus-preserves"]
 name = "animus-dogfood-smoke"
 path = "src/bin/animus-dogfood-smoke.rs"
 required-features = ["dogfood-smoke"]
+
+[[bin]]
+name = "animus-sandlock-live-fixture"
+path = "src/bin/animus-sandlock-live-fixture.rs"
+required-features = ["sandlock-host"]
 
 [dependencies]
 animus-adapters = { path = "../animus-adapters", version = "0.1.0" }
@@ -40,3 +46,7 @@ cap-std = "3.4"
 redb = "2.6.3"
 serde = { version = "1.0.228", features = ["derive"], optional = true }
 serde_json = { version = "1.0.150", optional = true }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+sandlock-core = { git = "https://github.com/multikernel/sandlock.git", rev = "e8c4cc0ef58e3fc145c4d147a61b889b4f291a10", optional = true }
+tokio = { version = "1", features = ["io-util", "macros", "net", "rt", "sync", "time"], optional = true }
