@@ -69,6 +69,15 @@ pub mod codebase_graph {
     };
 }
 
+/// Non-default SpaceWasm diagnostic contracts and injected host service.
+#[cfg(feature = "spacewasm-diagnostic")]
+pub mod spacewasm_diagnostic {
+    pub use animus_adapters::spacewasm::*;
+    pub use animus_std::spacewasm::{
+        DiagnosticService, ExecutionRequest, HostError, ServiceError, execute,
+    };
+}
+
 /// Non-default exact-model Mesh provider contracts and injected host adapter.
 #[cfg(feature = "mesh-provider")]
 pub mod mesh_provider {

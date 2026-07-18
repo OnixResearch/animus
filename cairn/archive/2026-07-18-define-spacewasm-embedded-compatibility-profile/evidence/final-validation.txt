@@ -1,0 +1,23 @@
+status: passed-with-bounded-runtime-blocker
+change: define-spacewasm-embedded-compatibility-profile
+profile: spacewasm-e24-hostless-run-v1
+
+Passed evidence:
+- Checked Nickel and standalone-export parity bind `wasm32v1-none`, the hostless `run` fixture, NASA SpaceWasm revision e24cf09355a90497148eb5029fdb8e3400bd63e3, Octet `spacewasm-mvp`, cohort b3:7c537eef7bff66d0a90508715de08de79c9aaac23352e1007a6d47e7fb4674a2, and finite limits.
+- Rust semantic revalidation rejects generated-profile drift.
+- Pure positive and negative tests cover exact profile/artifact evidence, deterministic return and expected-trap outcomes, disabled profiles, target/cohort drift, undeclared imports, unsupported proposals, stale Octet identity, resource overflow, runtime failure, receipt leaks, and overclaim.
+- The std shell contacts only an injected service after exact admission; missing/unavailable service and mismatched request facts fail before fallback.
+- The fixture compiles for `wasm32v1-none`, validates with wasm-tools, exports only `run`, contains no imports, and stays below the artifact limit.
+- Default, no-default, adapters, and root dependency trees remain free of SpaceWasm, Wasmtime, WASI, and runtime-loader dependencies.
+- Generic Wasm surface, component catalog, formatting, Clippy, config freshness, focused rail, and focused Nix check passed.
+
+Exact runtime blocker:
+- Mantle's pinned reference runner executes its fixed eight-fixture corpus and does not expose an arbitrary Animus guest invocation contract. No `ANIMUS_SPACEWASM_RUNNER` was available. Therefore Animus guest execution under SpaceWasm is unavailable, recorded explicitly, and cannot be inferred from Mantle fixture replay or Octet static acceptance.
+- Next best check: inject a reviewed arbitrary-guest runner that binds the exact guest, bundle, cohort, limits, inputs, outputs, and normalized observation, then rerun `scripts/cairn/check-spacewasm-compat --root .`.
+
+Non-claims:
+- not general Animus Wasm runtime support
+- not plugin activation or SDK support
+- not WIT, Component Model, or WASI support
+- not SpaceWasm correctness, memory safety, semantic equivalence, or sandbox completeness
+- not embedded production, certification, or release readiness

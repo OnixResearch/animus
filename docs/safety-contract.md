@@ -28,6 +28,8 @@ Animus is structured around a functional-core / imperative-shell (FCIS) split. T
 
 The initial Wasm compile boundary targets `wasm32-unknown-unknown` and covers `animus-core`, `animus-adapters`, `animus-router`, and root `animus --no-default-features`. The rail is a compile-surface check, not a runtime support claim. It excludes `animus-runtime`, `animus-std`, `animus-steel`, `animus-tui`, `animus-preserves`, terminal UI, provider clients, native persistence, process execution, filesystem authority, credentials, browser APIs, WASI host behavior, plugin loading, and host shell orchestration unless a later Cairn change adds a target-specific contract and validation evidence.
 
+The separate `spacewasm-embedded-compat` profile is a non-default diagnostic over one test guest, exact Octet static profile, and exact Mantle/SpaceWasm cohort. Its injected shell grants no reusable authority and a pass cannot be promoted to general runtime, plugin, WASI, sandbox, production, or release support. See [SpaceWasm embedded compatibility](spacewasm-embedded-compatibility.md).
+
 ## Security review boundary
 
 `animus-adapters` owns the reusable Goose-inspired security review DTOs and pure helpers. Review inputs keep only task labels, bounded context summaries, safe tool labels, active policy labels, and BLAKE3 evidence hashes; raw prompts, credentials, provider payloads, private paths, and unbounded tool arguments stay outside stored review state and receipts.

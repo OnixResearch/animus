@@ -67,6 +67,8 @@ mod redactedwriter;
 #[cfg(feature = "sandlock-host")]
 #[path = "sandlockhost/mod.rs"]
 pub mod sandlock_host;
+#[cfg(feature = "spacewasm-diagnostic")]
+pub mod spacewasm;
 #[cfg(feature = "syndicate-host")]
 mod syndicate;
 

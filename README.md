@@ -93,6 +93,8 @@ cargo check -p animus --no-default-features --target wasm32-unknown-unknown --lo
 
 The root `animus --no-default-features` profile intentionally excludes `animus-std`, `animus-steel`, `animus-tui`, `animus-preserves`, terminal UI, provider clients, native persistence, process execution, filesystem authority, credentials, browser APIs, WASI host behavior, plugin loading, and host shell orchestration. The dedicated `animus-router` crate is checked separately as a no-std routing decision core. Optional bridges such as Preserves are not part of the initial Wasm rail; add them only with separate compatibility evidence and adapter DTO revalidation tests.
 
+The separate non-default [SpaceWasm embedded compatibility profile](docs/spacewasm-embedded-compatibility.md) covers only one conservative-target test guest and exact Octet/Mantle/SpaceWasm cohort through an injected diagnostic service. It does not broaden the generic compile boundary or establish plugin, WASI, runtime-correctness, sandbox, production, or release claims.
+
 Run the focused rail:
 
 ```sh

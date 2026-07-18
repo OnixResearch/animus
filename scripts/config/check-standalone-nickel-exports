@@ -4,7 +4,7 @@ set -eu
 readonly FAILURE=1
 readonly EVALUATOR_IDENTITY='nixpkgs:nickel'
 readonly EVALUATOR_VERSION='nickel-lang-cli-1.17.0'
-readonly REQUEST_FIELDS='cargo_config clippy_config dylint_config pre_commit_config recipe_workflows model_runtime_profiles agent_role_profiles codebase_graph_profile mesh_provider_profile'
+readonly REQUEST_FIELDS='cargo_config clippy_config dylint_config pre_commit_config recipe_workflows model_runtime_profiles agent_role_profiles codebase_graph_profile mesh_provider_profile spacewasm_embedded_compat'
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 default_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)

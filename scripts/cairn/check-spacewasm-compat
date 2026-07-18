@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly ROOT="${2:-.}"
+readonly TARGET='wasm32v1-none'
+readonly MAX_ARTIFACT_BYTES=1048576
+readonly GUEST_SOURCE='fixtures/spacewasm/guest.rs'
+readonly PROHIBITED='spacewasm|wasmtime|wasmer|wasi|runtime-loader'
+cd "$ROOT"
+
+if [[ "${ANIMUS_SPACEWASM_SKIP_NICKEL:-0}" != "1" ]]; then
+  scripts/config/check-nickel-configs
+fi
+cargo test -p animus-adapters spacewasm --locked
+cargo test -p animus-std --no-default-features --features spacewasm-diagnostic spacewasm --locked
+cargo clippy -p animus-adapters --all-targets -- -D warnings
+cargo clippy -p animus-std --no-default-features --features spacewasm-diagnostic --all-targets -- -D warnings
+
+for args in '-p animus-adapters --no-default-features' '-p animus --no-default-features' '-p animus'; do
+  if cargo tree $args --edges normal | grep -Eiq "$PROHIBITED"; then
+    echo "SpaceWasm runtime dependency leaked into $args" >&2
+    exit 1
+  fi
+done
+
+work_dir=$(mktemp -d "${TMPDIR:-/tmp}/animus-spacewasm.XXXXXX")
+trap 'rm -rf "$work_dir"' EXIT
+artifact="$work_dir/animus-spacewasm-guest.wasm"
+rustc --edition 2021 --target "$TARGET" --crate-type cdylib -C linker=wasm-ld -C opt-level=s -C panic=abort "$GUEST_SOURCE" -o "$artifact"
+artifact_bytes=$(stat -c %s "$artifact")
+if (( artifact_bytes > MAX_ARTIFACT_BYTES )); then
+  echo "guest exceeds artifact limit" >&2
+  exit 1
+fi
+wasm-tools validate "$artifact"
+wasm-tools print "$artifact" > "$work_dir/guest.wat"
+grep -F '(export "run"' "$work_dir/guest.wat" >/dev/null
+if grep -F '(import ' "$work_dir/guest.wat" >/dev/null; then
+  echo 'guest contains undeclared imports' >&2
+  exit 1
+fi
+b3sum "$artifact" > "$work_dir/guest.blake3"
+
+if [[ -n "${ANIMUS_SPACEWASM_RUNNER:-}" ]]; then
+  "$ANIMUS_SPACEWASM_RUNNER" "$artifact" > "$work_dir/runtime-observation.json"
+  grep -F '"status":"passed"' "$work_dir/runtime-observation.json" >/dev/null
+else
+  echo 'SpaceWasm execution: blocked (no arbitrary-guest runner injected); static and shell-failure rails passed'
+fi
+
+echo 'SpaceWasm compatibility focused rail: passed'

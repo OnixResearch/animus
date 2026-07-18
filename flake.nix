@@ -113,6 +113,7 @@
               diff -u ${./config/generated/agent-guardrail-profile.json} "$tmp_dir/config/generated/agent-guardrail-profile.json"
               diff -u ${./config/generated/codebase-graph-profile.json} "$tmp_dir/config/generated/codebase-graph-profile.json"
               diff -u ${./config/generated/mesh-provider-profile.json} "$tmp_dir/config/generated/mesh-provider-profile.json"
+              diff -u ${./config/generated/spacewasm-embedded-compat.json} "$tmp_dir/config/generated/spacewasm-embedded-compat.json"
 
               nickel typecheck ${./config/nickel-export-requests.ncl}
               NICKEL_EXPORT_BIN=${nickel-export.packages.${system}.default}/bin/nickel-export \
@@ -207,6 +208,7 @@
                 || baseName == "check-coding-session-host"
                 || baseName == "check-codebase-graph"
                 || baseName == "check-mesh-provider"
+                || baseName == "check-spacewasm-compat"
                 || baseName == "check-branchfs-host"
                 || baseName == "check-acp-stdio-host"
                 || baseName == "check-lean4-loop-fabric"
@@ -442,6 +444,12 @@
 
           wasm-surface = cargoCheck "animus-wasm-surface" [ ] ''
             sh scripts/cairn/check-wasm-surface --root .
+          '';
+
+          spacewasm-compat = cargoCheck "animus-spacewasm-compat" [ pkgs.clippy pkgs.wasm-tools pkgs.b3sum pkgs.lld ] ''
+            ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
+            export ANIMUS_SPACEWASM_SKIP_NICKEL=1
+            sh scripts/cairn/check-spacewasm-compat --root .
           '';
 
           safe-receipts-artifacts = cargoCheck "animus-safe-receipts-artifacts" [ ] ''
@@ -836,6 +844,8 @@
             rust-analyzer
             gcc
             lean4
+            lld
+            wasm-tools
             nickel
             pkg-config
             pre-commit

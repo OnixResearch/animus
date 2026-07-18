@@ -88,6 +88,8 @@ mod security;
 #[cfg(test)]
 mod security_tests;
 mod skill;
+/// Pure opt-in SpaceWasm diagnostic admission and receipt contracts.
+pub mod spacewasm;
 mod status;
 mod timed;
 pub mod tool;
