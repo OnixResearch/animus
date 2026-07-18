@@ -88,7 +88,7 @@ Rejected because host-control owns topology, selectors, bounded observations, la
 
 ### Put the contract in Mantle
 
-Rejected because non-build consumers should not depend on a build system, and Mantle's AGPL/product semantics would constrain otherwise neutral consumers.
+Rejected because non-build consumers should not depend on a build system and Mantle's build/product authority would constrain an otherwise neutral contract. Mantle's owner-authorized reuse and relicensing remove license as a blocker, so semantically neutral Mantle code remains eligible source material if a later `extract` Cairn records exact provenance, attribution, and license grants.
 
 ## Risks / Trade-offs
 
