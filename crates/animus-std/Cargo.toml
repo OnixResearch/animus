@@ -14,6 +14,7 @@ workspace = true
 default = ["observability-host"]
 agent-role-profiles = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 authoritative-completion = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
+coding-session-host = ["durable-session-store"]
 dogfood-smoke = ["dep:animus-runtime"]
 durable-session-store = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 model-runtime-profiles = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
@@ -31,9 +32,19 @@ path = "src/bin/animus-dogfood-smoke.rs"
 required-features = ["dogfood-smoke"]
 
 [[bin]]
+name = "animus-coding-session-smoke"
+path = "src/bin/animus-coding-session-smoke.rs"
+required-features = ["coding-session-host"]
+
+[[bin]]
 name = "animus-sandlock-live-fixture"
 path = "src/bin/animus-sandlock-live-fixture.rs"
 required-features = ["sandlock-host"]
+
+[[test]]
+name = "coding-session-restart"
+path = "tests/coding-session-restart.rs"
+required-features = ["coding-session-host"]
 
 [[test]]
 name = "durable-session-restart"

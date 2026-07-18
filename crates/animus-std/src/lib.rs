@@ -21,6 +21,14 @@ mod agentroles;
 #[cfg(feature = "authoritative-completion")]
 #[path = "authoritativecompletion.rs"]
 mod authoritativecompletion;
+#[cfg(feature = "coding-session-host")]
+#[path = "codingsession.rs"]
+mod coding_session;
+/// Non-default coding-session lifecycle host and explicit injected services.
+#[cfg(feature = "coding-session-host")]
+pub mod coding_session_host {
+    pub use super::coding_session::*;
+}
 mod config;
 mod context;
 #[cfg(feature = "syndicate-host")]

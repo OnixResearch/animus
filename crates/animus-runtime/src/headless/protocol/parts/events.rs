@@ -197,6 +197,25 @@ impl RuntimeProjection {
             crate::RuntimeEvent::SandboxEscalation {
                 escalation_reason, ..
             } => Self::summary_checked("sandbox_escalation", escalation_reason),
+            crate::RuntimeEvent::SessionStateChanged {
+                status,
+                queue_count,
+                ..
+            } => Self::summary_checked(
+                "session_state",
+                format!("{status} queue_count={queue_count}").as_str(),
+            ),
+            crate::RuntimeEvent::SessionCommitObserved {
+                message_kind,
+                durable_cursor,
+                ..
+            } => Self::summary_checked(
+                "session_commit",
+                format!("{message_kind} durable_cursor={durable_cursor}").as_str(),
+            ),
+            crate::RuntimeEvent::SessionRecoveryObserved { status, .. } => {
+                Self::summary_checked("session_recovery", status)
+            }
             crate::RuntimeEvent::MaxTurnsExceeded { max_turns } => {
                 Ok(Self::summary(max_turns.to_string().as_str()))
             }

@@ -161,7 +161,10 @@ fn event_specific_labels(
         | super::RuntimeEvent::SteelPolicyDenied { .. }
         | super::RuntimeEvent::SandboxEscalation { .. }
         | super::RuntimeEvent::Cancelled { .. }
-        | super::RuntimeEvent::CompactionRequested { .. } => std::vec::Vec::new(),
+        | super::RuntimeEvent::CompactionRequested { .. }
+        | super::RuntimeEvent::SessionStateChanged { .. }
+        | super::RuntimeEvent::SessionCommitObserved { .. }
+        | super::RuntimeEvent::SessionRecoveryObserved { .. } => std::vec::Vec::new(),
     }
 }
 
@@ -199,6 +202,9 @@ fn level_for_event(event: &super::RuntimeEvent) -> animus_adapters::LogLevel {
         | super::RuntimeEvent::LifecycleHookOutcome { .. }
         | super::RuntimeEvent::SandboxEscalation { .. }
         | super::RuntimeEvent::CompactionRequested { .. }
+        | super::RuntimeEvent::SessionStateChanged { .. }
+        | super::RuntimeEvent::SessionCommitObserved { .. }
+        | super::RuntimeEvent::SessionRecoveryObserved { .. }
         | super::RuntimeEvent::Shutdown { .. } => animus_adapters::LogLevel::Info,
     }
 }

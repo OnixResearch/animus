@@ -10,7 +10,7 @@ Before a concrete adapter performs a host effect, the shell plans the effect wit
 
 ## Authority-scoped composition
 
-`animus_std::host_adapter_catalog()` records config, context, provider, observability, document-ingest, model-evidence, optional transport, optional Linux Sandlock enforcement, and smoke/demo blocks with explicit authority classes, feature gates, facade paths, direct dependency guidance, and focused checks. `plan_host_adapter` is pure and rejects missing, disabled, denied, or ambient-fallback requests before any shell effect. See [authority-scoped std host adapters](std-host-adapter-crates.md).
+`animus_std::host_adapter_catalog()` records config, context, provider, observability, document-ingest, model-evidence, optional transport, optional Linux Sandlock enforcement, durable-session storage, the non-default coding-session host, and smoke/demo blocks with explicit authority classes, feature gates, facade paths, direct dependency guidance, and focused checks. `plan_host_adapter` is pure and rejects missing, disabled, denied, or ambient-fallback requests before any shell effect. See [authority-scoped std host adapters](std-host-adapter-crates.md).
 
 ## Context and observability shells
 
@@ -21,6 +21,10 @@ Before a concrete adapter performs a host effect, the shell plans the effect wit
 - `NoopObservabilitySink` and `InMemoryObservabilitySink` remain available through the default `animus-std/observability-host` facade and are owned directly by `animus-std-observability`. They accept only validated `MetricSample` and `LogRecord` DTOs. JSONL, `tracing`, OpenTelemetry, Prometheus, dashboards, global subscribers, durable log stores, and network exporters are host-owned optional adapters.
 
 Runtime observability projection is pure over `RuntimeEvent` and `RunReport`. Observe-only middleware receives events in report order; failures are best-effort by default and add bounded `observe` diagnostics without extra model/tool dispatch.
+
+## Non-default coding-session composition
+
+`animus_std::coding_session_host` is enabled only by `coding-session-host`. It runs the pure runtime reducer through explicit provider, tool, persistence, policy, cancellation, timer, summarizer, and event services. The durable adapter opens only a caller-supplied capability root through `durable-session-store`. Provider and tool effects remain blocked until prerequisite message commits succeed. The packaged fake-backed smoke is bounded evidence for this composition and does not make a live-provider, concrete-tool, TUI, daemon, plugin, OAuth, or production claim. See [coding-session host facade](coding-session-host.md).
 
 ## Opt-in live smoke tests
 

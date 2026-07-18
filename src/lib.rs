@@ -52,6 +52,10 @@ pub use animus_std::{
     parse_model_runtime_profiles_json,
 };
 
+/// Re-export of the non-default durable coding-session host facade.
+#[cfg(feature = "coding-session-host")]
+pub use animus_std::coding_session_host;
+
 /// Re-export of host-owned provider retry policy and injected effect seams.
 #[cfg(feature = "provider-retry")]
 pub use animus_std::{

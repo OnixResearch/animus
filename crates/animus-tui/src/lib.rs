@@ -18,6 +18,7 @@
 #![forbid(unsafe_code)]
 
 mod bridge;
+mod frontend;
 mod runner;
 mod view;
 
@@ -28,6 +29,7 @@ pub use bridge::{
     ApprovalRequest, ToolCommandChoice, ToolCorrelationId, ToolHostCommand, ToolHostError,
     ToolHostEvent, ToolHostFailure, ToolHostFailureClass, ToolProgress, ToolRunId,
 };
+pub use frontend::CodingSessionRenderModel;
 /// Re-export of the Subwayrat terminal keymap package used by the optional TUI host.
 #[cfg(feature = "rats-widgets")]
 pub use rat_keymap;

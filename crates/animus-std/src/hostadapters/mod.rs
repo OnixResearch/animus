@@ -4,7 +4,7 @@
 //! variables, opens files, starts processes, contacts networks, inspects
 //! credentials, persists state, or accesses terminal state.
 
-const HOST_ADAPTER_DESCRIPTOR_COUNT: usize = 12;
+const HOST_ADAPTER_DESCRIPTOR_COUNT: usize = 13;
 const NO_HOST_EFFECT: &[HostAuthority] = &[HostAuthority::NoHostEffect];
 const ENVIRONMENT_AUTHORITY: &[HostAuthority] = &[HostAuthority::EnvironmentRead];
 const FILESYSTEM_AUTHORITY: &[HostAuthority] = &[HostAuthority::FilesystemRead];
@@ -23,6 +23,11 @@ const SANDBOX_AUTHORITY: &[HostAuthority] = &[
     HostAuthority::NetworkTransport,
 ];
 const PERSISTENCE_AUTHORITY: &[HostAuthority] = &[HostAuthority::Persistence];
+const CODING_SESSION_AUTHORITY: &[HostAuthority] = &[
+    HostAuthority::NetworkTransport,
+    HostAuthority::ProcessExecution,
+    HostAuthority::Persistence,
+];
 
 /// Explicit host authority class for a std adapter block.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -87,6 +92,8 @@ pub enum HostAdapterFamily {
     SandlockEnforcement,
     /// Optional capability-scoped durable local session store.
     DurableSessionStore,
+    /// Optional composed coding-session lifecycle host.
+    CodingSessionHost,
     /// Packaged smoke and demonstration shell.
     SmokeDemo,
 }
@@ -107,6 +114,7 @@ impl HostAdapterFamily {
             Self::IrohSyndicateTransport => "iroh_syndicate_transport",
             Self::SandlockEnforcement => "sandlock_enforcement",
             Self::DurableSessionStore => "durable_session_store",
+            Self::CodingSessionHost => "coding_session_host",
             Self::SmokeDemo => "smoke_demo",
         }
     }
@@ -267,6 +275,15 @@ const HOST_ADAPTER_DESCRIPTORS: [HostAdapterDescriptor; HOST_ADAPTER_DESCRIPTOR_
         facade_path: "animus_std::{DurableSessionLocalStore,open_durable_session_store}",
         direct_dependency: "animus-std/durable-session-store",
         focused_check: "scripts/cairn/check-durable-session-store --root .",
+    },
+    HostAdapterDescriptor {
+        family: HostAdapterFamily::CodingSessionHost,
+        owner: "animus-std::coding_session_host",
+        feature_gate: "coding-session-host",
+        required_authority: CODING_SESSION_AUTHORITY,
+        facade_path: "animus_std::coding_session_host::CodingSessionHost",
+        direct_dependency: "animus-std/coding-session-host",
+        focused_check: "scripts/cairn/check-coding-session-host --root .",
     },
     HostAdapterDescriptor {
         family: HostAdapterFamily::SmokeDemo,

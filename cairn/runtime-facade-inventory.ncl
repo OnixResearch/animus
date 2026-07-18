@@ -2805,6 +2805,10 @@ let entry_values = [
   entry "animus-runtime::VcsSnapshotReceipt" "animus-runtime" runtime reusable none stable "auto-classified public export for composition inventory",
   entry "animus-runtime::VcsSnapshotRecord" "animus-runtime" runtime reusable none stable "auto-classified public export for composition inventory",
   entry "animus-runtime::VcsSnapshotRecordDraft" "animus-runtime" runtime reusable none stable "auto-classified public export for composition inventory",
+  entry "animus-runtime::coding_session_host" "animus-runtime" runtime reusable none stable "provider- and frontend-neutral coding-session reducer facade",
+  entry "animus-std::coding_session_host" "animus-std" std_shell shell shell_owned stable "non-default explicit-service coding-session host facade",
+  entry "animus::coding_session_host" "animus" root shell shell_owned stable "root feature facade for the non-default coding-session host",
+  entry "animus-tui::CodingSessionRenderModel" "animus-tui" tui shell shell_owned optional_stability "shared TUI adapter over provider-neutral runtime events",
   entry "animus-tui::rats" "animus-tui" tui shell shell_owned optional_stability "terminal widget shell reexport",
 ]
 in

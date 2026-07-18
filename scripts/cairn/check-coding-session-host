@@ -1,0 +1,135 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+readonly EXPECTED_NON_CLAIM_COUNT=7
+readonly RECEIPT_RELATIVE_PATH=target/cairn/focused-rails/coding-session-host.md
+readonly SMOKE_SCHEMA=animus.coding-session-packaged-smoke.v1
+readonly SMOKE_STATUS=completed
+readonly PRIVATE_PROMPT=private-prompt-must-not-appear-in-receipt
+readonly REDACTION_MARKER=raw-prompt-provider-tool-and-path-material-omitted
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+
+if [ "${1:-}" = "--root" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  repo_root=$(CDPATH= cd -- "$2" && pwd)
+fi
+
+cd "${repo_root}"
+
+for command in cargo b3sum grep; do
+  if ! command -v "${command}" >/dev/null 2>&1; then
+    printf 'error: required command not found: %s\n' "${command}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+cargo test -p animus-runtime sessionhost::tests --locked -- --list \
+  | grep -F 'sessionhost::tests::identical_state_and_command_produce_identical_transition: test' >/dev/null
+cargo test -p animus-runtime sessionhost::tests --locked
+cargo test -p animus-std --features coding-session-host --locked -- --list \
+  | grep -F 'coding_session::tests::durable_binding_mismatch_blocks_before_provider_contact: test' >/dev/null
+cargo test -p animus-std --features coding-session-host --locked
+cargo test -p animus-tui frontend --locked -- --list \
+  | grep -F 'frontend::tests::headless_and_tui_consume_identical_session_event_order: test' >/dev/null
+cargo test -p animus-tui frontend --locked
+cargo test -p animus-preserves coding_session_events --locked -- --list \
+  | grep -F 'message::tests::coding_session_events_round_trip_as_metadata_only_lifecycle_events: test' >/dev/null
+cargo test -p animus-preserves coding_session_events --locked
+cargo test -p animus --features coding-session-host --locked
+cargo check -p animus-std --no-default-features --locked
+cargo check -p animus --no-default-features --locked
+
+smoke_root=$(mktemp -d "${TMPDIR:-/tmp}/animus-coding-session-smoke.XXXXXX")
+smoke_output=$(mktemp "${TMPDIR:-/tmp}/animus-coding-session-smoke-output.XXXXXX")
+negative_output=$(mktemp "${TMPDIR:-/tmp}/animus-coding-session-smoke-negative.XXXXXX")
+trap 'rm -rf "${smoke_root}" "${smoke_output}" "${negative_output}"' EXIT HUP INT TERM
+
+cargo run -q -p animus-std --features coding-session-host \
+  --bin animus-coding-session-smoke -- \
+  --store-root "${smoke_root}" \
+  --prompt "${PRIVATE_PROMPT}" > "${smoke_output}"
+
+grep -F "CODING_SESSION_SMOKE schema=${SMOKE_SCHEMA} status=${SMOKE_STATUS}" "${smoke_output}" >/dev/null
+grep -F "redaction=${REDACTION_MARKER}" "${smoke_output}" >/dev/null
+non_claim_count=$(grep -c '^NON_CLAIM surface=' "${smoke_output}")
+if [ "${non_claim_count}" -ne "${EXPECTED_NON_CLAIM_COUNT}" ]; then
+  printf 'error: expected %s non-claims, found %s\n' \
+    "${EXPECTED_NON_CLAIM_COUNT}" "${non_claim_count}" >&2
+  exit "${FAILURE}"
+fi
+if grep -F "${PRIVATE_PROMPT}" "${smoke_output}" >/dev/null; then
+  printf '%s\n' 'error: packaged smoke leaked the private prompt' >&2
+  exit "${FAILURE}"
+fi
+if cargo run -q -p animus-std --features coding-session-host \
+  --bin animus-coding-session-smoke -- > "${negative_output}" 2>&1; then
+  printf '%s\n' 'error: packaged smoke unexpectedly accepted missing explicit arguments' >&2
+  exit "${FAILURE}"
+fi
+grep -F 'issue=missing_store_root' "${negative_output}" >/dev/null
+
+grep -F 'animus-runtime::coding_session_host' cairn/runtime-facade-inventory.ncl >/dev/null
+grep -F 'animus-std::coding_session_host' cairn/runtime-facade-inventory.ncl >/dev/null
+grep -F 'animus::coding_session_host' cairn/runtime-facade-inventory.ncl >/dev/null
+grep -F 'runtime.coding-session-core' cairn/component-catalog.ncl >/dev/null
+grep -F 'std.coding-session-host' cairn/component-catalog.ncl >/dev/null
+grep -F 'It does **not** prove live-provider behavior, concrete product tools, TUI dogfood' docs/coding-session-host.md >/dev/null
+
+source_identity=$(
+  b3sum \
+    crates/animus-runtime/src/codingsession/core.rs \
+    crates/animus-runtime/src/codingsession/data.rs \
+    crates/animus-runtime/src/codingsession/receipt.rs \
+    crates/animus-runtime/src/codingsession/tests.rs \
+    crates/animus-runtime/src/codingsession/mod.rs \
+    crates/animus-preserves/src/message.rs \
+    crates/animus-std/src/codingsession.rs \
+    crates/animus-std/src/codingsession/tests.rs \
+    crates/animus-std/tests/coding-session-restart.rs \
+    crates/animus-std/src/bin/animus-coding-session-smoke.rs \
+    crates/animus-tui/src/frontend.rs \
+    docs/coding-session-host.md \
+    cairn/component-catalog.ncl \
+    cairn/runtime-facade-inventory.ncl \
+    flake.nix \
+    scripts/cairn/check-coding-session-host \
+    | b3sum \
+    | awk '{print $1}'
+)
+smoke_identity=$(b3sum "${smoke_output}" | awk '{print $1}')
+
+mkdir -p "$(dirname "${RECEIPT_RELATIVE_PATH}")"
+cat > "${RECEIPT_RELATIVE_PATH}" <<EOF
+# Coding-session host focused rail
+
+- status: passed
+- source identity (BLAKE3): ${source_identity}
+- packaged smoke identity (BLAKE3): ${smoke_identity}
+- reducer tests: passed
+- explicit-service host tests: passed
+- child-process restart and incomplete-tail tests: passed
+- shared headless/TUI event projection tests: passed
+- Preserves session-event round-trip and rejection tests: passed
+- root feature facade compile/test target: passed
+- default/no-std facade isolation checks: passed
+- packaged durable fake-backed smoke: passed
+- missing explicit smoke arguments: rejected
+- metadata redaction and non-claims: passed
+- live providers: not claimed
+- concrete product tools: not claimed
+- TUI dogfood: not claimed
+- daemon attach: not claimed
+- plugin runtime: not claimed
+- OAuth: not claimed
+- production readiness: not claimed
+EOF
+
+printf 'coding_session_host_source_b3=%s\n' "${source_identity}"
+printf 'coding_session_host_smoke_b3=%s\n' "${smoke_identity}"
+printf 'coding_session_host_receipt=%s\n' "${RECEIPT_RELATIVE_PATH}"

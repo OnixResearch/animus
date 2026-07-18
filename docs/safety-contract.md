@@ -8,8 +8,8 @@ Animus is structured around a functional-core / imperative-shell (FCIS) split. T
 - `crates/animus-adapters` is the component-boundary crate. It owns implementation-free port traits and typed DTOs that separate the harness from swappable model, tool, memory, and host integrations.
 - `crates/animus-preserves` is the optional Preserves serialization bridge. It owns cross-language text/binary encoding for adapter boundary messages and must not become a required dependency of the core or adapter-contract crates.
 - `crates/animus-steel` is the canonical Steel Scheme loop fabric. It owns script evaluation for agent turn selection and must revalidate every selected action through Rust adapter DTOs before calling model, tool, or response boundaries.
-- `crates/animus-runtime` is the reusable agent-loop runtime. It owns pure turn-state transitions, ordered runtime events/reports, max-turn handling, typed workflow command manifest/registry/binding/output contracts, the metadata-only tool catalog and pure executor admission/receipt core, safe provenance ledger/receipt/artifact DTOs, host-injected ledger/session replay and restore planning, pure durable-session framing/commit/recovery/receipt contracts, bounded worker-team task/report contracts, and thin generic shells that call injected loop fabrics, tool executors, worker services, and model/tool adapters without constructing concrete providers or host services.
-- `crates/animus-std` is the imperative host compatibility shell. It owns environment parsing, runtime setup, a pure authority catalog/fail-closed planner, async work, I/O, facade re-exports, and other process-facing concerns. Its non-default `durable-session-store` block alone owns capability-rooted private journals, writer leases, file permissions, synchronization, and reopen orchestration.
+- `crates/animus-runtime` is the reusable agent-loop runtime. It owns pure turn-state transitions, ordered runtime events/reports, max-turn handling, typed workflow command manifest/registry/binding/output contracts, the metadata-only tool catalog and pure executor admission/receipt core, safe provenance ledger/receipt/artifact DTOs, host-injected ledger/session replay and restore planning, pure durable-session framing/commit/recovery/receipt contracts, the pure coding-session lifecycle/queue/commit-order/recovery/event/receipt reducer, bounded worker-team task/report contracts, and thin generic shells that call injected loop fabrics, tool executors, worker services, and model/tool adapters without constructing concrete providers or host services.
+- `crates/animus-std` is the imperative host compatibility shell. It owns environment parsing, runtime setup, a pure authority catalog/fail-closed planner, async work, I/O, facade re-exports, and other process-facing concerns. Its non-default `durable-session-store` block alone owns capability-rooted private journals, writer leases, file permissions, synchronization, and reopen orchestration. Its non-default `coding-session-host` block composes only explicitly injected provider, tool, persistence, policy, cancellation, timer, summarizer, and event services.
 - `crates/animus-std-observability` is an authority-scoped std block for deterministic no-op and in-memory sinks. It depends only on observability adapter contracts and owns no filesystem, process, network, credential, clock, terminal, global subscriber, or persistence authority.
 - The root `animus` package is a thin compatibility layer. It must not accumulate non-trivial business logic.
 - `docs/request-lifecycle.md` is the maintained ownership map for runtime input, core state, Steel decisions, adapter dispatch, status decisions, reports, receipts, and future ledger seams.
@@ -43,6 +43,10 @@ Deterministic scanner findings and optional classifier/adversary-review outcomes
 ## Durable private-session boundary
 
 `animus-runtime::durable_session_store` may process bounded replay-private bytes only inside private frame values; its sidecars and receipts expose metadata and BLAKE3 identities, never those bodies. It remains pure and cannot discover or open storage. `animus-std/durable-session-store` requires an explicit capability root and relative names, rejects ambient fallback, serializes one writer, reports durable success only after `sync_all`, and fails closed on committed corruption or ambiguous lineage. Encryption, authentication, power-loss behavior, filesystem correctness, backup, replication, and production recovery remain non-claims. See [durable local session store](durable-session-store.md).
+
+## Coding-session host boundary
+
+`animus_runtime::coding_session_host` owns pure deterministic run, queue, active-leaf, durable-cursor, pending-effect, recovery, cancellation, event, and receipt reductions. It accepts only already-expanded and admitted input. It cannot discover resources or sessions, interpret commands, call providers or tools, read credentials or clocks, open storage, access a terminal, or perform persistence. The non-default `animus_std::coding_session_host` shell calls only explicit injected services and may emit a dependent provider or tool request only after the prerequisite durable message commit succeeds. Pending queue bodies remain non-transcript state until selected and committed. Resume validates the explicit store and admitted repair before continuation. Cancellation does not prove rollback. Receipts reject raw prompts, provider payloads, tool output, credentials, paths, and raw errors. See [coding-session host facade](coding-session-host.md).
 
 ## Config ownership
 
@@ -85,6 +89,7 @@ cargo test -p animus-runtime tool_executor_kit --locked
 cargo test -p animus-runtime worker_team --locked
 cargo test -p animus-std
 scripts/cairn/check-durable-session-store --root .
+scripts/cairn/check-coding-session-host --root .
 cargo test -p animus-std-observability
 cargo check -p animus-std --no-default-features
 cargo check --workspace --all-targets

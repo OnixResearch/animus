@@ -23,7 +23,18 @@ const RUNTIME_STREAM_KIND_FIELD: &str = "model_stream_kind";
 const RUNTIME_STREAM_VISIBILITY_FIELD: &str = "model_stream_visibility";
 const RUNTIME_PROVIDER_RETRY_FIELD: &str = "provider_retry_progress";
 const RUNTIME_COMPLETION_CANDIDATE_FIELD: &str = "completion_candidate_request_hash";
+const RUNTIME_SESSION_ID_FIELD: &str = "session_id";
+const RUNTIME_SESSION_RUN_ID_FIELD: &str = "session_run_id";
+const RUNTIME_SESSION_ENTRY_ID_FIELD: &str = "session_entry_id";
+const RUNTIME_SESSION_STATUS_FIELD: &str = "session_status";
+const RUNTIME_SESSION_MESSAGE_KIND_FIELD: &str = "session_message_kind";
+const RUNTIME_SESSION_HEAD_HASH_FIELD: &str = "session_head_hash";
+const RUNTIME_SESSION_ACTIVE_LEAF_FIELD: &str = "session_active_leaf_id";
+const RUNTIME_SESSION_SAFE_LABEL_MAX_BYTES: usize = 128;
+const BLAKE3_HEX_BYTES: usize = 64;
 const INVALID_COMPLETION_CANDIDATE_HASH_REASON: &str = "expected lowercase BLAKE3 hex";
+const INVALID_SESSION_LABEL_REASON: &str = "expected bounded ASCII identity label";
+const INVALID_SESSION_HASH_REASON: &str = "expected lowercase BLAKE3 hex";
 const INVALID_COMPLETION_CANDIDATE_REQUEST_REASON: &str = "expected exact COMPLETE request";
 const RUNTIME_MAX_TURNS_ZERO_REASON: &str = "max turns must be at least one";
 const MODEL_COMPONENT: &str = "model";
@@ -706,6 +717,43 @@ pub enum Envelope {
         /// Safe compaction summary.
         summary: String,
     },
+    /// Runtime coding-session lifecycle state payload.
+    RuntimeSessionStateChanged {
+        /// Stable session identity.
+        session_id: String,
+        /// Active run identity when present.
+        run_id: Option<String>,
+        /// Safe lifecycle status.
+        status: String,
+        /// Bounded pending queue count.
+        queue_count: u32,
+    },
+    /// Runtime coding-session durable commit payload.
+    RuntimeSessionCommitObserved {
+        /// Stable session identity.
+        session_id: String,
+        /// Correlated run identity.
+        run_id: String,
+        /// Committed entry identity.
+        entry_id: String,
+        /// Safe message-kind label.
+        message_kind: String,
+        /// Committed durable head hash.
+        head_hash: String,
+        /// Logical durable cursor.
+        durable_cursor: u64,
+    },
+    /// Runtime coding-session recovery payload.
+    RuntimeSessionRecoveryObserved {
+        /// Stable session identity.
+        session_id: String,
+        /// Safe recovery status.
+        status: String,
+        /// Committed durable head hash.
+        head_hash: String,
+        /// Active leaf identity when present.
+        active_leaf_id: Option<String>,
+    },
     /// Runtime shutdown event payload.
     RuntimeShutdown {
         /// Stable terminal status label.
@@ -759,6 +807,9 @@ impl Envelope {
             | Self::RuntimeSandboxEscalation { .. }
             | Self::RuntimeCancelled { .. }
             | Self::RuntimeCompactionRequested { .. }
+            | Self::RuntimeSessionStateChanged { .. }
+            | Self::RuntimeSessionCommitObserved { .. }
+            | Self::RuntimeSessionRecoveryObserved { .. }
             | Self::RuntimeShutdown { .. } => Kind::RuntimeEvent,
             Self::RuntimeReport { .. } => Kind::RuntimeReport,
         }
@@ -951,7 +1002,12 @@ fn runtime_event_group(event: &animus_runtime::RuntimeEvent) -> RuntimeEventGrou
         | animus_runtime::RuntimeEvent::LoopStarted { .. }
         | animus_runtime::RuntimeEvent::TurnStarted { .. }
         | animus_runtime::RuntimeEvent::LoopDecision { .. }
-        | animus_runtime::RuntimeEvent::LifecycleHookOutcome { .. } => RuntimeEventGroup::Lifecycle,
+        | animus_runtime::RuntimeEvent::LifecycleHookOutcome { .. }
+        | animus_runtime::RuntimeEvent::SessionStateChanged { .. }
+        | animus_runtime::RuntimeEvent::SessionCommitObserved { .. }
+        | animus_runtime::RuntimeEvent::SessionRecoveryObserved { .. } => {
+            RuntimeEventGroup::Lifecycle
+        }
         animus_runtime::RuntimeEvent::ModelRequested { .. }
         | animus_runtime::RuntimeEvent::ModelStreamStarted { .. }
         | animus_runtime::RuntimeEvent::ModelStreamFrame { .. }
@@ -987,7 +1043,10 @@ fn runtime_envelope_group(envelope: &Envelope) -> Option<RuntimeEventGroup> {
         | Envelope::RuntimeLoopStarted { .. }
         | Envelope::RuntimeTurnStarted { .. }
         | Envelope::RuntimeLoopDecision { .. }
-        | Envelope::RuntimeLifecycleHookOutcome { .. } => Some(RuntimeEventGroup::Lifecycle),
+        | Envelope::RuntimeLifecycleHookOutcome { .. }
+        | Envelope::RuntimeSessionStateChanged { .. }
+        | Envelope::RuntimeSessionCommitObserved { .. }
+        | Envelope::RuntimeSessionRecoveryObserved { .. } => Some(RuntimeEventGroup::Lifecycle),
         Envelope::RuntimeModelRequested { .. }
         | Envelope::RuntimeModelStreamStarted { .. }
         | Envelope::RuntimeModelStreamFrame { .. }
@@ -1047,6 +1106,43 @@ fn encode_lifecycle_event(event: &animus_runtime::RuntimeEvent) -> Envelope {
         animus_runtime::RuntimeEvent::LifecycleHookOutcome { outcome } => {
             encode_lifecycle_hook_outcome(outcome)
         }
+        animus_runtime::RuntimeEvent::SessionStateChanged {
+            session_id,
+            run_id,
+            status,
+            queue_count,
+        } => Envelope::RuntimeSessionStateChanged {
+            session_id: session_id.clone(),
+            run_id: run_id.clone(),
+            status: status.clone(),
+            queue_count: *queue_count,
+        },
+        animus_runtime::RuntimeEvent::SessionCommitObserved {
+            session_id,
+            run_id,
+            entry_id,
+            message_kind,
+            head_hash,
+            durable_cursor,
+        } => Envelope::RuntimeSessionCommitObserved {
+            session_id: session_id.clone(),
+            run_id: run_id.clone(),
+            entry_id: entry_id.clone(),
+            message_kind: message_kind.clone(),
+            head_hash: head_hash.clone(),
+            durable_cursor: *durable_cursor,
+        },
+        animus_runtime::RuntimeEvent::SessionRecoveryObserved {
+            session_id,
+            status,
+            head_hash,
+            active_leaf_id,
+        } => Envelope::RuntimeSessionRecoveryObserved {
+            session_id: session_id.clone(),
+            status: status.clone(),
+            head_hash: head_hash.clone(),
+            active_leaf_id: active_leaf_id.clone(),
+        },
         _other => unreachable!("runtime event group mismatch"),
     }
 }
@@ -1333,6 +1429,33 @@ fn decode_lifecycle_event(
             redaction: &redaction,
             status: status.as_deref(),
         }),
+        Envelope::RuntimeSessionStateChanged {
+            session_id,
+            run_id,
+            status,
+            queue_count,
+        } => decode_runtime_session_state(session_id, run_id, status, queue_count),
+        Envelope::RuntimeSessionCommitObserved {
+            session_id,
+            run_id,
+            entry_id,
+            message_kind,
+            head_hash,
+            durable_cursor,
+        } => decode_runtime_session_commit(SessionCommitEnvelopeParts {
+            session_id,
+            run_id,
+            entry_id,
+            message_kind,
+            head_hash,
+            durable_cursor,
+        }),
+        Envelope::RuntimeSessionRecoveryObserved {
+            session_id,
+            status,
+            head_hash,
+            active_leaf_id,
+        } => decode_runtime_session_recovery(session_id, status, head_hash, active_leaf_id),
         _other => unreachable!("runtime envelope group mismatch"),
     }
 }
@@ -1631,6 +1754,104 @@ fn decode_failure_event(
         }
         _other => unreachable!("runtime envelope group mismatch"),
     }
+}
+
+fn decode_runtime_session_state(
+    session_id: String,
+    run_id: Option<String>,
+    status: String,
+    queue_count: u32,
+) -> Result<animus_runtime::RuntimeEvent, crate::CodecError> {
+    validate_runtime_session_label(&session_id, RUNTIME_SESSION_ID_FIELD)?;
+    if let Some(run) = run_id.as_deref() {
+        validate_runtime_session_label(run, RUNTIME_SESSION_RUN_ID_FIELD)?;
+    }
+    validate_runtime_session_label(&status, RUNTIME_SESSION_STATUS_FIELD)?;
+    Ok(animus_runtime::RuntimeEvent::SessionStateChanged {
+        session_id,
+        run_id,
+        status,
+        queue_count,
+    })
+}
+
+struct SessionCommitEnvelopeParts {
+    session_id: String,
+    run_id: String,
+    entry_id: String,
+    message_kind: String,
+    head_hash: String,
+    durable_cursor: u64,
+}
+
+fn decode_runtime_session_commit(
+    parts: SessionCommitEnvelopeParts,
+) -> Result<animus_runtime::RuntimeEvent, crate::CodecError> {
+    validate_runtime_session_label(&parts.session_id, RUNTIME_SESSION_ID_FIELD)?;
+    validate_runtime_session_label(&parts.run_id, RUNTIME_SESSION_RUN_ID_FIELD)?;
+    validate_runtime_session_label(&parts.entry_id, RUNTIME_SESSION_ENTRY_ID_FIELD)?;
+    validate_runtime_session_label(&parts.message_kind, RUNTIME_SESSION_MESSAGE_KIND_FIELD)?;
+    validate_runtime_session_hash(&parts.head_hash)?;
+    Ok(animus_runtime::RuntimeEvent::SessionCommitObserved {
+        session_id: parts.session_id,
+        run_id: parts.run_id,
+        entry_id: parts.entry_id,
+        message_kind: parts.message_kind,
+        head_hash: parts.head_hash,
+        durable_cursor: parts.durable_cursor,
+    })
+}
+
+fn decode_runtime_session_recovery(
+    session_id: String,
+    status: String,
+    head_hash: String,
+    active_leaf_id: Option<String>,
+) -> Result<animus_runtime::RuntimeEvent, crate::CodecError> {
+    validate_runtime_session_label(&session_id, RUNTIME_SESSION_ID_FIELD)?;
+    validate_runtime_session_label(&status, RUNTIME_SESSION_STATUS_FIELD)?;
+    validate_runtime_session_hash(&head_hash)?;
+    if let Some(active_leaf) = active_leaf_id.as_deref() {
+        validate_runtime_session_label(active_leaf, RUNTIME_SESSION_ACTIVE_LEAF_FIELD)?;
+    }
+    Ok(animus_runtime::RuntimeEvent::SessionRecoveryObserved {
+        session_id,
+        status,
+        head_hash,
+        active_leaf_id,
+    })
+}
+
+fn validate_runtime_session_label(
+    value: &str,
+    field: &'static str,
+) -> Result<(), crate::CodecError> {
+    let valid = !value.is_empty()
+        && value.len() <= RUNTIME_SESSION_SAFE_LABEL_MAX_BYTES
+        && value.chars().all(|character| {
+            character.is_ascii_alphanumeric() || matches!(character, '.' | '_' | '-')
+        });
+    if !valid {
+        return Err(crate::CodecError::InvalidRuntimePayload {
+            field,
+            reason: INVALID_SESSION_LABEL_REASON,
+        });
+    }
+    Ok(())
+}
+
+fn validate_runtime_session_hash(value: &str) -> Result<(), crate::CodecError> {
+    let valid = value.len() == BLAKE3_HEX_BYTES
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte));
+    if !valid {
+        return Err(crate::CodecError::InvalidRuntimePayload {
+            field: RUNTIME_SESSION_HEAD_HASH_FIELD,
+            reason: INVALID_SESSION_HASH_REASON,
+        });
+    }
+    Ok(())
 }
 
 fn max_turns_from_count(max_turns: usize) -> Result<core::num::NonZeroUsize, crate::CodecError> {
@@ -2176,6 +2397,19 @@ mod tests {
     const RETRY_EXACT_PLAN_HASH: &str =
         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     const MAX_TURNS: usize = 2;
+    const SESSION_ID: &str = "session.preserves";
+    const SESSION_RUN_ID: &str = "run.preserves";
+    const SESSION_ENTRY_ID: &str = "entry.preserves";
+    const SESSION_STATUS: &str = "active";
+    const SESSION_RECOVERY_STATUS: &str = "clean";
+    const SESSION_MESSAGE_KIND: &str = "user";
+    const SESSION_ACTIVE_LEAF_ID: &str = "entry.preserves";
+    const SESSION_HEAD_HASH: &str =
+        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    const INVALID_SESSION_ID: &str = "../private/session";
+    const INVALID_SESSION_HEAD_HASH: &str = "not-a-blake3-hash";
+    const SESSION_QUEUE_COUNT: u32 = 1;
+    const SESSION_DURABLE_CURSOR: u64 = 1;
 
     fn steel_policy_denied_event() -> animus_runtime::RuntimeEvent {
         animus_runtime::RuntimeEvent::SteelPolicyDenied {
@@ -2364,6 +2598,72 @@ mod tests {
             .expect("runtime event should convert");
 
         assert_eq!(decoded, event);
+    }
+
+    #[test]
+    fn coding_session_events_round_trip_as_metadata_only_lifecycle_events() {
+        // r[verify agent_harness_runtime.coding_session_host.events]
+        let events = [
+            animus_runtime::RuntimeEvent::SessionStateChanged {
+                session_id: String::from(SESSION_ID),
+                run_id: Some(String::from(SESSION_RUN_ID)),
+                status: String::from(SESSION_STATUS),
+                queue_count: SESSION_QUEUE_COUNT,
+            },
+            animus_runtime::RuntimeEvent::SessionCommitObserved {
+                session_id: String::from(SESSION_ID),
+                run_id: String::from(SESSION_RUN_ID),
+                entry_id: String::from(SESSION_ENTRY_ID),
+                message_kind: String::from(SESSION_MESSAGE_KIND),
+                head_hash: String::from(SESSION_HEAD_HASH),
+                durable_cursor: SESSION_DURABLE_CURSOR,
+            },
+            animus_runtime::RuntimeEvent::SessionRecoveryObserved {
+                session_id: String::from(SESSION_ID),
+                status: String::from(SESSION_RECOVERY_STATUS),
+                head_hash: String::from(SESSION_HEAD_HASH),
+                active_leaf_id: Some(String::from(SESSION_ACTIVE_LEAF_ID)),
+            },
+        ];
+        for event in events {
+            let decoded = Envelope::from_runtime_event(&event)
+                .try_into_runtime_event()
+                .expect("coding-session event should convert");
+            assert_eq!(decoded, event);
+        }
+    }
+
+    #[test]
+    fn coding_session_events_reject_unsafe_identity_and_head_hash() {
+        let unsafe_identity = Envelope::RuntimeSessionStateChanged {
+            session_id: String::from(INVALID_SESSION_ID),
+            run_id: Some(String::from(SESSION_RUN_ID)),
+            status: String::from(SESSION_STATUS),
+            queue_count: SESSION_QUEUE_COUNT,
+        };
+        assert!(matches!(
+            unsafe_identity.try_into_runtime_event(),
+            Err(crate::CodecError::InvalidRuntimePayload {
+                field: RUNTIME_SESSION_ID_FIELD,
+                ..
+            })
+        ));
+
+        let invalid_hash = Envelope::RuntimeSessionCommitObserved {
+            session_id: String::from(SESSION_ID),
+            run_id: String::from(SESSION_RUN_ID),
+            entry_id: String::from(SESSION_ENTRY_ID),
+            message_kind: String::from(SESSION_MESSAGE_KIND),
+            head_hash: String::from(INVALID_SESSION_HEAD_HASH),
+            durable_cursor: SESSION_DURABLE_CURSOR,
+        };
+        assert!(matches!(
+            invalid_hash.try_into_runtime_event(),
+            Err(crate::CodecError::InvalidRuntimePayload {
+                field: RUNTIME_SESSION_HEAD_HASH_FIELD,
+                ..
+            })
+        ));
     }
 
     #[test]

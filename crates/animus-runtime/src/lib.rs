@@ -46,6 +46,12 @@ mod branching;
 mod capmap;
 mod caps;
 mod checkpoint;
+#[path = "codingsession/mod.rs"]
+mod sessionhost;
+/// Pure coding-session lifecycle facade and effect-request state machine.
+pub mod coding_session_host {
+    pub use super::sessionhost::*;
+}
 #[path = "composition/conformance.rs"]
 mod composition_conformance;
 mod context_layering;

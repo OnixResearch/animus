@@ -179,6 +179,12 @@ pub enum RuntimeEventKind {
     Cancelled,
     /// Compaction event.
     CompactionRequested,
+    /// Coding-session lifecycle state event.
+    SessionStateChanged,
+    /// Coding-session durable commit event.
+    SessionCommitObserved,
+    /// Coding-session recovery event.
+    SessionRecoveryObserved,
     /// Shutdown event.
     Shutdown,
 }
@@ -218,6 +224,9 @@ impl RuntimeEventKind {
             Self::SandboxEscalation => "sandbox_escalation",
             Self::Cancelled => "cancelled",
             Self::CompactionRequested => "compaction_requested",
+            Self::SessionStateChanged => "session_state_changed",
+            Self::SessionCommitObserved => "session_commit_observed",
+            Self::SessionRecoveryObserved => "session_recovery_observed",
             Self::Shutdown => "shutdown",
         }
     }

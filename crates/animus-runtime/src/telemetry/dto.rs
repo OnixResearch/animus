@@ -192,6 +192,43 @@ pub enum RuntimeEvent {
         /// Safe compaction summary.
         summary: String,
     },
+    /// Coding-session lifecycle state changed without exposing transcript bodies.
+    SessionStateChanged {
+        /// Stable session identity.
+        session_id: String,
+        /// Active run identity when one exists.
+        run_id: Option<String>,
+        /// Safe lifecycle status.
+        status: String,
+        /// Bounded pending queue count.
+        queue_count: u32,
+    },
+    /// A coding-session message crossed its declared durable boundary.
+    SessionCommitObserved {
+        /// Stable session identity.
+        session_id: String,
+        /// Correlated run identity.
+        run_id: String,
+        /// Committed entry identity.
+        entry_id: String,
+        /// Safe committed message kind.
+        message_kind: String,
+        /// Committed BLAKE3 head identity.
+        head_hash: String,
+        /// Logical durable cursor after commit.
+        durable_cursor: u64,
+    },
+    /// Coding-session recovery produced one validated metadata-only observation.
+    SessionRecoveryObserved {
+        /// Stable session identity.
+        session_id: String,
+        /// Safe recovery status.
+        status: String,
+        /// Committed BLAKE3 head identity.
+        head_hash: String,
+        /// Recovered active leaf identity when present.
+        active_leaf_id: Option<String>,
+    },
     /// Runtime completed and emitted a terminal status class.
     Shutdown {
         /// Terminal status class.
@@ -238,6 +275,11 @@ impl RuntimeEvent {
             Self::SandboxEscalation { .. } => super::RuntimeEventKind::SandboxEscalation,
             Self::Cancelled { .. } => super::RuntimeEventKind::Cancelled,
             Self::CompactionRequested { .. } => super::RuntimeEventKind::CompactionRequested,
+            Self::SessionStateChanged { .. } => super::RuntimeEventKind::SessionStateChanged,
+            Self::SessionCommitObserved { .. } => super::RuntimeEventKind::SessionCommitObserved,
+            Self::SessionRecoveryObserved { .. } => {
+                super::RuntimeEventKind::SessionRecoveryObserved
+            }
             Self::Shutdown { .. } => super::RuntimeEventKind::Shutdown,
         }
     }

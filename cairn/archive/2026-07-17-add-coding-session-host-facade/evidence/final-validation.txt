@@ -1,0 +1,36 @@
+Coding-session host facade final validation
+Date: 2026-07-17
+
+Implementation scope
+- Pure deterministic coding-session core, typed commands/effects/outcomes, queue semantics, durable commit ordering, recovery/repair, frontend projection, and metadata-only receipt projection: passed.
+- Non-default animus-std host over explicit provider, tool, persistence, policy, cancellation, timer, summarizer, and event services: passed.
+- Root feature facade, TUI adapter, headless events, Preserves metadata envelopes, explicit durable-store smoke, and child-process restart/incomplete-tail denial: passed.
+
+Validation evidence
+- cargo fmt --all -- --check: passed.
+- cargo test --workspace: passed.
+- cargo clippy --workspace --all-targets -- -D warnings: passed.
+- cargo tigerstyle check: passed.
+- scripts/cairn/check-coding-session-host: passed.
+  - focused source BLAKE3: ec7b2d7f5162bb8e3da488db01365bd2f00114ad1b3d1b70b8fa027e76b9b0ce
+  - packaged-smoke BLAKE3: 557177e8f06dd8f6fba505fffc907592db3c8c32078cdee47dc0034dabc2c28a
+  - focused receipt: target/cairn/focused-rails/coding-session-host.md
+- checks.x86_64-linux.coding-session-host: passed with local builders and secret-key-files disabled.
+- scripts/config/check-nickel-configs: passed.
+- scripts/cairn/check-component-catalog and all positive/negative fixtures: passed after deterministic docs regeneration.
+- safe-receipt artifact, evidence-safety, neutral-ledger, composition-conformance, request-lifecycle, and dogfood-readiness rails: passed.
+- runtime-facade inventory remains globally blocked by 23 pre-existing unrelated exports from completion, Aeneas, Sandlock, and Steel surfaces. The three coding-session module facades are present and the focused rail checks them directly; no coding-session export appeared in the unclassified-export diagnostics.
+
+Cairn evidence
+- repository validate: valid with no issues.
+- proposal gate: PASS, receipt 49f2b28975d9f5481241d0089d75382ad05fbddb056c2d1bdb43a10ace9ff398.
+- design gate: PASS, receipt cfa1e21f27dd024df58f486fb123a733f4667fa1e88ede4aa081fa0d596cf521.
+- tasks gate: PASS with 18/18 tasks complete, receipt 6598d07bc366981ecb25e90e4379ea519edf51506a4d1ec200a8a62c92208f80.
+- automated sync plan was blocked only by four unrelated accepted-spec identity-cardinality diagnostics; plan 891b382a5c5719d3b69f0625030747c9381bf9cdfd972e91e9278f0104d81905, receipt 2d3d62f6353025426c42bcf5f0864758afceeae430e9bcbe9391e8817744a59f.
+- exactly eight reviewed coding-session requirements were merged manually into the accepted agent-harness-runtime spec.
+- post-merge Cairn validation: valid with no issues.
+- post-merge Tracey remains globally invalid from unrelated lifecycle debt (747 referenced IDs across 2,265 requirements), receipt 3cef306b04cc4f96de91f151da261ec6d7a0686c944d55ed5f43b0535bd3d730. No coding-session requirement ID is missing or dangling.
+
+Bounded claims
+- Evidence proves the checked fake-backed, explicit-store coding-session path and its deterministic metadata projections only.
+- It does not prove live-provider quality, concrete product-tool behavior, external-effect rollback after cancellation, filesystem or power-loss correctness, TUI dogfood, daemon attach, plugins, OAuth, whole-product correctness, production readiness, or release eligibility.

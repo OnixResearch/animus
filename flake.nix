@@ -199,6 +199,7 @@
                 || baseName == "check-clankers-product-surfaces"
                 || baseName == "check-dogfood-readiness"
                 || baseName == "check-durable-session-store"
+                || baseName == "check-coding-session-host"
                 || baseName == "check-adapter-conformance-index"
                 || baseName == "check-adapter-family-crates"
                 || baseName == "check-ast-grep-agent-boundary-audits"
@@ -524,6 +525,12 @@
             pkgs.nickel
           ] ''
             sh scripts/cairn/check-durable-session-store --root .
+          '';
+
+          coding-session-host = cargoCheck "animus-coding-session-host" [
+            pkgs.b3sum
+          ] ''
+            sh scripts/cairn/check-coding-session-host --root .
           '';
 
           exec-policy = cargoCheck "animus-exec-policy" [ pkgs.nickel ] ''
