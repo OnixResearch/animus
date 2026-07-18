@@ -53,4 +53,6 @@ scripts/cairn/check-component-catalog --root .
 
 Positive fixtures cover read-only and declared-mutation fake execution. Negative fixtures cover missing or unavailable executors, denied capability, schema and argument mismatch, inactive or untrusted definitions, approval and output policy denial, mutation conflict, cancellation, timeout, fallback attempts, unsafe or oversized output, unsafe references, duplicate catalog identities, and receipt leaks.
 
+A host may expose the optional [codebase graph](codebase-graph-host.md) as a read-only capability pack. The executor still owns final tool/schema/capability/output admission; graph access itself cannot authorize repository reads or edits and stale indexes must fail before tool completion evidence.
+
 This kit does not add default tools, shell execution, filesystem mutation, network tools, MCP transport, plugin loading, provider dispatch, global discovery, or production tool packs.

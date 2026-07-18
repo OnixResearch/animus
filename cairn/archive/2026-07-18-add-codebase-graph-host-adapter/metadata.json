@@ -1,0 +1,7 @@
+{
+  "depends_on": [
+    "add-host-tool-executor-capability-packs",
+    "adopt-cap-std-context-boundary",
+    "bind-session-runtime-authority-profile"
+  ]
+}

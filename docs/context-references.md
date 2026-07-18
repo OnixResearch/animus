@@ -42,3 +42,7 @@ Accepted document reports remain untrusted context. `DocumentIngestReport::conte
 - `DocumentExtractionHost` plans local document extraction and delegates filesystem reads, optional extractor execution, timeout enforcement, process isolation, redaction, and receipt writes to an injected host service.
 
 These shells are not ambient discovery. They reject path escapes, missing files, binary/NUL-containing bodies, oversized files or listings, denied policy, unavailable roots, and network/image roles unless a separate host-owned adapter is explicitly supplied.
+
+## Codebase graph composition
+
+The optional [codebase graph host](codebase-graph-host.md) implements a separate injected syntactic-query service. A context resolver may request a bounded definition, reference, symbol, or scope result only after ordinary context policy, capability-root, and retrieval-budget admission. Graph answers remain untrusted syntactic context and do not grant repository reads, mutation, VCS, process, network, or tool authority.

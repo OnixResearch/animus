@@ -29,6 +29,8 @@ mod artifact;
 mod asset;
 mod bridge;
 mod child;
+/// Transport-neutral codebase-graph DTOs and deterministic reducers.
+pub mod codegraph;
 mod codex;
 mod dataspace;
 mod document;

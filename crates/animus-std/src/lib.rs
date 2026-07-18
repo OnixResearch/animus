@@ -21,6 +21,8 @@ mod agentroles;
 #[cfg(feature = "authoritative-completion")]
 #[path = "authoritativecompletion.rs"]
 mod authoritativecompletion;
+#[cfg(feature = "codebase-graph-host")]
+mod codegraph;
 #[cfg(feature = "coding-session-host")]
 #[path = "codingsession.rs"]
 mod coding_session;
@@ -82,6 +84,10 @@ pub use authoritativecompletion::{
     FinalSubjectHashRequest, FinalSubjectHashService, HostArtifactObservation,
     HostCheckExecutionObservation, ObservedChangedArtifact, load_agent_check_registry,
     parse_agent_check_registry_json,
+};
+#[cfg(feature = "codebase-graph-host")]
+pub use codegraph::{
+    CodeGraphHost, CodeGraphHostError, CodeGraphHostEvent, parse_code_graph_profile_json,
 };
 /// Backwards-compatible name for deterministic fixture bundles.
 pub type FixtureAdapters = Fixtures;

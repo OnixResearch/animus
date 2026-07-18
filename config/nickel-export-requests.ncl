@@ -37,6 +37,7 @@ in
     recipe_workflows | Request,
     model_runtime_profiles | Request,
     agent_role_profiles | Request,
+    codebase_graph_profile | Request,
   } = {
     cargo_config = request "animus.repo.cargo" "config/repo.ncl" ["config/agent-check-registry.ncl"] "cargo_config" 'toml ".cargo/config.toml" false,
     clippy_config = request "animus.repo.clippy" "config/repo.ncl" ["config/agent-check-registry.ncl"] "clippy_config" 'toml "clippy.toml" false,
@@ -45,5 +46,6 @@ in
     recipe_workflows = request "animus.recipe-workflows" "config/recipe-workflows.ncl" [] "recipe_workflow_catalog" 'json "policy/recipe-workflows/generated/recipe-workflows.json" false,
     model_runtime_profiles = request "animus.model-runtime-profiles" "config/model-runtime-profiles.ncl" ["policy/contracts/primitives.ncl"] "model_runtime_profile_set" 'json "config/generated/model-runtime-profiles.json" true,
     agent_role_profiles = request "animus.agent-role-profiles" "config/agent-role-profiles.ncl" ["policy/contracts/primitives.ncl"] "agent_role_catalog" 'json "config/generated/agent-role-profiles.json" true,
+    codebase_graph_profile = request "animus.codebase-graph-profile" "config/codebase-graph-profile.ncl" [] "codebase_graph_profile" 'json "config/generated/codebase-graph-profile.json" false,
   },
 }

@@ -8,4 +8,6 @@ Retrieval-capable resources include web search, browser automation, documentatio
 
 Reports and receipts may record budget decisions, source labels, safe references, counts, truncation status, and BLAKE3 content hashes. They must not embed raw fetched bodies, credentials, full host paths, or unbounded retrieved content by default.
 
+The optional [codebase graph host](codebase-graph-host.md) consumes the same finite retrieval posture for direct syntactic queries. Profile and request result ceilings apply before graph dispatch; stale indexes block answers rather than spending additional retrieval budget implicitly.
+
 Non-claims: this contract does not implement web search, browser automation, a documentation provider, or live retrieval. It defines deterministic DTOs and policy decisions that hosts and future adapters can consume.

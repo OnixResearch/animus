@@ -1,0 +1,30 @@
+status: passed
+change: add-codebase-graph-host-adapter
+date: 2026-07-18
+
+Implementation evidence:
+- `animus_adapters::codegraph` owns no-std DTOs, exact profile validation, file admission, contribution normalization, initial graph construction, create/modify/delete/rename reduction, stale classification, bounded stable query, cache identity/decision, existing context/tool/capability/budget admission composition, and metadata-only receipts.
+- `animus-std/codebase-graph-host` is non-default and owns capability-scoped reads plus exact `tree-sitter-rust-0.24` parsing.
+- Checked Nickel profile identity inputs bind Rust/query cohorts, capability-root label, exclusions, finite budgets, fail-closed stale policy, disabled initial cache posture, redaction, and non-claims. Runtime Rust revalidates checked JSON.
+- The initial cache posture is disabled. Pure identity and quarantine/rebuild/save decisions are present for a future caller-owned capability-scoped store; this change makes no cache-persistence claim.
+- Watcher lifecycle remains caller-owned. The host consumes explicit events, blocks trusted queries after overflow/gaps/unsupported events, and accepts a bounded rebuilt index; it does not start an ambient watcher.
+- Positive tests cover profile parity, parser definitions/references, capability-root reads, initial indexing, updates, stable queries, cache decisions, dispatch admission, and receipts.
+- Negative tests cover unknown/widened policy, malformed Rust, binary/NUL input, path escape, symlinks, special/oversized files, duplicate paths, ambiguous rename, event overflow, stale queries, mutation requests, malformed identities, and budget failures.
+
+Validation:
+- pre-change `cargo test -p animus-adapters`: 603 passed.
+- pre-change `cargo test -p animus-std`: passed.
+- `scripts/cairn/check-codebase-graph --root .`: passed.
+- focused adapter and std-host tests: passed.
+- focused Clippy with `-D warnings`: passed.
+- `scripts/cairn/check-component-catalog --root .`: passed.
+- `nix build .#checks.x86_64-linux.codebase-graph -L`: passed.
+- `nix build .#checks.x86_64-linux.nickel-config -L`: passed.
+- `nix build .#checks.x86_64-linux.component-catalog -L`: passed.
+- default/no-default and actual wasm32 parser-dependency isolation: passed.
+- runtime-facade inventory retains unrelated pre-existing blockers and reports no codebase-graph classification defect.
+- Cairn repository validation and proposal/design/tasks gates passed with 19/19 tasks complete.
+- Automated sync was blocked by four unrelated accepted-spec cardinality diagnostics; all eight reviewed `agent_harness_runtime.codebase_graph_host.*` requirements were merged manually without changing those unrelated requirements.
+
+Claim boundaries:
+- Results are syntactic evidence only. Type correctness, semantic completeness, compiler equivalence, cache durability, watcher completeness, mutation authority, production readiness, and release eligibility are not claimed.

@@ -15,6 +15,7 @@ default = ["observability-host"]
 agent-role-profiles = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 authoritative-completion = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 coding-session-host = ["durable-session-store"]
+codebase-graph-host = ["dep:serde", "dep:serde_json", "dep:tree-sitter", "dep:tree-sitter-rust"]
 dogfood-smoke = ["dep:animus-runtime"]
 durable-session-store = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 model-runtime-profiles = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
@@ -61,6 +62,8 @@ blake3 = { version = "1.8.5", default-features = false }
 cap-std = "3.4"
 serde = { version = "1.0.228", features = ["derive"], optional = true }
 serde_json = { version = "1.0.150", optional = true }
+tree-sitter = { version = "0.25.10", optional = true }
+tree-sitter-rust = { version = "0.24.0", optional = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 sandlock-core = { git = "https://github.com/multikernel/sandlock.git", rev = "e8c4cc0ef58e3fc145c4d147a61b889b4f291a10", optional = true }

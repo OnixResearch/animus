@@ -56,6 +56,15 @@ pub use animus_std::{
 #[cfg(feature = "coding-session-host")]
 pub use animus_std::coding_session_host;
 
+/// Non-default codebase-graph contracts and capability-scoped Rust host.
+#[cfg(feature = "codebase-graph-host")]
+pub mod codebase_graph {
+    pub use animus_adapters::codegraph::*;
+    pub use animus_std::{
+        CodeGraphHost, CodeGraphHostError, CodeGraphHostEvent, parse_code_graph_profile_json,
+    };
+}
+
 /// Re-export of the non-default ACP stdio host adapter.
 #[cfg(feature = "acp-stdio-host")]
 pub use animus_acp_stdio_host as acp_stdio_host;

@@ -1,0 +1,51 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+if [ "${1:-}" = '--root' ]; then
+  repo_root=$2
+fi
+cd "${repo_root}"
+
+profile_tmp=$(mktemp "${TMPDIR:-/tmp}/animus-codegraph-profile.XXXXXX")
+trap 'rm -f "${profile_tmp}"' EXIT HUP INT TERM
+nickel typecheck config/codebase-graph-profile.ncl
+nickel export --format json --field codebase_graph_profile config/codebase-graph-profile.ncl > "${profile_tmp}"
+diff -u config/generated/codebase-graph-profile.json "${profile_tmp}"
+cargo test -p animus-adapters codegraph --locked
+cargo test -p animus-std --features codebase-graph-host codegraph --locked
+cargo check -p animus-adapters --target wasm32-unknown-unknown --locked
+
+if cargo tree -p animus-std --no-default-features --locked | grep -E 'tree-sitter|tree-sitter-rust'; then
+  printf '%s\n' 'error: default animus-std dependency tree contains parser dependencies' >&2
+  exit "${FAILURE}"
+fi
+if grep -R -E 'tree_sitter|notify::|memmap' crates/animus-runtime/src crates/animus-adapters/src/codegraph.rs \
+  || grep -E 'std::fs|cap_std' crates/animus-adapters/src/codegraph.rs; then
+  printf '%s\n' 'error: reusable codebase-graph surface acquired parser or host authority' >&2
+  exit "${FAILURE}"
+fi
+
+mkdir -p target/cairn/focused-rails
+source_identity=$(
+  {
+    printf '%s\n' 'animus.codebase-graph.focused-source.v1'
+    b3sum config/codebase-graph-profile.ncl config/generated/codebase-graph-profile.json \
+      crates/animus-adapters/src/codegraph.rs crates/animus-std/src/codegraph.rs
+  } | b3sum | cut -d ' ' -f 1
+)
+cat > target/cairn/focused-rails/codebase-graph.md <<EOF
+# Codebase graph focused rail
+
+- schema: animus.focused-rail.v1
+- status: passed
+- source identity (domain-separated BLAKE3): ${source_identity}
+- typed Nickel profile and checked projection: passed
+- pure initial, incremental, stale, query, cache-identity, and receipt reducers: passed
+- capability-scoped Rust parser host, symlink, binary, malformed, and budget cases: passed
+- default/no-std/Wasm parser dependency isolation: passed
+- syntactic evidence only; type correctness, semantic completeness, mutation authority, production readiness, and release eligibility: not claimed
+EOF
+printf '%s\n' 'focused rail codebase-graph: pass'

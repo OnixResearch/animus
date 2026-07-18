@@ -84,6 +84,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "agent-role-profiles",
     "provider-retry",
     "coding-session-host",
+    "codebase-graph-host",
     "acp-stdio-host",
     "agent-guardrail",
     "lean-loop",

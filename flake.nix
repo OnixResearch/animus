@@ -111,6 +111,7 @@
               diff -u ${./config/generated/session-authority-profile.json} "$tmp_dir/config/generated/session-authority-profile.json"
               diff -u ${./config/generated/lean-loop-profile.json} "$tmp_dir/config/generated/lean-loop-profile.json"
               diff -u ${./config/generated/agent-guardrail-profile.json} "$tmp_dir/config/generated/agent-guardrail-profile.json"
+              diff -u ${./config/generated/codebase-graph-profile.json} "$tmp_dir/config/generated/codebase-graph-profile.json"
 
               nickel typecheck ${./config/nickel-export-requests.ncl}
               NICKEL_EXPORT_BIN=${nickel-export.packages.${system}.default}/bin/nickel-export \
@@ -203,6 +204,7 @@
                 || baseName == "check-dogfood-readiness"
                 || baseName == "check-durable-session-store"
                 || baseName == "check-coding-session-host"
+                || baseName == "check-codebase-graph"
                 || baseName == "check-acp-stdio-host"
                 || baseName == "check-lean4-loop-fabric"
                 || baseName == "check-session-authority-profile"
@@ -645,6 +647,10 @@
           nickel-config = pkgs.runCommand "animus-nickel-config" { } ''
             ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
             touch "$out"
+          '';
+
+          codebase-graph = cargoCheck "animus-codebase-graph" [ pkgs.nickel pkgs.b3sum ] ''
+            sh scripts/cairn/check-codebase-graph --root .
           '';
 
           clankers-product-surfaces =
