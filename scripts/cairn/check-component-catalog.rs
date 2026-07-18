@@ -83,6 +83,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "model-runtime-profiles",
     "agent-role-profiles",
     "provider-retry",
+    "branchfs-host",
     "coding-session-host",
     "codebase-graph-host",
     "acp-stdio-host",

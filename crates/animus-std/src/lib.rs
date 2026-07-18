@@ -21,6 +21,9 @@ mod agentroles;
 #[cfg(feature = "authoritative-completion")]
 #[path = "authoritativecompletion.rs"]
 mod authoritativecompletion;
+#[cfg(feature = "branchfs-host")]
+#[path = "branchfshost.rs"]
+pub mod branchfs_host;
 #[cfg(feature = "codebase-graph-host")]
 mod codegraph;
 #[cfg(feature = "coding-session-host")]

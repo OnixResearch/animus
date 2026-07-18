@@ -205,6 +205,7 @@
                 || baseName == "check-durable-session-store"
                 || baseName == "check-coding-session-host"
                 || baseName == "check-codebase-graph"
+                || baseName == "check-branchfs-host"
                 || baseName == "check-acp-stdio-host"
                 || baseName == "check-lean4-loop-fabric"
                 || baseName == "check-session-authority-profile"
@@ -651,6 +652,10 @@
 
           codebase-graph = cargoCheck "animus-codebase-graph" [ pkgs.nickel pkgs.b3sum ] ''
             sh scripts/cairn/check-codebase-graph --root .
+          '';
+
+          branchfs-host = cargoCheck "animus-branchfs-host" [ pkgs.clippy ] ''
+            sh scripts/cairn/check-branchfs-host
           '';
 
           clankers-product-surfaces =

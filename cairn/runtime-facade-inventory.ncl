@@ -2863,6 +2863,8 @@ let entry_values = [
   entry "animus-adapters::codegraph" "animus-adapters" adapters injection injected optional_stability "transport-neutral syntactic graph service DTOs, pure reducers, cache identity, and metadata-only receipts",
   entry "animus-std::CodeGraphHost" "animus-std" std_shell shell shell_owned optional_stability "non-default capability-scoped Rust parser and in-memory incremental graph host",
   entry "animus::codebase_graph" "animus" root shell shell_owned optional_stability "root feature facade for the non-default codebase graph host",
+  entry "animus-std::branchfs_host" "animus-std" std_shell shell shell_owned optional_stability "non-default abort-only BranchFS and fresh-Jujutsu materialization host",
+  entry "animus::branchfs_host" "animus" root shell shell_owned optional_stability "root feature facade for the non-default BranchFS speculative workspace host",
   acp_record "animus::acp_stdio_host" "animus" root "root feature facade for the non-default bounded ACP stdio host; implementation ownership remains in animus-acp-stdio-host",
   agent_guardrail_record "animus::agent_guardrail" "animus" root "root feature facade for the non-default Linux Bubblewrap agent guardrail; implementation ownership remains in animus-std-agent-guardrail",
   lean_loop_record "animus::lean_loop" "animus" root "root feature facade for the non-default bounded Lean 4 LoopFabric host; implementation ownership remains in animus-std-lean-loop",

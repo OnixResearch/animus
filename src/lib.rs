@@ -56,6 +56,10 @@ pub use animus_std::{
 #[cfg(feature = "coding-session-host")]
 pub use animus_std::coding_session_host;
 
+/// Non-default abort-only `BranchFS` speculative workspace host.
+#[cfg(feature = "branchfs-host")]
+pub use animus_std::branchfs_host;
+
 /// Non-default codebase-graph contracts and capability-scoped Rust host.
 #[cfg(feature = "codebase-graph-host")]
 pub mod codebase_graph {

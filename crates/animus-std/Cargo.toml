@@ -14,6 +14,7 @@ workspace = true
 default = ["observability-host"]
 agent-role-profiles = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 authoritative-completion = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
+branchfs-host = []
 coding-session-host = ["durable-session-store"]
 codebase-graph-host = ["dep:serde", "dep:serde_json", "dep:tree-sitter", "dep:tree-sitter-rust"]
 dogfood-smoke = ["dep:animus-runtime"]

@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+root="."
+if [[ "${1:-}" == "--root" ]]; then
+  root="${2:?missing --root value}"
+fi
+cd "$root"
+
+cargo test -p animus-adapters workspace
+cargo test -p animus-std --no-default-features --features branchfs-host
+cargo clippy -p animus-std --no-default-features --features branchfs-host --all-targets -- -D warnings
+cargo check -p animus-std --no-default-features
+
+adapter="crates/animus-std/src/branchfshost.rs"
+if grep -E 'Operation::Commit|"commit"\.into\(\)|\.branchfs_ctl.*commit' "$adapter"; then
+  echo "forbidden BranchFS commit command is representable" >&2
+  exit 1
+fi
+
+if [[ "${ANIMUS_BRANCHFS_LIVE:-0}" == "1" ]]; then
+  : "${ANIMUS_BRANCHFS_BIN:?set ANIMUS_BRANCHFS_BIN to the reviewed executable}"
+  command -v jj >/dev/null
+  base="$(mktemp -d)"
+  mount="$(mktemp -d)"
+  storage="$(mktemp -d)"
+  destination="$(mktemp -d)"
+  cleanup() {
+    "$ANIMUS_BRANCHFS_BIN" unmount --storage "$storage" "$mount" >/dev/null 2>&1 || true
+    rm -rf "$base" "$mount" "$storage" "$destination"
+  }
+  trap cleanup EXIT
+  jj git init "$base" >/dev/null
+  printf 'source\n' > "$base/source.txt"
+  source_identity="$(jj --repository "$base" log -r @ --no-graph -T 'commit_id')"
+  "$ANIMUS_BRANCHFS_BIN" mount --base "$base" --storage "$storage" "$mount"
+  "$ANIMUS_BRANCHFS_BIN" create --storage "$storage" candidate-a "$mount" --parent main
+  printf 'candidate-a\n' > "$mount/result.txt"
+  "$ANIMUS_BRANCHFS_BIN" create --storage "$storage" candidate-b "$mount" --parent main
+  printf 'candidate-b\n' > "$mount/result.txt"
+  test "$(cat "$mount/@candidate-a/result.txt")" = candidate-a
+  test "$(cat "$mount/@candidate-b/result.txt")" = candidate-b
+  printf 'abort\n' > "$mount/@candidate-b/.branchfs_ctl"
+  jj --repository "$base" workspace add --name animus-branchfs-winner "$destination" >/dev/null
+  cp "$mount/@candidate-a/result.txt" "$destination/result.txt"
+  winner_identity="$(b3sum --no-names "$mount/@candidate-a/result.txt")"
+  copied_identity="$(b3sum --no-names "$destination/result.txt")"
+  test "$winner_identity" = "$copied_identity"
+  test "$(jj --repository "$base" log -r @ --no-graph -T 'commit_id')" = "$source_identity"
+  printf 'abort\n' > "$mount/@candidate-a/.branchfs_ctl"
+  "$ANIMUS_BRANCHFS_BIN" unmount --storage "$storage" "$mount"
+  trap - EXIT
+  cleanup
+fi
+
+echo "branchfs host focused rail passed"

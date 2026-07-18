@@ -229,6 +229,10 @@ pub enum CodeGraphCacheDecision {
 }
 
 /// Existing admission facts required before context or read-only-tool dispatch.
+///
+/// The independent facts are intentionally explicit: collapsing them into one
+/// state enum would hide which existing admission boundary denied dispatch.
+#[allow(clippy::struct_excessive_bools)]
 pub struct CodeGraphDispatchAdmission {
     /// Existing context-reference or read-only-tool policy admitted the request.
     pub caller_admitted: bool,

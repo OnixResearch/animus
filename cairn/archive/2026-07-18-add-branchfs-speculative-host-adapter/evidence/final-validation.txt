@@ -1,0 +1,24 @@
+status: passed
+change: add-branchfs-speculative-host-adapter
+reviewed_branchfs_revision: a4b6592d31aacb4d2f94d0c80f43d47d38063fa9
+reviewed_cohort: branchfs-a4b6592-jj-abort-only-v1
+
+Passed evidence:
+- `cargo test -p animus-adapters workspace` covers portable workspace intent, deterministic planning, abort/commit capability denial, non-leaf state, cleanup, safe receipts, and positive/negative adapter facts.
+- `cargo test -p animus-std --no-default-features --features branchfs-host` passed 63 tests, including deterministic root-level sibling plans, exact cohort preflight, source/selection/manifest binding, fresh-workspace promotion, cleanup retention, receipt redaction, and command rendering.
+- `cargo clippy -p animus-std --no-default-features --features branchfs-host --all-targets -- -D warnings` passed.
+- `cargo check -p animus-std --no-default-features` and root `animus --features branchfs-host` checks passed.
+- `scripts/cairn/check-branchfs-host --root .` passed, including the structural no-commit guard.
+- `nix build .#checks.x86_64-linux.branchfs-host -L` passed in the sandbox-safe tier.
+- Component catalog validation passed. Runtime facade inventory reports only its unrelated pre-existing unclassified-export debt and no BranchFS classification defect.
+- Cairn repository validation and proposal/design/tasks gates passed with 14/14 tasks complete.
+- Automated sync was blocked by four unrelated accepted-spec cardinality diagnostics; all seven reviewed `agent_harness_runtime.branchfs_host_adapter.*` requirements were merged manually without changing those unrelated requirements.
+- Exact upstream source built from the reviewed immutable revision with FUSE development libraries.
+
+Live-tier blocker:
+- The opt-in real Linux rail was attempted against the compiled reviewed executable. `/dev/fuse` exists and is world-readable/writable, but the mount request returned `Operation not permitted (os error 1)` in the current agent execution environment before candidate execution. The rail is recorded as blocked, not passed. The next-best pure, fixture, renderer, exact-source-build, default-isolation, and Jujutsu handoff checks passed. Operators can rerun with `ANIMUS_BRANCHFS_LIVE=1 ANIMUS_BRANCHFS_BIN=/path/to/reviewed/branchfs scripts/cairn/check-branchfs-host --root .` on a host that admits FUSE mounts.
+
+Boundaries:
+- BranchFS commit and nested candidates are unrepresentable or rejected; Jujutsu exclusively owns durable promotion.
+- Receipts are metadata-only and use domain-separated BLAKE3 identities.
+- Evidence does not establish authorization, hostile-code containment, BranchFS/kernel correctness, merge correctness, repository completion, durable backup, production readiness, or release eligibility.

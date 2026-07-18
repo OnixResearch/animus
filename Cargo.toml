@@ -80,6 +80,7 @@ workspace = true
 default = ["std"]
 agent-role-profiles = ["std", "animus-std/agent-role-profiles"]
 acp-stdio-host = ["std", "coding-session-host", "dep:animus-acp-stdio-host"]
+branchfs-host = ["std", "animus-std/branchfs-host"]
 coding-session-host = ["std", "runtime", "animus-std/coding-session-host"]
 codebase-graph-host = ["std", "animus-std/codebase-graph-host"]
 durable-session-store = ["std", "runtime", "animus-std/durable-session-store"]

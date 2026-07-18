@@ -43,6 +43,10 @@ The non-default Linux-only `sandlock-host` feature adds the `animus_std::sandloc
 
 The catalog labels this block with filesystem-read, process-execution, and network-transport authority. Those labels describe possible effects after admission; they do not authorize the action or permit ambient root, command, credential, or adapter discovery.
 
+## Optional BranchFS speculative workspaces
+
+The non-default `branchfs-host` feature adds `animus_std::branchfs_host`. Its pure planner admits only root-level disposable siblings and has no BranchFS commit operation. The thin shell uses injected process, candidate-execution, bounded-manifest, Jujutsu, materialization, and abort services; promotion requires source freshness, a fresh Jujutsu workspace, and post-copy manifest equality. See [BranchFS speculative host](branchfs-host.md).
+
 ## Optional durable local session store
 
 The non-default `durable-session-store` feature adds the persistence-authority block exported as `animus_std::{DurableSessionLocalStore, open_durable_session_store}`. It requires an explicit capability directory, relative journal/lock names, generated-policy-bound descriptor, and lease identity. `animus-runtime` owns the pure bounded framing, lineage, identity, recovery, and receipt core; the std block alone owns file permissions, exclusive lease creation, append, `sync_all`, and reopen effects. It never selects an ambient or global store. See [durable local session store](durable-session-store.md).
@@ -78,6 +82,7 @@ cargo test -p animus-std observability --locked
 cargo check -p animus-std --no-default-features --locked
 cargo test -p animus-std --features sandlock-host sandlock_host --locked
 scripts/cairn/check-sandlock-host --root .
+scripts/cairn/check-branchfs-host
 scripts/cairn/check-durable-session-store --root .
 scripts/cairn/check-coding-session-host --root .
 scripts/cairn/check-agent-guardrail --root .
