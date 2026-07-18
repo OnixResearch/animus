@@ -1,0 +1,49 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly EXPECTED_REVISION='257fafc1c746f1faf156207043a4c826bfb16d49'
+readonly FAILURE=1
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+
+if [ "${1:-}" = '--root' ]; then
+  repo_root=$2
+fi
+
+if ! grep -Fq "github:OnixResearch/nickel-export/${EXPECTED_REVISION}" "${repo_root}/flake.nix"; then
+  printf '%s\n' 'error: standalone Nickel exporter pin is missing or drifted' >&2
+  exit "${FAILURE}"
+fi
+if grep -R -E 'nickel.export|nickel_export' "${repo_root}/crates" --include Cargo.toml --include '*.rs' >/dev/null 2>&1; then
+  printf '%s\n' 'error: reusable Rust crates acquired standalone exporter authority' >&2
+  exit "${FAILURE}"
+fi
+
+"${repo_root}/scripts/config/check-standalone-nickel-exports" "${repo_root}" --check
+"${repo_root}/scripts/config/check-standalone-nickel-export-negatives"
+
+mkdir -p "${repo_root}/target/cairn/focused-rails"
+source_identity=$(
+  {
+    printf '%s\n' 'animus.nickel-export-cutover.source.v1'
+    b3sum \
+      "${repo_root}/flake.nix" \
+      "${repo_root}/config/nickel-export-requests.ncl" \
+      "${repo_root}/scripts/config/check-standalone-nickel-exports" \
+      "${repo_root}/scripts/config/check-standalone-nickel-export-negatives"
+  } | b3sum | cut -d ' ' -f 1
+)
+cat > "${repo_root}/target/cairn/focused-rails/nickel-export-cutover.md" <<EOF
+# Standalone Nickel export cutover focused rail
+
+- schema: animus.focused-rail.v1
+- status: passed
+- source identity (domain-separated BLAKE3): ${source_identity}
+- exact standalone revision: ${EXPECTED_REVISION}
+- positive multi-format exact-byte parity: passed
+- negative malformed, contract, freshness, path, symlink, evaluator, secret, and overclaim cases: passed
+- legacy generation remains authoritative during this validation cycle
+- evaluator equivalence, semantic correctness, deployability, production readiness, and release eligibility: not claimed
+EOF
+
+printf '%s\n' 'focused rail nickel-export-cutover: pass'

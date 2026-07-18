@@ -1,0 +1,71 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+readonly EVALUATOR_IDENTITY='nixpkgs:nickel'
+readonly EVALUATOR_VERSION='nickel-lang-cli-1.17.0'
+nickel_export_bin=${NICKEL_EXPORT_BIN:-nickel-export}
+
+expect_failure() {
+  case_name=$1
+  shift
+  if "$@" >/dev/null 2>&1; then
+    printf 'error: negative case unexpectedly passed: %s\n' "${case_name}" >&2
+    exit "${FAILURE}"
+  fi
+}
+
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/animus-nickel-export-negative.XXXXXX")
+trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
+work=${tmp_dir}/work
+mkdir -p "${work}/generated" "${work}/requests"
+printf '%s\n' '{ value = "safe" }' > "${work}/config.ncl"
+cat > "${work}/requests/valid.json" <<'EOF'
+{"schema":"onix-nickel-export-request/v1","family_id":"animus.negative-fixture","source":"config.ncl","dependencies":[],"import_paths":[],"selector":"value","contract":"","format":"raw","destination":"generated/value.txt","allow_secret_material":false}
+EOF
+
+run_export() {
+  version=$1
+  request=$2
+  mode=$3
+  "${nickel_export_bin}" export \
+    --spec "${request}" \
+    --root "${work}" \
+    --evaluator "$(command -v nickel)" \
+    --evaluator-identity "${EVALUATOR_IDENTITY}" \
+    --evaluator-version "${version}" \
+    --manifest "generated/manifest.json" \
+    "${mode}"
+}
+
+run_export "${EVALUATOR_VERSION}" requests/valid.json --write > "${tmp_dir}/receipt.json"
+run_export "${EVALUATOR_VERSION}" requests/valid.json --check >/dev/null
+printf '%s\n' 'tampered' > "${work}/generated/value.txt"
+expect_failure stale-output run_export "${EVALUATOR_VERSION}" requests/valid.json --check
+run_export "${EVALUATOR_VERSION}" requests/valid.json --write >/dev/null
+expect_failure evaluator-drift run_export nickel-lang-cli-invalid requests/valid.json --check
+printf '%s\n' '{malformed' > "${work}/requests/malformed.json"
+expect_failure malformed-request run_export "${EVALUATOR_VERSION}" requests/malformed.json --check
+cat > "${work}/requests/path-escape.json" <<'EOF'
+{"schema":"onix-nickel-export-request/v1","family_id":"animus.escape","source":"../config.ncl","dependencies":[],"import_paths":[],"selector":"value","contract":"","format":"raw","destination":"generated/value.txt","allow_secret_material":false}
+EOF
+expect_failure path-escape run_export "${EVALUATOR_VERSION}" requests/path-escape.json --check
+cat > "${work}/requests/invalid-contract.json" <<'EOF'
+{"schema":"onix-nickel-export-request/v1","family_id":"animus.contract","source":"config.ncl","dependencies":[],"import_paths":[],"selector":"value","contract":"missing-contract.ncl","format":"raw","destination":"generated/value.txt","allow_secret_material":false}
+EOF
+expect_failure invalid-contract run_export "${EVALUATOR_VERSION}" requests/invalid-contract.json --check
+printf '%s\n' '{ value = "secret=private" }' > "${work}/config.ncl"
+expect_failure secret-marker run_export "${EVALUATOR_VERSION}" requests/valid.json --write
+printf '%s\n' '{ value = "safe" }' > "${work}/config.ncl"
+rm -f "${work}/generated/value.txt"
+ln -s "${tmp_dir}/outside.txt" "${work}/generated/value.txt"
+expect_failure symlink-destination run_export "${EVALUATOR_VERSION}" requests/valid.json --write
+
+if grep -Eiq 'semantic correctness|release eligibility|deployability' "${tmp_dir}/receipt.json"; then
+  :
+else
+  printf '%s\n' 'error: receipt omitted bounded non-claims' >&2
+  exit "${FAILURE}"
+fi
+
+printf '%s\n' 'standalone Nickel export negative cases: passed'

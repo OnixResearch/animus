@@ -1,0 +1,49 @@
+# Typed standalone Nickel export requests used during the fail-closed dual-run cutover.
+let NonEmpty = std.contract.from_predicate (fun value => value != "") in
+let RelativePath = NonEmpty in
+let Format = [| 'json, 'toml, 'yaml, 'raw |] in
+let Request = {
+  schema | NonEmpty,
+  family_id | NonEmpty,
+  source | RelativePath,
+  dependencies | Array RelativePath,
+  import_paths | Array RelativePath,
+  selector | String,
+  contract | String,
+  format | Format,
+  destination | RelativePath,
+  allow_secret_material | Bool,
+} in
+let request = fun family_value source_value dependency_values selector_value format_value destination_value allow_secret_markers =>
+  {
+    schema = "onix-nickel-export-request/v1",
+    family_id = family_value,
+    source = source_value,
+    dependencies = dependency_values,
+    import_paths = ["config", "policy/contracts"],
+    selector = selector_value,
+    contract = "",
+    format = format_value,
+    destination = destination_value,
+    allow_secret_material = allow_secret_markers,
+  }
+in
+{
+  requests | {
+    cargo_config | Request,
+    clippy_config | Request,
+    dylint_config | Request,
+    pre_commit_config | Request,
+    recipe_workflows | Request,
+    model_runtime_profiles | Request,
+    agent_role_profiles | Request,
+  } = {
+    cargo_config = request "animus.repo.cargo" "config/repo.ncl" ["config/agent-check-registry.ncl"] "cargo_config" 'toml ".cargo/config.toml" false,
+    clippy_config = request "animus.repo.clippy" "config/repo.ncl" ["config/agent-check-registry.ncl"] "clippy_config" 'toml "clippy.toml" false,
+    dylint_config = request "animus.repo.dylint" "config/repo.ncl" ["config/agent-check-registry.ncl"] "dylint_config" 'toml "dylint.toml" false,
+    pre_commit_config = request "animus.repo.pre-commit" "config/repo.ncl" ["config/agent-check-registry.ncl"] "pre_commit_config" 'yaml ".pre-commit-config.yaml" false,
+    recipe_workflows = request "animus.recipe-workflows" "config/recipe-workflows.ncl" [] "recipe_workflow_catalog" 'json "policy/recipe-workflows/generated/recipe-workflows.json" false,
+    model_runtime_profiles = request "animus.model-runtime-profiles" "config/model-runtime-profiles.ncl" ["policy/contracts/primitives.ncl"] "model_runtime_profile_set" 'json "config/generated/model-runtime-profiles.json" true,
+    agent_role_profiles = request "animus.agent-role-profiles" "config/agent-role-profiles.ncl" ["policy/contracts/primitives.ncl"] "agent_role_catalog" 'json "config/generated/agent-role-profiles.json" true,
+  },
+}

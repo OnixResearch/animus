@@ -4,6 +4,10 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     systems.url = "github:nix-systems/default-linux";
+    nickel-export = {
+      url = "github:OnixResearch/nickel-export/257fafc1c746f1faf156207043a4c826bfb16d49";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     octet.url = "git+ssh://git@github.com/OnixResearch/octet.git";
     rats = {
       url = "git+ssh://git@github.com/brittonr/rats.git?rev=e9cb7865fe400de6220aea8bfc08ddf4f75da3d3";
@@ -32,6 +36,7 @@
       self,
       nixpkgs,
       systems,
+      nickel-export,
       octet,
       rats,
       basalt,
@@ -82,27 +87,14 @@
             runtimeInputs = [
               pkgs.diffutils
               pkgs.nickel
+              nickel-export.packages.${system}.default
             ];
             text = ''
               tmp_dir="$(mktemp -d)"
               trap 'rm -rf "$tmp_dir"' EXIT
 
-              mkdir -p "$tmp_dir/.cargo"
-              mkdir -p "$tmp_dir/policy/recipe-workflows/generated"
-              mkdir -p "$tmp_dir/config/generated"
-              nickel export --format toml --field cargo_config ${./.}/config/repo.ncl > "$tmp_dir/.cargo/config.toml"
-              nickel export --format toml --field clippy_config ${./.}/config/repo.ncl > "$tmp_dir/clippy.toml"
-              nickel export --format toml --field dylint_config ${./.}/config/repo.ncl > "$tmp_dir/dylint.toml"
-              nickel export --format yaml --field pre_commit_config ${./.}/config/repo.ncl > "$tmp_dir/.pre-commit-config.yaml"
-              nickel export --format json --field agent_check_registry ${./.}/config/repo.ncl > "$tmp_dir/config/generated/agent-check-registry.json"
-              nickel export --format json --field recipe_workflow_catalog ${./config/recipe-workflows.ncl} > "$tmp_dir/policy/recipe-workflows/generated/recipe-workflows.json"
-              nickel export --format json --field model_runtime_profile_set ${./.}/config/model-runtime-profiles.ncl > "$tmp_dir/config/generated/model-runtime-profiles.json"
-              nickel export --format json --field agent_role_catalog ${./.}/config/agent-role-profiles.ncl > "$tmp_dir/config/generated/agent-role-profiles.json"
-              nickel export --format json --field aeneas_proof_campaign_bundle ${./.}/config/aeneas-proof-campaign.ncl > "$tmp_dir/config/generated/aeneas-proof-campaign.json"
-              nickel export --format json --field provider_retry_policy ${./.}/config/provider-retry-policy.ncl > "$tmp_dir/config/generated/provider-retry-policy.json"
-              nickel export --format json --field session_tree_export_policy ${./.}/config/session-tree-export-policy.ncl > "$tmp_dir/config/generated/session-tree-export-policy.json"
-              nickel export --format json --field durable_session_store_policy ${./.}/config/durable-session-store-policy.ncl > "$tmp_dir/config/generated/durable-session-store-policy.json"
-              nickel export --format json --field session_authority_profile ${./.}/config/session-authority-profile.ncl > "$tmp_dir/config/generated/session-authority-profile.json"
+              ANIMUS_REPO_ROOT=${./.} ${pkgs.runtimeShell} \
+                ${./scripts/config/export-nickel-configs} "$tmp_dir"
 
               diff -u ${./.cargo/config.toml} "$tmp_dir/.cargo/config.toml"
               diff -u ${./clippy.toml} "$tmp_dir/clippy.toml"
@@ -117,6 +109,14 @@
               diff -u ${./config/generated/session-tree-export-policy.json} "$tmp_dir/config/generated/session-tree-export-policy.json"
               diff -u ${./config/generated/durable-session-store-policy.json} "$tmp_dir/config/generated/durable-session-store-policy.json"
               diff -u ${./config/generated/session-authority-profile.json} "$tmp_dir/config/generated/session-authority-profile.json"
+              diff -u ${./config/generated/lean-loop-profile.json} "$tmp_dir/config/generated/lean-loop-profile.json"
+              diff -u ${./config/generated/agent-guardrail-profile.json} "$tmp_dir/config/generated/agent-guardrail-profile.json"
+
+              nickel typecheck ${./config/nickel-export-requests.ncl}
+              NICKEL_EXPORT_BIN=${nickel-export.packages.${system}.default}/bin/nickel-export \
+                ${pkgs.runtimeShell} ${./scripts/config/check-standalone-nickel-exports} ${./.} --check
+              NICKEL_EXPORT_BIN=${nickel-export.packages.${system}.default}/bin/nickel-export \
+                ${pkgs.runtimeShell} ${./scripts/config/check-standalone-nickel-export-negatives}
             '';
           };
 

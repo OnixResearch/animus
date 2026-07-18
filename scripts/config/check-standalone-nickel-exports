@@ -1,0 +1,63 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+readonly EVALUATOR_IDENTITY='nixpkgs:nickel'
+readonly EVALUATOR_VERSION='nickel-lang-cli-1.17.0'
+readonly REQUEST_FIELDS='cargo_config clippy_config dylint_config pre_commit_config recipe_workflows model_runtime_profiles agent_role_profiles'
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+default_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+repo_root=${1:-${default_root}}
+mode=${2:---check}
+request_source=${repo_root}/config/nickel-export-requests.ncl
+request_root=${repo_root}/config/generated/nickel-export-requests
+manifest_root=${repo_root}/config/generated/nickel-export-manifests
+nickel_export_bin=${NICKEL_EXPORT_BIN:-nickel-export}
+
+case "${mode}" in
+  --check|--write) ;;
+  *)
+    printf 'error: expected --check or --write, got %s\n' "${mode}" >&2
+    exit "${FAILURE}"
+    ;;
+esac
+
+if ! command -v nickel >/dev/null 2>&1; then
+  printf '%s\n' 'error: nickel 1.17.0 is required' >&2
+  exit "${FAILURE}"
+fi
+if ! command -v "${nickel_export_bin}" >/dev/null 2>&1; then
+  printf '%s\n' 'error: the pinned nickel-export executable is required' >&2
+  exit "${FAILURE}"
+fi
+
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/animus-nickel-export.XXXXXX")
+trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
+mkdir -p "${request_root}" "${manifest_root}"
+cd "${repo_root}"
+
+for request_field in ${REQUEST_FIELDS}; do
+  generated_request_path=${tmp_dir}/${request_field}.json
+  request_path=${request_root}/${request_field}.json
+  request_relative=config/generated/nickel-export-requests/${request_field}.json
+  receipt_path=${tmp_dir}/${request_field}.receipt.json
+  manifest_relative=config/generated/nickel-export-manifests/${request_field}.manifest.json
+
+  nickel export --format json --field "requests.${request_field}" "${request_source}" > "${generated_request_path}"
+  if [ "${mode}" = '--write' ]; then
+    cp "${generated_request_path}" "${request_path}"
+  else
+    cmp "${generated_request_path}" "${request_path}"
+  fi
+  "${nickel_export_bin}" export \
+    --spec "${request_relative}" \
+    --root "${repo_root}" \
+    --evaluator "$(command -v nickel)" \
+    --evaluator-identity "${EVALUATOR_IDENTITY}" \
+    --evaluator-version "${EVALUATOR_VERSION}" \
+    --manifest "${manifest_relative}" \
+    "${mode}" > "${receipt_path}"
+done
+
+printf '%s\n' 'standalone Nickel export parity: passed'
