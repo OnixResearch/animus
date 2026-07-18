@@ -13,10 +13,11 @@ const TEST_QUEUE_ENTRY: &str = "entry.host-queue";
 const TEST_QUEUE_BODY: &str = "steer host toward evidence";
 const TEST_POLICY_HASH: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const TEST_MAX_QUEUE_ITEMS: u32 = 8;
-const EXPECTED_SINGLE_TURN_MESSAGES: usize = 2;
-const EXPECTED_QUEUED_MESSAGES: usize = 4;
+const EXPECTED_INITIAL_COMMIT_MESSAGES: usize = 2;
+const EXPECTED_SINGLE_TURN_MESSAGES: usize = 3;
+const EXPECTED_QUEUED_MESSAGES: usize = 5;
 const EXPECTED_SINGLE_PROVIDER_DISPATCH: u32 = 1;
-const EXPECTED_SINGLE_TURN_EVENTS: usize = 7;
+const EXPECTED_SINGLE_TURN_EVENTS: usize = 10;
 const FIRST_LEASE: &str = "lease.restart.first";
 const SECOND_LEASE: &str = "lease.restart.second";
 const MISMATCHED_LEASE: &str = "lease.mismatched-binding";
@@ -31,10 +32,11 @@ const TEST_TOOL_CAPABILITY: &str = "tool.read";
 const TEST_TOOL_ASSISTANT: &str = "I will inspect the fixture";
 const TEST_TOOL_OUTPUT: &str = "bounded fixture output";
 const TEST_TOOL_VISIBLE_CHARS: u32 = 128;
-const EXPECTED_TOOL_FLOW_MESSAGES: usize = 4;
+const EXPECTED_TOOL_FLOW_MESSAGES: usize = 5;
 const EXPECTED_TOOL_FLOW_COMMITS: u32 = 4;
 const EXPECTED_TOOL_FLOW_PROVIDER_DISPATCHES: u32 = 2;
 const EXPECTED_TOOL_FLOW_TOOL_DISPATCHES: u32 = 1;
+const EXPECTED_TOOL_FLOW_AUTHORITY_OBSERVATIONS: u32 = 3;
 const FIRST_PROVIDER_DISPATCH: u32 = 1;
 const SECOND_COMMIT: u32 = 2;
 
@@ -210,6 +212,21 @@ impl CodingSessionPolicyService for DenyPolicy {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
+struct UnavailableAuthority {
+    observation_count: u32,
+}
+
+impl CodingSessionAuthorityService for UnavailableAuthority {
+    fn observe_current_enforcement(
+        &mut self,
+        _profile: &SessionRuntimeAuthorityProfile,
+    ) -> Result<SessionAuthorityEnforcementObservation, CodingSessionServiceIssue> {
+        self.observation_count = self.observation_count.saturating_add(1);
+        Err(CodingSessionServiceIssue::Unavailable)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default)]
 struct MissingTimer;
 
 impl CodingSessionTimerService for MissingTimer {
@@ -254,6 +271,10 @@ fn host_runs_fake_provider_over_commit_before_effect_boundaries() {
     );
     assert_eq!(services.persistence.commit_count, 2);
     assert_eq!(services.events.events.len(), EXPECTED_SINGLE_TURN_EVENTS);
+    assert_eq!(
+        services.authority.observation_count,
+        EXPECTED_SINGLE_PROVIDER_DISPATCH
+    );
 }
 
 #[test]
@@ -264,6 +285,7 @@ fn host_runs_fake_tool_call_and_result_through_durable_boundaries() {
         tool: TestTool::default(),
         persistence: MemoryPersistence::new(false),
         policy: AllowCodingSessionPolicy,
+        authority: AdmittedCodingSessionAuthority::default(),
         cancellation: ObservedCodingSessionCancellation,
         timer: AvailableCodingSessionTimer,
         summarizer: FakeCodingSessionSummarizer {
@@ -324,6 +346,10 @@ fn host_runs_fake_tool_call_and_result_through_durable_boundaries() {
         services.persistence.commit_count,
         EXPECTED_TOOL_FLOW_COMMITS
     );
+    assert_eq!(
+        services.authority.observation_count,
+        EXPECTED_TOOL_FLOW_AUTHORITY_OBSERVATIONS
+    );
 }
 
 #[test]
@@ -335,6 +361,7 @@ fn host_blocks_tool_dispatch_when_assistant_commit_fails() {
         tool: TestTool::default(),
         persistence: MemoryPersistence::fail_on_commit(SECOND_COMMIT),
         policy: AllowCodingSessionPolicy,
+        authority: AdmittedCodingSessionAuthority::default(),
         cancellation: ObservedCodingSessionCancellation,
         timer: AvailableCodingSessionTimer,
         summarizer: FakeCodingSessionSummarizer {
@@ -355,7 +382,10 @@ fn host_blocks_tool_dispatch_when_assistant_commit_fails() {
     assert_eq!(services.provider.dispatch_count, FIRST_PROVIDER_DISPATCH);
     assert_eq!(services.tool.dispatch_count, 0);
     assert_eq!(services.persistence.commit_count, 1);
-    assert_eq!(services.persistence.messages.len(), 1);
+    assert_eq!(
+        services.persistence.messages.len(),
+        EXPECTED_INITIAL_COMMIT_MESSAGES
+    );
 }
 
 #[test]
@@ -378,11 +408,14 @@ fn host_accepts_explicit_steering_while_provider_effect_is_pending() {
         input: input(TEST_QUEUE_BODY),
     })
     .expect("queue steering");
-    assert_eq!(host.message_snapshot().len(), 1);
-    assert_eq!(host.state_snapshot().queued_count(), 1);
+    assert_eq!(
+        host.message_snapshot().len(),
+        EXPECTED_INITIAL_COMMIT_MESSAGES
+    );
+    assert_eq!(host.state_snapshot().queued_count(), Some(1));
     host.drive_pending().expect("finish queued flow");
     assert_eq!(host.message_snapshot().len(), EXPECTED_QUEUED_MESSAGES);
-    assert_eq!(host.state_snapshot().queued_count(), 0);
+    assert_eq!(host.state_snapshot().queued_count(), Some(0));
 }
 
 #[test]
@@ -406,6 +439,7 @@ fn persistence_failure_blocks_provider_and_policy_denial_preserves_state() {
         tool: DenyUnusedCodingSessionTool,
         persistence: MemoryPersistence::new(false),
         policy: DenyPolicy,
+        authority: AdmittedCodingSessionAuthority::default(),
         cancellation: ObservedCodingSessionCancellation,
         timer: AvailableCodingSessionTimer,
         summarizer: FakeCodingSessionSummarizer {
@@ -420,6 +454,40 @@ fn persistence_failure_blocks_provider_and_policy_denial_preserves_state() {
     assert_eq!(error.issue(), CodingSessionHostIssue::PolicyDenied);
     assert!(denied.message_snapshot().is_empty());
     assert!(denied.event_snapshot().is_empty());
+}
+
+#[test]
+fn current_authority_unavailability_blocks_provider_after_durable_binding() {
+    // r[verify agent_harness_runtime.session_authority_profile.realized_enforcement]
+    let services = CodingSessionHostServices {
+        provider: TestProvider { dispatch_count: 0 },
+        tool: DenyUnusedCodingSessionTool,
+        persistence: MemoryPersistence::new(false),
+        policy: AllowCodingSessionPolicy,
+        authority: UnavailableAuthority::default(),
+        cancellation: ObservedCodingSessionCancellation,
+        timer: AvailableCodingSessionTimer,
+        summarizer: FakeCodingSessionSummarizer {
+            summary: String::from(SMOKE_SUMMARY),
+        },
+        events: RecordingEvents::default(),
+    };
+    let mut host = CodingSessionHost::new(new_state(false), services).expect("host");
+    let error = host
+        .prompt(TEST_RUN, TEST_USER_ENTRY, input(TEST_PROMPT))
+        .expect_err("authority unavailable");
+    assert_eq!(error.issue(), CodingSessionHostIssue::SessionBlocked);
+    assert_eq!(
+        error.reducer_issue(),
+        Some(CodingSessionIssue::AuthorityEnforcementUnavailable)
+    );
+    let services = host.into_services();
+    assert_eq!(services.authority.observation_count, 1);
+    assert_eq!(services.provider.dispatch_count, 0);
+    assert_eq!(
+        services.persistence.messages.len(),
+        EXPECTED_INITIAL_COMMIT_MESSAGES
+    );
 }
 
 #[test]
@@ -452,6 +520,7 @@ fn missing_timer_is_rejected_at_host_construction() {
         tool: DenyUnusedCodingSessionTool,
         persistence: MemoryPersistence::new(false),
         policy: AllowCodingSessionPolicy,
+        authority: AdmittedCodingSessionAuthority::default(),
         cancellation: ObservedCodingSessionCancellation,
         timer: MissingTimer,
         summarizer: FakeCodingSessionSummarizer {
@@ -473,7 +542,7 @@ fn packaged_smoke_uses_explicit_store_and_renders_only_safe_metadata() {
     let receipt = run_packaged_durable_coding_session_smoke(root.path.as_path(), TEST_PROMPT)
         .expect("packaged smoke");
     assert!(receipt.contains("status=completed"));
-    assert!(receipt.contains("committed_messages=2"));
+    assert!(receipt.contains("committed_messages=3"));
     assert!(receipt.contains("NON_CLAIM surface=live-provider"));
     assert!(!receipt.contains(TEST_PROMPT));
     assert!(!receipt.contains(root.path.to_string_lossy().as_ref()));
@@ -561,6 +630,7 @@ fn memory_host(
         DenyUnusedCodingSessionTool,
         MemoryPersistence,
         AllowCodingSessionPolicy,
+        AdmittedCodingSessionAuthority,
         ObservedCodingSessionCancellation,
         AvailableCodingSessionTimer,
         FakeCodingSessionSummarizer,
@@ -575,6 +645,7 @@ fn memory_host(
             tool: DenyUnusedCodingSessionTool,
             persistence: MemoryPersistence::new(fail_commit),
             policy: AllowCodingSessionPolicy,
+            authority: AdmittedCodingSessionAuthority::default(),
             cancellation: ObservedCodingSessionCancellation,
             timer: AvailableCodingSessionTimer,
             summarizer: FakeCodingSessionSummarizer {
@@ -592,6 +663,8 @@ fn new_state(resume_required: bool) -> CodingSessionState {
             branch_id: String::from(SMOKE_BRANCH_ID),
             queue_profile: CodingSessionQueueProfile::Sequential,
             services: CodingSessionServiceSet::all_available(),
+            authority_profile: smoke_authority_profile().expect("authority profile"),
+            authority_authorization_identity: String::from(SMOKE_AUTHORIZATION_IDENTITY),
             resume_required,
         },
         animus_runtime::MessageQueuePolicy::new(animus_runtime::MessageQueuePolicyDraft {
@@ -692,6 +765,7 @@ fn services_with_persistence<Persistence>(
     DenyUnusedCodingSessionTool,
     Persistence,
     AllowCodingSessionPolicy,
+    AdmittedCodingSessionAuthority,
     ObservedCodingSessionCancellation,
     AvailableCodingSessionTimer,
     FakeCodingSessionSummarizer,
@@ -702,6 +776,7 @@ fn services_with_persistence<Persistence>(
         tool: DenyUnusedCodingSessionTool,
         persistence,
         policy: AllowCodingSessionPolicy,
+        authority: AdmittedCodingSessionAuthority::default(),
         cancellation: ObservedCodingSessionCancellation,
         timer: AvailableCodingSessionTimer,
         summarizer: FakeCodingSessionSummarizer {

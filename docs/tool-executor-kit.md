@@ -32,6 +32,8 @@ A denied plan never invokes a service and can produce a safe denial receipt.
 
 Receipt and output validation reject raw credentials, private paths, raw file bodies, provider payload markers, unbounded stdout/stderr markers, unsafe references, oversized output, malformed hashes, and inconsistent completed/denied states. Rejection does not emit completed-effect evidence.
 
+A resumable session may bind the effective catalog and capability-ceiling identities in its [session runtime authority profile](session-runtime-authority-profile.md). Equality of those identities neither replaces this final admission nor proves current executor, capability, credential, or tool readiness.
+
 ## Verification and non-claims
 
 Focused checks:

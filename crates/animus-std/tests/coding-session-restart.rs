@@ -7,10 +7,10 @@ use animus_runtime::coding_session_host::{
 };
 use animus_runtime::{MessageQueuePolicy, MessageQueuePolicyDraft};
 use animus_std::coding_session_host::{
-    AllowCodingSessionPolicy, AvailableCodingSessionTimer, CodingSessionHost,
-    CodingSessionHostIssue, CodingSessionHostServices, DenyUnusedCodingSessionTool,
-    DurableCodingSessionPersistence, FakeCodingSessionProvider, FakeCodingSessionSummarizer,
-    NoopCodingSessionEventSink, ObservedCodingSessionCancellation,
+    AdmittedCodingSessionAuthority, AllowCodingSessionPolicy, AvailableCodingSessionTimer,
+    CodingSessionHost, CodingSessionHostIssue, CodingSessionHostServices,
+    DenyUnusedCodingSessionTool, DurableCodingSessionPersistence, FakeCodingSessionProvider,
+    FakeCodingSessionSummarizer, NoopCodingSessionEventSink, ObservedCodingSessionCancellation,
 };
 use animus_std::{
     DurableSessionStoreLocation, DurableSessionStoreOpenRequest, FileSynchronizer,
@@ -35,7 +35,7 @@ const FAKE_RESPONSE: &str = "unused restart provider";
 const FAKE_SUMMARY: &str = "unused restart summary";
 const QUEUE_POLICY_HASH: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const MAX_QUEUE_ITEMS: u32 = 8;
-const EXPECTED_MESSAGES: usize = 2;
+const EXPECTED_MESSAGES: usize = 3;
 const INCOMPLETE_TAIL_BYTE: u8 = 0xff;
 
 #[test]
@@ -115,6 +115,7 @@ fn host<Persistence>(
     DenyUnusedCodingSessionTool,
     Persistence,
     AllowCodingSessionPolicy,
+    AdmittedCodingSessionAuthority,
     ObservedCodingSessionCancellation,
     AvailableCodingSessionTimer,
     FakeCodingSessionSummarizer,
@@ -129,6 +130,8 @@ where
             branch_id: String::from(BRANCH_ID),
             queue_profile: CodingSessionQueueProfile::Sequential,
             services: CodingSessionServiceSet::all_available(),
+            authority_profile: authority_profile(),
+            authority_authorization_identity: String::from(QUEUE_POLICY_HASH),
             resume_required: true,
         },
         queue_policy(),
@@ -144,6 +147,7 @@ where
             tool: DenyUnusedCodingSessionTool,
             persistence,
             policy: AllowCodingSessionPolicy,
+            authority: AdmittedCodingSessionAuthority::default(),
             cancellation: ObservedCodingSessionCancellation,
             timer: AvailableCodingSessionTimer,
             summarizer: FakeCodingSessionSummarizer {
@@ -153,6 +157,25 @@ where
         },
     )
     .expect("host")
+}
+
+fn authority_profile() -> animus_runtime::session_authority_profile::SessionRuntimeAuthorityProfile
+{
+    let components = animus_runtime::session_authority_profile::SessionAuthorityComponentClass::ALL
+        .iter()
+        .map(
+            |class| animus_runtime::session_authority_profile::SessionAuthorityComponentDraft {
+                class: *class,
+                identity: QUEUE_POLICY_HASH,
+            },
+        )
+        .collect::<Vec<_>>();
+    animus_runtime::session_authority_profile::build_session_authority_profile(
+        animus_runtime::session_authority_profile::SessionAuthorityProfileDraft {
+            components: components.as_slice(),
+        },
+    )
+    .expect("authority profile")
 }
 
 fn queue_policy() -> MessageQueuePolicy {

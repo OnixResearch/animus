@@ -229,6 +229,25 @@ pub enum RuntimeEvent {
         /// Recovered active leaf identity when present.
         active_leaf_id: Option<String>,
     },
+    /// Session authority-profile continuity or binding was observed.
+    SessionAuthorityProfileObserved {
+        /// Stable session identity.
+        session_id: String,
+        /// Stable branch identity.
+        branch_id: String,
+        /// Safe admission or binding status.
+        status: String,
+        /// Current requested profile BLAKE3 identity.
+        profile_identity: String,
+        /// Durable binding identity when one exists.
+        binding_identity: Option<String>,
+        /// Safe authorization decision identity when one exists.
+        authorization_identity: Option<String>,
+        /// Current realized-enforcement observation identity when one exists.
+        enforcement_observation_identity: Option<String>,
+        /// Bounded safe component classes that changed.
+        changed_components: Vec<String>,
+    },
     /// Runtime completed and emitted a terminal status class.
     Shutdown {
         /// Terminal status class.
@@ -279,6 +298,9 @@ impl RuntimeEvent {
             Self::SessionCommitObserved { .. } => super::RuntimeEventKind::SessionCommitObserved,
             Self::SessionRecoveryObserved { .. } => {
                 super::RuntimeEventKind::SessionRecoveryObserved
+            }
+            Self::SessionAuthorityProfileObserved { .. } => {
+                super::RuntimeEventKind::SessionAuthorityProfileObserved
             }
             Self::Shutdown { .. } => super::RuntimeEventKind::Shutdown,
         }

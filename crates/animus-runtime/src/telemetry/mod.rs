@@ -185,6 +185,8 @@ pub enum RuntimeEventKind {
     SessionCommitObserved,
     /// Coding-session recovery event.
     SessionRecoveryObserved,
+    /// Session authority-profile binding or comparison event.
+    SessionAuthorityProfileObserved,
     /// Shutdown event.
     Shutdown,
 }
@@ -227,6 +229,7 @@ impl RuntimeEventKind {
             Self::SessionStateChanged => "session_state_changed",
             Self::SessionCommitObserved => "session_commit_observed",
             Self::SessionRecoveryObserved => "session_recovery_observed",
+            Self::SessionAuthorityProfileObserved => "session_authority_profile_observed",
             Self::Shutdown => "shutdown",
         }
     }

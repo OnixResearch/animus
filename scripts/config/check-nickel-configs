@@ -28,3 +28,4 @@ diff -u config/generated/agent-role-profiles.json "${tmp_dir}/config/generated/a
 diff -u config/generated/provider-retry-policy.json "${tmp_dir}/config/generated/provider-retry-policy.json"
 diff -u config/generated/session-tree-export-policy.json "${tmp_dir}/config/generated/session-tree-export-policy.json"
 diff -u config/generated/durable-session-store-policy.json "${tmp_dir}/config/generated/durable-session-store-policy.json"
+diff -u config/generated/session-authority-profile.json "${tmp_dir}/config/generated/session-authority-profile.json"

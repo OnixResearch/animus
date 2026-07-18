@@ -21,6 +21,7 @@ pub(super) const MESSAGE_KIND_TOOL_RESULT_CODE: u8 = 4;
 pub(super) const MESSAGE_KIND_SUMMARY_CODE: u8 = 5;
 pub(super) const MESSAGE_KIND_REPAIR_CODE: u8 = 6;
 pub(super) const MESSAGE_KIND_BRANCH_MOVE_CODE: u8 = 7;
+pub(super) const MESSAGE_KIND_AUTHORITY_PROFILE_BINDING_CODE: u8 = 8;
 pub(super) const MESSAGE_WIRE_PREFIX_BYTES: usize = 8;
 pub(super) const HASH_SEPARATOR: &[u8] = b"\x1f";
 pub(super) const REDACTION_MARKER: &str =
@@ -101,6 +102,8 @@ pub struct CodingSessionConfig {
     pub branch_id: String,
     pub queue_profile: CodingSessionQueueProfile,
     pub services: CodingSessionServiceSet,
+    pub authority_profile: crate::session_authority_profile::SessionRuntimeAuthorityProfile,
+    pub authority_authorization_identity: String,
     pub resume_required: bool,
 }
 
@@ -174,6 +177,7 @@ pub enum CodingSessionMessageKind {
     Summary,
     Repair,
     BranchMove,
+    AuthorityProfileBinding,
 }
 
 impl CodingSessionMessageKind {
@@ -187,6 +191,7 @@ impl CodingSessionMessageKind {
             Self::Summary => "summary",
             Self::Repair => "repair",
             Self::BranchMove => "branch_move",
+            Self::AuthorityProfileBinding => "authority_profile_binding",
         }
     }
 
@@ -200,6 +205,7 @@ impl CodingSessionMessageKind {
             Self::Summary => MESSAGE_KIND_SUMMARY_CODE,
             Self::Repair => MESSAGE_KIND_REPAIR_CODE,
             Self::BranchMove => MESSAGE_KIND_BRANCH_MOVE_CODE,
+            Self::AuthorityProfileBinding => MESSAGE_KIND_AUTHORITY_PROFILE_BINDING_CODE,
         }
     }
 
@@ -213,6 +219,7 @@ impl CodingSessionMessageKind {
             MESSAGE_KIND_SUMMARY_CODE => Some(Self::Summary),
             MESSAGE_KIND_REPAIR_CODE => Some(Self::Repair),
             MESSAGE_KIND_BRANCH_MOVE_CODE => Some(Self::BranchMove),
+            MESSAGE_KIND_AUTHORITY_PROFILE_BINDING_CODE => Some(Self::AuthorityProfileBinding),
             _unsupported => None,
         }
     }
@@ -350,6 +357,11 @@ pub enum CodingSessionCommand {
     Compact {
         entry_id: String,
     },
+    RebindAuthority {
+        entry_id: String,
+        profile: crate::session_authority_profile::SessionRuntimeAuthorityProfile,
+        authorization_identity: String,
+    },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -368,6 +380,7 @@ pub enum CodingSessionAfterCommit {
     InjectNextOrProvider,
     RecoveryReady,
     CompactionReady,
+    AuthorityRebound,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -617,6 +630,7 @@ pub enum CodingSessionEffectService {
     Cancellation,
     Timer,
     Policy,
+    Authority,
     Summarizer,
     Recovery,
 }
@@ -631,6 +645,7 @@ impl CodingSessionEffectService {
             Self::Cancellation => "cancellation",
             Self::Timer => "timer",
             Self::Policy => "policy",
+            Self::Authority => "authority",
             Self::Summarizer => "summarizer",
             Self::Recovery => "recovery",
         }
@@ -719,6 +734,10 @@ pub enum CodingSessionIssue {
     CancellationFailure,
     SummarizerFailure,
     RecoveryBlocked,
+    AuthorityProfileUnbound,
+    AuthorityProfileMismatch,
+    AuthorityReauthorizationRequired,
+    AuthorityEnforcementUnavailable,
     BoundExceeded,
     UnsafeReceipt,
 }
@@ -764,6 +783,8 @@ pub struct CodingSessionState {
     pub(super) active_leaf_id: Option<String>,
     pub(super) durable_head_hash: String,
     pub(super) durable_cursor: u64,
+    pub(super) committed_authority_profile_identity: Option<String>,
+    pub(super) authority_binding_identity: Option<String>,
     pub(super) pending_effect: Option<CodingSessionEffectRequest>,
     pub(super) recovery: CodingSessionRecoveryPosture,
     pub(super) terminal: Option<CodingSessionTerminalKind>,
@@ -816,6 +837,28 @@ impl CodingSessionState {
     }
 
     #[must_use]
+    pub const fn authority_profile(
+        &self,
+    ) -> &crate::session_authority_profile::SessionRuntimeAuthorityProfile {
+        &self.config.authority_profile
+    }
+
+    #[must_use]
+    pub fn authority_authorization_identity(&self) -> &str {
+        self.config.authority_authorization_identity.as_str()
+    }
+
+    #[must_use]
+    pub fn committed_authority_profile_identity(&self) -> Option<&str> {
+        self.committed_authority_profile_identity.as_deref()
+    }
+
+    #[must_use]
+    pub fn authority_binding_identity(&self) -> Option<&str> {
+        self.authority_binding_identity.as_deref()
+    }
+
+    #[must_use]
     pub const fn recovery_posture(&self) -> CodingSessionRecoveryPosture {
         self.recovery
     }
@@ -831,10 +874,8 @@ impl CodingSessionState {
     }
 
     #[must_use]
-    pub fn queued_count(&self) -> u32 {
-        let count_items = u32::try_from(self.queued_bodies.len());
-        debug_assert!(count_items.is_ok());
-        count_items.unwrap_or(u32::MAX)
+    pub fn queued_count(&self) -> Option<u32> {
+        u32::try_from(self.queued_bodies.len()).ok()
     }
 }
 
@@ -881,6 +922,8 @@ pub struct CodingSessionReceipt {
     pub pending_queue_count: u32,
     pub durable_cursor: u64,
     pub committed_head_hash: String,
+    pub authority_profile_identity: String,
+    pub authority_binding_identity: String,
     pub redaction_marker: &'static str,
     pub non_claims: Vec<String>,
     pub receipt_hash: String,

@@ -30,11 +30,19 @@ const RUNTIME_SESSION_STATUS_FIELD: &str = "session_status";
 const RUNTIME_SESSION_MESSAGE_KIND_FIELD: &str = "session_message_kind";
 const RUNTIME_SESSION_HEAD_HASH_FIELD: &str = "session_head_hash";
 const RUNTIME_SESSION_ACTIVE_LEAF_FIELD: &str = "session_active_leaf_id";
+const RUNTIME_SESSION_BRANCH_ID_FIELD: &str = "session_branch_id";
+const RUNTIME_SESSION_PROFILE_IDENTITY_FIELD: &str = "session_authority_profile_identity";
+const RUNTIME_SESSION_BINDING_IDENTITY_FIELD: &str = "session_authority_binding_identity";
+const RUNTIME_SESSION_AUTHORIZATION_IDENTITY_FIELD: &str = "session_authorization_identity";
+const RUNTIME_SESSION_ENFORCEMENT_IDENTITY_FIELD: &str = "session_enforcement_observation_identity";
+const RUNTIME_SESSION_CHANGED_COMPONENT_FIELD: &str = "session_authority_changed_component";
 const RUNTIME_SESSION_SAFE_LABEL_MAX_BYTES: usize = 128;
 const BLAKE3_HEX_BYTES: usize = 64;
 const INVALID_COMPLETION_CANDIDATE_HASH_REASON: &str = "expected lowercase BLAKE3 hex";
 const INVALID_SESSION_LABEL_REASON: &str = "expected bounded ASCII identity label";
 const INVALID_SESSION_HASH_REASON: &str = "expected lowercase BLAKE3 hex";
+const INVALID_SESSION_AUTHORITY_COMPONENT_REASON: &str =
+    "expected unique session authority component class";
 const INVALID_COMPLETION_CANDIDATE_REQUEST_REASON: &str = "expected exact COMPLETE request";
 const RUNTIME_MAX_TURNS_ZERO_REASON: &str = "max turns must be at least one";
 const MODEL_COMPONENT: &str = "model";
@@ -754,6 +762,25 @@ pub enum Envelope {
         /// Active leaf identity when present.
         active_leaf_id: Option<String>,
     },
+    /// Runtime coding-session authority-profile observation payload.
+    RuntimeSessionAuthorityProfileObserved {
+        /// Stable session identity.
+        session_id: String,
+        /// Stable branch identity.
+        branch_id: String,
+        /// Safe admission or binding status.
+        status: String,
+        /// Current requested profile BLAKE3 identity.
+        profile_identity: String,
+        /// Durable binding BLAKE3 identity when present.
+        binding_identity: Option<String>,
+        /// Authorization decision BLAKE3 identity when present.
+        authorization_identity: Option<String>,
+        /// Realized-enforcement observation BLAKE3 identity when present.
+        enforcement_observation_identity: Option<String>,
+        /// Bounded changed component classes.
+        changed_components: Vec<String>,
+    },
     /// Runtime shutdown event payload.
     RuntimeShutdown {
         /// Stable terminal status label.
@@ -810,6 +837,7 @@ impl Envelope {
             | Self::RuntimeSessionStateChanged { .. }
             | Self::RuntimeSessionCommitObserved { .. }
             | Self::RuntimeSessionRecoveryObserved { .. }
+            | Self::RuntimeSessionAuthorityProfileObserved { .. }
             | Self::RuntimeShutdown { .. } => Kind::RuntimeEvent,
             Self::RuntimeReport { .. } => Kind::RuntimeReport,
         }
@@ -1005,7 +1033,8 @@ fn runtime_event_group(event: &animus_runtime::RuntimeEvent) -> RuntimeEventGrou
         | animus_runtime::RuntimeEvent::LifecycleHookOutcome { .. }
         | animus_runtime::RuntimeEvent::SessionStateChanged { .. }
         | animus_runtime::RuntimeEvent::SessionCommitObserved { .. }
-        | animus_runtime::RuntimeEvent::SessionRecoveryObserved { .. } => {
+        | animus_runtime::RuntimeEvent::SessionRecoveryObserved { .. }
+        | animus_runtime::RuntimeEvent::SessionAuthorityProfileObserved { .. } => {
             RuntimeEventGroup::Lifecycle
         }
         animus_runtime::RuntimeEvent::ModelRequested { .. }
@@ -1046,7 +1075,10 @@ fn runtime_envelope_group(envelope: &Envelope) -> Option<RuntimeEventGroup> {
         | Envelope::RuntimeLifecycleHookOutcome { .. }
         | Envelope::RuntimeSessionStateChanged { .. }
         | Envelope::RuntimeSessionCommitObserved { .. }
-        | Envelope::RuntimeSessionRecoveryObserved { .. } => Some(RuntimeEventGroup::Lifecycle),
+        | Envelope::RuntimeSessionRecoveryObserved { .. }
+        | Envelope::RuntimeSessionAuthorityProfileObserved { .. } => {
+            Some(RuntimeEventGroup::Lifecycle)
+        }
         Envelope::RuntimeModelRequested { .. }
         | Envelope::RuntimeModelStreamStarted { .. }
         | Envelope::RuntimeModelStreamFrame { .. }
@@ -1142,6 +1174,25 @@ fn encode_lifecycle_event(event: &animus_runtime::RuntimeEvent) -> Envelope {
             status: status.clone(),
             head_hash: head_hash.clone(),
             active_leaf_id: active_leaf_id.clone(),
+        },
+        animus_runtime::RuntimeEvent::SessionAuthorityProfileObserved {
+            session_id,
+            branch_id,
+            status,
+            profile_identity,
+            binding_identity,
+            authorization_identity,
+            enforcement_observation_identity,
+            changed_components,
+        } => Envelope::RuntimeSessionAuthorityProfileObserved {
+            session_id: session_id.clone(),
+            branch_id: branch_id.clone(),
+            status: status.clone(),
+            profile_identity: profile_identity.clone(),
+            binding_identity: binding_identity.clone(),
+            authorization_identity: authorization_identity.clone(),
+            enforcement_observation_identity: enforcement_observation_identity.clone(),
+            changed_components: changed_components.clone(),
         },
         _other => unreachable!("runtime event group mismatch"),
     }
@@ -1429,6 +1480,20 @@ fn decode_lifecycle_event(
             redaction: &redaction,
             status: status.as_deref(),
         }),
+        session @ (Envelope::RuntimeSessionStateChanged { .. }
+        | Envelope::RuntimeSessionCommitObserved { .. }
+        | Envelope::RuntimeSessionRecoveryObserved { .. }
+        | Envelope::RuntimeSessionAuthorityProfileObserved { .. }) => {
+            decode_session_envelope(session)
+        }
+        _other => unreachable!("runtime envelope group mismatch"),
+    }
+}
+
+fn decode_session_envelope(
+    envelope: Envelope,
+) -> Result<animus_runtime::RuntimeEvent, crate::CodecError> {
+    match envelope {
         Envelope::RuntimeSessionStateChanged {
             session_id,
             run_id,
@@ -1456,7 +1521,26 @@ fn decode_lifecycle_event(
             head_hash,
             active_leaf_id,
         } => decode_runtime_session_recovery(session_id, status, head_hash, active_leaf_id),
-        _other => unreachable!("runtime envelope group mismatch"),
+        Envelope::RuntimeSessionAuthorityProfileObserved {
+            session_id,
+            branch_id,
+            status,
+            profile_identity,
+            binding_identity,
+            authorization_identity,
+            enforcement_observation_identity,
+            changed_components,
+        } => decode_runtime_session_authority(SessionAuthorityEnvelopeParts {
+            session_id,
+            branch_id,
+            status,
+            profile_identity,
+            binding_identity,
+            authorization_identity,
+            enforcement_observation_identity,
+            changed_components,
+        }),
+        _other => unreachable!("session envelope projection mismatch"),
     }
 }
 
@@ -1822,6 +1906,84 @@ fn decode_runtime_session_recovery(
     })
 }
 
+struct SessionAuthorityEnvelopeParts {
+    session_id: String,
+    branch_id: String,
+    status: String,
+    profile_identity: String,
+    binding_identity: Option<String>,
+    authorization_identity: Option<String>,
+    enforcement_observation_identity: Option<String>,
+    changed_components: Vec<String>,
+}
+
+fn decode_runtime_session_authority(
+    parts: SessionAuthorityEnvelopeParts,
+) -> Result<animus_runtime::RuntimeEvent, crate::CodecError> {
+    validate_runtime_session_label(&parts.session_id, RUNTIME_SESSION_ID_FIELD)?;
+    validate_runtime_session_label(&parts.branch_id, RUNTIME_SESSION_BRANCH_ID_FIELD)?;
+    validate_runtime_session_label(&parts.status, RUNTIME_SESSION_STATUS_FIELD)?;
+    validate_runtime_blake3(
+        &parts.profile_identity,
+        RUNTIME_SESSION_PROFILE_IDENTITY_FIELD,
+    )?;
+    validate_optional_runtime_blake3(
+        parts.binding_identity.as_deref(),
+        RUNTIME_SESSION_BINDING_IDENTITY_FIELD,
+    )?;
+    validate_optional_runtime_blake3(
+        parts.authorization_identity.as_deref(),
+        RUNTIME_SESSION_AUTHORIZATION_IDENTITY_FIELD,
+    )?;
+    validate_optional_runtime_blake3(
+        parts.enforcement_observation_identity.as_deref(),
+        RUNTIME_SESSION_ENFORCEMENT_IDENTITY_FIELD,
+    )?;
+    validate_changed_authority_components(parts.changed_components.as_slice())?;
+    Ok(
+        animus_runtime::RuntimeEvent::SessionAuthorityProfileObserved {
+            session_id: parts.session_id,
+            branch_id: parts.branch_id,
+            status: parts.status,
+            profile_identity: parts.profile_identity,
+            binding_identity: parts.binding_identity,
+            authorization_identity: parts.authorization_identity,
+            enforcement_observation_identity: parts.enforcement_observation_identity,
+            changed_components: parts.changed_components,
+        },
+    )
+}
+
+fn validate_changed_authority_components(components: &[String]) -> Result<(), crate::CodecError> {
+    let mut observed = Vec::with_capacity(components.len());
+    if components.len()
+        > animus_runtime::session_authority_profile::SessionAuthorityComponentClass::ALL.len()
+    {
+        return Err(crate::CodecError::InvalidRuntimePayload {
+            field: RUNTIME_SESSION_CHANGED_COMPONENT_FIELD,
+            reason: INVALID_SESSION_AUTHORITY_COMPONENT_REASON,
+        });
+    }
+    for component in components {
+        let class =
+            animus_runtime::session_authority_profile::SessionAuthorityComponentClass::from_label(
+                component,
+            )
+            .ok_or(crate::CodecError::InvalidRuntimePayload {
+                field: RUNTIME_SESSION_CHANGED_COMPONENT_FIELD,
+                reason: INVALID_SESSION_AUTHORITY_COMPONENT_REASON,
+            })?;
+        if observed.contains(&class) {
+            return Err(crate::CodecError::InvalidRuntimePayload {
+                field: RUNTIME_SESSION_CHANGED_COMPONENT_FIELD,
+                reason: INVALID_SESSION_AUTHORITY_COMPONENT_REASON,
+            });
+        }
+        observed.push(class);
+    }
+    Ok(())
+}
+
 fn validate_runtime_session_label(
     value: &str,
     field: &'static str,
@@ -1841,13 +2003,27 @@ fn validate_runtime_session_label(
 }
 
 fn validate_runtime_session_hash(value: &str) -> Result<(), crate::CodecError> {
+    validate_runtime_blake3(value, RUNTIME_SESSION_HEAD_HASH_FIELD)
+}
+
+fn validate_optional_runtime_blake3(
+    value: Option<&str>,
+    field: &'static str,
+) -> Result<(), crate::CodecError> {
+    if let Some(identity) = value {
+        validate_runtime_blake3(identity, field)?;
+    }
+    Ok(())
+}
+
+fn validate_runtime_blake3(value: &str, field: &'static str) -> Result<(), crate::CodecError> {
     let valid = value.len() == BLAKE3_HEX_BYTES
         && value
             .bytes()
             .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte));
     if !valid {
         return Err(crate::CodecError::InvalidRuntimePayload {
-            field: RUNTIME_SESSION_HEAD_HASH_FIELD,
+            field,
             reason: INVALID_SESSION_HASH_REASON,
         });
     }
@@ -2398,10 +2574,14 @@ mod tests {
         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     const MAX_TURNS: usize = 2;
     const SESSION_ID: &str = "session.preserves";
+    const SESSION_BRANCH_ID: &str = "branch.preserves";
     const SESSION_RUN_ID: &str = "run.preserves";
     const SESSION_ENTRY_ID: &str = "entry.preserves";
     const SESSION_STATUS: &str = "active";
     const SESSION_RECOVERY_STATUS: &str = "clean";
+    const SESSION_AUTHORITY_STATUS: &str = "exact_match";
+    const SESSION_AUTHORITY_CHANGED_COMPONENT: &str = "permission";
+    const INVALID_SESSION_AUTHORITY_COMPONENT: &str = "credential_value";
     const SESSION_MESSAGE_KIND: &str = "user";
     const SESSION_ACTIVE_LEAF_ID: &str = "entry.preserves";
     const SESSION_HEAD_HASH: &str =
@@ -2624,6 +2804,16 @@ mod tests {
                 head_hash: String::from(SESSION_HEAD_HASH),
                 active_leaf_id: Some(String::from(SESSION_ACTIVE_LEAF_ID)),
             },
+            animus_runtime::RuntimeEvent::SessionAuthorityProfileObserved {
+                session_id: String::from(SESSION_ID),
+                branch_id: String::from(SESSION_BRANCH_ID),
+                status: String::from(SESSION_AUTHORITY_STATUS),
+                profile_identity: String::from(SESSION_HEAD_HASH),
+                binding_identity: Some(String::from(SESSION_HEAD_HASH)),
+                authorization_identity: Some(String::from(SESSION_HEAD_HASH)),
+                enforcement_observation_identity: Some(String::from(SESSION_HEAD_HASH)),
+                changed_components: vec![String::from(SESSION_AUTHORITY_CHANGED_COMPONENT)],
+            },
         ];
         for event in events {
             let decoded = Envelope::from_runtime_event(&event)
@@ -2661,6 +2851,24 @@ mod tests {
             invalid_hash.try_into_runtime_event(),
             Err(crate::CodecError::InvalidRuntimePayload {
                 field: RUNTIME_SESSION_HEAD_HASH_FIELD,
+                ..
+            })
+        ));
+
+        let invalid_authority = Envelope::RuntimeSessionAuthorityProfileObserved {
+            session_id: String::from(SESSION_ID),
+            branch_id: String::from(SESSION_BRANCH_ID),
+            status: String::from(SESSION_AUTHORITY_STATUS),
+            profile_identity: String::from(SESSION_HEAD_HASH),
+            binding_identity: None,
+            authorization_identity: None,
+            enforcement_observation_identity: None,
+            changed_components: vec![String::from(INVALID_SESSION_AUTHORITY_COMPONENT)],
+        };
+        assert!(matches!(
+            invalid_authority.try_into_runtime_event(),
+            Err(crate::CodecError::InvalidRuntimePayload {
+                field: RUNTIME_SESSION_CHANGED_COMPONENT_FIELD,
                 ..
             })
         ));

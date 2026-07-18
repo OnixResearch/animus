@@ -1,6 +1,6 @@
 # Session restore contract
 
-Animus models session restore as typed planning and safe evidence, not as PTY transfer or implicit conversation continuity. Provider/terminal restore DTOs live in `animus-adapters`; the host-injected ledger/session replay seam lives in `animus-runtime::session_persistence`. Hosts own storage, process management, native agent resume calls, terminal state, and handoff mechanics.
+Animus models session restore as typed planning and safe evidence, not as PTY transfer or implicit conversation continuity. Provider/terminal restore DTOs live in `animus-adapters`; the host-injected ledger/session replay seam lives in `animus-runtime::session_persistence`. Hosts own storage, process management, native agent resume calls, terminal state, and handoff mechanics. Coding-session restart additionally compares its committed [session runtime authority profile](session-runtime-authority-profile.md) before repair or continuation; generic restore planning does not infer or authorize that profile.
 
 ## Contracts
 

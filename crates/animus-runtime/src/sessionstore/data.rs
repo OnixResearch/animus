@@ -226,6 +226,8 @@ pub enum DurableSessionRecordKind {
     Repair,
     /// Branch navigation marker.
     BranchMove,
+    /// Metadata-only session authority-profile binding.
+    AuthorityProfileBinding,
 }
 
 impl DurableSessionRecordKind {
@@ -239,6 +241,7 @@ impl DurableSessionRecordKind {
             Self::Summary => 4,
             Self::Repair => 5,
             Self::BranchMove => 6,
+            Self::AuthorityProfileBinding => 7,
         }
     }
 
@@ -252,6 +255,7 @@ impl DurableSessionRecordKind {
             4 => Some(Self::Summary),
             5 => Some(Self::Repair),
             6 => Some(Self::BranchMove),
+            7 => Some(Self::AuthorityProfileBinding),
             _other => None,
         }
     }
@@ -266,6 +270,7 @@ impl DurableSessionRecordKind {
             Self::Summary => "summary",
             Self::Repair => "repair",
             Self::BranchMove => "branch_move",
+            Self::AuthorityProfileBinding => "authority_profile_binding",
         }
     }
 }

@@ -1,0 +1,39 @@
+Session runtime authority-profile final validation
+Date: 2026-07-17
+
+Implementation scope
+- Pure canonical metadata-only authority profile, exact required component classes, domain-separated BLAKE3 profile/binding/enforcement/receipt identities, drift comparison, legacy classification, and abandon/fork/rebind planning: passed.
+- Durable AuthorityProfileBinding record with wire code 7, initial binding before the first provider boundary, append-only successor rebinds, provider/summarizer projection exclusion, and resume comparison before repair or continuation: passed.
+- Explicit animus-std current-authority service with fresh admission before provider, tool, and summarizer effects and after resume: passed with deterministic fake positive evidence and unavailable-authority negative evidence.
+- Provider/UI-neutral runtime, headless, TUI, observability, and Preserves metadata event projections: passed; no transcript body or raw provider/tool material is carried by authority envelopes.
+- Nickel authoring/parity source exports validated generated data; runtime Rust does not evaluate Nickel. Canonical configured profile identity: 53a1955677292245ccd4ccc6c0c3a7f3bcd9431f4ac0d6f1a7f9fb7ca1ac5070.
+
+Validation evidence
+- cargo fmt --all -- --check: passed on the final source.
+- cargo test --workspace --all-targets --locked: passed on the final source.
+- cargo clippy --workspace --all-targets --locked -- -D warnings: passed on the final source.
+- cargo tigerstyle check: passed on the final source with local builders and secret-key-files disabled.
+- scripts/cairn/check-session-authority-profile --root .: passed.
+  - profile source BLAKE3: 099edc7b05fd58b6338134a6cb69745fdbafd69c4f628a82dbbef381a3c80530.
+  - generated profile BLAKE3: e2f720aacd896936cb678fc5df7140bd6b7cba596291b9b8d798a525cb197ff9.
+  - authority runtime source-set BLAKE3: ab8a4acba161c0eb7cef7731497d53007eebdee761b6a484aaa41a54cbc41c13.
+  - positive fixtures: 1; negative fixtures: 3.
+  - receipt: target/cairn/focused-rails/session-authority-profile.md.
+- checks.x86_64-linux.session-authority-profile: passed with local builders and secret-key-files disabled.
+- Durable-session-store, coding-session-host, model-runtime-profile, tool-catalog, and Sandlock focused rails: passed.
+- Nickel config drift, component catalog and fixtures, Preserves boundary schemas, safe-receipt artifacts, evidence safety, neutral ledger, composition conformance, request lifecycle, and dogfood claim-hygiene rails: passed.
+- Runtime-facade inventory remains globally blocked by 23 pre-existing unrelated completion, Aeneas, Sandlock, and Steel exports. The authority and coding-session facade entries are classified and no session-authority export appeared in the diagnostics.
+
+Cairn evidence
+- Strict repository validation before and after accepted-spec merge: valid with no issues.
+- Proposal gate: PASS, receipt 95d8949f2f0d35ede6d536a2f2eb63e711ae319cba015a212c9e4b8528270fed.
+- Design gate: PASS, receipt 4e23bc202511dd8931a26a021532cf5987e3be7b4bc31e96b31156b00197c25d.
+- Tasks gate: PASS with 17/17 tasks complete, receipt 508a87baba204b13f465ae1775de9c00a00f24bcdf375b8792860d9fc29e8d04.
+- Automated sync plan was blocked only by four unrelated accepted-spec identity-cardinality diagnostics; plan 5af47fee3dee065114d746330cadaa40cade86d0688ba4718fa6e422f67844e6, receipt a9b29fc175764fb86d74b4b5d3d4be94bafc8fb4e034e12116f21252194d63dd.
+- Exactly seven reviewed authority-profile requirements were merged manually into the accepted agent-harness-runtime spec.
+- Post-merge Tracey remains globally invalid from unrelated lifecycle debt: 754 referenced IDs across 2,272 requirements, receipt 9514e3baf8cf43729a342fa0afe91a726f09fa257f6530bf40e97e0b515d29ff. No session-authority requirement ID is missing or dangling.
+
+Bounded claims
+- Exact profile equality establishes requested-profile continuity only. It does not authorize an effect or prove current enforcement.
+- Evidence is bounded to checked pure logic, generated parity data, deterministic fake services, and explicit local durable-store scenarios.
+- It does not prove authorization-oracle soundness, Sandlock/kernel/filesystem/power-loss correctness, capability availability, provider or tool readiness, credential admission, replay equivalence, whole-session correctness, production readiness, or release eligibility.

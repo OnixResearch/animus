@@ -4,6 +4,7 @@ const SESSION_ID: &str = "session.fixture";
 const BRANCH_ID: &str = "branch.main";
 const RUN_ID: &str = "run.one";
 const OTHER_RUN_ID: &str = "run.other";
+const AUTHORITY_ENTRY: &str = "authority.fixture";
 const USER_ENTRY: &str = "entry.user";
 const QUEUED_ENTRY: &str = "entry.queued";
 const QUEUED_ENTRY_TWO: &str = "entry.queued.two";
@@ -30,14 +31,16 @@ const QUEUE_MAX_ITEMS: u32 = 8;
 const TOOL_VISIBLE_CHARS: u32 = 128;
 const FIRST_CURSOR: u64 = 1;
 const SECOND_CURSOR: u64 = 2;
-const EXPECTED_SINGLE_TURN_MESSAGE_COUNT: usize = 2;
-const EXPECTED_SINGLE_TURN_RECEIPT_MESSAGE_COUNT: u32 = 2;
-const EXPECTED_QUEUE_INJECTED_MESSAGE_COUNT: usize = 3;
-const EXPECTED_TOOL_PRE_FINAL_MESSAGE_COUNT: usize = 3;
-const EXPECTED_TOOL_MESSAGE_COUNT: usize = 4;
-const EXPECTED_ALL_AT_ONCE_MESSAGE_COUNT: usize = 4;
-const EXPECTED_SECOND_TURN_USER_MESSAGES: usize = 3;
-const EXPECTED_SECOND_TURN_MESSAGES: usize = 4;
+const THIRD_CURSOR: u64 = 3;
+const EXPECTED_INITIAL_COMMIT_MESSAGE_COUNT: usize = 2;
+const EXPECTED_SINGLE_TURN_MESSAGE_COUNT: usize = 3;
+const EXPECTED_SINGLE_TURN_RECEIPT_MESSAGE_COUNT: u32 = 3;
+const EXPECTED_QUEUE_INJECTED_MESSAGE_COUNT: usize = 4;
+const EXPECTED_TOOL_PRE_FINAL_MESSAGE_COUNT: usize = 4;
+const EXPECTED_TOOL_MESSAGE_COUNT: usize = 5;
+const EXPECTED_ALL_AT_ONCE_MESSAGE_COUNT: usize = 5;
+const EXPECTED_SECOND_TURN_USER_MESSAGES: usize = 4;
+const EXPECTED_SECOND_TURN_MESSAGES: usize = 5;
 const WIRE_VERSION_INDEX: usize = 0;
 const UNSUPPORTED_WIRE_VERSION: u8 = 2;
 
@@ -87,7 +90,7 @@ fn prompt_commits_before_provider_and_final_response_commits_before_completion()
         user_commit.effect,
         Some(CodingSessionEffectRequest::Provider(_))
     ));
-    assert_eq!(user_commit.state.messages().len(), 1);
+    assert_provider_projection_excludes_authority(&user_commit);
 
     let provider = provider_final(&user_commit.state, RESPONSE);
     assert!(matches!(
@@ -124,6 +127,28 @@ fn prompt_commits_before_provider_and_final_response_commits_before_completion()
     );
 }
 
+fn assert_provider_projection_excludes_authority(transition: &CodingSessionTransition) {
+    assert_eq!(
+        transition.state.messages().len(),
+        EXPECTED_INITIAL_COMMIT_MESSAGE_COUNT
+    );
+    assert_eq!(
+        transition.state.messages()[0].kind(),
+        CodingSessionMessageKind::AuthorityProfileBinding
+    );
+    let provider_request = match transition.effect.as_ref().expect("provider effect") {
+        CodingSessionEffectRequest::Provider(request) => request,
+        _other => panic!("expected provider request"),
+    };
+    assert!(provider_request.request().prompt().contains(PROMPT));
+    assert!(
+        !provider_request
+            .request()
+            .prompt()
+            .contains(transition.state.authority_profile().profile_identity())
+    );
+}
+
 #[test]
 fn terminal_receipt_is_bounded_metadata() {
     let completed = completed_session();
@@ -135,6 +160,16 @@ fn terminal_receipt_is_bounded_metadata() {
         EXPECTED_SINGLE_TURN_RECEIPT_MESSAGE_COUNT
     );
     assert_eq!(receipt.provider_dispatch_count, 1);
+    assert_eq!(
+        receipt.authority_profile_identity,
+        completed.authority_profile().profile_identity()
+    );
+    assert_eq!(
+        receipt.authority_binding_identity,
+        completed
+            .authority_binding_identity()
+            .expect("authority binding")
+    );
     assert!(!receipt.non_claims.is_empty());
 }
 
@@ -338,8 +373,37 @@ fn queue_items_remain_non_transcript_until_durable_injection() {
         },
     )
     .expect("queue steering");
-    assert_eq!(queued.state.messages().len(), 1);
-    assert_eq!(queued.state.queued_count(), 1);
+    assert_eq!(
+        queued.state.messages().len(),
+        EXPECTED_INITIAL_COMMIT_MESSAGE_COUNT
+    );
+    assert_eq!(queued.state.queued_count(), Some(1));
+    let removed = edit_and_remove_follow_up(&queued);
+
+    let provider = provider_final(&removed.state, RESPONSE);
+    let assistant_commit = commit_pending(&provider.state);
+    assert!(matches!(
+        assistant_commit.effect,
+        Some(CodingSessionEffectRequest::Commit(_))
+    ));
+    assert_eq!(
+        assistant_commit.state.messages().len(),
+        EXPECTED_SINGLE_TURN_MESSAGE_COUNT
+    );
+
+    let queue_commit = commit_pending(&assistant_commit.state);
+    assert_eq!(
+        queue_commit.state.messages().len(),
+        EXPECTED_QUEUE_INJECTED_MESSAGE_COUNT
+    );
+    assert_eq!(queue_commit.state.queued_count(), Some(0));
+    assert!(matches!(
+        queue_commit.effect,
+        Some(CodingSessionEffectRequest::Provider(_))
+    ));
+}
+
+fn edit_and_remove_follow_up(queued: &CodingSessionTransition) -> CodingSessionTransition {
     let with_follow_up = reduce_coding_session_command(
         &queued.state,
         &CodingSessionCommand::FollowUp {
@@ -358,7 +422,10 @@ fn queue_items_remain_non_transcript_until_durable_injection() {
         },
     )
     .expect("edit queued follow-up");
-    assert_eq!(edited.state.messages().len(), 1);
+    assert_eq!(
+        edited.state.messages().len(),
+        EXPECTED_INITIAL_COMMIT_MESSAGE_COUNT
+    );
     assert_eq!(edited.state.active_leaf_id(), queued.state.active_leaf_id());
     let removed = reduce_coding_session_command(
         &edited.state,
@@ -367,34 +434,16 @@ fn queue_items_remain_non_transcript_until_durable_injection() {
         },
     )
     .expect("remove queued follow-up");
-    assert_eq!(removed.state.messages().len(), 1);
-    assert_eq!(removed.state.queued_count(), 1);
+    assert_eq!(
+        removed.state.messages().len(),
+        EXPECTED_INITIAL_COMMIT_MESSAGE_COUNT
+    );
+    assert_eq!(removed.state.queued_count(), Some(1));
     assert_eq!(
         removed.state.active_leaf_id(),
         queued.state.active_leaf_id()
     );
-
-    let provider = provider_final(&removed.state, RESPONSE);
-    let assistant_commit = commit_pending(&provider.state);
-    assert!(matches!(
-        assistant_commit.effect,
-        Some(CodingSessionEffectRequest::Commit(_))
-    ));
-    assert_eq!(
-        assistant_commit.state.messages().len(),
-        EXPECTED_SINGLE_TURN_MESSAGE_COUNT
-    );
-
-    let queue_commit = commit_pending(&assistant_commit.state);
-    assert_eq!(
-        queue_commit.state.messages().len(),
-        EXPECTED_QUEUE_INJECTED_MESSAGE_COUNT
-    );
-    assert_eq!(queue_commit.state.queued_count(), 0);
-    assert!(matches!(
-        queue_commit.effect,
-        Some(CodingSessionEffectRequest::Provider(_))
-    ));
+    removed
 }
 
 #[test]
@@ -434,7 +483,7 @@ fn all_at_once_profile_commits_every_selected_queue_item_before_provider() {
         second_queue_commit.state.messages().len(),
         EXPECTED_ALL_AT_ONCE_MESSAGE_COUNT
     );
-    assert_eq!(second_queue_commit.state.queued_count(), 0);
+    assert_eq!(second_queue_commit.state.queued_count(), Some(0));
 }
 
 #[test]
@@ -487,7 +536,7 @@ fn oversized_and_unexpanded_inputs_preserve_state() {
     )
     .expect_err("oversized steering input must fail");
     assert_eq!(input_error.issue(), CodingSessionIssue::InvalidInput);
-    assert_eq!(started.state.queued_count(), 0);
+    assert_eq!(started.state.queued_count(), Some(0));
 
     let denied = state(CodingSessionQueueProfile::Sequential, false);
     let unexpanded_error = reduce_coding_session_command(
@@ -608,9 +657,10 @@ fn compaction_summary_commits_before_compaction_event() {
 #[test]
 fn clean_resume_replays_messages_and_repairs_unmatched_tool_without_reexecution() {
     // r[verify agent_harness_runtime.coding_session_host.recovery]
+    let authority = recovered_authority_message();
     let user = super::core::test_message(super::core::CodingSessionMessageDraft {
         entry_id: USER_ENTRY,
-        parent_id: None,
+        parent_id: Some(AUTHORITY_ENTRY),
         run_id: RUN_ID,
         kind: CodingSessionMessageKind::User,
         body: PROMPT,
@@ -644,8 +694,8 @@ fn clean_resume_replays_messages_and_repairs_unmatched_tool_without_reexecution(
                 status: CodingSessionRecoveryStatus::Clean,
                 committed_head_hash: String::from(SAFE_HEAD),
                 active_leaf_id: Some(String::from("entry.tool.call")),
-                durable_cursor: SECOND_CURSOR,
-                messages: vec![user, call],
+                durable_cursor: THIRD_CURSOR,
+                messages: vec![authority, user, call],
             },
         },
     )
@@ -665,6 +715,136 @@ fn clean_resume_replays_messages_and_repairs_unmatched_tool_without_reexecution(
             .iter()
             .any(|event| matches!(event, crate::telemetry::RuntimeEvent::ToolRequested { .. }))
     );
+}
+
+#[test]
+fn explicit_authority_rebind_commits_successor_without_provider_dispatch() {
+    // r[verify agent_harness_runtime.session_authority_profile.durable_binding]
+    let completed = completed_session();
+    let prior_binding_identity = completed
+        .authority_binding_identity()
+        .expect("initial binding")
+        .to_string();
+    let changed_profile = authority_profile(POLICY_HASH);
+    let requested = reduce_coding_session_command(
+        &completed,
+        &CodingSessionCommand::RebindAuthority {
+            entry_id: String::from("authority.rebind"),
+            profile: changed_profile.clone(),
+            authorization_identity: String::from(SAFE_HEAD),
+        },
+    )
+    .expect("rebind request");
+    assert!(matches!(
+        requested.effect,
+        Some(CodingSessionEffectRequest::Commit(_))
+    ));
+    let rebound = commit_pending(&requested.state);
+    assert!(rebound.effect.is_none());
+    assert_eq!(rebound.state.authority_profile(), &changed_profile);
+    assert_ne!(
+        rebound.state.authority_binding_identity(),
+        Some(prior_binding_identity.as_str())
+    );
+    assert_eq!(
+        rebound.state.provider_dispatch_count,
+        completed.provider_dispatch_count
+    );
+}
+
+#[test]
+fn authority_transition_planning_exposes_abandon_and_fork_without_mutation() {
+    let completed = completed_session();
+    let original = completed.clone();
+    let requested = authority_profile(POLICY_HASH);
+    let fork = plan_coding_session_authority_transition(
+        &completed,
+        &requested,
+        crate::session_authority_profile::SessionAuthorityTransitionAction::Fork {
+            branch_id: "branch.authority-fork",
+            authorization_identity: SAFE_HEAD,
+        },
+    )
+    .expect("fork plan");
+    assert_eq!(
+        fork.disposition(),
+        crate::session_authority_profile::SessionAuthorityTransitionDisposition::ForkCommitRequired
+    );
+    assert_eq!(
+        fork.binding().expect("fork binding").branch_id(),
+        "branch.authority-fork"
+    );
+    let abandon = plan_coding_session_authority_transition(
+        &completed,
+        completed.authority_profile(),
+        crate::session_authority_profile::SessionAuthorityTransitionAction::Abandon,
+    )
+    .expect("abandon plan");
+    assert_eq!(
+        abandon.disposition(),
+        crate::session_authority_profile::SessionAuthorityTransitionDisposition::Abandoned
+    );
+    assert_eq!(completed, original);
+}
+
+#[test]
+fn resume_blocks_profile_drift_and_legacy_unbound_history_before_effects() {
+    // r[verify agent_harness_runtime.session_authority_profile.resume_admission]
+    let mut drift_config = config(CodingSessionQueueProfile::Sequential, true);
+    drift_config.authority_profile = authority_profile(POLICY_HASH);
+    let drift_state = new_coding_session_state(drift_config, queue_policy()).expect("drift state");
+    let drift_request = reduce_coding_session_command(&drift_state, &CodingSessionCommand::Resume)
+        .expect("drift resume request");
+    let drift_effect_id = drift_request.effect.as_ref().expect("recovery").effect_id();
+    let drifted = reduce_coding_session_outcome(
+        &drift_request.state,
+        &CodingSessionEffectOutcome::RecoverySucceeded {
+            effect_id: String::from(drift_effect_id),
+            snapshot: CodingSessionRecoverySnapshot {
+                status: CodingSessionRecoveryStatus::Clean,
+                committed_head_hash: String::from(SAFE_HEAD),
+                active_leaf_id: Some(String::from(USER_ENTRY)),
+                durable_cursor: SECOND_CURSOR,
+                messages: vec![recovered_authority_message(), recovered_user_message()],
+            },
+        },
+    )
+    .expect("drift blocked transition");
+    assert_eq!(
+        drifted.state.last_issue(),
+        Some(CodingSessionIssue::AuthorityProfileMismatch)
+    );
+    assert!(drifted.effect.is_none());
+    assert_eq!(drifted.state.provider_dispatch_count, 0);
+
+    let legacy_state = state(CodingSessionQueueProfile::Sequential, true);
+    let legacy_request =
+        reduce_coding_session_command(&legacy_state, &CodingSessionCommand::Resume)
+            .expect("legacy resume request");
+    let legacy_effect_id = legacy_request
+        .effect
+        .as_ref()
+        .expect("recovery")
+        .effect_id();
+    let legacy = reduce_coding_session_outcome(
+        &legacy_request.state,
+        &CodingSessionEffectOutcome::RecoverySucceeded {
+            effect_id: String::from(legacy_effect_id),
+            snapshot: CodingSessionRecoverySnapshot {
+                status: CodingSessionRecoveryStatus::Empty,
+                committed_head_hash: String::from(CODING_SESSION_EMPTY_HEAD_HASH),
+                active_leaf_id: None,
+                durable_cursor: 0,
+                messages: Vec::new(),
+            },
+        },
+    )
+    .expect("legacy blocked transition");
+    assert_eq!(
+        legacy.state.last_issue(),
+        Some(CodingSessionIssue::AuthorityProfileUnbound)
+    );
+    assert!(legacy.effect.is_none());
 }
 
 #[test]
@@ -707,8 +887,8 @@ fn incomplete_and_stale_leaf_recovery_fail_closed() {
                 status: CodingSessionRecoveryStatus::Clean,
                 committed_head_hash: String::from(SAFE_HEAD),
                 active_leaf_id: Some(String::from("entry.stale-leaf")),
-                durable_cursor: FIRST_CURSOR,
-                messages: vec![recovered_user],
+                durable_cursor: SECOND_CURSOR,
+                messages: vec![recovered_authority_message(), recovered_user],
             },
         },
     )
@@ -869,8 +1049,53 @@ fn config(profile: CodingSessionQueueProfile, resume_required: bool) -> CodingSe
         branch_id: String::from(BRANCH_ID),
         queue_profile: profile,
         services: CodingSessionServiceSet::all_available(),
+        authority_profile: authority_profile(SAFE_HEAD),
+        authority_authorization_identity: String::from(POLICY_HASH),
         resume_required,
     }
+}
+
+fn authority_profile(
+    permission_identity: &str,
+) -> crate::session_authority_profile::SessionRuntimeAuthorityProfile {
+    let classes = crate::session_authority_profile::SessionAuthorityComponentClass::ALL;
+    let identities = [
+        POLICY_HASH,
+        permission_identity,
+        POLICY_HASH,
+        POLICY_HASH,
+        POLICY_HASH,
+        POLICY_HASH,
+        POLICY_HASH,
+        POLICY_HASH,
+        POLICY_HASH,
+        POLICY_HASH,
+    ];
+    let components = classes
+        .iter()
+        .zip(identities.iter())
+        .map(
+            |(class, identity)| crate::session_authority_profile::SessionAuthorityComponentDraft {
+                class: *class,
+                identity,
+            },
+        )
+        .collect::<Vec<_>>();
+    let profile = crate::session_authority_profile::build_session_authority_profile(
+        crate::session_authority_profile::SessionAuthorityProfileDraft {
+            components: components.as_slice(),
+        },
+    )
+    .expect("authority profile");
+    assert_eq!(profile.components().len(), classes.len());
+    assert_eq!(
+        profile
+            .component(crate::session_authority_profile::SessionAuthorityComponentClass::Permission)
+            .expect("permission component")
+            .identity(),
+        permission_identity
+    );
+    profile
 }
 
 fn queue_policy() -> crate::mailbox::MessageQueuePolicy {
@@ -1077,10 +1302,42 @@ fn tool_request() -> animus_adapters::ToolRequest {
     .expect("tool request")
 }
 
+fn recovered_authority_message() -> CodingSessionMessage {
+    let profile = authority_profile(SAFE_HEAD);
+    let binding = crate::session_authority_profile::build_session_authority_binding(
+        crate::session_authority_profile::SessionAuthorityBindingDraft {
+            profile: &profile,
+            authorization_identity: POLICY_HASH,
+            branch_id: BRANCH_ID,
+            prior_head_hash: CODING_SESSION_EMPTY_HEAD_HASH,
+            prior_profile_identity: None,
+        },
+    )
+    .expect("authority binding");
+    let payload = crate::session_authority_profile::encode_session_authority_binding(&binding)
+        .expect("authority payload");
+    let message = super::core::test_message(super::core::CodingSessionMessageDraft {
+        entry_id: AUTHORITY_ENTRY,
+        parent_id: None,
+        run_id: RUN_ID,
+        kind: CodingSessionMessageKind::AuthorityProfileBinding,
+        body: payload.as_str(),
+        tool_correlation_id: None,
+        tool_name: None,
+    })
+    .expect("recovered authority");
+    assert_eq!(
+        message.kind(),
+        CodingSessionMessageKind::AuthorityProfileBinding
+    );
+    assert_eq!(message.parent_id(), None);
+    message
+}
+
 fn recovered_user_message() -> CodingSessionMessage {
     super::core::test_message(super::core::CodingSessionMessageDraft {
         entry_id: USER_ENTRY,
-        parent_id: None,
+        parent_id: Some(AUTHORITY_ENTRY),
         run_id: RUN_ID,
         kind: CodingSessionMessageKind::User,
         body: PROMPT,

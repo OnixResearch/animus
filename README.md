@@ -38,6 +38,8 @@ See [docs/redacted-session-tree-export.md](docs/redacted-session-tree-export.md)
 
 See [docs/nickel-policy-contracts.md](docs/nickel-policy-contracts.md) for shared authoring-time contracts, checked policy projections, Rust DTO parity, authority ownership, and projection non-claims.
 
+See [docs/session-runtime-authority-profile.md](docs/session-runtime-authority-profile.md) for canonical metadata-only authority identities, durable binding and drift admission, explicit transition planning, current host re-probes, and evidence non-claims.
+
 ## Development shell
 
 Enter the pinned Nix development shell:

@@ -22,6 +22,8 @@ A profile set declares:
 
 Nickel rejects malformed schemas, duplicate IDs or bindings, dangling budget/toolset references, contradictory disabled-tool profiles, unsafe labels, invalid defaults, and unadmitted project profiles. Rust revalidates the exported DTOs and recomputes each canonical profile identity, so a well-shaped but stale hash still fails closed.
 
+A resumable coding-session may include that admitted model-profile identity as one component of its separate [session runtime authority profile](session-runtime-authority-profile.md). The session profile records only the identity and cannot load, select, authorize, or widen a model profile.
+
 ## Resolution
 
 `resolve_model_runtime_profile` uses exactly three specificity tiers:

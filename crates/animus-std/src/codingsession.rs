@@ -16,6 +16,11 @@ use animus_runtime::coding_session_host::{
     decode_coding_session_message, encode_coding_session_message, new_coding_session_state,
     project_coding_session_receipt, reduce_coding_session_command, reduce_coding_session_outcome,
 };
+use animus_runtime::session_authority_profile::{
+    SessionAuthorityComponentClass, SessionAuthorityEnforcementDraft,
+    SessionAuthorityEnforcementObservation, SessionRuntimeAuthorityProfile,
+    build_session_authority_enforcement_observation, validate_session_authority_enforcement,
+};
 
 const GENERATED_DURABLE_POLICY: &str =
     include_str!("../../../config/generated/durable-session-store-policy.json");
@@ -33,6 +38,10 @@ const SMOKE_PROVIDER_RESPONSE: &str = "deterministic fake provider response";
 const SMOKE_SUMMARY: &str = "deterministic fake compaction summary";
 const SMOKE_RECEIPT_SCHEMA: &str = "animus.coding-session-packaged-smoke.v1";
 const SMOKE_REDACTION_MARKER: &str = "raw-prompt-provider-tool-and-path-material-omitted";
+const SMOKE_AUTHORITY_COMPONENT_IDENTITY: &str =
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const SMOKE_AUTHORIZATION_IDENTITY: &str =
+    "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 const SMOKE_NON_CLAIMS: &[&str] = &[
     "live-provider",
     "concrete-product-tools",
@@ -139,6 +148,13 @@ pub trait CodingSessionPolicyService {
     fn admit(&mut self, command: &CodingSessionCommand) -> bool;
 }
 
+pub trait CodingSessionAuthorityService {
+    fn observe_current_enforcement(
+        &mut self,
+        profile: &SessionRuntimeAuthorityProfile,
+    ) -> Result<SessionAuthorityEnforcementObservation, CodingSessionServiceIssue>;
+}
+
 pub trait CodingSessionCancellationService {
     fn cancel(&mut self, run_id: &str) -> Result<bool, CodingSessionServiceIssue>;
 }
@@ -163,6 +179,7 @@ pub struct CodingSessionHostServices<
     Tool,
     Persistence,
     Policy,
+    Authority,
     Cancellation,
     Timer,
     Summarizer,
@@ -172,6 +189,7 @@ pub struct CodingSessionHostServices<
     pub tool: Tool,
     pub persistence: Persistence,
     pub policy: Policy,
+    pub authority: Authority,
     pub cancellation: Cancellation,
     pub timer: Timer,
     pub summarizer: Summarizer,
@@ -184,6 +202,7 @@ pub struct CodingSessionHost<
     Tool,
     Persistence,
     Policy,
+    Authority,
     Cancellation,
     Timer,
     Summarizer,
@@ -195,6 +214,7 @@ pub struct CodingSessionHost<
         Tool,
         Persistence,
         Policy,
+        Authority,
         Cancellation,
         Timer,
         Summarizer,
@@ -203,13 +223,24 @@ pub struct CodingSessionHost<
     events: Vec<RuntimeEvent>,
 }
 
-impl<Provider, Tool, Persistence, Policy, Cancellation, Timer, Summarizer, Events>
-    CodingSessionHost<Provider, Tool, Persistence, Policy, Cancellation, Timer, Summarizer, Events>
+impl<Provider, Tool, Persistence, Policy, Authority, Cancellation, Timer, Summarizer, Events>
+    CodingSessionHost<
+        Provider,
+        Tool,
+        Persistence,
+        Policy,
+        Authority,
+        Cancellation,
+        Timer,
+        Summarizer,
+        Events,
+    >
 where
     Provider: CodingSessionProviderService,
     Tool: CodingSessionToolService,
     Persistence: CodingSessionPersistenceService,
     Policy: CodingSessionPolicyService,
+    Authority: CodingSessionAuthorityService,
     Cancellation: CodingSessionCancellationService,
     Timer: CodingSessionTimerService,
     Summarizer: CodingSessionSummarizerService,
@@ -222,6 +253,7 @@ where
             Tool,
             Persistence,
             Policy,
+            Authority,
             Cancellation,
             Timer,
             Summarizer,
@@ -292,7 +324,12 @@ where
     }
 
     pub fn resume(&mut self) -> Result<(), CodingSessionHostError> {
-        self.submit(CodingSessionCommand::Resume)
+        self.submit(CodingSessionCommand::Resume)?;
+        self.admit_current_authority().map_err(|_issue| {
+            CodingSessionHostError::blocked(Some(
+                CodingSessionIssue::AuthorityEnforcementUnavailable,
+            ))
+        })
     }
 
     pub fn compact(&mut self, entry_id: &str) -> Result<(), CodingSessionHostError> {
@@ -389,6 +426,7 @@ where
         Tool,
         Persistence,
         Policy,
+        Authority,
         Cancellation,
         Timer,
         Summarizer,
@@ -420,6 +458,9 @@ where
                 )
             }
             CodingSessionEffectRequest::Provider(request) => {
+                if let Err(issue) = self.admit_current_authority() {
+                    return failed_outcome(effect, CodingSessionEffectService::Authority, issue);
+                }
                 self.services.provider.dispatch(request).map_or_else(
                     |issue| failed_outcome(effect, CodingSessionEffectService::Provider, issue),
                     |reply| CodingSessionEffectOutcome::ProviderSucceeded {
@@ -429,6 +470,9 @@ where
                 )
             }
             CodingSessionEffectRequest::Tool(request) => {
+                if let Err(issue) = self.admit_current_authority() {
+                    return failed_outcome(effect, CodingSessionEffectService::Authority, issue);
+                }
                 self.services.tool.dispatch(request).map_or_else(
                     |issue| failed_outcome(effect, CodingSessionEffectService::Tool, issue),
                     |response| CodingSessionEffectOutcome::ToolSucceeded {
@@ -459,6 +503,9 @@ where
                 )
             }
             CodingSessionEffectRequest::Summarizer(request) => {
+                if let Err(issue) = self.admit_current_authority() {
+                    return failed_outcome(effect, CodingSessionEffectService::Authority, issue);
+                }
                 self.services.summarizer.summarize(request).map_or_else(
                     |issue| failed_outcome(effect, CodingSessionEffectService::Summarizer, issue),
                     |summary| CodingSessionEffectOutcome::SummarizerSucceeded {
@@ -469,6 +516,34 @@ where
                 )
             }
         }
+    }
+
+    fn admit_current_authority(&mut self) -> Result<(), CodingSessionServiceIssue> {
+        let profile = self.state.authority_profile().clone();
+        let observation = self
+            .services
+            .authority
+            .observe_current_enforcement(&profile)?;
+        validate_session_authority_enforcement(&profile, &observation)
+            .map_err(|_error| CodingSessionServiceIssue::Denied)?;
+        let event = RuntimeEvent::SessionAuthorityProfileObserved {
+            session_id: String::from(self.state.session_id()),
+            branch_id: String::from(self.state.branch_id()),
+            status: String::from("enforcement_admitted"),
+            profile_identity: String::from(profile.profile_identity()),
+            binding_identity: self.state.authority_binding_identity().map(String::from),
+            authorization_identity: Some(String::from(
+                self.state.authority_authorization_identity(),
+            )),
+            enforcement_observation_identity: Some(String::from(
+                observation.observation_identity(),
+            )),
+            changed_components: Vec::new(),
+        };
+        self.services.events.observe(&event);
+        self.events.push(event);
+        debug_assert!(self.state.authority_binding_identity().is_some());
+        Ok(())
     }
 
     fn apply_transition(&mut self, transition: CodingSessionTransition) {
@@ -645,6 +720,54 @@ impl CodingSessionPolicyService for AllowCodingSessionPolicy {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
+pub struct AdmittedCodingSessionAuthority {
+    pub observation_count: u32,
+}
+
+impl CodingSessionAuthorityService for AdmittedCodingSessionAuthority {
+    fn observe_current_enforcement(
+        &mut self,
+        profile: &SessionRuntimeAuthorityProfile,
+    ) -> Result<SessionAuthorityEnforcementObservation, CodingSessionServiceIssue> {
+        self.observation_count = self
+            .observation_count
+            .checked_add(1)
+            .ok_or(CodingSessionServiceIssue::Failed)?;
+        let permission_identity = profile
+            .component(SessionAuthorityComponentClass::Permission)
+            .ok_or(CodingSessionServiceIssue::Unavailable)?
+            .identity();
+        let sandbox_identity = profile
+            .component(SessionAuthorityComponentClass::SandboxIntent)
+            .ok_or(CodingSessionServiceIssue::Unavailable)?
+            .identity();
+        let adapter_identity = profile
+            .component(SessionAuthorityComponentClass::AdapterCohort)
+            .ok_or(CodingSessionServiceIssue::Unavailable)?
+            .identity();
+        let tool_identity = profile
+            .component(SessionAuthorityComponentClass::ToolCatalog)
+            .ok_or(CodingSessionServiceIssue::Unavailable)?
+            .identity();
+        let model_identity = profile
+            .component(SessionAuthorityComponentClass::ModelRuntime)
+            .ok_or(CodingSessionServiceIssue::Unavailable)?
+            .identity();
+        build_session_authority_enforcement_observation(SessionAuthorityEnforcementDraft {
+            profile_identity: profile.profile_identity(),
+            authorization_identity: SMOKE_AUTHORIZATION_IDENTITY,
+            adapter_cohort_identity: adapter_identity,
+            capability_observation_identity: permission_identity,
+            tool_readiness_identity: tool_identity,
+            provider_readiness_identity: model_identity,
+            sandbox_observation_identity: sandbox_identity,
+            admitted: true,
+        })
+        .map_err(|_error| CodingSessionServiceIssue::Malformed)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default)]
 pub struct NoopCodingSessionEventSink;
 
 impl CodingSessionEventSink for NoopCodingSessionEventSink {
@@ -764,6 +887,8 @@ pub fn run_packaged_durable_coding_session_smoke(
             branch_id: String::from(SMOKE_BRANCH_ID),
             queue_profile: CodingSessionQueueProfile::Sequential,
             services: CodingSessionServiceSet::all_available(),
+            authority_profile: smoke_authority_profile()?,
+            authority_authorization_identity: String::from(SMOKE_AUTHORIZATION_IDENTITY),
             resume_required: false,
         },
         smoke_queue_policy()?,
@@ -778,6 +903,7 @@ pub fn run_packaged_durable_coding_session_smoke(
         tool: DenyUnusedCodingSessionTool,
         persistence,
         policy: AllowCodingSessionPolicy,
+        authority: AdmittedCodingSessionAuthority::default(),
         cancellation: ObservedCodingSessionCancellation,
         timer: AvailableCodingSessionTimer,
         summarizer: FakeCodingSessionSummarizer {
@@ -838,6 +964,27 @@ fn render_smoke_receipt(receipt: &CodingSessionReceipt) -> String {
     lines.join("\n")
 }
 
+fn smoke_authority_profile() -> Result<
+    animus_runtime::session_authority_profile::SessionRuntimeAuthorityProfile,
+    CodingSessionHostError,
+> {
+    let components = animus_runtime::session_authority_profile::SessionAuthorityComponentClass::ALL
+        .iter()
+        .map(
+            |class| animus_runtime::session_authority_profile::SessionAuthorityComponentDraft {
+                class: *class,
+                identity: SMOKE_AUTHORITY_COMPONENT_IDENTITY,
+            },
+        )
+        .collect::<Vec<_>>();
+    animus_runtime::session_authority_profile::build_session_authority_profile(
+        animus_runtime::session_authority_profile::SessionAuthorityProfileDraft {
+            components: components.as_slice(),
+        },
+    )
+    .map_err(|_error| CodingSessionHostError::new(CodingSessionHostIssue::ReducerRejected))
+}
+
 fn failed_outcome(
     effect: &CodingSessionEffectRequest,
     service: CodingSessionEffectService,
@@ -880,6 +1027,9 @@ const fn durable_record_kind(
         CodingSessionMessageKind::BranchMove => {
             animus_runtime::durable_session_store::DurableSessionRecordKind::BranchMove
         }
+        CodingSessionMessageKind::AuthorityProfileBinding => {
+            animus_runtime::durable_session_store::DurableSessionRecordKind::AuthorityProfileBinding
+        }
     }
 }
 
@@ -907,6 +1057,9 @@ const fn record_kind_matches(
         ) | (
             animus_runtime::durable_session_store::DurableSessionRecordKind::BranchMove,
             CodingSessionMessageKind::BranchMove
+        ) | (
+            animus_runtime::durable_session_store::DurableSessionRecordKind::AuthorityProfileBinding,
+            CodingSessionMessageKind::AuthorityProfileBinding
         )
     )
 }

@@ -18,6 +18,7 @@ const PROMPT_MESSAGE_SEPARATOR: &str = "\n";
 const GENERATED_ENTRY_PREFIX: &str = "entry.";
 const GENERATED_REPAIR_PREFIX: &str = "repair.";
 const GENERATED_MAINTENANCE_PREFIX: &str = "maintenance.";
+const GENERATED_AUTHORITY_PREFIX: &str = "authority.";
 const GENERATED_ID_HEX_CHARS: usize = 24;
 const COUNTER_INCREMENT: u32 = 1;
 const WIRE_U16_BYTES: usize = 2;
@@ -25,6 +26,9 @@ const WIRE_RUN_LENGTH_OFFSET: usize = 2;
 const WIRE_CALL_LENGTH_OFFSET: usize = 4;
 const WIRE_TOOL_LENGTH_OFFSET: usize = 6;
 const SYNTHETIC_REPAIR_BODY: &str = "interrupted tool result unavailable after recovery";
+const MAX_AUTHORITY_BINDINGS_PER_COMMIT: usize = 1;
+const INITIAL_PROMPT_MESSAGE_CAPACITY: usize = 2;
+const COMMIT_EVENTS_PER_MESSAGE: usize = 2;
 
 #[derive(Clone, Copy)]
 struct PromptDraft<'a> {
@@ -109,6 +113,18 @@ pub fn new_coding_session_state(
     validate_id(config.session_id.as_str())?;
     validate_id(config.branch_id.as_str())?;
     validate_services(config.services)?;
+    crate::session_authority_profile::validate_session_authority_profile(&config.authority_profile)
+        .map_err(|_error| error(super::data::CodingSessionIssue::InvalidInput, FIELD_CONFIG))?;
+    crate::session_authority_profile::build_session_authority_binding(
+        crate::session_authority_profile::SessionAuthorityBindingDraft {
+            profile: &config.authority_profile,
+            authorization_identity: config.authority_authorization_identity.as_str(),
+            branch_id: config.branch_id.as_str(),
+            prior_head_hash: super::data::CODING_SESSION_EMPTY_HEAD_HASH,
+            prior_profile_identity: None,
+        },
+    )
+    .map_err(|_error| error(super::data::CodingSessionIssue::InvalidInput, FIELD_CONFIG))?;
     if !queue_policy.admits_source(QUEUE_SOURCE) {
         return Err(error(
             super::data::CodingSessionIssue::InvalidInput,
@@ -130,6 +146,8 @@ pub fn new_coding_session_state(
         active_leaf_id: None,
         durable_head_hash: String::from(super::data::CODING_SESSION_EMPTY_HEAD_HASH),
         durable_cursor: 0,
+        committed_authority_profile_identity: None,
+        authority_binding_identity: None,
         pending_effect: None,
         recovery,
         terminal: None,
@@ -142,6 +160,57 @@ pub fn new_coding_session_state(
     debug_assert!(state.run.is_none() && state.queue.is_none());
     debug_assert!(state.pending_effect.is_none());
     Ok(state)
+}
+
+/// Plans an explicit abandon, fork, or rebind outcome from durable session authority metadata.
+///
+/// # Errors
+///
+/// Returns [`super::data::CodingSessionError`] when committed binding metadata is malformed or the
+/// requested transition cannot satisfy the authority-profile transition contract.
+pub fn plan_coding_session_authority_transition(
+    state: &super::data::CodingSessionState,
+    requested_profile: &crate::session_authority_profile::SessionRuntimeAuthorityProfile,
+    action: crate::session_authority_profile::SessionAuthorityTransitionAction<'_>,
+) -> Result<
+    crate::session_authority_profile::SessionAuthorityTransitionPlan,
+    super::data::CodingSessionError,
+> {
+    let committed_binding = latest_authority_binding(state.messages())?;
+    let comparison = crate::session_authority_profile::compare_session_authority_profiles(
+        committed_binding
+            .as_ref()
+            .map(crate::session_authority_profile::SessionAuthorityBinding::profile),
+        requested_profile,
+    )
+    .map_err(|_error| {
+        error(
+            super::data::CodingSessionIssue::AuthorityProfileMismatch,
+            FIELD_CONFIG,
+        )
+    })?;
+    debug_assert_eq!(
+        comparison.current_profile_identity(),
+        requested_profile.profile_identity()
+    );
+    debug_assert!(
+        comparison.changed_components().len()
+            <= crate::session_authority_profile::SessionAuthorityComponentClass::ALL.len()
+    );
+    crate::session_authority_profile::plan_session_authority_transition(
+        crate::session_authority_profile::SessionAuthorityTransitionRequest {
+            comparison: &comparison,
+            requested_profile,
+            prior_head_hash: state.durable_head_hash(),
+            action,
+        },
+    )
+    .map_err(|_error| {
+        error(
+            super::data::CodingSessionIssue::AuthorityReauthorizationRequired,
+            FIELD_CONFIG,
+        )
+    })
 }
 
 /// Reduces one host command without performing effects.
@@ -211,6 +280,11 @@ pub fn reduce_coding_session_command(
         super::data::CodingSessionCommand::Cancel { run_id } => reduce_cancel(state, run_id),
         super::data::CodingSessionCommand::Resume => reduce_resume(state),
         super::data::CodingSessionCommand::Compact { entry_id } => reduce_compact(state, entry_id),
+        super::data::CodingSessionCommand::RebindAuthority {
+            entry_id,
+            profile,
+            authorization_identity,
+        } => reduce_rebind_authority(state, entry_id, profile, authorization_identity),
     }
 }
 
@@ -308,6 +382,9 @@ pub fn reduce_coding_session_frontend_event(
         }
         crate::telemetry::RuntimeEvent::SessionCommitObserved { .. } => {
             next.committed_message_count = next.committed_message_count.saturating_add(1);
+        }
+        crate::telemetry::RuntimeEvent::SessionAuthorityProfileObserved { status, .. } => {
+            next.lifecycle_status.clone_from(status);
         }
         crate::telemetry::RuntimeEvent::ToolRequested { request } => {
             next.active_tool_correlation = Some(String::from(request.correlation_id()));
@@ -459,15 +536,7 @@ fn reduce_prompt(
     ensure_no_pending_effect(state)?;
     validate_input(draft.input)?;
     validate_id(draft.run_id)?;
-    let message = build_message(CodingSessionMessageDraft {
-        entry_id: draft.entry_id,
-        parent_id: state.active_leaf_id(),
-        run_id: draft.run_id,
-        kind: super::data::CodingSessionMessageKind::User,
-        body: draft.input.body.as_str(),
-        tool_correlation_id: None,
-        tool_name: None,
-    })?;
+    let messages = build_prompt_messages(state, draft)?;
     let mut next = state.clone();
     next.run = Some(super::data::CodingSessionRun {
         run_id: String::from(draft.run_id),
@@ -485,7 +554,7 @@ fn reduce_prompt(
     stage_commit(
         next,
         StagedCommit {
-            messages: vec![message],
+            messages,
             queued_item_id: None,
             after_commit: super::data::CodingSessionAfterCommit::DispatchProvider,
             events,
@@ -513,6 +582,7 @@ fn reduce_continue(
             FIELD_STATE,
         ));
     }
+    ensure_authority_bound(state)?;
     validate_id(run_id)?;
     let mut next = state.clone();
     next.run = Some(super::data::CodingSessionRun {
@@ -768,12 +838,95 @@ fn reduce_compact(
             ),
             run_id,
             entry_id: String::from(entry_id),
-            messages: state.messages.clone(),
+            messages: state
+                .messages
+                .iter()
+                .filter(|message| {
+                    message.kind() != super::data::CodingSessionMessageKind::AuthorityProfileBinding
+                })
+                .cloned()
+                .collect(),
         },
     );
     let mut next = state.clone();
     next.pending_effect = Some(effect.clone());
     finish_transition(next, Vec::new(), Some(effect))
+}
+
+// r[impl agent_harness_runtime.session_authority_profile.durable_binding]
+fn reduce_rebind_authority(
+    state: &super::data::CodingSessionState,
+    entry_id: &str,
+    profile: &crate::session_authority_profile::SessionRuntimeAuthorityProfile,
+    authorization_identity: &str,
+) -> Result<super::data::CodingSessionTransition, super::data::CodingSessionError> {
+    debug_assert!(state.run.is_some() || state.queue.is_none());
+    debug_assert!(state.queue.is_some() || state.queued_bodies.is_empty());
+    ensure_no_pending_effect(state)?;
+    ensure_dispatch_ready(state)?;
+    ensure_authority_bound(state)?;
+    if state.run.is_some() {
+        return Err(error(
+            super::data::CodingSessionIssue::AlreadyRunning,
+            FIELD_RUN,
+        ));
+    }
+    validate_id(entry_id)?;
+    let comparison = crate::session_authority_profile::compare_session_authority_profiles(
+        Some(state.authority_profile()),
+        profile,
+    )
+    .map_err(|_error| {
+        error(
+            super::data::CodingSessionIssue::AuthorityProfileMismatch,
+            FIELD_CONFIG,
+        )
+    })?;
+    let plan = crate::session_authority_profile::plan_session_authority_transition(
+        crate::session_authority_profile::SessionAuthorityTransitionRequest {
+            comparison: &comparison,
+            requested_profile: profile,
+            prior_head_hash: state.durable_head_hash(),
+            action: crate::session_authority_profile::SessionAuthorityTransitionAction::Rebind {
+                branch_id: state.branch_id(),
+                authorization_identity,
+            },
+        },
+    )
+    .map_err(|_error| {
+        error(
+            super::data::CodingSessionIssue::AuthorityProfileMismatch,
+            FIELD_CONFIG,
+        )
+    })?;
+    let binding = plan.binding().ok_or_else(|| {
+        error(
+            super::data::CodingSessionIssue::AuthorityProfileMismatch,
+            FIELD_CONFIG,
+        )
+    })?;
+    let payload = crate::session_authority_profile::encode_session_authority_binding(binding)
+        .map_err(|_error| error(super::data::CodingSessionIssue::InvalidInput, FIELD_CONFIG))?;
+    let message = build_message(CodingSessionMessageDraft {
+        entry_id,
+        parent_id: state.active_leaf_id(),
+        run_id: maintenance_run_id(state).as_str(),
+        kind: super::data::CodingSessionMessageKind::AuthorityProfileBinding,
+        body: payload.as_str(),
+        tool_correlation_id: None,
+        tool_name: None,
+    })?;
+    debug_assert_eq!(binding.profile(), profile);
+    debug_assert_eq!(binding.prior_head_hash(), state.durable_head_hash());
+    stage_commit(
+        state.clone(),
+        StagedCommit {
+            messages: vec![message],
+            queued_item_id: None,
+            after_commit: super::data::CodingSessionAfterCommit::AuthorityRebound,
+            events: Vec::new(),
+        },
+    )
 }
 
 fn reduce_commit_success(
@@ -790,9 +943,52 @@ fn reduce_commit_success(
             super::data::CodingSessionServiceIssue::Failed,
         );
     }
+    validate_commit_success(state, request, outcome)?;
+    let committed_binding = authority_binding_from_messages(request.messages.as_slice())?;
+    if let Some(binding) = committed_binding.as_ref() {
+        validate_committed_authority_binding(state, binding)?;
+    }
+    let mut next = state.clone();
+    next.pending_effect = None;
+    if let Some(binding) = committed_binding.as_ref() {
+        apply_committed_authority_binding(&mut next, binding);
+    }
+    next.messages.extend(request.messages.iter().cloned());
+    next.active_leaf_id = Some(String::from(outcome.active_leaf_id));
+    next.durable_head_hash = String::from(outcome.new_head_hash);
+    next.durable_cursor = outcome.durable_cursor;
+    next.commit_count = increment(next.commit_count)?;
+    acknowledge_queued_commit(&mut next, request.queued_item_id.as_deref())?;
+    let mut events = Vec::with_capacity(
+        request
+            .messages
+            .len()
+            .saturating_mul(COMMIT_EVENTS_PER_MESSAGE),
+    );
+    for message in &request.messages {
+        events.push(commit_event(&next, message)?);
+        if message.kind() == super::data::CodingSessionMessageKind::AuthorityProfileBinding {
+            let binding =
+                crate::session_authority_profile::decode_session_authority_binding(message.body())
+                    .map_err(|_error| {
+                        error(
+                            super::data::CodingSessionIssue::AuthorityProfileMismatch,
+                            FIELD_MESSAGE,
+                        )
+                    })?;
+            events.push(authority_profile_event(&next, &binding, "committed")?);
+        }
+    }
+    handle_after_commit(next, &request.after_commit, events)
+}
+
+fn validate_commit_success(
+    state: &super::data::CodingSessionState,
+    request: &super::data::CodingSessionCommitRequest,
+    outcome: CommitSuccess<'_>,
+) -> Result<(), super::data::CodingSessionError> {
     validate_hash(outcome.new_head_hash)?;
-    let expected_leaf = request.proposed_active_leaf_id();
-    let has_expected_leaf = outcome.active_leaf_id == expected_leaf;
+    let has_expected_leaf = outcome.active_leaf_id == request.proposed_active_leaf_id();
     let has_expected_session = request.session_id() == state.session_id();
     let has_expected_branch = request.branch_id() == state.branch_id();
     let has_expected_head = request.prior_head_hash == state.durable_head_hash;
@@ -836,19 +1032,9 @@ fn reduce_commit_success(
             FIELD_EFFECT,
         ));
     }
-    let mut next = state.clone();
-    next.pending_effect = None;
-    next.messages.extend(request.messages.iter().cloned());
-    next.active_leaf_id = Some(String::from(outcome.active_leaf_id));
-    next.durable_head_hash = String::from(outcome.new_head_hash);
-    next.durable_cursor = outcome.durable_cursor;
-    next.commit_count = increment(next.commit_count)?;
-    acknowledge_queued_commit(&mut next, request.queued_item_id.as_deref())?;
-    let mut events = Vec::with_capacity(request.messages.len());
-    for message in &request.messages {
-        events.push(commit_event(&next, message)?);
-    }
-    handle_after_commit(next, &request.after_commit, events)
+    debug_assert!(message_count > 0);
+    debug_assert_eq!(outcome.durable_cursor, expected_cursor);
+    Ok(())
 }
 
 fn reduce_provider_success(
@@ -999,29 +1185,51 @@ fn reduce_recovery_success(
     debug_assert!(state.run.is_some() || state.queue.is_none());
     debug_assert!(state.queue.is_some() || state.queued_bodies.is_empty());
     validate_recovery_snapshot(state, snapshot)?;
-    if matches!(
-        snapshot.status,
-        super::data::CodingSessionRecoveryStatus::IncompleteTail
-            | super::data::CodingSessionRecoveryStatus::Corrupt
-    ) {
-        let mut next = state.clone();
-        next.pending_effect = None;
+    if is_blocked_recovery_status(snapshot.status) {
+        return block_recovery(state, snapshot.status);
+    }
+    let recovered_binding = latest_authority_binding(snapshot.messages.as_slice())?;
+    let comparison = crate::session_authority_profile::compare_session_authority_profiles(
+        recovered_binding
+            .as_ref()
+            .map(crate::session_authority_profile::SessionAuthorityBinding::profile),
+        state.authority_profile(),
+    )
+    .map_err(|_error| {
+        error(
+            super::data::CodingSessionIssue::AuthorityProfileMismatch,
+            FIELD_RECOVERY,
+        )
+    })?;
+    let (mut next, mut events) = recovered_state(state, snapshot)?;
+    if comparison.status()
+        != crate::session_authority_profile::SessionAuthorityResumeStatus::ExactMatch
+    {
         next.recovery = super::data::CodingSessionRecoveryPosture::Blocked;
         next.terminal = Some(super::data::CodingSessionTerminalKind::Blocked);
-        next.last_issue = Some(super::data::CodingSessionIssue::RecoveryBlocked);
-        let events = vec![recovery_event(&next, snapshot.status)?];
+        next.last_issue = Some(match comparison.status() {
+            crate::session_authority_profile::SessionAuthorityResumeStatus::LegacyUnbound => {
+                super::data::CodingSessionIssue::AuthorityProfileUnbound
+            }
+            crate::session_authority_profile::SessionAuthorityResumeStatus::DriftBlocked
+            | crate::session_authority_profile::SessionAuthorityResumeStatus::ExactMatch => {
+                super::data::CodingSessionIssue::AuthorityProfileMismatch
+            }
+        });
+        events.push(authority_comparison_event(&next, &comparison)?);
         return finish_transition(next, events, None);
     }
-    let mut next = state.clone();
-    next.pending_effect = None;
-    next.messages.clone_from(&snapshot.messages);
-    next.active_leaf_id.clone_from(&snapshot.active_leaf_id);
-    next.durable_head_hash
-        .clone_from(&snapshot.committed_head_hash);
-    next.durable_cursor = snapshot.durable_cursor;
-    next.terminal = None;
-    next.last_issue = None;
-    let events = vec![recovery_event(&next, snapshot.status)?];
+    let binding = recovered_binding.as_ref().ok_or_else(|| {
+        error(
+            super::data::CodingSessionIssue::AuthorityProfileUnbound,
+            FIELD_RECOVERY,
+        )
+    })?;
+    validate_recovered_authority_binding(&next, binding)?;
+    next.committed_authority_profile_identity =
+        Some(String::from(binding.profile().profile_identity()));
+    next.authority_binding_identity = Some(String::from(binding.binding_identity()));
+    events.push(authority_comparison_event(&next, &comparison)?);
     let repairs = build_recovery_repairs(&next)?;
     if repairs.is_empty() {
         next.recovery = super::data::CodingSessionRecoveryPosture::Ready;
@@ -1037,6 +1245,57 @@ fn reduce_recovery_success(
             events,
         },
     )
+}
+
+const fn is_blocked_recovery_status(status: super::data::CodingSessionRecoveryStatus) -> bool {
+    matches!(
+        status,
+        super::data::CodingSessionRecoveryStatus::IncompleteTail
+            | super::data::CodingSessionRecoveryStatus::Corrupt
+    )
+}
+
+fn block_recovery(
+    state: &super::data::CodingSessionState,
+    status: super::data::CodingSessionRecoveryStatus,
+) -> Result<super::data::CodingSessionTransition, super::data::CodingSessionError> {
+    debug_assert!(is_blocked_recovery_status(status));
+    let mut next = state.clone();
+    next.pending_effect = None;
+    next.recovery = super::data::CodingSessionRecoveryPosture::Blocked;
+    next.terminal = Some(super::data::CodingSessionTerminalKind::Blocked);
+    next.last_issue = Some(super::data::CodingSessionIssue::RecoveryBlocked);
+    let events = vec![recovery_event(&next, status)?];
+    debug_assert_eq!(
+        next.last_issue,
+        Some(super::data::CodingSessionIssue::RecoveryBlocked)
+    );
+    finish_transition(next, events, None)
+}
+
+fn recovered_state(
+    state: &super::data::CodingSessionState,
+    snapshot: &super::data::CodingSessionRecoverySnapshot,
+) -> Result<
+    (
+        super::data::CodingSessionState,
+        Vec<crate::telemetry::RuntimeEvent>,
+    ),
+    super::data::CodingSessionError,
+> {
+    let mut next = state.clone();
+    next.pending_effect = None;
+    next.messages.clone_from(&snapshot.messages);
+    next.active_leaf_id.clone_from(&snapshot.active_leaf_id);
+    next.durable_head_hash
+        .clone_from(&snapshot.committed_head_hash);
+    next.durable_cursor = snapshot.durable_cursor;
+    next.terminal = None;
+    next.last_issue = None;
+    let events = vec![recovery_event(&next, snapshot.status)?];
+    debug_assert_eq!(next.messages, snapshot.messages);
+    debug_assert_eq!(next.durable_cursor, snapshot.durable_cursor);
+    Ok((next, events))
 }
 
 fn reduce_summarizer_success(
@@ -1096,6 +1355,9 @@ fn reduce_effect_failure(
         }
         super::data::CodingSessionEffectService::Summarizer => {
             super::data::CodingSessionIssue::SummarizerFailure
+        }
+        super::data::CodingSessionEffectService::Authority => {
+            super::data::CodingSessionIssue::AuthorityEnforcementUnavailable
         }
         super::data::CodingSessionEffectService::Timer
         | super::data::CodingSessionEffectService::Policy => {
@@ -1178,6 +1440,10 @@ fn handle_after_commit(
             events.push(crate::telemetry::RuntimeEvent::CompactionRequested {
                 summary: String::from("durable compaction boundary committed"),
             });
+            finish_transition(state, events, None)
+        }
+        super::data::CodingSessionAfterCommit::AuthorityRebound => {
+            events.push(session_state_event(&state, "authority_rebound")?);
             finish_transition(state, events, None)
         }
     }
@@ -1370,6 +1636,9 @@ fn build_provider_request(
 ) -> Result<animus_adapters::ModelRequest, super::data::CodingSessionError> {
     let mut prompt = String::new();
     for message in &state.messages {
+        if message.kind == super::data::CodingSessionMessageKind::AuthorityProfileBinding {
+            continue;
+        }
         prompt.push_str(message.kind.as_str());
         prompt.push_str(PROMPT_ROLE_SEPARATOR);
         prompt.push_str(message.body.as_str());
@@ -1517,6 +1786,249 @@ fn build_recovery_repairs(
     Ok(repairs)
 }
 
+fn build_prompt_messages(
+    state: &super::data::CodingSessionState,
+    draft: PromptDraft<'_>,
+) -> Result<Vec<super::data::CodingSessionMessage>, super::data::CodingSessionError> {
+    let mut messages = Vec::with_capacity(INITIAL_PROMPT_MESSAGE_CAPACITY);
+    let mut parent_id = state.active_leaf_id().map(String::from);
+    if let Some(binding_message) =
+        initial_authority_binding_message(state, draft.run_id, parent_id.as_deref())?
+    {
+        parent_id = Some(String::from(binding_message.entry_id()));
+        messages.push(binding_message);
+    }
+    let user_message = build_message(CodingSessionMessageDraft {
+        entry_id: draft.entry_id,
+        parent_id: parent_id.as_deref(),
+        run_id: draft.run_id,
+        kind: super::data::CodingSessionMessageKind::User,
+        body: draft.input.body.as_str(),
+        tool_correlation_id: None,
+        tool_name: None,
+    })?;
+    messages.push(user_message);
+    debug_assert!(!messages.is_empty());
+    debug_assert!(messages.len() <= INITIAL_PROMPT_MESSAGE_CAPACITY);
+    Ok(messages)
+}
+
+fn initial_authority_binding_message(
+    state: &super::data::CodingSessionState,
+    run_id: &str,
+    parent_id: Option<&str>,
+) -> Result<Option<super::data::CodingSessionMessage>, super::data::CodingSessionError> {
+    match state.committed_authority_profile_identity() {
+        Some(committed_identity)
+            if committed_identity == state.authority_profile().profile_identity() =>
+        {
+            Ok(None)
+        }
+        Some(_mismatched_identity) => Err(error(
+            super::data::CodingSessionIssue::AuthorityProfileMismatch,
+            FIELD_CONFIG,
+        )),
+        None => {
+            let binding = crate::session_authority_profile::build_session_authority_binding(
+                crate::session_authority_profile::SessionAuthorityBindingDraft {
+                    profile: state.authority_profile(),
+                    authorization_identity: state.authority_authorization_identity(),
+                    branch_id: state.branch_id(),
+                    prior_head_hash: state.durable_head_hash(),
+                    prior_profile_identity: None,
+                },
+            )
+            .map_err(|_error| {
+                error(
+                    super::data::CodingSessionIssue::AuthorityProfileMismatch,
+                    FIELD_CONFIG,
+                )
+            })?;
+            let payload =
+                crate::session_authority_profile::encode_session_authority_binding(&binding)
+                    .map_err(|_error| {
+                        error(
+                            super::data::CodingSessionIssue::AuthorityProfileMismatch,
+                            FIELD_CONFIG,
+                        )
+                    })?;
+            let entry_hash = hash_parts(
+                super::data::CODING_SESSION_MESSAGE_HASH_DOMAIN,
+                &[
+                    state.session_id(),
+                    state.branch_id(),
+                    binding.binding_identity(),
+                    state.durable_head_hash(),
+                ],
+            );
+            let entry_id = prefixed_id(PrefixedIdDraft {
+                prefix: GENERATED_AUTHORITY_PREFIX,
+                hash: entry_hash.as_str(),
+            });
+            let message = build_message(CodingSessionMessageDraft {
+                entry_id: entry_id.as_str(),
+                parent_id,
+                run_id,
+                kind: super::data::CodingSessionMessageKind::AuthorityProfileBinding,
+                body: payload.as_str(),
+                tool_correlation_id: None,
+                tool_name: None,
+            })?;
+            debug_assert_eq!(
+                message.kind(),
+                super::data::CodingSessionMessageKind::AuthorityProfileBinding
+            );
+            debug_assert_eq!(message.parent_id(), parent_id);
+            Ok(Some(message))
+        }
+    }
+}
+
+fn authority_binding_from_messages(
+    messages: &[super::data::CodingSessionMessage],
+) -> Result<
+    Option<crate::session_authority_profile::SessionAuthorityBinding>,
+    super::data::CodingSessionError,
+> {
+    let mut binding = None;
+    let mut binding_count_items = 0_usize;
+    for message in messages {
+        if message.kind() != super::data::CodingSessionMessageKind::AuthorityProfileBinding {
+            continue;
+        }
+        binding_count_items = binding_count_items.saturating_add(1);
+        if binding_count_items > MAX_AUTHORITY_BINDINGS_PER_COMMIT {
+            return Err(error(
+                super::data::CodingSessionIssue::AuthorityProfileMismatch,
+                FIELD_MESSAGE,
+            ));
+        }
+        binding = Some(
+            crate::session_authority_profile::decode_session_authority_binding(message.body())
+                .map_err(|_error| {
+                    error(
+                        super::data::CodingSessionIssue::AuthorityProfileMismatch,
+                        FIELD_MESSAGE,
+                    )
+                })?,
+        );
+    }
+    debug_assert!(binding_count_items <= MAX_AUTHORITY_BINDINGS_PER_COMMIT);
+    debug_assert_eq!(
+        binding.is_some(),
+        binding_count_items == MAX_AUTHORITY_BINDINGS_PER_COMMIT
+    );
+    Ok(binding)
+}
+
+fn latest_authority_binding(
+    messages: &[super::data::CodingSessionMessage],
+) -> Result<
+    Option<crate::session_authority_profile::SessionAuthorityBinding>,
+    super::data::CodingSessionError,
+> {
+    let mut latest = None;
+    for message in messages {
+        if message.kind() == super::data::CodingSessionMessageKind::AuthorityProfileBinding {
+            latest = Some(
+                crate::session_authority_profile::decode_session_authority_binding(message.body())
+                    .map_err(|_error| {
+                        error(
+                            super::data::CodingSessionIssue::AuthorityProfileMismatch,
+                            FIELD_RECOVERY,
+                        )
+                    })?,
+            );
+        }
+    }
+    Ok(latest)
+}
+
+fn validate_committed_authority_binding(
+    state: &super::data::CodingSessionState,
+    binding: &crate::session_authority_profile::SessionAuthorityBinding,
+) -> Result<(), super::data::CodingSessionError> {
+    if binding.branch_id() != state.branch_id()
+        || binding.prior_head_hash() != state.durable_head_hash()
+    {
+        return Err(error(
+            super::data::CodingSessionIssue::AuthorityProfileMismatch,
+            FIELD_MESSAGE,
+        ));
+    }
+    if binding.prior_profile_identity() != state.committed_authority_profile_identity() {
+        return Err(error(
+            super::data::CodingSessionIssue::AuthorityProfileMismatch,
+            FIELD_MESSAGE,
+        ));
+    }
+    if state.committed_authority_profile_identity().is_none()
+        && binding.profile() != state.authority_profile()
+    {
+        return Err(error(
+            super::data::CodingSessionIssue::AuthorityProfileMismatch,
+            FIELD_MESSAGE,
+        ));
+    }
+    debug_assert_eq!(binding.branch_id(), state.branch_id());
+    debug_assert_eq!(binding.prior_head_hash(), state.durable_head_hash());
+    Ok(())
+}
+
+fn validate_recovered_authority_binding(
+    state: &super::data::CodingSessionState,
+    binding: &crate::session_authority_profile::SessionAuthorityBinding,
+) -> Result<(), super::data::CodingSessionError> {
+    if binding.branch_id() != state.branch_id() || binding.profile() != state.authority_profile() {
+        return Err(error(
+            super::data::CodingSessionIssue::AuthorityProfileMismatch,
+            FIELD_RECOVERY,
+        ));
+    }
+    debug_assert_eq!(binding.branch_id(), state.branch_id());
+    debug_assert_eq!(binding.profile(), state.authority_profile());
+    Ok(())
+}
+
+fn apply_committed_authority_binding(
+    state: &mut super::data::CodingSessionState,
+    binding: &crate::session_authority_profile::SessionAuthorityBinding,
+) {
+    state.config.authority_profile = binding.profile().clone();
+    state.config.authority_authorization_identity = String::from(binding.authorization_identity());
+    state.committed_authority_profile_identity =
+        Some(String::from(binding.profile().profile_identity()));
+    state.authority_binding_identity = Some(String::from(binding.binding_identity()));
+    debug_assert_eq!(
+        state.committed_authority_profile_identity(),
+        Some(binding.profile().profile_identity())
+    );
+    debug_assert_eq!(
+        state.authority_binding_identity(),
+        Some(binding.binding_identity())
+    );
+}
+
+fn ensure_authority_bound(
+    state: &super::data::CodingSessionState,
+) -> Result<(), super::data::CodingSessionError> {
+    if state.committed_authority_profile_identity()
+        != Some(state.authority_profile().profile_identity())
+    {
+        return Err(error(
+            super::data::CodingSessionIssue::AuthorityProfileUnbound,
+            FIELD_STATE,
+        ));
+    }
+    if state.authority_binding_identity().is_none() {
+        return Err(error(
+            super::data::CodingSessionIssue::AuthorityProfileUnbound,
+            FIELD_STATE,
+        ));
+    }
+    Ok(())
+}
+
 fn build_generated_message(
     state: &super::data::CodingSessionState,
     draft: GeneratedMessageDraft<'_>,
@@ -1559,6 +2071,16 @@ fn build_message(
     validate_id(draft.run_id)?;
     validate_body(draft.body)?;
     validate_tool_fields(draft.kind, draft.tool_correlation_id, draft.tool_name)?;
+    if draft.kind == super::data::CodingSessionMessageKind::AuthorityProfileBinding {
+        crate::session_authority_profile::decode_session_authority_binding(draft.body).map_err(
+            |_error| {
+                error(
+                    super::data::CodingSessionIssue::AuthorityProfileMismatch,
+                    FIELD_MESSAGE,
+                )
+            },
+        )?;
+    }
     let message_hash = hash_parts(
         super::data::CODING_SESSION_MESSAGE_HASH_DOMAIN,
         &[
@@ -1816,6 +2338,60 @@ fn recovery_event(
         head_hash: String::from(state.durable_head_hash()),
         active_leaf_id: state.active_leaf_id.clone(),
     })
+}
+
+fn authority_profile_event(
+    state: &super::data::CodingSessionState,
+    binding: &crate::session_authority_profile::SessionAuthorityBinding,
+    status: &str,
+) -> Result<crate::telemetry::RuntimeEvent, super::data::CodingSessionError> {
+    validate_id(status)?;
+    validate_hash(binding.profile().profile_identity())?;
+    validate_hash(binding.binding_identity())?;
+    Ok(
+        crate::telemetry::RuntimeEvent::SessionAuthorityProfileObserved {
+            session_id: String::from(state.session_id()),
+            branch_id: String::from(state.branch_id()),
+            status: String::from(status),
+            profile_identity: String::from(binding.profile().profile_identity()),
+            binding_identity: Some(String::from(binding.binding_identity())),
+            authorization_identity: Some(String::from(binding.authorization_identity())),
+            enforcement_observation_identity: None,
+            changed_components: Vec::new(),
+        },
+    )
+}
+
+fn authority_comparison_event(
+    state: &super::data::CodingSessionState,
+    comparison: &crate::session_authority_profile::SessionAuthorityComparison,
+) -> Result<crate::telemetry::RuntimeEvent, super::data::CodingSessionError> {
+    validate_hash(comparison.current_profile_identity())?;
+    let changed_components = comparison
+        .changed_components()
+        .iter()
+        .map(|class| String::from(class.as_str()))
+        .collect::<Vec<_>>();
+    debug_assert_eq!(
+        comparison.current_profile_identity(),
+        state.authority_profile().profile_identity()
+    );
+    debug_assert!(
+        changed_components.len()
+            <= crate::session_authority_profile::SessionAuthorityComponentClass::ALL.len()
+    );
+    Ok(
+        crate::telemetry::RuntimeEvent::SessionAuthorityProfileObserved {
+            session_id: String::from(state.session_id()),
+            branch_id: String::from(state.branch_id()),
+            status: String::from(comparison.status().as_str()),
+            profile_identity: String::from(comparison.current_profile_identity()),
+            binding_identity: state.authority_binding_identity.clone(),
+            authorization_identity: Some(String::from(state.authority_authorization_identity())),
+            enforcement_observation_identity: None,
+            changed_components,
+        },
+    )
 }
 
 fn finish_transition(

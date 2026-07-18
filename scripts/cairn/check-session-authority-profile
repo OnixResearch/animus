@@ -1,0 +1,109 @@
+#!/usr/bin/env sh
+# r[verify agent_harness_runtime.session_authority_profile.verification]
+set -eu
+
+readonly FAILURE=1
+readonly RECEIPT_SCHEMA='animus.focused-rail-receipt.v1'
+readonly RAIL_NAME='session-authority-profile'
+readonly PROFILE_SOURCE='config/session-authority-profile.ncl'
+readonly GENERATED_PROFILE='config/generated/session-authority-profile.json'
+readonly FIXTURE_ROOT='config/session-authority-profile/fixtures'
+readonly PURE_CORE='crates/animus-runtime/src/authorityprofile'
+readonly RUNTIME_TEST_FILTER='sessionauthority::tests'
+readonly SESSION_TEST_FILTER='sessionhost::tests'
+readonly HOST_TEST_FILTER='coding_session::tests'
+
+root='.'
+if [ "${1:-}" = '--root' ]; then
+  root=${2:-.}
+fi
+cd "${root}"
+
+for tool in nickel b3sum cargo diff grep; do
+  if ! command -v "${tool}" >/dev/null 2>&1; then
+    printf 'error: %s is required for the authority-profile rail\n' "${tool}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/animus-session-authority.XXXXXX")
+trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
+
+nickel export --format json --field session_authority_profile "${PROFILE_SOURCE}" \
+  > "${tmp_dir}/session-authority-profile.json"
+diff -u "${GENERATED_PROFILE}" "${tmp_dir}/session-authority-profile.json"
+
+positive_count=0
+negative_count=0
+for fixture in "${FIXTURE_ROOT}"/*.ncl; do
+  case "${fixture}" in
+    */valid-*)
+      nickel eval --field fixture "${fixture}" >/dev/null
+      positive_count=$((positive_count + 1))
+      ;;
+    *)
+      if nickel eval --field fixture "${fixture}" \
+        >"${tmp_dir}/fixture.out" 2>"${tmp_dir}/fixture.err"
+      then
+        printf 'error: negative fixture unexpectedly passed: %s\n' "${fixture}" >&2
+        exit "${FAILURE}"
+      fi
+      expected_issue=$(nickel export --format raw --field expected_issue "${fixture}" 2>/dev/null)
+      if ! grep -F "${expected_issue}" "${tmp_dir}/fixture.err" >/dev/null; then
+        printf 'error: fixture %s missed issue %s\n' "${fixture}" "${expected_issue}" >&2
+        exit "${FAILURE}"
+      fi
+      negative_count=$((negative_count + 1))
+      ;;
+  esac
+done
+if [ "${positive_count}" -eq 0 ] || [ "${negative_count}" -eq 0 ]; then
+  printf '%s\n' 'error: authority-profile fixtures require positive and negative cases' >&2
+  exit "${FAILURE}"
+fi
+
+cargo test -p animus-runtime --locked -- --list > "${tmp_dir}/runtime-tests.list"
+for expected_test in \
+  'sessionauthority::tests::nickel_profile_matches_rust_canonical_identity' \
+  'sessionauthority::tests::every_component_class_is_reported_as_drift' \
+  'sessionhost::tests::explicit_authority_rebind_commits_successor_without_provider_dispatch' \
+  'sessionhost::tests::resume_blocks_profile_drift_and_legacy_unbound_history_before_effects'
+do
+  grep -F "${expected_test}" "${tmp_dir}/runtime-tests.list" >/dev/null || {
+    printf 'error: expected authority test is missing: %s\n' "${expected_test}" >&2
+    exit "${FAILURE}"
+  }
+done
+cargo test -p animus-runtime --locked "${RUNTIME_TEST_FILTER}"
+cargo test -p animus-runtime --locked "${SESSION_TEST_FILTER}"
+cargo test -p animus-std --locked --features coding-session-host "${HOST_TEST_FILTER}"
+cargo test -p animus-std --locked --features coding-session-host \
+  --test coding-session-restart child_process_commit_reopens_and_incomplete_tail_blocks_continuation
+
+if grep -R -E 'std::fs|std::process|Command::new|std::env|TcpStream|UdpSocket|SystemTime::now|Instant::now' \
+  "${PURE_CORE}" --include='*.rs' >/dev/null 2>&1
+then
+  printf '%s\n' 'error: session authority pure core gained ambient host authority' >&2
+  exit "${FAILURE}"
+fi
+
+profile_source_hash=$(b3sum "${PROFILE_SOURCE}" | cut -d ' ' -f 1)
+generated_hash=$(b3sum "${GENERATED_PROFILE}" | cut -d ' ' -f 1)
+runtime_hash=$(find "${PURE_CORE}" -type f -name '*.rs' -print | sort | xargs b3sum | b3sum | cut -d ' ' -f 1)
+mkdir -p target/cairn/focused-rails
+receipt_path=target/cairn/focused-rails/${RAIL_NAME}.md
+cat > "${receipt_path}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+profile_source_blake3: ${profile_source_hash}
+generated_profile_blake3: ${generated_hash}
+runtime_source_set_blake3: ${runtime_hash}
+positive_fixtures: ${positive_count}
+negative_fixtures: ${negative_count}
+claims: nickel-rust-identity-parity,canonical-metadata-only-profile,durable-binding-before-effects,exact-resume,drift-and-legacy-denial,explicit-rebind,current-host-reprobe,receipt-redaction,child-process-restart
+non_claims: authorization-minting,sandbox-enforcement,capability-availability,provider-or-tool-readiness,replay-equivalence,whole-session-correctness,release-eligibility
+EOF
+
+printf '%s\n' 'focused rail session-authority-profile: pass'
+printf 'receipt: %s\n' "${receipt_path}"

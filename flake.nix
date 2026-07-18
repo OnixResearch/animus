@@ -102,6 +102,7 @@
               nickel export --format json --field provider_retry_policy ${./.}/config/provider-retry-policy.ncl > "$tmp_dir/config/generated/provider-retry-policy.json"
               nickel export --format json --field session_tree_export_policy ${./.}/config/session-tree-export-policy.ncl > "$tmp_dir/config/generated/session-tree-export-policy.json"
               nickel export --format json --field durable_session_store_policy ${./.}/config/durable-session-store-policy.ncl > "$tmp_dir/config/generated/durable-session-store-policy.json"
+              nickel export --format json --field session_authority_profile ${./.}/config/session-authority-profile.ncl > "$tmp_dir/config/generated/session-authority-profile.json"
 
               diff -u ${./.cargo/config.toml} "$tmp_dir/.cargo/config.toml"
               diff -u ${./clippy.toml} "$tmp_dir/clippy.toml"
@@ -115,6 +116,7 @@
               diff -u ${./config/generated/provider-retry-policy.json} "$tmp_dir/config/generated/provider-retry-policy.json"
               diff -u ${./config/generated/session-tree-export-policy.json} "$tmp_dir/config/generated/session-tree-export-policy.json"
               diff -u ${./config/generated/durable-session-store-policy.json} "$tmp_dir/config/generated/durable-session-store-policy.json"
+              diff -u ${./config/generated/session-authority-profile.json} "$tmp_dir/config/generated/session-authority-profile.json"
             '';
           };
 
@@ -200,6 +202,7 @@
                 || baseName == "check-dogfood-readiness"
                 || baseName == "check-durable-session-store"
                 || baseName == "check-coding-session-host"
+                || baseName == "check-session-authority-profile"
                 || baseName == "check-adapter-conformance-index"
                 || baseName == "check-adapter-family-crates"
                 || baseName == "check-ast-grep-agent-boundary-audits"
@@ -531,6 +534,14 @@
             pkgs.b3sum
           ] ''
             sh scripts/cairn/check-coding-session-host --root .
+          '';
+
+          session-authority-profile = cargoCheck "animus-session-authority-profile" [
+            pkgs.b3sum
+            pkgs.diffutils
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-session-authority-profile --root .
           '';
 
           exec-policy = cargoCheck "animus-exec-policy" [ pkgs.nickel ] ''

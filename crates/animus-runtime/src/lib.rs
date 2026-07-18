@@ -52,6 +52,12 @@ mod sessionhost;
 pub mod coding_session_host {
     pub use super::sessionhost::*;
 }
+#[path = "authorityprofile/mod.rs"]
+mod sessionauthority;
+/// Pure metadata-only runtime authority profiles, durable bindings, and receipts.
+pub mod session_authority_profile {
+    pub use super::sessionauthority::*;
+}
 #[path = "composition/conformance.rs"]
 mod composition_conformance;
 mod context_layering;

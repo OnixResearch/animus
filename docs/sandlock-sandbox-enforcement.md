@@ -70,7 +70,7 @@ When that variable is absent, the receipt records the real-kernel tier as blocke
 
 ## Authority and non-claims
 
-Animus/Basalt authorization must already allow the exact action, subject, target, descriptor, policy, and command identities before root resolution, mechanism probing, or target launch. Sandlock success cannot mint, widen, refresh, or replace authorization. A successful receipt is not authorization, not proof of kernel correctness or complete containment, not build hermeticity, not cross-platform parity, and not production or release eligibility. `cleanup=complete` is bounded to child termination/reaping and observed COW workdir restoration; it does not prove cleanup of upstream-private temporary storage that the reviewed Sandlock API does not expose.
+Animus/Basalt authorization must already allow the exact action, subject, target, descriptor, policy, and command identities before root resolution, mechanism probing, or target launch. A resumable session may bind the requested descriptor identity in its [session runtime authority profile](session-runtime-authority-profile.md), but matching that identity never skips Sandlock's current per-mechanism probes or exact launch admission. Sandlock success cannot mint, widen, refresh, or replace authorization. A successful receipt is not authorization, not proof of kernel correctness or complete containment, not build hermeticity, not cross-platform parity, and not production or release eligibility. `cleanup=complete` is bounded to child termination/reaping and observed COW workdir restoration; it does not prove cleanup of upstream-private temporary storage that the reviewed Sandlock API does not expose.
 
 ## Non-adopted Sandlock surfaces
 

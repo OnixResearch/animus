@@ -1,0 +1,8 @@
+{
+  "depends_on": [
+    "add-coding-session-host-facade",
+    "add-durable-session-store-host",
+    "add-per-model-runtime-profiles",
+    "add-sandlock-linux-host-adapter"
+  ]
+}

@@ -10,7 +10,7 @@ The durable profile is `sync_all_each_commit`. A commit is reported successful o
 
 ## Private journal and safe evidence
 
-Private frame payloads may contain bounded model-visible user, assistant, tool-result, summary, repair, or branch-navigation bodies. Every frame carries an explicit entry ID and parent ID, sequence, branch, payload byte count and BLAKE3 hash, previous-frame hash, and domain-separated frame identity. A commit binds the ordered frame hashes and exact active leaf; the active leaf must be the final committed entry.
+Private frame payloads may contain bounded model-visible user, assistant, tool-result, summary, repair, or branch-navigation bodies, plus metadata-only session authority-profile bindings. Every frame carries an explicit entry ID and parent ID, sequence, branch, payload byte count and BLAKE3 hash, previous-frame hash, and domain-separated frame identity. A commit binds the ordered frame hashes and exact active leaf; the active leaf must be the final committed entry.
 
 Safe sidecars and receipts contain entry/order metadata, kinds, counts, redaction classes, policy and head identities, operation and durability classes, lock/recovery status, and BLAKE3 identities. Receipt projection revalidates the descriptor against generated policy and rejects raw messages, tool/provider bodies, credentials, capability or store paths, frame payloads, lock dumps, and unbounded errors.
 
@@ -18,7 +18,7 @@ Safe sidecars and receipts contain entry/order metadata, kinds, counts, redactio
 
 Opening uses exclusive `create_new` lease admission. A different lease is a conflict and reuse of the same lease is stale; neither path appends. Failed lock creation setup removes the unowned lease before returning. Explicit `close` releases the lease.
 
-Recovery accepts only a contiguous sequence and BLAKE3 chain whose parent IDs continue from the prior committed active leaf. It ignores only an incomplete final frame or uncommitted final transaction. It fails closed on committed corruption, parent or hash mismatch, sequence gaps, stale heads, duplicate entry IDs, unsupported schema, and mid-file corruption. Recovery never truncates, rewrites, compacts past, or silently repairs committed history.
+Recovery accepts only a contiguous sequence and BLAKE3 chain whose parent IDs continue from the prior committed active leaf. The store preserves authority-profile records as typed private frames but does not interpret, infer, authorize, or enforce them; [`coding_session_host`](coding-session-host.md) and the [authority-profile core](session-runtime-authority-profile.md) own those checks. It ignores only an incomplete final frame or uncommitted final transaction. It fails closed on committed corruption, parent or hash mismatch, sequence gaps, stale heads, duplicate entry IDs, unsupported schema, and mid-file corruption. Recovery never truncates, rewrites, compacts past, or silently repairs committed history.
 
 ## Verification
 

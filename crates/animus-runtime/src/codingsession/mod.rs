@@ -12,7 +12,8 @@ mod evidence;
 
 pub use core::{
     coding_session_effect_step_bound, decode_coding_session_message, encode_coding_session_message,
-    new_coding_session_state, reduce_coding_session_command, reduce_coding_session_frontend_event,
+    new_coding_session_state, plan_coding_session_authority_transition,
+    reduce_coding_session_command, reduce_coding_session_frontend_event,
     reduce_coding_session_outcome,
 };
 pub use data::{

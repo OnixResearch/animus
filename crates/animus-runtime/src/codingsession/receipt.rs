@@ -38,6 +38,21 @@ pub fn project_coding_session_receipt(
             FIELD_RECEIPT,
         )
     })?;
+    let authority_profile_identity =
+        state
+            .committed_authority_profile_identity()
+            .ok_or_else(|| {
+                super::core::error(
+                    super::data::CodingSessionIssue::AuthorityProfileUnbound,
+                    FIELD_RECEIPT,
+                )
+            })?;
+    let authority_binding_identity = state.authority_binding_identity().ok_or_else(|| {
+        super::core::error(
+            super::data::CodingSessionIssue::AuthorityProfileUnbound,
+            FIELD_RECEIPT,
+        )
+    })?;
     let non_claims = super::data::NON_CLAIMS
         .iter()
         .map(|value| String::from(*value))
@@ -61,6 +76,8 @@ pub fn project_coding_session_receipt(
         pending_queue_count,
         durable_cursor: state.durable_cursor,
         committed_head_hash: state.durable_head_hash.clone(),
+        authority_profile_identity: String::from(authority_profile_identity),
+        authority_binding_identity: String::from(authority_binding_identity),
         redaction_marker: super::data::REDACTION_MARKER,
         non_claims,
         receipt_hash,
@@ -113,6 +130,16 @@ fn receipt_hash(input: ReceiptHashInput<'_>) -> String {
         input.pending_queue_count.to_string(),
         input.state.durable_cursor.to_string(),
         input.state.durable_head_hash.clone(),
+        input
+            .state
+            .committed_authority_profile_identity()
+            .unwrap_or_default()
+            .to_string(),
+        input
+            .state
+            .authority_binding_identity()
+            .unwrap_or_default()
+            .to_string(),
         super::data::REDACTION_MARKER.to_string(),
     ];
     for part in owned.iter().chain(input.non_claims.iter()) {

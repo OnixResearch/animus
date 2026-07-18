@@ -197,6 +197,20 @@ impl RuntimeProjection {
             crate::RuntimeEvent::SandboxEscalation {
                 escalation_reason, ..
             } => Self::summary_checked("sandbox_escalation", escalation_reason),
+            crate::RuntimeEvent::SessionStateChanged { .. }
+            | crate::RuntimeEvent::SessionCommitObserved { .. }
+            | crate::RuntimeEvent::SessionRecoveryObserved { .. }
+            | crate::RuntimeEvent::SessionAuthorityProfileObserved { .. } => {
+                Self::from_session_event(event)
+            }
+            crate::RuntimeEvent::MaxTurnsExceeded { max_turns } => {
+                Ok(Self::summary(max_turns.to_string().as_str()))
+            }
+        }
+    }
+
+    fn from_session_event(event: &crate::RuntimeEvent) -> Result<Self, HeadlessProtocolError> {
+        match event {
             crate::RuntimeEvent::SessionStateChanged {
                 status,
                 queue_count,
@@ -216,9 +230,19 @@ impl RuntimeProjection {
             crate::RuntimeEvent::SessionRecoveryObserved { status, .. } => {
                 Self::summary_checked("session_recovery", status)
             }
-            crate::RuntimeEvent::MaxTurnsExceeded { max_turns } => {
-                Ok(Self::summary(max_turns.to_string().as_str()))
-            }
+            crate::RuntimeEvent::SessionAuthorityProfileObserved {
+                status,
+                changed_components,
+                ..
+            } => Self::summary_checked(
+                "session_authority_profile",
+                format!("{status} changed_count={}", changed_components.len()).as_str(),
+            ),
+            _other => Err(HeadlessProtocolError::new(
+                None,
+                HeadlessProtocolErrorKind::RuntimeFailure,
+                "session_event",
+            )),
         }
     }
 
