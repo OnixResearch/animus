@@ -85,6 +85,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "provider-retry",
     "coding-session-host",
     "acp-stdio-host",
+    "agent-guardrail",
     "lean-loop",
     "sandlock-host",
     "session-tree-export",

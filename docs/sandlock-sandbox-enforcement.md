@@ -2,6 +2,8 @@
 
 Animus uses Sandlock as a bounded Linux reference for sandbox-enforcement patterns. The implementation remains an Animus-owned contract: reusable crates validate portable descriptors and safe receipts, while host shells own kernel probing, filesystem staging, process launch, Landlock/seccomp integration, network/HTTP enforcement, and platform errors.
 
+The optional [Bubblewrap agent guardrail](agent-guardrail.md) is a separate lower-cost backend for an interactive agent's exact mount profile. Its private-root evidence may show reduced accidental disclosure and damage, but it does not satisfy Sandlock mechanism requirements, filtered network/HTTP policy, COW claims, or hostile-code containment.
+
 ## Portable descriptor boundary
 
 `SandboxDescriptor` captures execution-constraint intent without Linux kernel details:

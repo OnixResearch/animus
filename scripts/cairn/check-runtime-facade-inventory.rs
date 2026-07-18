@@ -101,6 +101,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     FEATURE_STEEL,
     "all-families",
     "acp-stdio-host",
+    "agent-guardrail",
     "batch",
     "compaction",
     "dataset-export",

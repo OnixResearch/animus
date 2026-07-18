@@ -1,0 +1,34 @@
+status: passed
+change: add-bubblewrap-agent-guardrail-host
+date: 2026-07-18
+
+Final-source evidence:
+- `scripts/cairn/check-agent-guardrail --root .` with explicit Bubblewrap 0.11.2 and live Linux evidence: passed.
+- Focused source identity (domain-separated BLAKE3): `10422fe0fe7b451e67589046b3d303818791946ceea034b1a425057d710524c3`.
+- Checked profile identity (domain-separated BLAKE3): `0bd7d738da8aa60eab473c0b4297c498b8fc428030893dd8730ce9f289f46e31`.
+- `nix build .#checks.x86_64-linux.agent-guardrail -L`: passed, including the real Bubblewrap behavior test in the Nix build sandbox.
+- `cargo test -p animus-std-agent-guardrail --all-targets`: passed; 9 pure/memfd tests, 3 fake-Bubblewrap/CLI tests, and the opt-in real behavior test are positive/negative evidence.
+- Exact real behavior: admitted worktree write passed; unmounted credential and sibling reads, worktree symlink escape, outside-root write, non-close-on-exec inherited descriptor, and host-loopback connection were denied.
+- `cargo test --workspace`: passed.
+- `cargo clippy --workspace --all-targets -- -D warnings`: passed.
+- `cargo tigerstyle check`: passed.
+- `cargo fmt --all -- --check`: passed.
+- `scripts/config/check-nickel-configs`: passed.
+- `scripts/cairn/check-component-catalog`: passed.
+- `scripts/cairn/check-safe-receipts-artifacts --root .`: passed.
+- Root `agent-guardrail`, default, no-default, and actual `wasm32-unknown-unknown` dependency-isolation checks: passed in the focused rail.
+- Reviewed reference: dpc's `isolate`, Radicle `rad:z3qqqx5cpk5jk9ioEGaw54dihfDwb`, commit `8e17bc6f5ec87c52d4c69c59a1fe0abc9eda3776`, MIT OR Apache-2.0. It is a reference cohort only, not a runtime dependency.
+
+Lifecycle evidence:
+- Pinned Cairn repository validation: passed with no issues.
+- Proposal, design, and tasks gates: passed; 18/18 tasks complete.
+- Automated sync preflight is blocked by four unrelated accepted-spec `delta_merge.accepted_identity_cardinality` diagnostics. All eight reviewed `agent_harness_runtime.bubblewrap_agent_guardrail.*` requirements were merged manually into the accepted specification without altering those unrelated blocks.
+
+Bounded global blockers:
+- `scripts/cairn/check-runtime-facade-inventory` remains blocked by the same 23 pre-existing unclassified Aeneas, authoritative-completion, Sandlock, Steel, and agent-check exports. It reports no unclassified or invalid `animus::agent_guardrail` export.
+- `scripts/cairn/check-roadmap` reports only the unrelated unregistered active change `adapt-harbor-evaluation-harness`; the Bubblewrap change and its prerequisite edges are registered and valid.
+
+Claim boundaries:
+- Passing evidence is bounded accidental-disclosure and host-damage reduction for the exact checked profile and observed Bubblewrap cohort.
+- The guardrail does not create authorization and does not replace portable sandbox admission, Sandlock, Mantle, Nix build sandboxes, or VM isolation.
+- No hostile-code containment, kernel correctness, same-UID secrecy, filtered network egress, build hermeticity, TOCTOU-safe path resolution, production readiness, or release eligibility is claimed.

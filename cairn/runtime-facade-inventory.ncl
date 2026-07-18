@@ -61,6 +61,8 @@ let acp_feature = "acp-stdio-host" in
 let acp_family = "acp" in
 let lean_loop_feature = "lean-loop" in
 let lean_loop_family = "loop" in
+let agent_guardrail_feature = "agent-guardrail" in
+let agent_guardrail_family = "policy" in
 let syndicate_record = fun export_path_value owning_crate_value source_value class_value side_effect_value review_note_value => {
   export_path = export_path_value,
   owning_crate = owning_crate_value,
@@ -134,6 +136,21 @@ let lean_loop_record = fun export_path_value owning_crate_value source_value rev
   depends_on = ["animus-runtime::LoopFabric"],
   composes_with = ["animus-steel::SteelLoopFabric"],
   capability_family = lean_loop_family,
+}
+in
+let agent_guardrail_record = fun export_path_value owning_crate_value source_value review_note_value => {
+  export_path = export_path_value,
+  owning_crate = owning_crate_value,
+  source = source_value,
+  class = shell,
+  side_effect = shell_owned,
+  stability = optional_stability,
+  review_note = review_note_value,
+  feature_gate = agent_guardrail_feature,
+  required_authority = shell_owned,
+  depends_on = ["animus-adapters::evaluate_sandbox_dispatch"],
+  composes_with = [],
+  capability_family = agent_guardrail_family,
 }
 in
 
@@ -2844,6 +2861,7 @@ let entry_values = [
   entry "animus-std::coding_session_host" "animus-std" std_shell shell shell_owned stable "non-default explicit-service coding-session host facade with current authority-enforcement re-probes",
   entry "animus::coding_session_host" "animus" root shell shell_owned stable "root feature facade for the non-default coding-session host",
   acp_record "animus::acp_stdio_host" "animus" root "root feature facade for the non-default bounded ACP stdio host; implementation ownership remains in animus-acp-stdio-host",
+  agent_guardrail_record "animus::agent_guardrail" "animus" root "root feature facade for the non-default Linux Bubblewrap agent guardrail; implementation ownership remains in animus-std-agent-guardrail",
   lean_loop_record "animus::lean_loop" "animus" root "root feature facade for the non-default bounded Lean 4 LoopFabric host; implementation ownership remains in animus-std-lean-loop",
   entry "animus-tui::CodingSessionRenderModel" "animus-tui" tui shell shell_owned optional_stability "shared TUI adapter over provider-neutral runtime events",
   entry "animus-tui::rats" "animus-tui" tui shell shell_owned optional_stability "terminal widget shell reexport",

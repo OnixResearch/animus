@@ -15,6 +15,7 @@ session_tree_export_source_file=${repo_root}/config/session-tree-export-policy.n
 durable_session_store_source_file=${repo_root}/config/durable-session-store-policy.ncl
 session_authority_profile_source_file=${repo_root}/config/session-authority-profile.ncl
 lean_loop_profile_source_file=${repo_root}/config/lean-loop-profile.ncl
+agent_guardrail_profile_source_file=${repo_root}/config/agent-guardrail-profile.ncl
 
 if ! command -v nickel >/dev/null 2>&1; then
   printf '%s\n' 'error: nickel is required to export repo config. Run inside `nix develop`.' >&2
@@ -38,3 +39,4 @@ nickel export --format json --field session_tree_export_policy "${session_tree_e
 nickel export --format json --field durable_session_store_policy "${durable_session_store_source_file}" > "${target_root}/config/generated/durable-session-store-policy.json"
 nickel export --format json --field session_authority_profile "${session_authority_profile_source_file}" > "${target_root}/config/generated/session-authority-profile.json"
 nickel export --format json --field lean_loop_profile "${lean_loop_profile_source_file}" > "${target_root}/config/generated/lean-loop-profile.json"
+nickel export --format json --field agent_guardrail_profile "${agent_guardrail_profile_source_file}" > "${target_root}/config/generated/agent-guardrail-profile.json"

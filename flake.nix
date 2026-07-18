@@ -232,6 +232,7 @@
                 || baseName == "check-interrupted-tool-repair"
                 || baseName == "check-provider-retry"
                 || baseName == "check-sandlock-host"
+                || baseName == "check-agent-guardrail"
                 || baseName == "check-session-tree-export"
                 || baseName == "check-provenance-ledger"
                 || baseName == "check-release-evidence-index"
@@ -524,6 +525,17 @@
           ] ''
             unset ANIMUS_SANDLOCK_LINUX_LIVE
             sh scripts/cairn/check-sandlock-host --root .
+          '';
+
+          agent-guardrail = cargoCheck "animus-agent-guardrail" [
+            pkgs.b3sum
+            pkgs.bubblewrap
+            pkgs.clippy
+            pkgs.nickel
+          ] ''
+            export ANIMUS_GUARDRAIL_LINUX_LIVE=1
+            export ANIMUS_GUARDRAIL_BWRAP=${pkgs.bubblewrap}/bin/bwrap
+            sh scripts/cairn/check-agent-guardrail --root .
           '';
 
           durable-session-store = cargoCheck "animus-durable-session-store" [

@@ -60,6 +60,10 @@ pub use animus_std::coding_session_host;
 #[cfg(feature = "acp-stdio-host")]
 pub use animus_acp_stdio_host as acp_stdio_host;
 
+/// Re-export of the non-default Linux Bubblewrap agent-guardrail host adapter.
+#[cfg(feature = "agent-guardrail")]
+pub use animus_std_agent_guardrail as agent_guardrail;
+
 /// Re-export of the non-default bounded Lean 4 loop-fabric host adapter.
 #[cfg(feature = "lean-loop")]
 pub use animus_std_lean_loop as lean_loop;
