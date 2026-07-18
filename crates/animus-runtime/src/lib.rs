@@ -76,6 +76,8 @@ mod executionkit;
 mod exports;
 mod fabric;
 mod fresh_context_tasks;
+/// Pure optional Harbor-compatible evaluation planning and evidence projection.
+pub mod harbor_eval;
 mod headless;
 mod hooks;
 #[path = "interrupted_tool_repair/mod.rs"]

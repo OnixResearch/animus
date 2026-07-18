@@ -45,6 +45,8 @@ mod dogfood_smoke;
 #[path = "sessionstore.rs"]
 mod durablefile;
 mod execution;
+#[cfg(feature = "harbor-eval")]
+pub mod harbor;
 mod hostadapters;
 #[cfg(feature = "iroh-host")]
 mod iroh;

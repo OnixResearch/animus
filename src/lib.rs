@@ -69,6 +69,16 @@ pub mod codebase_graph {
     };
 }
 
+/// Non-default Harbor-compatible evaluation planning, ports, and local host shell.
+#[cfg(feature = "harbor-eval")]
+pub mod harbor_evaluation {
+    pub use animus_adapters::harbor::*;
+    pub use animus_runtime::harbor_eval::*;
+    pub use animus_std::harbor::{
+        HostError, ProfileError, execute_separate_verifier, validate_profile_json,
+    };
+}
+
 /// Non-default SpaceWasm diagnostic contracts and injected host service.
 #[cfg(feature = "spacewasm-diagnostic")]
 pub mod spacewasm_diagnostic {

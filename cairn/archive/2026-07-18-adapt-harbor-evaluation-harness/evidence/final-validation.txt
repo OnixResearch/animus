@@ -1,0 +1,31 @@
+status: passed
+change: adapt-harbor-evaluation-harness
+profile: harbor-v0.18-local-atif-v1.7
+
+Reference cohort:
+- Harbor release v0.18.0, commit 527d50deb63a5d279e8c20593c18a2cbc7f61f9e, Apache-2.0.
+- Harbor task schema 1.3 and ATIF-v1.7 from the reviewed release.
+- Adapted mechanisms: typed local task/environment/verifier posture, deterministic trial planning, separate-verifier artifact transfer, finite rewards, ATIF correlation/lineage, and metadata-only evidence.
+- External mechanisms: Harbor Python/Pydantic application, Hub, registries, Docker/cloud backends, scheduler, Reward Kit, training systems, credentials, filesystem/process/network effects, and persistence.
+
+Passed evidence:
+- Checked Nickel and standalone-export parity bind exact cohort, local no-network task/dataset/agent/model/environment/verifier identities, finite resources, separate verifier mode, secret declarations without values, strict reward policy, redaction, and non-claims.
+- Rust reparses and semantically revalidates generated profile facts before host execution.
+- Pure planning tests cover deterministic task-major trial expansion, stable BLAKE3 identities, concurrency/trial limits, resume freshness, identity validation, and verifier isolation.
+- ATIF-v1.7 tests cover one-based order, tool-call/observation correlation, subagent lineage, bounds, terminal state, hidden-reasoning omission, unsupported version, orphan, and malformed sequence rejection.
+- Reward tests cover finite attributed reduction, deterministic order, duplicate/non-finite rejection, and advisory judgment classification.
+- Injected environment and verifier production entrypoints cover a positive separate-verifier vertical slice plus unavailable, timeout, shared-verifier, stale identity, and undeclared-artifact failures.
+- Receipts contain safe identities, bounded counts, statuses, redaction markers, and non-claims only; raw prompts, hidden reasoning/tests, trajectories, tool/provider/environment payloads, credentials, paths, logs, and completion/benchmark claims do not enter the DTO.
+- Default, no-default, reusable, and Wasm-facing dependency trees remain free of Harbor, Python, Pydantic, container, cloud, scheduler, and host-effect dependencies.
+- Focused tests, formatting, Clippy, Nickel drift, component catalog, safe-receipt and composition rails, Cairn gates, and focused Nix check passed.
+- The runtime-facade inventory contains explicit Harbor and SpaceWasm classifications; its aggregate rail remains blocked only by unrelated pre-existing Aeneas, authoritative-completion, Sandlock, Steel, codegraph-detail, and agent-check export debt.
+
+Live boundary:
+- No live Harbor/Python/container execution was required or claimed. The first supported backend is the reviewed injected local fixture service, and cloud/Hub/container parity remains out of scope.
+
+Non-claims:
+- not verifier soundness or arbitrary verifier independence
+- not benchmark superiority or agent/model correctness
+- not automatic authoritative completion
+- not Harbor Hub, cloud, container, scheduler, Reward Kit, or training parity
+- not production or release readiness

@@ -30,6 +30,10 @@ The initial Wasm compile boundary targets `wasm32-unknown-unknown` and covers `a
 
 The separate `spacewasm-embedded-compat` profile is a non-default diagnostic over one test guest, exact Octet static profile, and exact Mantle/SpaceWasm cohort. Its injected shell grants no reusable authority and a pass cannot be promoted to general runtime, plugin, WASI, sandbox, production, or release support. See [SpaceWasm embedded compatibility](spacewasm-embedded-compatibility.md).
 
+## Evaluation harness boundary
+
+The non-default Harbor-compatible evaluation lane accepts only checked local profiles, pure bounded planning, exact ATIF-v1.7 metadata projection, finite attributed rewards, separate verifier identities, allowlisted artifact manifests, and caller-injected services. It imports no Python, Pydantic, Harbor, container, cloud, filesystem, process, network, credential, clock, scheduler, or persistence authority into reusable crates. Scores and judge outputs remain advisory unless existing Cairn completion policy independently admits exact current evidence. See [Harbor evaluation harness](harbor-evaluation-harness.md).
+
 ## Security review boundary
 
 `animus-adapters` owns the reusable Goose-inspired security review DTOs and pure helpers. Review inputs keep only task labels, bounded context summaries, safe tool labels, active policy labels, and BLAKE3 evidence hashes; raw prompts, credentials, provider payloads, private paths, and unbounded tool arguments stay outside stored review state and receipts.

@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euo pipefail
+readonly ROOT="${2:-.}"
+readonly PROHIBITED='(^|[-_])(harbor|pydantic|docker|kubernetes|boto|cloud)([-_]|$)'
+cd "$ROOT"
+if [[ "${ANIMUS_HARBOR_SKIP_NICKEL:-0}" != "1" ]]; then scripts/config/check-nickel-configs; fi
+cargo test -p animus-runtime harbor_eval --locked
+cargo test -p animus-adapters harbor --locked
+cargo test -p animus-std --no-default-features --features harbor-eval harbor --locked
+cargo clippy -p animus-runtime --all-targets -- -D warnings
+cargo clippy -p animus-adapters --all-targets -- -D warnings
+cargo clippy -p animus-std --no-default-features --features harbor-eval --all-targets -- -D warnings
+for args in '-p animus-adapters --no-default-features' '-p animus-runtime --no-default-features' '-p animus --no-default-features' '-p animus'; do
+  if cargo tree $args --edges normal | grep -Eiq "$PROHIBITED"; then
+    echo "Harbor/Python/container/cloud dependency leaked into $args" >&2
+    exit 1
+  fi
+done
+if grep -REn 'std::fs|std::process|std::env|std::net|Command::|TcpStream|Docker|Pydantic' crates/animus-runtime/src/harbor_eval.rs crates/animus-adapters/src/harbor.rs; then
+  echo 'ambient host authority leaked into reusable Harbor surfaces' >&2
+  exit 1
+fi
+echo 'Harbor evaluation focused rail: passed'

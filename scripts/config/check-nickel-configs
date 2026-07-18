@@ -34,3 +34,4 @@ diff -u config/generated/agent-guardrail-profile.json "${tmp_dir}/config/generat
 diff -u config/generated/codebase-graph-profile.json "${tmp_dir}/config/generated/codebase-graph-profile.json"
 diff -u config/generated/mesh-provider-profile.json "${tmp_dir}/config/generated/mesh-provider-profile.json"
 diff -u config/generated/spacewasm-embedded-compat.json "${tmp_dir}/config/generated/spacewasm-embedded-compat.json"
+diff -u config/generated/harbor-evaluation-profile.json "${tmp_dir}/config/generated/harbor-evaluation-profile.json"

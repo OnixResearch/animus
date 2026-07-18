@@ -39,6 +39,8 @@ mod flow;
 mod front;
 /// Optional OpenClaw-inspired gateway control-plane DTOs.
 pub mod gateway;
+/// Optional Harbor-compatible evaluation execution ports.
+pub mod harbor;
 mod hostcontrol;
 mod intent;
 mod invocation;

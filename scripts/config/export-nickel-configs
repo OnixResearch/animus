@@ -21,6 +21,7 @@ agent_guardrail_profile_source_file=${repo_root}/config/agent-guardrail-profile.
 codebase_graph_profile_source_file=${repo_root}/config/codebase-graph-profile.ncl
 mesh_provider_profile_source_file=${repo_root}/config/mesh-provider-profile.ncl
 spacewasm_profile_source_file=${repo_root}/config/spacewasm-embedded-compat.ncl
+harbor_profile_source_file=${repo_root}/config/harbor-evaluation-profile.ncl
 
 if ! command -v nickel >/dev/null 2>&1; then
   printf '%s\n' 'error: nickel is required to export repo config. Run inside `nix develop`.' >&2
@@ -49,3 +50,4 @@ nickel export --format json --field agent_guardrail_profile "${agent_guardrail_p
 nickel export --format json --field codebase_graph_profile "${codebase_graph_profile_source_file}" > "${target_root}/config/generated/codebase-graph-profile.json"
 nickel export --format json --field mesh_provider_profile "${mesh_provider_profile_source_file}" > "${target_root}/config/generated/mesh-provider-profile.json"
 nickel export --format json --field spacewasm_embedded_compat "${spacewasm_profile_source_file}" > "${target_root}/config/generated/spacewasm-embedded-compat.json"
+nickel export --format json --field harbor_evaluation_profile "${harbor_profile_source_file}" > "${target_root}/config/generated/harbor-evaluation-profile.json"

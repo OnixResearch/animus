@@ -40,6 +40,7 @@ in
     codebase_graph_profile | Request,
     mesh_provider_profile | Request,
     spacewasm_embedded_compat | Request,
+    harbor_evaluation_profile | Request,
   } = {
     cargo_config = request "animus.repo.cargo" "config/repo.ncl" ["config/agent-check-registry.ncl"] "cargo_config" 'toml ".cargo/config.toml" false,
     clippy_config = request "animus.repo.clippy" "config/repo.ncl" ["config/agent-check-registry.ncl"] "clippy_config" 'toml "clippy.toml" false,
@@ -51,5 +52,6 @@ in
     codebase_graph_profile = request "animus.codebase-graph-profile" "config/codebase-graph-profile.ncl" [] "codebase_graph_profile" 'json "config/generated/codebase-graph-profile.json" false,
     mesh_provider_profile = request "animus.mesh-provider-profile" "config/mesh-provider-profile.ncl" [] "mesh_provider_profile" 'json "config/generated/mesh-provider-profile.json" false,
     spacewasm_embedded_compat = request "animus.spacewasm-embedded-compat" "config/spacewasm-embedded-compat.ncl" [] "spacewasm_embedded_compat" 'json "config/generated/spacewasm-embedded-compat.json" false,
+    harbor_evaluation_profile = request "animus.harbor-evaluation-profile" "config/harbor-evaluation-profile.ncl" [] "harbor_evaluation_profile" 'json "config/generated/harbor-evaluation-profile.json" false,
   },
 }
