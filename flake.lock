@@ -377,6 +377,23 @@
         "type": "github"
       }
     },
+    "host-control": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784385102,
+        "narHash": "sha256-oQkddmPvU3iA7jiCkQiOq0OUFQH9ufLgrsNI1zY54zo=",
+        "ref": "refs/heads/main",
+        "rev": "e359ccb80a52efb860307278510fa5297ac970ed",
+        "revCount": 2,
+        "type": "git",
+        "url": "ssh://git@github.com/OnixResearch/host-control.git"
+      },
+      "original": {
+        "rev": "e359ccb80a52efb860307278510fa5297ac970ed",
+        "type": "git",
+        "url": "ssh://git@github.com/OnixResearch/host-control.git"
+      }
+    },
     "nickel-export": {
       "inputs": {
         "cairn": "cairn_2",
@@ -540,6 +557,7 @@
       "inputs": {
         "basalt": "basalt",
         "cairn": "cairn",
+        "host-control": "host-control",
         "nickel-export": "nickel-export",
         "nixpkgs": "nixpkgs_3",
         "octet": "octet",

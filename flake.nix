@@ -9,6 +9,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     octet.url = "git+ssh://git@github.com/OnixResearch/octet.git";
+    host-control = {
+      url = "git+ssh://git@github.com/OnixResearch/host-control.git?rev=e359ccb80a52efb860307278510fa5297ac970ed";
+      flake = false;
+    };
     rats = {
       url = "git+ssh://git@github.com/brittonr/rats.git?rev=e9cb7865fe400de6220aea8bfc08ddf4f75da3d3";
       flake = false;
@@ -38,6 +42,7 @@
       systems,
       nickel-export,
       octet,
+      host-control,
       rats,
       basalt,
       cairn,
@@ -115,6 +120,7 @@
               diff -u ${./config/generated/mesh-provider-profile.json} "$tmp_dir/config/generated/mesh-provider-profile.json"
               diff -u ${./config/generated/spacewasm-embedded-compat.json} "$tmp_dir/config/generated/spacewasm-embedded-compat.json"
               diff -u ${./config/generated/harbor-evaluation-profile.json} "$tmp_dir/config/generated/harbor-evaluation-profile.json"
+              diff -u ${./config/generated/host-control-source.json} "$tmp_dir/config/generated/host-control-source.json"
 
               nickel typecheck ${./config/nickel-export-requests.ncl}
               NICKEL_EXPORT_BIN=${nickel-export.packages.${system}.default}/bin/nickel-export \
@@ -200,6 +206,7 @@
                 || baseName == "clippy.toml"
                 || baseName == "dylint.toml"
                 || baseName == "flake.nix"
+                || baseName == "flake.lock"
                 || baseName == ".pre-commit-config.yaml"
                 || baseName == "config.toml"
                 || baseName == "README.md"
@@ -211,6 +218,7 @@
                 || baseName == "check-mesh-provider"
                 || baseName == "check-spacewasm-compat"
                 || baseName == "check-harbor-evaluation"
+                || baseName == "check-host-control-extraction"
                 || baseName == "check-branchfs-host"
                 || baseName == "check-acp-stdio-host"
                 || baseName == "check-lean4-loop-fabric"
@@ -288,6 +296,7 @@
             outputHashes = {
               "basalt-0.1.0" = "sha256-kPESje/5w1vk2KKJgFz0Z+RqyxkjJAiGT7mgortULX4=";
               "cairn-core-0.1.0" = "sha256-Xv9uAhYI+byXcKbqR+A4rESDYmmX44ZWhDLARgqbv5k=";
+              "host-control-core-0.1.0" = "sha256-oQkddmPvU3iA7jiCkQiOq0OUFQH9ufLgrsNI1zY54zo=";
               "rat-chrome-0.1.0" = "sha256-Ct58ZfWnIe7KJ6q/a+gUMVCa4ylTuSv7ZnjI1IYHzgY=";
               "rat-widgets-0.1.0" = "sha256-Ct58ZfWnIe7KJ6q/a+gUMVCa4ylTuSv7ZnjI1IYHzgY=";
               "sandlock-core-0.7.0" = "sha256-pAFP4xo7ClmQBFi+kHoQ+xauXZEJvg0D6cGpkZNkAGQ=";
@@ -304,6 +313,8 @@
                 args:
                 if args.url == "ssh://git@github.com/brittonr/rats.git" then
                   rats
+                else if args.url == "ssh://git@github.com/OnixResearch/host-control.git" then
+                  host-control
                 else if args.url == "ssh://git@github.com/OnixResearch/basalt.git" then
                   basalt
                 else if args.url == "ssh://git@github.com/OnixResearch/cairn.git" then
@@ -452,6 +463,11 @@
             ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
             export ANIMUS_HARBOR_SKIP_NICKEL=1
             sh scripts/cairn/check-harbor-evaluation --root .
+          '';
+
+          host-control-extraction = cargoCheck "animus-host-control-extraction" [ ] ''
+            ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
+            sh scripts/cairn/check-host-control-extraction --root .
           '';
 
           spacewasm-compat = cargoCheck "animus-spacewasm-compat" [ pkgs.clippy pkgs.wasm-tools pkgs.b3sum pkgs.lld ] ''

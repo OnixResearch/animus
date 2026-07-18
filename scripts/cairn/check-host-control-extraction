@@ -1,0 +1,44 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly SUCCESS=0
+readonly FAILURE=1
+readonly EXPECTED_REPOSITORY='ssh://git@github.com/OnixResearch/host-control.git'
+readonly EXPECTED_REVISION='e359ccb80a52efb860307278510fa5297ac970ed'
+readonly EXPECTED_PACKAGE='host-control-core'
+
+repo_root='.'
+if [ "${1:-}" = '--root' ]; then
+  repo_root=${2:?missing root path}
+fi
+
+fail() {
+  printf 'host-control extraction check failed: %s\n' "$1" >&2
+  exit "${FAILURE}"
+}
+
+profile="${repo_root}/config/generated/host-control-source.json"
+adapter_manifest="${repo_root}/crates/animus-adapters/Cargo.toml"
+lock_file="${repo_root}/Cargo.lock"
+flake_lock="${repo_root}/flake.lock"
+facade="${repo_root}/crates/animus-adapters/src/hostcontrol/mod.rs"
+semantic_file_count=$(find "${repo_root}/crates/animus-adapters/src/hostcontrol" -type f ! -name mod.rs | wc -l)
+dependency_count=$(grep -R -F "${EXPECTED_REPOSITORY}" "${repo_root}"/crates/*/Cargo.toml | wc -l)
+
+[ -f "${profile}" ] || fail 'generated source profile is missing'
+[ "${semantic_file_count}" -eq 0 ] || fail 'Animus still owns host-control semantic source files'
+[ "${dependency_count}" -eq 1 ] || fail 'host-control must have exactly one direct Animus dependency owner'
+grep -F "${EXPECTED_REPOSITORY}" "${adapter_manifest}" >/dev/null || fail 'adapter manifest repository drifted'
+grep -F "rev = \"${EXPECTED_REVISION}\"" "${adapter_manifest}" >/dev/null || fail 'adapter manifest revision drifted'
+grep -F "name = \"${EXPECTED_PACKAGE}\"" "${lock_file}" >/dev/null || fail 'Cargo lock package is missing'
+grep -F "git+${EXPECTED_REPOSITORY}?rev=${EXPECTED_REVISION}#${EXPECTED_REVISION}" "${lock_file}" >/dev/null || fail 'Cargo lock source drifted'
+grep -F "\"rev\": \"${EXPECTED_REVISION}\"" "${flake_lock}" >/dev/null || fail 'Nix lock revision drifted'
+grep -F "\"repository\": \"${EXPECTED_REPOSITORY}\"" "${profile}" >/dev/null || fail 'generated repository profile drifted'
+grep -F "\"revision\": \"${EXPECTED_REVISION}\"" "${profile}" >/dev/null || fail 'generated revision profile drifted'
+grep -F 'pub use host_control_core::*;' "${facade}" >/dev/null || fail 'compatibility facade is not a pure re-export'
+
+cargo test -p animus-adapters --test host_control_conformance --locked
+cargo check -p animus-adapters --locked
+
+printf 'host-control extraction check passed for %s at %s\n' "${EXPECTED_REPOSITORY}" "${EXPECTED_REVISION}"
+exit "${SUCCESS}"

@@ -217,6 +217,7 @@ Repository-owned Animus crates are `MIT OR Apache-2.0`; complete texts are in [L
 
 ## References
 
+- [Host Control](https://github.com/OnixResearch/host-control) — independently versioned no-std topology, selector, bounded-observation, layout, event, wait, error, feature, and snapshot-first stream semantics. Animus pins an exact revision and retains only compatibility re-exports; product authority remains consumer-owned.
 - [Basalt](https://github.com/OnixResearch/basalt) — hardened UCAN contract boundaries for Nickel policy artifacts and Steel DTO evaluation backends. Added as the optional Cargo feature `basalt-reference` through the SSH-pinned `basalt` package and as a flake source input.
 - [Cairn](https://github.com/OnixResearch/cairn) — Rust lifecycle engine for native repository lifecycle work. Added as the optional Cargo feature `cairn-reference` through the SSH-pinned `cairn-core` package and as a flake source input.
 - [Trellis](https://github.com/OnixResearch/trellis) — composable verified-logic building blocks. Added as the optional Cargo feature `trellis-reference` through the SSH-pinned `verified-logic` package and as a flake source input.

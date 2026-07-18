@@ -81,6 +81,8 @@ const ALLOWED_FEATURES: &[&str] = &[
     "headless",
     "loop",
     "mesh-provider",
+    "harbor-eval",
+    "spacewasm-diagnostic",
     "model-runtime-profiles",
     "agent-role-profiles",
     "provider-retry",

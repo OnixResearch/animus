@@ -16,6 +16,7 @@ animus-adapter-safe = { path = "../animus-adapter-safe", version = "0.1.0" }
 animus-core = { path = "../animus-core", version = "0.1.0" }
 animus-router = { path = "../animus-router", version = "0.1.0" }
 blake3 = { version = "1.8.5", default-features = false }
+host-control-core = { git = "ssh://git@github.com/OnixResearch/host-control.git", rev = "e359ccb80a52efb860307278510fa5297ac970ed" }
 
 [dev-dependencies]
 serde = { version = "1.0.228", features = ["derive"] }
