@@ -1,0 +1,10 @@
+status: handed-off
+consumer_repository: /home/brittonr/git/OnixResearch/tile
+consumer_change: cairn/changes/adopt-host-control-protocol
+consumer_handoff_commit: 9f3cf32
+canonical_source: ssh://git@github.com/OnixResearch/host-control.git
+reviewed_revision: e359ccb80a52efb860307278510fa5297ac970ed
+
+The Tile-owned Cairn package records exact source admission, loss-aware stable/native and revision-scoped selector mapping, bounded observation, status/error/feature/layout/event/wait/stream conversion, authority isolation, compatibility, rollback, and positive/negative conformance requirements. Its handoff evidence explicitly blocks Tile completion and release evidence until Tile independently pins and validates this exact source.
+
+This handoff satisfies Animus dependency sequencing only. It does not claim Tile implementation, Tile validation, Tile release eligibility, daemon correctness, transport security, PTY/process preservation, terminal truth, or whole-product readiness.

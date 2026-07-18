@@ -1,0 +1,48 @@
+status: passed
+change: extract-host-control-protocol
+canonical_repository: ssh://git@github.com/OnixResearch/host-control.git
+canonical_revision: e359ccb80a52efb860307278510fa5297ac970ed
+standalone_local_commit: e359ccb80a52efb860307278510fa5297ac970ed
+animus_cutover_commit: 704bec1
+standalone_remote_ref: refs/heads/main=e359ccb80a52efb860307278510fa5297ac970ed
+tile_handoff_commit: 9f3cf32
+
+PASS standalone cargo test --workspace --all-features
+PASS standalone cargo clippy --workspace --all-targets --all-features -- -D warnings
+PASS standalone cargo check -p host-control-core --target wasm32-unknown-unknown
+PASS standalone Nickel typecheck
+PASS standalone Cairn validation
+PASS Animus focused host-control extraction rail
+PASS Animus host-control positive and negative consumer conformance fixtures
+PASS Animus adapter tests and Clippy
+PASS Animus adapter wasm32-unknown-unknown check
+PASS Animus default and no-default root checks
+PASS Animus workspace all-target check
+PASS Animus workspace tests
+PASS Animus TUI tests
+PASS Animus component catalog and positive/negative fixtures
+PASS standalone Nickel export parity and negative cases
+PASS Animus checked Nickel configuration
+PASS Nix checks.x86_64-linux.host-control-extraction
+PASS canonical Cargo.lock, flake.lock, generated profile, and manifest source agreement
+PASS compatibility facade no-fork/source isolation checks
+PASS Tile-owned adoption package and immutable handoff evidence
+
+BROAD RAIL: `nix flake check -L` executed. The new `host-control-extraction` check passed. The aggregate stopped only at the pre-existing `clankers-product-surfaces` diagnostic for `crates/animus-std/src/codingsession.rs:51` containing the existing `oauth` non-claim marker. The host-control cutover does not modify that file or diagnostic. No host-control finding occurred.
+
+Bounded claims:
+- exact source identity and lock/profile agreement
+- deterministic standalone core and mapping behavior for reviewed fixtures
+- Animus compatibility imports delegate to the standalone core
+- optional codecs revalidate before semantic admission
+- host authority remains consumer-owned
+
+Retained non-claims:
+- no daemon correctness claim
+- no transport confidentiality/authentication claim
+- no PTY/process preservation claim
+- no terminal-output truth claim
+- no policy/authorization correctness claim
+- no arbitrary cross-product equivalence claim
+- no Tile adoption or release claim
+- no whole-product production-readiness claim

@@ -1,0 +1,42 @@
+status: resolved
+change: extract-host-control-protocol
+canonical_repository: ssh://git@github.com/OnixResearch/host-control.git
+initial_candidate_revision: b485fec
+reviewed_revision: e359ccb80a52efb860307278510fa5297ac970ed
+animus_cutover_commit: 704bec1
+
+Resolution:
+- An authorized operator created the canonical GitHub repository and explicitly requested publication.
+- `main` was pushed and remote `refs/heads/main` resolved exactly to `e359ccb80a52efb860307278510fa5297ac970ed` after the optional Preserves codec was added.
+- The reviewed standalone revision contains the no-std/alloc semantic core, optional serde and Preserves codecs that revalidate decoded values, typed Nickel release profile, native Cairn specification, positive and negative Animus/Tile profile fixtures, and bounded non-claims.
+- Animus Cargo, Nix, generated source profile, and focused rail now agree on the exact immutable revision.
+- Animus deleted its forked semantic implementation and retains a compatibility re-export plus consumer conformance fixtures.
+- Tile handoff is recorded in Tile commit `9f3cf32` under its active `adopt-host-control-protocol` Cairn package. Tile owns its later adoption and release evidence.
+
+Standalone checks passed:
+- cargo test --workspace --all-features
+- cargo clippy --workspace --all-targets --all-features -- -D warnings
+- cargo check -p host-control-core --target wasm32-unknown-unknown
+- nickel typecheck config/repo.ncl
+- Cairn repository validation
+
+Animus checks passed:
+- scripts/cairn/check-host-control-extraction --root .
+- cargo test -p animus-adapters --locked
+- cargo clippy -p animus-adapters --all-targets -- -D warnings
+- cargo check -p animus-adapters --target wasm32-unknown-unknown --locked
+- cargo check -p animus --no-default-features --locked
+- cargo check -p animus --locked
+- scripts/cairn/check-component-catalog --root .
+- nix run .#check-nickel-configs
+- nix build .#checks.x86_64-linux.host-control-extraction --no-link -L
+
+Non-claims:
+- not daemon correctness
+- not transport confidentiality or authentication
+- not PTY or process preservation
+- not terminal-output truth
+- not policy or authorization correctness
+- not arbitrary Animus/Tile behavioral equivalence
+- not Tile adoption completion
+- not whole-product production readiness
