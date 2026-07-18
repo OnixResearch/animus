@@ -1,0 +1,7 @@
+{
+  "depends_on": [
+    "adapt-goose-acp-mcp-interop",
+    "add-coding-session-host-facade",
+    "bind-session-runtime-authority-profile"
+  ]
+}

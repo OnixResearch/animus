@@ -34,6 +34,10 @@ Receipt and output validation reject raw credentials, private paths, raw file bo
 
 A resumable session may bind the effective catalog and capability-ceiling identities in its [session runtime authority profile](session-runtime-authority-profile.md). Equality of those identities neither replaces this final admission nor proves current executor, capability, credential, or tool readiness.
 
+## ACP pass-through boundary
+
+The optional [ACP stdio host](acp-stdio-host.md) never executes a tool directly. It asks an injected admission service for the current policy, permission mode, authorization, capability, sandbox, authority-profile, and executor facts; an optional ACP client decision is then applied as an additional denial-only gate before the coding-session host reaches this executor kit. Tool arguments and outputs are omitted from ACP receipts and metadata updates.
+
 ## Verification and non-claims
 
 Focused checks:

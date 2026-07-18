@@ -77,7 +77,7 @@ impl CodingSessionHostError {
         }
     }
 
-    fn from_reducer(error: CodingSessionError) -> Self {
+    fn from_reducer(error: &CodingSessionError) -> Self {
         Self {
             issue: CodingSessionHostIssue::ReducerRejected,
             reducer_issue: Some(error.issue()),
@@ -119,6 +119,8 @@ pub struct CodingSessionCommitObservation {
 }
 
 pub trait CodingSessionProviderService {
+    /// # Errors
+    /// Returns a typed issue when provider admission or dispatch fails.
     fn dispatch(
         &mut self,
         request: &CodingSessionProviderRequest,
@@ -126,6 +128,8 @@ pub trait CodingSessionProviderService {
 }
 
 pub trait CodingSessionToolService {
+    /// # Errors
+    /// Returns a typed issue when tool admission or execution fails.
     fn dispatch(
         &mut self,
         request: &CodingSessionToolRequest,
@@ -133,11 +137,15 @@ pub trait CodingSessionToolService {
 }
 
 pub trait CodingSessionPersistenceService {
+    /// # Errors
+    /// Returns a typed issue when the durable commit is not confirmed.
     fn commit(
         &mut self,
         request: &CodingSessionCommitRequest,
     ) -> Result<CodingSessionCommitObservation, CodingSessionServiceIssue>;
 
+    /// # Errors
+    /// Returns a typed issue when durable recovery or validation fails.
     fn recover(
         &mut self,
         request: &CodingSessionRecoveryRequest,
@@ -149,6 +157,8 @@ pub trait CodingSessionPolicyService {
 }
 
 pub trait CodingSessionAuthorityService {
+    /// # Errors
+    /// Returns a typed issue when fresh authority enforcement cannot be observed.
     fn observe_current_enforcement(
         &mut self,
         profile: &SessionRuntimeAuthorityProfile,
@@ -156,6 +166,8 @@ pub trait CodingSessionAuthorityService {
 }
 
 pub trait CodingSessionCancellationService {
+    /// # Errors
+    /// Returns a typed issue when cancellation observation fails.
     fn cancel(&mut self, run_id: &str) -> Result<bool, CodingSessionServiceIssue>;
 }
 
@@ -164,6 +176,8 @@ pub trait CodingSessionTimerService {
 }
 
 pub trait CodingSessionSummarizerService {
+    /// # Errors
+    /// Returns a typed issue when summary generation or admission fails.
     fn summarize(
         &mut self,
         request: &CodingSessionSummarizerRequest,
@@ -172,6 +186,35 @@ pub trait CodingSessionSummarizerService {
 
 pub trait CodingSessionEventSink {
     fn observe(&mut self, event: &RuntimeEvent);
+}
+
+/// Explicit pre-effect gate used by protocol hosts that must obtain an
+/// additional caller-owned decision before the existing service executes.
+///
+/// A successful gate decision never replaces the coding-session authority
+/// probe or the injected service's own admission and enforcement checks.
+pub trait CodingSessionEffectGate {
+    /// Admits or rejects one pending effect before its existing service runs.
+    ///
+    /// # Errors
+    ///
+    /// Returns a typed service issue when the protocol-side decision is absent,
+    /// stale, denied, malformed, cancelled, or unavailable.
+    fn admit(
+        &mut self,
+        effect: &CodingSessionEffectRequest,
+    ) -> Result<(), CodingSessionServiceIssue>;
+}
+
+struct AdmitCodingSessionEffects;
+
+impl CodingSessionEffectGate for AdmitCodingSessionEffects {
+    fn admit(
+        &mut self,
+        _effect: &CodingSessionEffectRequest,
+    ) -> Result<(), CodingSessionServiceIssue> {
+        Ok(())
+    }
 }
 
 pub struct CodingSessionHostServices<
@@ -246,6 +289,8 @@ where
     Summarizer: CodingSessionSummarizerService,
     Events: CodingSessionEventSink,
 {
+    /// # Errors
+    /// Returns a host error when required injected services are unavailable.
     pub fn new(
         state: CodingSessionState,
         services: CodingSessionHostServices<
@@ -272,59 +317,71 @@ where
         })
     }
 
+    /// # Errors
+    /// Returns a host error when policy, reduction, authority, persistence, or effects fail.
     pub fn prompt(
         &mut self,
         run_id: &str,
         entry_id: &str,
         input: CodingSessionInput,
     ) -> Result<(), CodingSessionHostError> {
-        self.submit(CodingSessionCommand::Prompt {
+        self.submit(&CodingSessionCommand::Prompt {
             run_id: String::from(run_id),
             entry_id: String::from(entry_id),
             input,
         })
     }
 
+    /// # Errors
+    /// Returns a host error when continuation cannot be safely reduced and driven.
     pub fn continue_run(&mut self, run_id: &str) -> Result<(), CodingSessionHostError> {
-        self.submit(CodingSessionCommand::Continue {
+        self.submit(&CodingSessionCommand::Continue {
             run_id: String::from(run_id),
         })
     }
 
+    /// # Errors
+    /// Returns a host error when steering cannot be safely queued and persisted.
     pub fn steer(
         &mut self,
         item_id: &str,
         entry_id: &str,
         input: CodingSessionInput,
     ) -> Result<(), CodingSessionHostError> {
-        self.submit(CodingSessionCommand::Steer {
+        self.submit(&CodingSessionCommand::Steer {
             item_id: String::from(item_id),
             entry_id: String::from(entry_id),
             input,
         })
     }
 
+    /// # Errors
+    /// Returns a host error when follow-up input cannot be safely queued and persisted.
     pub fn follow_up(
         &mut self,
         item_id: &str,
         entry_id: &str,
         input: CodingSessionInput,
     ) -> Result<(), CodingSessionHostError> {
-        self.submit(CodingSessionCommand::FollowUp {
+        self.submit(&CodingSessionCommand::FollowUp {
             item_id: String::from(item_id),
             entry_id: String::from(entry_id),
             input,
         })
     }
 
+    /// # Errors
+    /// Returns a host error when cancellation cannot be reduced or observed.
     pub fn cancel(&mut self, run_id: &str) -> Result<(), CodingSessionHostError> {
-        self.submit(CodingSessionCommand::Cancel {
+        self.submit(&CodingSessionCommand::Cancel {
             run_id: String::from(run_id),
         })
     }
 
+    /// # Errors
+    /// Returns a host error when recovery or fresh authority admission fails.
     pub fn resume(&mut self) -> Result<(), CodingSessionHostError> {
-        self.submit(CodingSessionCommand::Resume)?;
+        self.submit(&CodingSessionCommand::Resume)?;
         self.admit_current_authority().map_err(|_issue| {
             CodingSessionHostError::blocked(Some(
                 CodingSessionIssue::AuthorityEnforcementUnavailable,
@@ -332,61 +389,109 @@ where
         })
     }
 
+    /// # Errors
+    /// Returns a host error when compaction cannot be summarized and committed safely.
     pub fn compact(&mut self, entry_id: &str) -> Result<(), CodingSessionHostError> {
-        self.submit(CodingSessionCommand::Compact {
+        self.submit(&CodingSessionCommand::Compact {
             entry_id: String::from(entry_id),
         })
     }
 
+    /// # Errors
+    /// Returns a host error when a queued item cannot be edited and committed safely.
     pub fn edit_queued(
         &mut self,
         item_id: &str,
         entry_id: &str,
         input: CodingSessionInput,
     ) -> Result<(), CodingSessionHostError> {
-        self.submit(CodingSessionCommand::EditQueued {
+        self.submit(&CodingSessionCommand::EditQueued {
             item_id: String::from(item_id),
             entry_id: String::from(entry_id),
             input,
         })
     }
 
+    /// # Errors
+    /// Returns a host error when a queued item cannot be removed and committed safely.
     pub fn remove_queued(&mut self, item_id: &str) -> Result<(), CodingSessionHostError> {
-        self.submit(CodingSessionCommand::RemoveQueued {
+        self.submit(&CodingSessionCommand::RemoveQueued {
             item_id: String::from(item_id),
         })
     }
 
+    /// # Errors
+    /// Returns a host error when policy or pure command reduction rejects the command.
     pub fn begin_without_driving(
         &mut self,
-        command: CodingSessionCommand,
+        command: &CodingSessionCommand,
     ) -> Result<(), CodingSessionHostError> {
-        if !self.services.policy.admit(&command) {
+        if !self.services.policy.admit(command) {
             return Err(CodingSessionHostError::new(
                 CodingSessionHostIssue::PolicyDenied,
             ));
         }
-        let transition = reduce_coding_session_command(&self.state, &command)
-            .map_err(CodingSessionHostError::from_reducer)?;
+        let transition = reduce_coding_session_command(&self.state, command)
+            .map_err(|error| CodingSessionHostError::from_reducer(&error))?;
         self.apply_transition(transition);
         Ok(())
     }
 
+    /// # Errors
+    /// Returns a host error when the pending effect cannot be reduced or executed safely.
     pub fn drive_one_pending(&mut self) -> Result<bool, CodingSessionHostError> {
+        let mut gate = AdmitCodingSessionEffects;
+        self.drive_one_pending_with_gate(&mut gate)
+    }
+
+    /// Drives one pending effect after an explicit protocol-side gate.
+    ///
+    /// The gate is additive: provider/tool/summarizer authority probes and the
+    /// injected effect service still run after the gate admits the effect.
+    ///
+    /// # Errors
+    /// Returns a host error when the gate, service, or outcome reduction fails.
+    pub fn drive_one_pending_with_gate<Gate>(
+        &mut self,
+        gate: &mut Gate,
+    ) -> Result<bool, CodingSessionHostError>
+    where
+        Gate: CodingSessionEffectGate + ?Sized,
+    {
         let Some(effect) = self.state.pending_effect().cloned() else {
             self.finish_drive()?;
             return Ok(false);
         };
-        let outcome = self.execute_effect(&effect);
+        let outcome = gate.admit(&effect).map_or_else(
+            |issue| failed_outcome(&effect, effect_service(&effect), issue),
+            |()| self.execute_effect(&effect),
+        );
         let transition = reduce_coding_session_outcome(&self.state, &outcome)
-            .map_err(CodingSessionHostError::from_reducer)?;
+            .map_err(|error| CodingSessionHostError::from_reducer(&error))?;
         self.apply_transition(transition);
         Ok(true)
     }
 
+    /// # Errors
+    /// Returns a host error when pending effects fail or exceed the step bound.
     pub fn drive_pending(&mut self) -> Result<(), CodingSessionHostError> {
+        let mut gate = AdmitCodingSessionEffects;
+        self.drive_pending_with_gate(&mut gate)
+    }
+
+    /// Drives all pending effects through an explicit additive gate.
+    ///
+    /// # Errors
+    /// Returns a host error when the gate, service, reducer, or step bound rejects progress.
+    pub fn drive_pending_with_gate<Gate>(
+        &mut self,
+        gate: &mut Gate,
+    ) -> Result<(), CodingSessionHostError>
+    where
+        Gate: CodingSessionEffectGate + ?Sized,
+    {
         for _step in 0..coding_session_effect_step_bound() {
-            if !self.drive_one_pending()? {
+            if !self.drive_one_pending_with_gate(gate)? {
                 return Ok(());
             }
         }
@@ -410,6 +515,8 @@ where
         self.events.as_slice()
     }
 
+    /// # Errors
+    /// Returns a host error when receipt projection detects sensitive or inconsistent facts.
     pub fn receipt(
         &self,
         sensitive: CodingSessionSensitiveDraft<'_>,
@@ -435,7 +542,7 @@ where
         self.services
     }
 
-    fn submit(&mut self, command: CodingSessionCommand) -> Result<(), CodingSessionHostError> {
+    fn submit(&mut self, command: &CodingSessionCommand) -> Result<(), CodingSessionHostError> {
         self.begin_without_driving(command)?;
         self.drive_pending()
     }
@@ -589,6 +696,8 @@ where
         }
     }
 
+    /// # Errors
+    /// Returns a durable-store error when lease cleanup cannot be confirmed.
     pub fn close(self) -> Result<(), super::durablefile::DurableSessionHostError> {
         self.store.close()
     }
@@ -837,6 +946,8 @@ impl CodingSessionSummarizerService for FakeCodingSessionSummarizer {
 }
 
 // r[impl agent_harness_runtime.coding_session_host.conformance]
+/// # Errors
+/// Returns a host error when the packaged durable smoke path cannot complete safely.
 pub fn run_packaged_durable_coding_session_smoke(
     store_root: &std::path::Path,
     prompt: &str,
@@ -893,7 +1004,7 @@ pub fn run_packaged_durable_coding_session_smoke(
         },
         smoke_queue_policy()?,
     )
-    .map_err(CodingSessionHostError::from_reducer)?;
+    .map_err(|error| CodingSessionHostError::from_reducer(&error))?;
     let persistence = DurableCodingSessionPersistence::new(store, &policy, &descriptor);
     let services = CodingSessionHostServices {
         provider: FakeCodingSessionProvider {
@@ -983,6 +1094,17 @@ fn smoke_authority_profile() -> Result<
         },
     )
     .map_err(|_error| CodingSessionHostError::new(CodingSessionHostIssue::ReducerRejected))
+}
+
+const fn effect_service(effect: &CodingSessionEffectRequest) -> CodingSessionEffectService {
+    match effect {
+        CodingSessionEffectRequest::Commit(_) => CodingSessionEffectService::Persistence,
+        CodingSessionEffectRequest::Provider(_) => CodingSessionEffectService::Provider,
+        CodingSessionEffectRequest::Tool(_) => CodingSessionEffectService::Tool,
+        CodingSessionEffectRequest::Cancellation(_) => CodingSessionEffectService::Cancellation,
+        CodingSessionEffectRequest::Recovery(_) => CodingSessionEffectService::Recovery,
+        CodingSessionEffectRequest::Summarizer(_) => CodingSessionEffectService::Summarizer,
+    }
 }
 
 fn failed_outcome(

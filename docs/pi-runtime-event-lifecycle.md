@@ -22,3 +22,7 @@ Model and tool dispatch guards execute before adapters. Blocks and hook errors f
 ## Reuse contract
 
 SDK and headless consumers should subscribe to `RunReport::events()` and use `RuntimeEvent::kind()`/`RuntimeEventKind::as_str()` for stable classification. Receipt builders can persist safe event labels and terminal status classes without embedding host UI state. Future RPC transports should stream the same lifecycle facts rather than translating them into terminal-specific events.
+
+## ACP projection
+
+The optional [ACP stdio host](acp-stdio-host.md) projects this same ordered event stream into bounded ACP updates. Visible assistant content may cross the boundary; hidden reasoning, provider requests, raw tool bodies, credentials, environment values, physical paths, and raw diagnostics do not. A conformance fixture feeds one event order to headless, TUI, and ACP reducers and verifies that none gains transcript mutation authority.

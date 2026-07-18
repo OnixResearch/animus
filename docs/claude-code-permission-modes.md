@@ -12,3 +12,7 @@ The pure adapter-boundary core lives in `animus-adapters`:
 If authority is denied, the permission resolver denies before dispatch even when local policy says `allow`. If local policy says `ask`, the resolver returns `PromptRequired` without model, tool, shell, filesystem, network, or Steel dispatch until a matching host prompt token is supplied. Stale or mismatched prompt tokens fail closed.
 
 Permission receipts must not include raw prompts, credentials, provider payloads, raw tool bodies, full paths, or unbounded outputs.
+
+## ACP permission composition
+
+The optional [ACP stdio host](acp-stdio-host.md) applies client approval only after the current permission mode and every other host-owned admission intersects to allow the tool request. Client `allow_once` or `allow_always` cannot widen an Animus `ask`/`deny` result, authorization, capability ceiling, sandbox, runtime authority profile, or executor state. Missing and cancelled decisions fail closed.

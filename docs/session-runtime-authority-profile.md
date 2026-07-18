@@ -47,6 +47,10 @@ A host implementation remains responsible for current authorization, capability 
 
 Authority events and receipts contain bounded status and changed-component classes plus safe session, branch, head, profile, binding, authorization, and enforcement-observation identities. Coding-session receipts include only the committed profile and binding identities. Sensitive drafts are rejected rather than redacted after serialization.
 
+## ACP continuity boundary
+
+The optional [ACP stdio host](acp-stdio-host.md) copies only the safe profile identity into its session binding and metadata-only receipt. On load it invokes the existing coding-session `resume` path, so exact durable profile continuity and a fresh `CodingSessionAuthorityService` observation are required before repair, continuation, provider, summarizer, transcript, or tool effects. Client permission approval is additive and cannot widen this profile or substitute for current enforcement.
+
 ## Verification
 
 Run from the repository root:

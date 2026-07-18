@@ -195,6 +195,7 @@
                 || baseName == "Cargo.toml"
                 || baseName == "clippy.toml"
                 || baseName == "dylint.toml"
+                || baseName == "flake.nix"
                 || baseName == ".pre-commit-config.yaml"
                 || baseName == "config.toml"
                 || baseName == "README.md"
@@ -202,6 +203,7 @@
                 || baseName == "check-dogfood-readiness"
                 || baseName == "check-durable-session-store"
                 || baseName == "check-coding-session-host"
+                || baseName == "check-acp-stdio-host"
                 || baseName == "check-session-authority-profile"
                 || baseName == "check-adapter-conformance-index"
                 || baseName == "check-adapter-family-crates"
@@ -534,6 +536,13 @@
             pkgs.b3sum
           ] ''
             sh scripts/cairn/check-coding-session-host --root .
+          '';
+
+          acp-stdio-host = cargoCheck "animus-acp-stdio-host" [
+            pkgs.b3sum
+            pkgs.clippy
+          ] ''
+            sh scripts/cairn/check-acp-stdio-host --root .
           '';
 
           session-authority-profile = cargoCheck "animus-session-authority-profile" [

@@ -56,6 +56,10 @@ pub use animus_std::{
 #[cfg(feature = "coding-session-host")]
 pub use animus_std::coding_session_host;
 
+/// Re-export of the non-default ACP stdio host adapter.
+#[cfg(feature = "acp-stdio-host")]
+pub use animus_acp_stdio_host as acp_stdio_host;
+
 /// Re-export of host-owned provider retry policy and injected effect seams.
 #[cfg(feature = "provider-retry")]
 pub use animus_std::{

@@ -84,6 +84,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "agent-role-profiles",
     "provider-retry",
     "coding-session-host",
+    "acp-stdio-host",
     "sandlock-host",
     "session-tree-export",
     "durable-session-store",

@@ -100,6 +100,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     FEATURE_COMPAT,
     FEATURE_STEEL,
     "all-families",
+    "acp-stdio-host",
     "batch",
     "compaction",
     "dataset-export",
@@ -131,6 +132,7 @@ const ALLOWED_AUTHORITIES: &[&str] = &[
 
 const ALLOWED_FAMILIES: &[&str] = &[
     FAMILY_COMPATIBILITY,
+    "acp",
     "batch",
     "compaction",
     "dataset-export",

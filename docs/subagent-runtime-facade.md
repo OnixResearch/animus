@@ -31,6 +31,10 @@ The module includes deterministic reducers for:
 
 Subagent receipts, lineage records, UX projections, and conformance reports contain only safe labels, status classes, requirement ids, BLAKE3 hashes, bounded evidence references, and budget summaries. Validation rejects raw transcripts, raw child logs, provider payload markers, credential-like material, full-path markers, unbounded output markers, wildcard authority, duplicate normalized labels, stale handles, unbounded detail import, mutation bypass attempts, and missing expected failure classes.
 
+## ACP boundary
+
+The optional [ACP stdio host](acp-stdio-host.md) hosts the selected local Animus coding session; it does not discover, spawn, authenticate, or remotely transport external subagents. Existing ACP/MCP descriptor and subagent contracts remain data-only unless a separately admitted host service implements them.
+
 ## Verification
 
 Focused verification lives in `crates/animus-runtime/src/subagents.rs` unit tests and covers positive and negative cases for every subagent surface. Run:

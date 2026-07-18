@@ -20,6 +20,10 @@ Opening uses exclusive `create_new` lease admission. A different lease is a conf
 
 Recovery accepts only a contiguous sequence and BLAKE3 chain whose parent IDs continue from the prior committed active leaf. The store preserves authority-profile records as typed private frames but does not interpret, infer, authorize, or enforce them; [`coding_session_host`](coding-session-host.md) and the [authority-profile core](session-runtime-authority-profile.md) own those checks. It ignores only an incomplete final frame or uncommitted final transaction. It fails closed on committed corruption, parent or hash mismatch, sequence gaps, stale heads, duplicate entry IDs, unsupported schema, and mid-file corruption. Recovery never truncates, rewrites, compacts past, or silently repairs committed history.
 
+## ACP load/resume boundary
+
+The optional [ACP stdio host](acp-stdio-host.md) receives only an explicit safe session reference and hashed workspace identity. Its factory must open this existing store, after which the coding-session facade runs normal recovery, active-leaf validation, interrupted-tool repair, and current authority-profile admission. ACP load success cannot bypass or replace any store or facade check, and no repair/provider/tool/transcript effect occurs before those checks pass.
+
 ## Verification
 
 Run:

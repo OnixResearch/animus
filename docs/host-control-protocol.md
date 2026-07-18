@@ -13,6 +13,10 @@ Animus models host control as UI-neutral DTOs and pure validation, not as a term
 - `HostEvent`, `HostEventSubscription`, `HostWaitRequest`, `filter_host_events`, and `resolve_host_wait` share semantic status matching for subscriptions and one-shot waits across agent status, output match, pane lifecycle, cancellation, timeout, and host-error events.
 - `HostControlEnvelope`, `HostTypedError`, and `HostUnknownFields` carry correlation IDs, protocol version, typed errors, accepted features, unknown feature labels, and unknown fields without requiring any IPC server.
 
+## ACP relationship
+
+The optional [ACP stdio host](acp-stdio-host.md) is a separate bounded local protocol adapter, not a replacement host-control owner. It delegates lifecycle actions to the coding-session facade and does not gain process, daemon, remote-control, endpoint-discovery, credential, or host-shutdown authority.
+
 ## Non-claims
 
 This contract does not copy Herdr's JSON protocol, start a host daemon, manage PTYs, preserve live processes during layout apply, read unbounded transcripts, or make terminal rendering available to reusable runtime code.

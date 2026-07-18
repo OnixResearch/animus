@@ -57,6 +57,8 @@ let router_family = "router" in
 let orchestration_family = "orchestration" in
 let syndicate_feature = "syndicate-host" in
 let syndicate_family = "preserves" in
+let acp_feature = "acp-stdio-host" in
+let acp_family = "acp" in
 let syndicate_record = fun export_path_value owning_crate_value source_value class_value side_effect_value review_note_value => {
   export_path = export_path_value,
   owning_crate = owning_crate_value,
@@ -100,6 +102,21 @@ let router_record = fun export_path_value owning_crate_value source_value featur
   depends_on = [],
   composes_with = [],
   capability_family = router_family,
+}
+in
+let acp_record = fun export_path_value owning_crate_value source_value review_note_value => {
+  export_path = export_path_value,
+  owning_crate = owning_crate_value,
+  source = source_value,
+  class = shell,
+  side_effect = shell_owned,
+  stability = optional_stability,
+  review_note = review_note_value,
+  feature_gate = acp_feature,
+  required_authority = shell_owned,
+  depends_on = ["animus-std::coding_session_host", "animus-runtime::coding_session_host"],
+  composes_with = ["animus-tui::CodingSessionRenderModel"],
+  capability_family = acp_family,
 }
 in
 
@@ -2809,6 +2826,7 @@ let entry_values = [
   entry "animus-runtime::coding_session_host" "animus-runtime" runtime reusable none stable "provider- and frontend-neutral coding-session reducer facade with authority-profile binding and resume admission",
   entry "animus-std::coding_session_host" "animus-std" std_shell shell shell_owned stable "non-default explicit-service coding-session host facade with current authority-enforcement re-probes",
   entry "animus::coding_session_host" "animus" root shell shell_owned stable "root feature facade for the non-default coding-session host",
+  acp_record "animus::acp_stdio_host" "animus" root "root feature facade for the non-default bounded ACP stdio host; implementation ownership remains in animus-acp-stdio-host",
   entry "animus-tui::CodingSessionRenderModel" "animus-tui" tui shell shell_owned optional_stability "shared TUI adapter over provider-neutral runtime events",
   entry "animus-tui::rats" "animus-tui" tui shell shell_owned optional_stability "terminal widget shell reexport",
 ]

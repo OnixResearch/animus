@@ -74,6 +74,10 @@ Workspace lints forbid unsafe code. If this policy is intentionally relaxed in t
 
 `config/repo.ncl` is the source of truth for the consumer-owned Octet configuration exported to `dylint.toml`. Every registered Octet lint for the pinned flake input must be listed under `octet.lint_levels` with level `"deny"`. Keep the list complete when `flake.lock` updates; any suppression must be narrow, justified, owned, and tested.
 
+## ACP stdio safety boundary
+
+The optional [ACP stdio host](acp-stdio-host.md) is non-default and local-stdio-only. Animus owns bounded newline framing, backpressure, correlation, permission-response admission, cancellation/deadline observation, write/flush/broken-pipe classification, safe stderr diagnostics, and cleanup. It has no socket, HTTP, WebSocket, TLS, provider discovery, credential discovery, implicit retry, or network fallback. ACP approval is additive and cannot widen policy, capability, sandbox, authority profile, or executor admission.
+
 ## Verification rails
 
 Use these commands as the standard verification rails:

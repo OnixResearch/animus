@@ -27,6 +27,10 @@ Confirmation receipts keep request, resource, ability, session, policy, and rece
 
 The reusable crates do not display prompts, read terminal input, send notifications, call external approval services, or persist approval records. Hosts inject a `ConfirmationBroker` implementation when a product surface needs those behaviors.
 
+## ACP client confirmation
+
+The optional [ACP stdio host](acp-stdio-host.md) treats `session/request_permission` as one additional host-side decision. It preserves the existing request/session/tool correlation and fails closed on absent, stale, malformed, cancelled, or EOF responses. ACP approval cannot replace authorization, capability, sandbox, runtime-profile, executor, or confirmation-broker admission.
+
 ## Focused validation
 
 Run the confirmation-focused adapter tests:

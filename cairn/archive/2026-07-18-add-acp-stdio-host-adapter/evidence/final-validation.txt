@@ -1,0 +1,43 @@
+ACP stdio host final validation
+Date: 2026-07-18
+
+Authoritative focused evidence
+- `nix develop -c scripts/cairn/check-acp-stdio-host`: PASS.
+- Receipt: `target/cairn/focused-rails/acp-stdio-host.md`.
+- Status: exact `passed`.
+- Current source identity (BLAKE3): `5810409bb05c8cb08e5e91b6b163456d2a9abe069b58db8b64efbd1f8a6d9245`.
+- Reviewed cohort: `agent-client-protocol 0.10.4` / `agent-client-protocol-schema 0.11.4`, Apache-2.0.
+- `nix build .#checks.x86_64-linux.acp-stdio-host -L`: PASS.
+
+Current-source implementation checks
+- `cargo fmt --all`: PASS.
+- `cargo test -p animus-acp-stdio-host --all-targets`: PASS, 32 tests.
+- `cargo clippy -p animus-acp-stdio-host --all-targets --no-deps -- -D warnings`: PASS.
+- `cargo test --workspace`: PASS.
+- `cargo clippy --workspace --all-targets -- -D warnings`: PASS.
+- `cargo tigerstyle check`: PASS.
+- `scripts/config/check-nickel-configs`: PASS.
+- `scripts/cairn/check-wasm-surface`: PASS, including actual `wasm32-unknown-unknown` checks and positive/negative dependency fixtures.
+- `scripts/cairn/check-component-catalog`: PASS, including positive and negative fixtures.
+
+Lifecycle checks
+- `cairn validate --root .`: PASS before and after accepted-spec synchronization.
+- `cairn gate proposal add-acp-stdio-host-adapter --root .`: PASS.
+- `cairn gate design add-acp-stdio-host-adapter --root .`: PASS.
+- `cairn gate tasks add-acp-stdio-host-adapter --root .`: PASS with 20/20 tasks complete.
+- Automated sync dry-run was blocked without mutation by four pre-existing `delta_merge.accepted_identity_cardinality` diagnostics in unrelated accepted requirements.
+- All nine reviewed ACP requirements were therefore merged manually into `cairn/specs/agent-harness-runtime/spec.md`; each ACP requirement ID now occurs exactly once in the accepted spec.
+- Post-merge Tracey remains globally invalid from unrelated lifecycle debt (`763` referenced IDs across `2281` requirements), but no `agent_harness_runtime.acp_stdio_host.*` ID is missing or dangling.
+
+Adversarial and boundary evidence
+- Production codec/transport fixtures cover stable capability negotiation, numeric/string correlation preservation, standard assistant/tool session updates, bounded framing, malformed/truncated/oversized input, frame-count exhaustion, permission confirmation and EOF, stale confirmation correlation, output backpressure, broken pipe, cancellation ambiguity, deadline classification, cleanup failure, and clean EOF.
+- Reducer/facade fixtures cover duplicate and out-of-order correlations, unsupported methods/features, one coding-session owner, durable load/resume before binding, profile drift before prompt resolution, additive permission denial, shared headless/TUI/ACP order, hidden/provider/tool payload omission, and metadata-only BLAKE3 receipts with leak rejection.
+- Root default, root no-default, reusable, and Wasm dependency checks exclude the ACP cohort and any live server entrypoint unless the explicit feature is selected.
+- A non-authoritative VibeThinker adversarial review suggested explicit frame-count exhaustion coverage; that negative fixture was added and validated. Its other concerns were already covered or remain explicit non-claims.
+
+Bounded global blockers
+- `scripts/cairn/check-runtime-facade-inventory` and `nix flake check -L` remain blocked by the same 23 unrelated pre-existing unclassified exports from Aeneas, authoritative-completion, Sandlock, Steel, and agent-check surfaces. No ACP export appears in the unclassified set.
+- The broad Nix gate failed only at `checks.x86_64-linux.runtime-facade-inventory`; the dedicated ACP Nix check passes.
+
+Non-claims
+- This evidence does not prove arbitrary-editor interoperability, WebSocket/HTTP/TLS or remote transport security, plugin hosting, terminal multiplexing, live-provider or concrete-product-tool behavior, production readiness, whole-product correctness, or release eligibility.

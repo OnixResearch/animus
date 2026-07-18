@@ -55,6 +55,10 @@ The non-default `coding-session-host` feature adds `animus_std::coding_session_h
 
 Deterministic config parsing, provider selection, context planning, document/model-evidence ingest planning, observability record validation, and host adapter admission remain pure over explicit values. Filesystem opens, environment reads, process calls, transport calls, credential lookup, durable storage, terminal access, and other effects stay in thin owner shells after a plan is admitted.
 
+## Optional ACP stdio host crate
+
+`animus-acp-stdio-host` is intentionally separate from `animus-std` and absent from default members. It depends on the non-default coding-session feature and owns only the reviewed ACP schema mapping plus bounded local stdio shell. Reusable crates and default/no-std/Wasm feature graphs do not acquire its ACP cohort or entrypoint. See [`acp-stdio-host.md`](acp-stdio-host.md).
+
 ## Verification and non-claims
 
 Focused checks:

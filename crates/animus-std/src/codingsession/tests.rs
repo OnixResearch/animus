@@ -391,7 +391,7 @@ fn host_blocks_tool_dispatch_when_assistant_commit_fails() {
 #[test]
 fn host_accepts_explicit_steering_while_provider_effect_is_pending() {
     let mut host = memory_host(false).expect("host");
-    host.begin_without_driving(CodingSessionCommand::Prompt {
+    host.begin_without_driving(&CodingSessionCommand::Prompt {
         run_id: String::from(TEST_RUN),
         entry_id: String::from(TEST_USER_ENTRY),
         input: input(TEST_PROMPT),
@@ -402,7 +402,7 @@ fn host_accepts_explicit_steering_while_provider_effect_is_pending() {
         host.state_snapshot().pending_effect(),
         Some(CodingSessionEffectRequest::Provider(_))
     ));
-    host.begin_without_driving(CodingSessionCommand::Steer {
+    host.begin_without_driving(&CodingSessionCommand::Steer {
         item_id: String::from(TEST_QUEUE_ITEM),
         entry_id: String::from(TEST_QUEUE_ENTRY),
         input: input(TEST_QUEUE_BODY),
@@ -493,14 +493,14 @@ fn current_authority_unavailability_blocks_provider_after_durable_binding() {
 #[test]
 fn cancellation_replaces_only_pending_external_effect_and_does_not_claim_rollback() {
     let mut host = memory_host(false).expect("host");
-    host.begin_without_driving(CodingSessionCommand::Prompt {
+    host.begin_without_driving(&CodingSessionCommand::Prompt {
         run_id: String::from(TEST_RUN),
         entry_id: String::from(TEST_USER_ENTRY),
         input: input(TEST_PROMPT),
     })
     .expect("begin prompt");
     host.drive_one_pending().expect("commit user");
-    host.begin_without_driving(CodingSessionCommand::Cancel {
+    host.begin_without_driving(&CodingSessionCommand::Cancel {
         run_id: String::from(TEST_RUN),
     })
     .expect("cancel");
@@ -622,22 +622,19 @@ fn real_file_host_reopens_and_resumes_committed_messages_without_provider_contac
     services.persistence.close().expect("close reopened store");
 }
 
-fn memory_host(
-    fail_commit: bool,
-) -> Result<
-    CodingSessionHost<
-        TestProvider,
-        DenyUnusedCodingSessionTool,
-        MemoryPersistence,
-        AllowCodingSessionPolicy,
-        AdmittedCodingSessionAuthority,
-        ObservedCodingSessionCancellation,
-        AvailableCodingSessionTimer,
-        FakeCodingSessionSummarizer,
-        RecordingEvents,
-    >,
-    CodingSessionHostError,
-> {
+type MemoryCodingSessionHost = CodingSessionHost<
+    TestProvider,
+    DenyUnusedCodingSessionTool,
+    MemoryPersistence,
+    AllowCodingSessionPolicy,
+    AdmittedCodingSessionAuthority,
+    ObservedCodingSessionCancellation,
+    AvailableCodingSessionTimer,
+    FakeCodingSessionSummarizer,
+    RecordingEvents,
+>;
+
+fn memory_host(fail_commit: bool) -> Result<MemoryCodingSessionHost, CodingSessionHostError> {
     CodingSessionHost::new(
         new_state(false),
         CodingSessionHostServices {

@@ -62,6 +62,10 @@ Child-process tests prove that a committed session reopens after process exit an
 
 The packaged `animus-coding-session-smoke` binary uses deterministic fake services and an explicit temporary store supplied by the caller. Its output is bounded receipt metadata, not a transcript or product-readiness claim.
 
+## Optional ACP stdio caller
+
+The [`animus-acp-stdio-host`](acp-stdio-host.md) crate is an optional protocol caller of this facade. `CodingSessionEffectGate` and the `drive_*_with_gate` methods allow a protocol-side permission decision to deny before an effect, but an allow never replaces the existing authority probe or injected service admission. ACP new/load/prompt/cancel requests delegate into this same host; ACP does not own a second transcript, queue, run state, active leaf, durable store, or tool executor.
+
 ## Verification
 
 Run from the repository root:

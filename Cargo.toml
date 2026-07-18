@@ -2,6 +2,7 @@
 members = [
   "crates/animus-adapter-observability",
   "crates/animus-adapter-safe",
+  "crates/animus-acp-stdio-host",
   "crates/animus-adapters",
   "crates/animus-core",
   "crates/animus-preserves",
@@ -76,6 +77,7 @@ workspace = true
 [features]
 default = ["std"]
 agent-role-profiles = ["std", "animus-std/agent-role-profiles"]
+acp-stdio-host = ["std", "coding-session-host", "dep:animus-acp-stdio-host"]
 coding-session-host = ["std", "runtime", "animus-std/coding-session-host"]
 durable-session-store = ["std", "runtime", "animus-std/durable-session-store"]
 std = ["dep:animus-std"]
@@ -96,6 +98,7 @@ steel = ["dep:animus-steel"]
 tui = ["std", "dep:animus-tui"]
 
 [dependencies]
+animus-acp-stdio-host = { path = "crates/animus-acp-stdio-host", version = "0.1.0", optional = true }
 animus-adapters = { path = "crates/animus-adapters", version = "0.1.0" }
 animus-core = { path = "crates/animus-core", version = "0.1.0" }
 animus-preserves = { path = "crates/animus-preserves", version = "0.1.0", optional = true }
