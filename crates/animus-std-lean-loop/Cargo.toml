@@ -1,0 +1,18 @@
+[package]
+name = "animus-std-lean-loop"
+description = "Optional bounded Lean 4 process-backed LoopFabric adapter for Animus."
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+animus-adapters = { path = "../animus-adapters", version = "0.1.0" }
+animus-runtime = { path = "../animus-runtime", version = "0.1.0", default-features = false }
+blake3 = { version = "1.8.5", default-features = false }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.150"

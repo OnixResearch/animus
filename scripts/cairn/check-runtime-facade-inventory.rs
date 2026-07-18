@@ -106,6 +106,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "dataset-export",
     "dogfood-smoke",
     "headless",
+    "lean-loop",
     "loop",
     "policy",
     "provenance",

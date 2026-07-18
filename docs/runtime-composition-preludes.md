@@ -21,7 +21,7 @@ The flat root exports remain compatibility surfaces. Do not remove or silently r
 
 ## Neutral loop fabric
 
-`LoopFabric` consumes `RuntimeLoopTurn` and returns `RuntimeLoopDecision`, so custom Rust, replay, or test fabrics do not construct Steel values. The default Steel runner is an adapter behind the `steel` feature, enabled by the default `compat` bundle.
+`LoopFabric` consumes `RuntimeLoopTurn` and returns `RuntimeLoopDecision`, so custom Rust, replay, or test fabrics do not construct Steel values. The default Steel runner is an adapter behind the `steel` feature, enabled by the default `compat` bundle. The non-default `lean-loop` feature adds a separately compiled Lean 4 process-backed fabric through the same neutral trait; Rust revalidates every candidate, and Steel remains the canonical scriptable fabric. See [the Lean 4 loop fabric](lean4-loop-fabric.md).
 
 The Nickel-governed Steel policy includes `default-loop` for a simple model-then-response fabric and `ralph-loop` for a bounded Ralph-style profile. `ralph-loop` repeats model turns until the previous model message is exactly `COMPLETE` after trimming or the runtime turn budget ends. That exact response is only a completion candidate: controller continuation waits for repository-selected passing evidence and a matching Cairn completion receipt when authoritative evidence is required. All PRD/progress loading, fresh sessions, VCS, validation, shell, browser, Cairn invocation, and persistence effects remain host-owned.
 

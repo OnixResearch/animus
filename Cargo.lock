@@ -107,6 +107,7 @@ dependencies = [
  "animus-router",
  "animus-runtime",
  "animus-std",
+ "animus-std-lean-loop",
  "animus-steel",
  "animus-tui",
  "basalt",
@@ -221,6 +222,17 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
+]
+
+[[package]]
+name = "animus-std-lean-loop"
+version = "0.1.0"
+dependencies = [
+ "animus-adapters",
+ "animus-runtime",
+ "blake3",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

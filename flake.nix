@@ -204,6 +204,7 @@
                 || baseName == "check-durable-session-store"
                 || baseName == "check-coding-session-host"
                 || baseName == "check-acp-stdio-host"
+                || baseName == "check-lean4-loop-fabric"
                 || baseName == "check-session-authority-profile"
                 || baseName == "check-adapter-conformance-index"
                 || baseName == "check-adapter-family-crates"
@@ -240,7 +241,9 @@
                 || baseName == "check-wasm-surface"
                 || baseName == "export-policy-projections"
                 || baseName == "generate-current-head-release-evidence-index"
+                || baseName == "lean-toolchain"
                 || pkgs.lib.hasSuffix ".json" baseName
+                || pkgs.lib.hasSuffix ".lean" baseName
                 || pkgs.lib.hasSuffix ".ncl" baseName
                 || pkgs.lib.hasSuffix ".rs" baseName
                 || pkgs.lib.hasSuffix ".scm" baseName
@@ -545,6 +548,16 @@
             sh scripts/cairn/check-acp-stdio-host --root .
           '';
 
+          lean4-loop-fabric = cargoCheck "animus-lean4-loop-fabric" [
+            pkgs.b3sum
+            pkgs.clippy
+            pkgs.gcc
+            pkgs.lean4
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-lean4-loop-fabric --root .
+          '';
+
           session-authority-profile = cargoCheck "animus-session-authority-profile" [
             pkgs.b3sum
             pkgs.diffutils
@@ -791,6 +804,7 @@
             clippy
             rust-analyzer
             gcc
+            lean4
             nickel
             pkg-config
             pre-commit

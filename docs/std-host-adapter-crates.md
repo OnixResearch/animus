@@ -59,6 +59,10 @@ Deterministic config parsing, provider selection, context planning, document/mod
 
 `animus-acp-stdio-host` is intentionally separate from `animus-std` and absent from default members. It depends on the non-default coding-session feature and owns only the reviewed ACP schema mapping plus bounded local stdio shell. Reusable crates and default/no-std/Wasm feature graphs do not acquire its ACP cohort or entrypoint. See [`acp-stdio-host.md`](acp-stdio-host.md).
 
+## Optional Lean 4 loop-fabric crate
+
+`animus-std-lean-loop` is intentionally separate from `animus-std` and absent from default members. The `lean-loop` root feature supplies one exact process-backed implementation of `animus_runtime::LoopFabric`; it verifies an explicit compiled Lean artifact, clears the environment, owns bounded JSON-line pipes/deadlines/cancellation/cleanup, and reconstructs candidates through current Rust model/tool/response contracts. It does not own runtime sequencing, adapters, sessions, transcripts, or completion, and it never falls back to Steel. See [`lean4-loop-fabric.md`](lean4-loop-fabric.md).
+
 ## Verification and non-claims
 
 Focused checks:
@@ -72,6 +76,7 @@ cargo test -p animus-std --features sandlock-host sandlock_host --locked
 scripts/cairn/check-sandlock-host --root .
 scripts/cairn/check-durable-session-store --root .
 scripts/cairn/check-coding-session-host --root .
+scripts/cairn/check-lean4-loop-fabric --root .
 scripts/cairn/check-component-catalog --root .
 scripts/cairn/check-runtime-facade-inventory --root .
 scripts/cairn/check-request-lifecycle --root .

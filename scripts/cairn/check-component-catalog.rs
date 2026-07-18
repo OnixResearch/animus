@@ -85,6 +85,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "provider-retry",
     "coding-session-host",
     "acp-stdio-host",
+    "lean-loop",
     "sandlock-host",
     "session-tree-export",
     "durable-session-store",

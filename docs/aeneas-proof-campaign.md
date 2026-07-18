@@ -8,7 +8,11 @@ runtime export is
 Runtime code never evaluates Nickel. Hosts load the generated profile, resolve
 existing recipes, roles, model profiles, tool catalogs, injected services, and
 safe-receipt policy, then pass already-loaded metadata into the pure contracts
-in `animus_runtime::aeneas_proof_campaign`.
+in `animus_runtime::aeneas_proof_campaign`. This campaign proves selected
+Rust-derived statements through external Aeneas/Lean providers; it is separate
+from the optional [Lean 4 loop fabric](lean4-loop-fabric.md), whose maintained
+theorems cover only its repository-owned encoded fabric kernel and do not
+certify Aeneas campaigns or Rust/Lean semantic equivalence.
 
 ## Composition and authority
 

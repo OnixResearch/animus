@@ -28,6 +28,8 @@ See [docs/safety-contract.md](docs/safety-contract.md) for the durable repo-owne
 
 See [docs/acp-stdio-host.md](docs/acp-stdio-host.md) for the non-default bounded local-stdio ACP host, exact reviewed protocol cohort, one-facade ownership, additive permissions, safe events/receipts, dependency isolation, and non-claims.
 
+See [docs/lean4-loop-fabric.md](docs/lean4-loop-fabric.md) for the non-default compiled Lean 4 `LoopFabric`, checked kernel theorems, bounded child protocol, Rust candidate revalidation, exact artifact/profile identities, dependency isolation, and non-claims.
+
 See [docs/goose-message-queue-interrupts.md](docs/goose-message-queue-interrupts.md) for the pure queued-message reducer, interrupt classifier, fail-closed controls, and safe receipt boundary, and [docs/goose-remote-server-admission.md](docs/goose-remote-server-admission.md) for Goose-style remote backend descriptors, host-supplied handshake summaries, fail-closed admission, and safe receipts.
 
 See [docs/portfolio-search.md](docs/portfolio-search.md) for the pure bounded portfolio state machine, mechanism registry, delayed cross-pollination, gap-strength gates, adversarial audit, honest terminal outcomes, and safe receipt boundary.

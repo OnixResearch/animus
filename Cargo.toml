@@ -11,6 +11,7 @@ members = [
   "crates/animus-router",
   "crates/animus-runtime",
   "crates/animus-std",
+  "crates/animus-std-lean-loop",
   "crates/animus-std-observability",
   "crates/animus-steel",
   "crates/animus-tui",
@@ -80,6 +81,7 @@ agent-role-profiles = ["std", "animus-std/agent-role-profiles"]
 acp-stdio-host = ["std", "coding-session-host", "dep:animus-acp-stdio-host"]
 coding-session-host = ["std", "runtime", "animus-std/coding-session-host"]
 durable-session-store = ["std", "runtime", "animus-std/durable-session-store"]
+lean-loop = ["runtime", "dep:animus-std-lean-loop"]
 std = ["dep:animus-std"]
 iroh-host = ["std", "animus-std/iroh-host"]
 iroh-syndicate-host = ["std", "animus-std/iroh-syndicate-host"]
@@ -105,6 +107,7 @@ animus-preserves = { path = "crates/animus-preserves", version = "0.1.0", option
 animus-router = { path = "crates/animus-router", version = "0.1.0", optional = true }
 animus-runtime = { path = "crates/animus-runtime", version = "0.1.0", optional = true }
 animus-std = { path = "crates/animus-std", version = "0.1.0", optional = true }
+animus-std-lean-loop = { path = "crates/animus-std-lean-loop", version = "0.1.0", optional = true }
 animus-steel = { path = "crates/animus-steel", version = "0.1.0", optional = true }
 animus-tui = { path = "crates/animus-tui", version = "0.1.0", optional = true }
 basalt = { git = "ssh://git@github.com/OnixResearch/basalt.git", rev = "005e1496a4a1be477ba84008ecbcdf8793a236c6", optional = true }

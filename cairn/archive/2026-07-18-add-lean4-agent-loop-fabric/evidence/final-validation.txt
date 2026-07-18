@@ -1,0 +1,37 @@
+status: passed
+change: add-lean4-agent-loop-fabric
+date: 2026-07-18
+
+Final-source evidence:
+- `nix develop -c scripts/cairn/check-lean4-loop-fabric --root .`: passed.
+- Focused source identity (domain-separated BLAKE3): `99cd2d87f354e9b256fe70a7b94baaf7c7bfb4d6c5d09cd9f4ae69af1f9350f2`.
+- Reviewed proof-source identity (domain-separated BLAKE3): `d8e0ffd0ae32507bb7051c5b77e162f76484debde12a32d09f40616fed7c0c54`.
+- Checked profile identity (domain-separated BLAKE3): `6f53d802197d295650d6db5e1f6252bfe2695c6969c46822dea57e8383c6f8d0`.
+- Actual compiled Lean executable identity (domain-separated BLAKE3): `54d3105b8c034c3fbeaf12c16b8b6b24d4e47a8abdba766069e71f6ebcecb381`.
+- Lean 4.30.0 Lake build, pure-kernel tests, named theorem suite, and reviewed axiom allowlist: passed.
+- Actual compiled Lean child plus fixture-child success/failure protocol cases: passed.
+- `cargo test -p animus-std-lean-loop --all-targets`: passed, including current runtime model/event/max-turn ownership tests and negative transport/receipt cases.
+- `cargo test --workspace`: passed.
+- `cargo clippy --workspace --all-targets -- -D warnings`: passed.
+- `cargo tigerstyle check`: passed.
+- `scripts/config/check-nickel-configs`: passed.
+- `scripts/cairn/check-component-catalog`: passed.
+- Root `lean-loop`, default, no-default, and actual `wasm32-unknown-unknown` checks: passed in the focused rail.
+- `nix build .#checks.x86_64-linux.lean4-loop-fabric -L`: passed against staged final source.
+- `cargo fmt --all -- --check`: passed.
+
+Lifecycle evidence:
+- Pinned Cairn repository validation: passed with no issues.
+- Proposal, design, and tasks gates: passed; 23/23 tasks complete.
+- Automated sync preflight is blocked by four unrelated accepted-spec `delta_merge.accepted_identity_cardinality` diagnostics. All nine reviewed `agent_harness_runtime.lean4_loop.*` requirements were merged manually into the accepted specification without altering those unrelated blocks.
+
+Bounded blockers:
+- `scripts/cairn/check-runtime-facade-inventory` remains globally blocked by 23 pre-existing unclassified Aeneas, authoritative-completion, Sandlock, Steel, and agent-check exports. It reports no unclassified or invalid Lean-loop export; `animus::lean_loop` is classified as the optional shell-owned `loop` family facade.
+- Pinned Cairn traceability coverage cannot parse the repository generated policy because `gate_policy.substance` is absent. Exact inspection confirms each of the nine Lean requirement IDs is present once in the accepted spec; this does not promote the globally blocked traceability rail to passed evidence.
+
+Claim boundaries:
+- The Lean theorems cover only the encoded pure kernel and reviewed reference phase sequence.
+- Lean output remains an untrusted candidate reconstructed through current Rust contracts before runtime admission or dispatch.
+- Fixture-only sandbox evidence does not establish child confinement or external sandbox correctness.
+- Executable hashing is a pre-launch identity observation, not atomic hash-to-spawn path pinning.
+- No theorem-to-Rust equivalence, provider/tool correctness, transcript/session correctness, authoritative completion, whole-agent correctness, production readiness, or release eligibility is claimed.
