@@ -1,0 +1,24 @@
+status: passed
+change: add-mesh-llm-provider-adapter
+profile: private-responses-exact-model-v1
+
+Passed deterministic evidence:
+- Checked Nickel profile and standalone export parity bind private-only posture, explicit Responses style, exact-model selection, `auto`/`mesh` denial, no provider fallback, conservative unknown capabilities, safe bounds, redaction, and non-claims.
+- No-std pure tests cover bounded deterministic catalog normalization, duplicate/unsafe/virtual rejection, exact capability and budget admission, response-model substitution, authority-before-effect, and metadata-only receipts.
+- Non-default std-host tests cover an injected bounded transport, admitted exact-model dispatch, denied authority before contact, timeout/cancellation classes, profile revalidation, and response substitution.
+- Existing reviewed Responses concrete and streaming fixtures cover content, tools, usage, structured response projection, stream/error/cancellation parsing, and canonical normalization for the explicitly selected API style.
+- Source guards reject HTTP/Iroh client construction, environment/process discovery, Mesh lifecycle, and invite handling in adapter sources.
+- Focused tests, Clippy, default/no-default checks, Nickel drift, component catalog, and `nix build .#checks.x86_64-linux.mesh-provider -L` passed.
+- Cairn repository validation and proposal/design/tasks gates passed with 18/18 tasks complete.
+- Automated sync was blocked by four unrelated accepted-spec cardinality diagnostics; all seven reviewed `agent_harness_runtime.mesh_llm_provider.*` requirements were merged manually without changing those unrelated requirements.
+
+Live/deployment boundary:
+- No operator-supplied live Mesh endpoint/model or OnixOS deployment was available. Live transport, GPU, peer, split, WAN, and deployment evidence are absent and remain explicit non-claims; deterministic fixture conformance does not promote them.
+
+Non-claims:
+- not remote runtime integrity
+- not peer honesty
+- not physical-route truth
+- not model correctness or exact model bytes
+- not split parity
+- not confidentiality, performance, production readiness, or release eligibility

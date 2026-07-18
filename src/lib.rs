@@ -69,6 +69,16 @@ pub mod codebase_graph {
     };
 }
 
+/// Non-default exact-model Mesh provider contracts and injected host adapter.
+#[cfg(feature = "mesh-provider")]
+pub mod mesh_provider {
+    pub use animus_adapters::mesh::*;
+    pub use animus_std::mesh::{
+        InferenceRequest, MeshHostError, MeshProfile, MeshTransport, ProviderObservation,
+        TransportOutcome, TransportRequest, TransportStatus, execute, parse_profile,
+    };
+}
+
 /// Re-export of the non-default ACP stdio host adapter.
 #[cfg(feature = "acp-stdio-host")]
 pub use animus_acp_stdio_host as acp_stdio_host;

@@ -19,6 +19,7 @@ session_authority_profile_source_file=${repo_root}/config/session-authority-prof
 lean_loop_profile_source_file=${repo_root}/config/lean-loop-profile.ncl
 agent_guardrail_profile_source_file=${repo_root}/config/agent-guardrail-profile.ncl
 codebase_graph_profile_source_file=${repo_root}/config/codebase-graph-profile.ncl
+mesh_provider_profile_source_file=${repo_root}/config/mesh-provider-profile.ncl
 
 if ! command -v nickel >/dev/null 2>&1; then
   printf '%s\n' 'error: nickel is required to export repo config. Run inside `nix develop`.' >&2
@@ -45,3 +46,4 @@ nickel export --format json --field session_authority_profile "${session_authori
 nickel export --format json --field lean_loop_profile "${lean_loop_profile_source_file}" > "${target_root}/config/generated/lean-loop-profile.json"
 nickel export --format json --field agent_guardrail_profile "${agent_guardrail_profile_source_file}" > "${target_root}/config/generated/agent-guardrail-profile.json"
 nickel export --format json --field codebase_graph_profile "${codebase_graph_profile_source_file}" > "${target_root}/config/generated/codebase-graph-profile.json"
+nickel export --format json --field mesh_provider_profile "${mesh_provider_profile_source_file}" > "${target_root}/config/generated/mesh-provider-profile.json"

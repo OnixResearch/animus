@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+root="."
+if [[ "${1:-}" == "--root" ]]; then root="${2:?missing --root value}"; fi
+cd "$root"
+
+if [[ "${ANIMUS_MESH_SKIP_NICKEL:-0}" != "1" ]]; then
+  scripts/config/check-nickel-configs
+fi
+cargo test -p animus-adapters mesh
+cargo test -p animus-std --no-default-features --features mesh-provider mesh
+cargo test -p animus-std providers::tests::concrete
+cargo test -p animus-std providers::tests::streaming
+cargo clippy -p animus-std --no-default-features --features mesh-provider --all-targets -- -D warnings
+cargo check -p animus-std --no-default-features
+
+if grep -E 'reqwest|iroh|std::env|std::process|Command::new|mesh-llm|invite.*token' crates/animus-adapters/src/mesh.rs crates/animus-std/src/mesh.rs; then
+  echo "Mesh adapter acquired forbidden ambient transport or lifecycle authority" >&2
+  exit 1
+fi
+
+echo "mesh provider focused rail passed"

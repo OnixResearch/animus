@@ -46,6 +46,8 @@ mod ledger;
 mod lens;
 mod manifest;
 mod mcpapp;
+/// Pure Mesh LLM catalog, exact-model, authority, and receipt contracts.
+pub mod mesh;
 mod modefsm;
 mod model;
 mod modelevidence;

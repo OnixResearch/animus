@@ -21,3 +21,7 @@ The concrete request builder projects canonical messages, content parts, tool de
 ## Optional live smoke
 
 Live provider smoke is intentionally non-default. A host may add a separate, explicitly configured smoke check with credentials and network access, but archive evidence for this change is deterministic fixture dispatch, projection literals, parity inventory, fail-closed cases, response normalization, receipt-leak rejection, and Cairn validation. No default live-provider availability, provider reliability, credential storage, OAuth, retry, router, or fallback claim is made.
+
+## Optional Mesh gateway
+
+The non-default Mesh adapter reuses the reviewed Responses style only after its checked profile, bounded catalog, exact-model, authority, response-fidelity, and failure fixtures pass. It receives a caller-owned transport rather than constructing HTTP or Iroh clients, and it never performs provider-side model selection, local retry, or fallback. See [Mesh LLM provider adapter](mesh-provider.md).

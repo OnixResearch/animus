@@ -51,6 +51,8 @@ mod iroh;
 // r[impl agent_harness_runtime.syndicate_iroh_bridge.feature]
 #[cfg(feature = "iroh-syndicate-host")]
 mod irohsyndicate;
+#[cfg(feature = "mesh-provider")]
+pub mod mesh;
 mod modelevidence;
 #[cfg(feature = "model-runtime-profiles")]
 mod modelprofiles;

@@ -80,6 +80,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "dataset-export",
     "headless",
     "loop",
+    "mesh-provider",
     "model-runtime-profiles",
     "agent-role-profiles",
     "provider-retry",
