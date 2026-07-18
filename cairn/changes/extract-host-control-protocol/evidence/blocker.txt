@@ -1,0 +1,29 @@
+status: blocked
+change: extract-host-control-protocol
+candidate_repository: /home/brittonr/git/OnixResearch/host-control
+candidate_revision: b485fec
+canonical_repository: ssh://git@github.com/OnixResearch/host-control.git
+
+Completed local evidence:
+- Created an independent git-only sibling repository with README, AGENTS guidance, MIT-or-Apache package metadata, typed Nickel release profile, native Cairn lifecycle, and no Animus/Tile dependency.
+- Extracted `host-control-core` as `#![no_std]` plus `alloc` with selector, topology, bounded observation, layout, event, wait, error, feature, envelope, explicit Animus/Tile status mapping, scoped-index, and snapshot-first stream semantics.
+- Added optional serde wire DTO revalidation and retained serialization/transport authority outside the core.
+- Positive and negative tests cover current Animus behavior plus Tile mapping, lossy status, stale scope/revision, and incremental-before-snapshot failures.
+- `cargo test --workspace`, serde-feature tests, workspace/default and serde Clippy with `-D warnings`, `wasm32-unknown-unknown` check, Nickel typecheck, and Cairn validation passed through the pinned development tools.
+- Local candidate commit: `b485fec separate neutral host semantics from product authority`.
+
+Exact blocker:
+- `https://api.github.com/repos/OnixResearch/host-control` returns 404; the canonical repository does not exist or is not publicly reachable.
+- Animus requirements reject workspace-relative, release-local, branch-only, tag-only, or unreachable dependency sources. The local candidate commit therefore cannot satisfy the immutable published source pin, Cargo lock agreement, source-freshness rail, or compatibility-facade cutover.
+- Creating/pushing the canonical remote and publishing the Tile handoff require external repository/push authority. Push was not explicitly requested and is prohibited by agent policy without that explicit request.
+- Preserves adapter release work and the Tile-owned Cairn adoption package remain downstream of the published canonical source.
+
+Next best check:
+1. An authorized operator creates `OnixResearch/host-control` and pushes local commit `b485fec` without rewriting it.
+2. Verify the remote commit is reachable at the canonical SSH coordinate.
+3. Pin Animus and Tile to that exact revision, replace the Animus semantic implementation with a re-export/conversion-only facade, run source/lock/no-fork/conformance/Nix rails, then sync and archive this change.
+
+Non-claims:
+- local candidate identity is not a published release identity
+- copied-and-extended fixtures do not prove arbitrary Animus/Tile behavioral equivalence
+- no daemon, transport-security, PTY/process preservation, terminal-truth, policy-authorization, or product-readiness claim
