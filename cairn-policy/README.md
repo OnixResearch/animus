@@ -1,6 +1,8 @@
 # Cairn policy
 
-`generated/cairn-policy.json` is the repo-local Cairn runtime policy artifact used by default lifecycle validation. Runtime validation consumes this generated JSON; it does not execute Nickel while validating Animus lifecycle artifacts.
+`generated/cairn-policy.json` is the repository-local Cairn runtime policy artifact.
+
+Default lifecycle validation consumes this generated JSON. It does not execute Nickel while it validates Animus lifecycle artifacts.
 
 Source: the canonical Cairn policy export from `github.com/OnixResearch/cairn`, pinned in this repository's flake input as `cairn`.
 
@@ -35,4 +37,11 @@ cd /path/to/animus
 nix run .#cairn -- validate --root . --policy cairn-policy/generated/cairn-policy.json
 ```
 
-When refreshing the generated policy, record the Cairn revision or package identity, the drift-check result, the policy hash reported by Cairn validation, and the validation command used so lifecycle evidence can be reproduced.
+When you refresh the policy, record these items:
+
+- Cairn revision or package identity
+- drift-check result
+- policy hash from Cairn validation
+- validation command
+
+These records make the lifecycle evidence reproducible.
