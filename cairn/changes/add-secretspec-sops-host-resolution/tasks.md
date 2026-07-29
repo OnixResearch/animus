@@ -1,33 +1,46 @@
-## Phase 1: Baseline, cohort, and policy
+# Tasks
 
-- [ ] [serial] Establish and record focused positive and negative baselines for injected services, safe receipts, process-job bounds, capability-rooted file access, feature isolation, and no-std/Wasm surfaces before implementation. r[agent_harness_runtime.secret_resolution.contract] r[agent_harness_runtime.secret_resolution.authority]
-- [ ] [serial] Record exact reviewed SecretSpec release/SDK and SOPS release/docs/source/license identities, including deterministic evidence that native SecretSpec SOPS support is released and compatible or remains unsupported; do not pin an unreleased branch or pull request. r[agent_harness_runtime.secret_resolution.secretspec] r[agent_harness_runtime.secret_resolution.sops_compatibility]
-- [ ] [serial] Add typed Nickel resolver policy for closed resolver kinds, project/profile/provider/key identities, reasons, destinations, formats, lexical paths, explicit environment-key names, count/byte/deadline bounds, audit posture, and required non-claims, plus a checked generated Rust projection. r[agent_harness_runtime.secret_resolution.policy] r[agent_harness_runtime.secret_resolution.authority]
-- [ ] [parallel] Add positive and negative Nickel fixtures for valid SecretSpec/SOPS profiles and unknown kinds, duplicate ids, plaintext values, unsafe paths, unsupported formats/cohorts, zero/excessive bounds, broad environment inheritance, missing reasons, and weakened non-claims. r[agent_harness_runtime.secret_resolution.policy] r[agent_harness_runtime.secret_resolution.verification]
+## 1. Pin and baseline
 
-## Phase 2: Authority-free contract and pure core
+- [ ] [serial] 1.1 Run the focused credential and adapter tests before core changes and record baseline failures. r[credentials.secretspec.provider_conformance]
+- [ ] [serial] 1.2 Pin SecretSpec `v0.17.0` and tag commit `a8794e46ec9664a0e1a3869cc3105d0853937e48` through Cargo and Nix dependency inputs. r[credentials.secretspec.explicit_resolution]
+- [ ] [serial] 1.3 Enable only the provider features required by the accepted Animus profiles. r[credentials.secretspec.explicit_resolution]
+- [ ] [serial] 1.4 Record the upstream license, source identity, feature set, and SOPS child-process limitation. r[credentials.secretspec.bounded_provider_execution]
 
-- [ ] [serial] Add `animus-adapter-secrets` with request, declaration/reference, capability, admission-plan, typed observation/failure, destination, redaction, and safe-receipt values; keep it `no_std + alloc` and free of provider clients and I/O. r[agent_harness_runtime.secret_resolution.contract] r[agent_harness_runtime.secret_resolution.receipts]
-- [ ] [serial] Implement pure validation, capability negotiation, admission, observation classification, and receipt construction over explicit inputs with BLAKE3 identities only for non-secret configuration/reference material. r[agent_harness_runtime.secret_resolution.contract] r[agent_harness_runtime.secret_resolution.policy] r[agent_harness_runtime.secret_resolution.receipts]
-- [ ] [serial] Add a non-serializable, non-debuggable, non-cloneable, non-hashable ephemeral secret delivery type and prove reusable runtime state/events/receipts cannot accept it as persisted evidence. r[agent_harness_runtime.secret_resolution.material]
-- [ ] [parallel] Add positive and negative pure tests for admitted requests and every malformed id/profile/key/path/reason/destination/capability/bound, missing service, unsupported cohort, unsafe receipt field, plaintext serialization/debug attempts, and value-derived hash attempts. r[agent_harness_runtime.secret_resolution.verification] r[agent_harness_runtime.secret_resolution.receipts]
+## 2. Build the functional core
 
-## Phase 3: Optional SecretSpec host
+- [ ] [serial] 2.1 Add typed credential requirements, profile and scope selection, provider allowlists, and stable rejection categories. r[credentials.secretspec.explicit_resolution]
+- [ ] [serial] 2.2 Reject implicit profiles, unknown declarations, undeclared scopes, provider fallback, and write requests. r[credentials.secretspec.explicit_resolution] r[credentials.secretspec.read_only]
+- [ ] [serial] 2.3 Add positive tests for valid selections and negative tests for each rejection path. r[credentials.secretspec.provider_conformance]
+- [ ] [serial] 2.4 Add assertions that public metadata cannot contain secret values or provider credentials. r[credentials.secretspec.no_durable_secret_material]
 
-- [ ] [serial] Add opt-in `animus-std-secrets` SecretSpec integration at the exact reviewed release, loading only an explicit manifest/profile/provider and resolving one admitted key without process-global environment mutation, generation, migration/import, login, or bulk export behavior. r[agent_harness_runtime.secret_resolution.secretspec] r[agent_harness_runtime.secret_resolution.authority]
-- [ ] [serial] Map SecretSpec success, optional/missing/required keys, invalid manifest/profile/provider/reference, unavailable credentials, provider denial, path-secret cleanup, cancellation where supported, and fixed safe failures into the shared typed observation without retaining provider text or values. r[agent_harness_runtime.secret_resolution.secretspec] r[agent_harness_runtime.secret_resolution.receipts]
-- [ ] [parallel] Add fake-provider positive and negative tests for one-key delivery, missing/optional/required behavior, profile/provider selection, reference coordinates, path-secret lifetime, reason propagation, audit-write failure, provider errors containing sentinels, no global env mutation, and no plaintext in rendered/persistable surfaces. r[agent_harness_runtime.secret_resolution.secretspec] r[agent_harness_runtime.secret_resolution.verification]
+## 3. Build the imperative shell
 
-## Phase 4: Optional bounded SOPS host
+- [ ] [serial] 3.1 Add the optional `std` SecretSpec SDK adapter and keep it out of `no_std` crates. r[credentials.secretspec.functional_boundary]
+- [ ] [serial] 3.2 Add an internal resolver worker for providers that can launch child processes. r[credentials.secretspec.bounded_provider_execution]
+- [ ] [serial] 3.3 Execute that worker through `bounded-exec` with named deadline, input, output, and teardown limits. r[credentials.secretspec.bounded_provider_execution]
+- [ ] [serial] 3.4 Return secret material in secrecy-aware containers and clear temporary buffers where supported. r[credentials.secretspec.no_durable_secret_material]
+- [ ] [serial] 3.5 Disable SecretSpec write operations and plaintext caches for this adapter. r[credentials.secretspec.read_only] r[credentials.secretspec.no_durable_secret_material]
 
-- [ ] [serial] Add direct SOPS resolution through one exact configured executable, capability-confined encrypted-file input, explicit argv/environment names, shared bounded child execution, documented initial format subset, bounded in-memory duplicate-rejecting parse, one lexical key extraction, and immediate plaintext drop. r[agent_harness_runtime.secret_resolution.sops] r[agent_harness_runtime.secret_resolution.authority]
-- [ ] [serial] Reject traversal/symlink escape, executable ambiguity, unsupported/binary confusion, duplicate or missing keys, malformed or oversized output, invalid UTF-8 where required, timeout, cancellation, truncation, stderr-sensitive failure, nonzero exit, signal/cleanup uncertainty, and selected-value overflow before delivery. r[agent_harness_runtime.secret_resolution.sops] r[agent_harness_runtime.secret_resolution.receipts]
-- [ ] [parallel] Add synthetic encrypted-file and fake-executable positive/negative fixtures covering exact argv/environment, bounded streams/deadlines/teardown, no decrypted temp file, no ambient fallback, hostile output/error sentinels, and safe receipt behavior. r[agent_harness_runtime.secret_resolution.sops] r[agent_harness_runtime.secret_resolution.verification]
-- [ ] [serial] Add the native SecretSpec SOPS compatibility gate; enable combined mode only for a pinned released cohort that passes provider/address/error/redaction fixtures, otherwise preserve a deterministic unsupported result while direct SOPS remains distinct. r[agent_harness_runtime.secret_resolution.sops_compatibility]
+## 4. Verify providers and failures
 
-## Phase 5: Isolation, evidence, and successor readiness
+- [ ] [serial] 4.1 Add positive environment, systemd credential, and SOPS provider fixtures. r[credentials.secretspec.provider_conformance]
+- [ ] [serial] 4.2 Add negative fixtures for missing manifests, profiles, scopes, declarations, provider credentials, and executables. r[credentials.secretspec.provider_conformance]
+- [ ] [serial] 4.3 Add malformed SOPS, nonzero exit, timeout, cancellation, and oversized-output tests. r[credentials.secretspec.bounded_provider_execution] r[credentials.secretspec.provider_conformance]
+- [ ] [serial] 4.4 Prove through tests that diagnostics, transcripts, receipts, and snapshots contain no secret or value-derived hash. r[credentials.secretspec.no_durable_secret_material]
 
-- [ ] [serial] Wire optional facade exports and feature gates without changing default, no-std, Wasm, core, adapter, runtime, Steel, TUI, or unrelated std dependency/authority surfaces. r[agent_harness_runtime.secret_resolution.authority]
-- [ ] [parallel] Update component/contract indexes, focused verification docs, README references, and non-claims; record the exact immutable Animus revision and public API needed by the blocked Lattice successor without adding a workspace-relative runtime dependency. r[agent_harness_runtime.secret_resolution.authority] r[agent_harness_runtime.secret_resolution.verification]
-- [ ] [serial] Run focused crate tests, negative leak fixtures, Nickel projection freshness, adapter/component/contract rails, no-std/Wasm checks, Tiger Style/Clippy, Cairn validation and proposal/design/tasks gates, and the smallest applicable Nix checks; preserve exact blockers and evidence. r[agent_harness_runtime.secret_resolution.verification]
-- [ ] [serial] Sync accepted requirements, verify markers reached `cairn/specs/agent-harness-runtime/spec.md`, archive only after the consumable revision and conformance evidence exist, and then unblock but do not implement the Lattice successor Cairn. r[agent_harness_runtime.secret_resolution.verification] [depends:lattice.credentials.animus_secret_providers]
+## 5. Integrate and document
+
+- [ ] [serial] 5.1 Wire resolved credentials into one representative host adapter without changing its pure core. r[credentials.secretspec.functional_boundary]
+- [ ] [serial] 5.2 Document profile, scope, provider, deployment, rotation, and rollback procedures. r[credentials.secretspec.explicit_resolution]
+- [ ] [serial] 5.3 Document that SecretSpec and SOPS resolve values but do not establish caller authority. r[credentials.secretspec.no_durable_secret_material]
+- [ ] [serial] 5.4 Publish the immutable validated revision required by Lattice. r[credentials.secretspec.provider_conformance]
+
+## 6. Validate
+
+- [ ] [serial] 6.1 Run `cargo fmt --all -- --check`. r[credentials.secretspec.provider_conformance]
+- [ ] [serial] 6.2 Run focused positive and negative credential tests. r[credentials.secretspec.provider_conformance]
+- [ ] [serial] 6.3 Run `cargo check --workspace --all-targets`. r[credentials.secretspec.functional_boundary]
+- [ ] [serial] 6.4 Run `cargo clippy --workspace --all-targets -- -D warnings`. r[credentials.secretspec.functional_boundary]
+- [ ] [serial] 6.5 Run `check-nickel-configs` and the relevant `nix flake check` targets. r[credentials.secretspec.explicit_resolution]
+- [ ] [serial] 6.6 Run Cairn validation, requirement coverage, design gate, and tasks gate. r[credentials.secretspec.provider_conformance]

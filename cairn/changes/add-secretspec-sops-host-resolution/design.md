@@ -1,115 +1,83 @@
+# Design: SecretSpec host credential resolution
+
 ## Context
 
-SecretSpec separates a checked-in declaration from provider-owned values. Its Rust SDK can select a manifest profile and provider, validate required keys, resolve values, materialize path secrets, and emit metadata-only local audit records. SOPS instead decrypts YAML, JSON, ENV, INI, or binary files using host-owned AWS KMS, GCP KMS, Azure Key Vault, age, or PGP authority.
+SecretSpec separates declarations from provider-owned values. Profiles and scopes select which declarations an application can resolve. Its audit records omit values and redact provider credentials.
 
-The reviewed SecretSpec material explicitly describes these as different layers. On 2026-07-23 its documentation called native SOPS support an open proposal. Animus therefore needs two explicit host mechanisms behind one authority-free request contract, not a fabricated claim that the released SecretSpec cohort already implements SOPS.
+The assessed upstream release is `v0.17.0`, tag commit `a8794e46ec9664a0e1a3869cc3105d0853937e48`. Its native SOPS provider invokes the `sops` executable with `std::process::Command`. The upstream provider does not expose Animus process deadlines or output limits. Animus must therefore place any such resolution inside its own bounded process boundary.
 
-## Success Contract
+## Goals
 
-Completion requires one pure contract plus two optional, bounded host adapters with deterministic positive and negative conformance evidence. Passing compilation, resolving only environment-backed examples, invoking `sops` through an unrestricted shell string, or logging a provider success without proving plaintext omission is insufficient.
-
-False completion includes:
-
-- storing a `String` secret inside a serializable/debuggable request, result, event, receipt, or runtime state;
-- hashing secret bytes into cache or evidence identity;
-- inheriting the complete host environment into a SOPS process;
-- writing a decrypted document to a temporary path;
-- treating SecretSpec's non-blocking local audit as durable authoritative evidence;
-- enabling a `secretspec+sops` mode from unreleased documentation or an unpinned branch;
-- describing successful decryption as proof of authorization, encryption correctness, confidentiality, or provider truth.
+- Use the SecretSpec Rust SDK as the single host-side declaration and provider interface.
+- Keep validation deterministic and provider access explicit.
+- Bound provider processes, output, and teardown.
+- Prevent secret material from entering durable evidence.
+- Give downstream adapters one narrow credential API.
 
 ## Architecture
 
 ```text
-Nickel resolver policy -> checked generated projection
-                         |
-                         v
-SecretResolutionCore (pure)
-  descriptor + request + explicit capability facts
-  -> admitted plan | stable rejection
-                         |
-                         v
-Injected SecretResolutionService (host-owned)
-  +----------------------+--------------------+
-  |                                           |
-SecretSpecHost                              SopsHost
-pinned SDK/provider config                 capability file + bounded child
-  |                                           |
-  +-------------> EphemeralSecret ------------+
-                    |
-                    v
-             caller-owned effect boundary
-                    |
-                    v
-             safe metadata receipt core
+host configuration
+  -> pure request validation
+  -> imperative SecretSpec resolver shell
+  -> bounded resolver worker when provider execution is possible
+  -> SecretSpec SDK and selected provider
+  -> opaque credential material
+  -> existing typed adapter input
 ```
 
-`animus-adapter-secrets` owns DTOs, admission, failure classes, provider capabilities, and safe receipt construction. It is `no_std + alloc`, performs no I/O, and depends only on authority-free crates. `animus-std-secrets` owns concrete SecretSpec SDK use, encrypted file access, bounded SOPS process invocation, output parsing, ephemeral memory, and shell diagnostics.
+### Functional core
 
-## Decisions
+The core accepts declaration metadata, an explicit profile, an explicit scope, a requested credential name, and caller policy. It returns either a validated resolution request or a typed rejection.
 
-### Decision: model declaration and storage separately
+The core does not read files, environment variables, clocks, process state, or provider values. It rejects unknown declarations, undeclared scopes, implicit profiles, write requests, and disallowed provider schemes.
 
-**Choice:** Requests name an Animus resolver id, SecretSpec project/profile/key identities or a SOPS document/key-path identity, a safe purpose/reason code, a destination binding, and explicit bounds. Resolver kind is a closed enum. SOPS is not represented as a SecretSpec provider until a pinned released SDK proves that capability.
+### Imperative shell
 
-**Rationale:** SecretSpec declares and resolves application requirements; SOPS encrypts files. Preserving that distinction prevents storage encryption from being promoted into application-interface, authorization, or audit claims.
+The shell loads the manifest, constructs the pinned SecretSpec SDK resolver, and obtains values from the selected provider. Provider paths that can launch commands run in a dedicated internal worker through `bounded-exec`.
 
-### Decision: keep material outside serializable DTOs
+The worker receives only the minimum manifest coordinates and provider credentials. It returns a bounded value through a private pipe. The parent closes the pipe after one read and clears temporary buffers where the Rust type permits it.
 
-**Choice:** Planning DTOs and receipts contain safe labels, reference identities, policy identities, counts, statuses, and BLAKE3 hashes of non-secret configuration. Plaintext is returned only in an `EphemeralSecret` host value that omits `Serialize`, `Deserialize`, `Clone`, `Debug`, equality, display, and content hashing and exposes a borrow only to the immediate caller-owned delivery closure.
+## Provider policy
 
-**Rationale:** Type shape should make accidental persistence and logging harder. Animus does not hash values because low-entropy secrets can be attacked through value-derived digests.
+- Environment providers are for explicit development and CI profiles.
+- Systemd credential providers are the preferred service path.
+- SOPS providers are allowed only by an explicit profile and scope.
+- Provider fallback is disabled unless the manifest declares an ordered policy that the caller also allows.
+- SecretSpec write operations are not exposed through the Animus adapter.
+- SOPS stderr is mapped to a typed, redacted error. It is not copied verbatim into receipts.
 
-### Decision: use a pure admission core and thin host shells
+## Data model
 
-**Choice:** Admission consumes a request, loaded policy, provider capability facts, and explicit availability facts. It checks resolver identity, project/profile/key shape, purpose, destination, declared capability, format, lexical path/key segments, and named bounds before returning a plan. Shells perform only the admitted I/O and return a typed observation for pure receipt construction.
+`CredentialRequirement` contains public metadata: logical name, required scope, allowed provider schemes, and purpose.
 
-**Rationale:** All policy branches remain testable without standing up SecretSpec, SOPS, KMS, files, or processes.
+`ResolvedCredential` contains secret material plus public origin metadata. The origin records the manifest identity, profile name, scope name, provider scheme, and declaration name. It does not record a provider URI when that URI can contain credentials.
 
-### Decision: pin SecretSpec and isolate it behind an optional host crate
+Secret values use secrecy-aware and zeroizing containers where supported. Pure adapter logic receives an opaque borrowed value and does not own provider access.
 
-**Choice:** Implementation selects an exact released SecretSpec SDK cohort after license/API review and enables it only in `animus-std-secrets`. Manifest and machine provider configuration remain caller-selected. The adapter requests one admitted key and does not call `set_as_env_vars`, import/migration, generation, provider login, or bulk profile injection.
+## Evidence and diagnostics
 
-**Rationale:** Direct SDK use avoids parsing secret-bearing CLI output while keeping provider network/filesystem behavior in an opt-in std shell. Narrow per-key delivery minimizes secret spread.
+Receipts record the request identity, selected public profile and scope, provider scheme, policy outcome, timing class, and bounded failure category. They do not record values, value-derived hashes, provider credentials, decrypted file content, child stdout, or child stderr.
 
-### Decision: support SOPS through bounded explicit execution
+The manifest and dependency identities use BLAKE3 because they are public stack-owned artifacts. No digest is computed from secret material.
 
-**Choice:** Initial SOPS support invokes an exact configured `sops` executable with explicit argv through the shared bounded-process mechanism. It capability-opens one encrypted file beneath an admitted root, allows a documented structured-format subset, requests decrypted output over a bounded pipe, parses into a duplicate-rejecting in-memory representation, extracts one lexical key path, and drops the document immediately. Stdout truncation, stderr output, timeout, cancellation, launch failure, nonzero exit, unsupported format, malformed structure, duplicate keys, missing key, and oversized selected values fail before delivery.
+## Failure behavior
 
-**Rationale:** SOPS is a Go application with an established file format and key-service ecosystem. A bounded process adapter preserves that implementation boundary and avoids vendoring cryptographic/key-service behavior into Animus.
+- Missing manifest, profile, scope, declaration, or provider fails closed.
+- Missing SOPS executable fails with a stable installation category.
+- Timeout, cancellation, oversized output, malformed output, and nonzero exit each have separate typed outcomes.
+- A worker failure cannot fall back to an ambient environment value.
+- Cancellation tears down the owned worker process tree.
 
-### Decision: make provider credentials explicit but opaque
+## Compatibility and rollout
 
-**Choice:** Policy may allow named environment keys or other host credential channels required by a selected SecretSpec/SOPS provider, but contains no values. The shell constructs the smallest explicit environment from caller-supplied opaque material and never records those values or their hashes. Missing credentials are a typed pre-effect failure where the provider can declare them; provider-native denials remain fixed safe classes.
+The existing explicit environment and file adapters remain available during migration. Callers opt into SecretSpec by configuration. After downstream migration, legacy paths can be deprecated in a separate change.
 
-**Rationale:** KMS, cloud, age, PGP, keyring, and password-manager authentication differ. Animus can bound delivery without owning their authority or pretending all failures are distinguishable in advance.
+Lattice remains blocked on an archived Animus change and an immutable revision. A workspace-relative checkout is test input only, not a durable dependency.
 
-### Decision: separate Animus receipts from SecretSpec audit
+## Validation
 
-**Choice:** Animus receipts record resolver kind/id, declaration/project/profile/key reference hashes, reason code, destination class, policy/config identities, bounds, outcome class, and redaction evidence. SecretSpec audit metadata may be observed as advisory correlation only. Audit write failure never becomes a false success or false denial, and Animus does not claim complete access history.
-
-**Rationale:** SecretSpec documents auditing as local, capped, truncating, and non-blocking. It is useful operational metadata, not authoritative durable evidence.
-
-### Decision: gate future native SecretSpec SOPS support
-
-**Choice:** A fixture-backed compatibility gate verifies an exact released SecretSpec version, provider name/URI, read behavior, address mapping, error classes, and plaintext/redaction boundaries before enabling `secretspec+sops`. Until then, configuration for that combined mode fails with `unsupported_provider_cohort`; direct SOPS remains available.
-
-**Rationale:** Documentation from a branch or open pull request is not release evidence.
-
-## Adversarial Audit
-
-| Family | Mechanism | Result |
-|---|---|---|
-| Environment injection | Resolve a whole profile and mutate process-global environment | Rejected: ambient, difficult to isolate, and unnecessarily broad. |
-| SecretSpec CLI JSON export | Parse `secretspec export --format json` | Rejected for the initial Rust host: it broadens plaintext process/output exposure compared with the SDK. |
-| Embed SOPS internals | Reimplement or bind SOPS cryptography/key services | Rejected: expands authority and review surface and diverges from the established implementation. |
-| Unbounded SOPS child | Run a shell command and parse arbitrary stdout | Rejected: shell injection, environment inheritance, hangs, truncation ambiguity, and diagnostic leaks. |
-| Distinct bounded hosts | One pure request contract with pinned SecretSpec SDK and explicit bounded SOPS adapters | Selected: preserves layer, authority, and release boundaries. |
-
-The selected design must survive malformed manifests, unknown profiles/keys, traversal and symlink escape, executable substitution, hostile encrypted filenames, duplicate JSON/YAML keys, decompression/output growth, invalid UTF-8 where text is required, binary confusion, inherited credential leakage, signal/timeout/cleanup uncertainty, provider errors containing sensitive text, value-derived hash attempts, audit-write failure, and an unavailable native SecretSpec SOPS cohort.
-
-## Compatibility and Non-claims
-
-The feature is opt-in. Existing core/runtime/std users acquire no credential provider, SOPS executable, manifest search, filesystem read, environment read, or network behavior. Compatibility re-exports remain metadata/service contracts unless the new feature is selected.
-
-Successful resolution proves only that the selected adapter observed one bounded value for one admitted request. It does not prove the value is correct or fresh, the caller is globally authorized, SOPS or its key services are correct, SecretSpec provider policy is sufficient, audits are complete, memory cannot be inspected, host paths are safe outside the capability, external effects are unique, or the system is production ready.
+- Unit tests cover pure request validation and redaction.
+- Integration fixtures cover environment, systemd credential, and SOPS reads.
+- Negative fixtures cover missing scopes, disallowed providers, malformed encrypted files, missing executables, timeouts, oversized output, cancellation, and attempted writes.
+- Repository checks include format, focused tests, clippy, Nickel configuration checks, and the relevant Nix flake checks.
