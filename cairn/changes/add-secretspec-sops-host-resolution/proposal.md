@@ -32,6 +32,6 @@ SecretSpec `v0.17.0` now includes a Rust SDK and a native SOPS provider. Animus 
 
 ## Impact
 
-- **Affected specs:** `credentials`
+- **Affected specs:** `credentials`, `agent-harness-runtime`
 - **Affected code:** host adapter, runtime shell wiring, configuration loader, provider worker, and receipts
 - **Downstream:** Lattice can consume the adapter after this change is validated, archived, and available at an immutable revision
