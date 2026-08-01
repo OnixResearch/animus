@@ -77,6 +77,7 @@ mod exports;
 mod fabric;
 mod fresh_context_tasks;
 /// Pure optional Harbor-compatible evaluation planning and evidence projection.
+#[path = "harbor/eval.rs"]
 pub mod harbor_eval;
 mod headless;
 mod hooks;

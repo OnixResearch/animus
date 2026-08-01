@@ -1,11 +1,9 @@
 //! Pure Mesh LLM catalog, exact-model, authority, and receipt contracts.
 
+// External catalog DTO fields stay compact, while independent admission booleans preserve denial provenance.
 #![allow(missing_docs, clippy::struct_excessive_bools)]
 
-use alloc::collections::BTreeSet;
-use alloc::string::{String, ToString};
-use alloc::vec::Vec;
-use blake3::Hasher;
+use alloc::string::ToString;
 
 const CATALOG_DOMAIN: &str = "animus.mesh.catalog.v1";
 const RECEIPT_DOMAIN: &str = "animus.mesh.receipt.v1";
@@ -13,6 +11,7 @@ const RECEIPT_DOMAIN: &str = "animus.mesh.receipt.v1";
 pub const MAX_CATALOG_MODELS: usize = 128;
 /// Maximum safe model identifier length.
 pub const MAX_MODEL_ID_BYTES: usize = 128;
+const RECEIPT_NON_CLAIM_COUNT: usize = 6;
 
 /// Explicit reviewed OpenAI-compatible API style.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -54,7 +53,7 @@ pub struct CatalogSnapshot<'a> {
 /// Validated deterministic model row.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Model {
-    pub id: String,
+    pub id: alloc::string::String,
     pub text: Capability,
     pub tools: Capability,
     pub streaming: Capability,
@@ -67,11 +66,11 @@ pub struct Model {
 /// Validated deterministic catalog.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Catalog {
-    pub endpoint_identity: String,
-    pub config_identity: String,
-    pub freshness_identity: String,
-    pub identity: String,
-    pub models: Vec<Model>,
+    pub endpoint_identity: alloc::string::String,
+    pub config_identity: alloc::string::String,
+    pub freshness_identity: alloc::string::String,
+    pub identity: alloc::string::String,
+    pub models: alloc::vec::Vec<Model>,
 }
 
 /// Catalog normalization failure.
@@ -108,8 +107,12 @@ pub fn normalize_catalog(snapshot: &CatalogSnapshot<'_>) -> Result<Catalog, Cata
     if !snapshot.private_gateway {
         return Err(CatalogError::PublicGateway);
     }
-    let mut ids = BTreeSet::new();
-    let mut models = Vec::with_capacity(snapshot.rows.len());
+    debug_assert!(!snapshot.rows.is_empty());
+    debug_assert!(snapshot.rows.len() <= MAX_CATALOG_MODELS);
+    debug_assert!(snapshot.private_gateway);
+
+    let mut ids = alloc::collections::BTreeSet::new();
+    let mut models = alloc::vec::Vec::with_capacity(snapshot.rows.len());
     for row in snapshot.rows {
         if !safe_model_id(row.id) {
             return Err(CatalogError::UnsafeModelId);
@@ -135,7 +138,11 @@ pub fn normalize_catalog(snapshot: &CatalogSnapshot<'_>) -> Result<Catalog, Cata
         });
     }
     models.sort_by(|left, right| left.id.cmp(&right.id));
+    debug_assert_eq!(models.len(), snapshot.rows.len());
+    debug_assert!(models.windows(2).all(|pair| pair[0].id < pair[1].id));
+
     let identity = catalog_identity(snapshot, &models);
+    debug_assert!(safe_identity(&identity));
     Ok(Catalog {
         endpoint_identity: snapshot.endpoint_identity.to_string(),
         config_identity: snapshot.config_identity.to_string(),
@@ -161,7 +168,7 @@ fn safe_model_id(value: &str) -> bool {
             .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b':'))
 }
 
-fn catalog_identity(snapshot: &CatalogSnapshot<'_>, models: &[Model]) -> String {
+fn catalog_identity(snapshot: &CatalogSnapshot<'_>, models: &[Model]) -> alloc::string::String {
     let mut hasher = domain_hasher(CATALOG_DOMAIN);
     for value in [
         snapshot.endpoint_identity,
@@ -211,22 +218,32 @@ pub fn admit_exact_model(
     let Some(model) = catalog.models.iter().find(|model| model.id == model_id) else {
         return ExactModelDecision::MissingModel;
     };
-    if model.text != Capability::Supported
-        || (requirements.tools && model.tools != Capability::Supported)
-        || (requirements.streaming && model.streaming != Capability::Supported)
-        || (requirements.structured_output && model.structured_output != Capability::Supported)
-        || (requirements.developer_role && model.developer_role != Capability::Supported)
-    {
+    debug_assert_eq!(model.id, model_id);
+    debug_assert!(!model_id.is_empty());
+
+    if model.text != Capability::Supported {
         return ExactModelDecision::CapabilityDenied;
     }
-    if requirements.output_tokens > model.output_tokens
-        || requirements
-            .input_tokens
-            .saturating_add(requirements.output_tokens)
-            > model.context_tokens
-    {
+    if requirements.tools && model.tools != Capability::Supported {
+        return ExactModelDecision::CapabilityDenied;
+    }
+    if requirements.streaming && model.streaming != Capability::Supported {
+        return ExactModelDecision::CapabilityDenied;
+    }
+    if requirements.structured_output && model.structured_output != Capability::Supported {
+        return ExactModelDecision::CapabilityDenied;
+    }
+    if requirements.developer_role && model.developer_role != Capability::Supported {
+        return ExactModelDecision::CapabilityDenied;
+    }
+    let requested_tokens = requirements
+        .input_tokens
+        .saturating_add(requirements.output_tokens);
+    if requirements.output_tokens > model.output_tokens || requested_tokens > model.context_tokens {
         return ExactModelDecision::BudgetDenied;
     }
+    debug_assert!(requirements.output_tokens <= model.output_tokens);
+    debug_assert!(requested_tokens <= model.context_tokens);
     ExactModelDecision::Admitted
 }
 
@@ -275,6 +292,9 @@ pub fn admit_dispatch(input: &DispatchAdmission) -> DispatchDecision {
     if !input.transport_available {
         return DispatchDecision::MissingTransport;
     }
+    debug_assert_eq!(input.exact_model, ExactModelDecision::Admitted);
+    debug_assert!(input.profile_admitted);
+    debug_assert!(input.transport_available);
     DispatchDecision::Admitted
 }
 
@@ -312,11 +332,11 @@ pub struct ReceiptInput<'a> {
 /// Metadata-only Mesh receipt.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Receipt {
-    pub identity: String,
-    pub model_label: String,
-    pub status: String,
+    pub identity: alloc::string::String,
+    pub model_label: alloc::string::String,
+    pub status: alloc::string::String,
     pub physical_route: &'static str,
-    pub non_claims: [&'static str; 6],
+    pub non_claims: [&'static str; RECEIPT_NON_CLAIM_COUNT],
 }
 
 /// Receipt leak or unsafe label.
@@ -349,13 +369,19 @@ pub fn project_receipt(input: &ReceiptInput<'_>) -> Result<Receipt, ReceiptError
     if identities.iter().any(|value| !safe_identity(value)) {
         return Err(ReceiptError::UnsafeIdentity);
     }
+    debug_assert!(safe_model_id(input.provider_label));
+    debug_assert!(safe_model_id(input.model_label));
+    debug_assert!(identities.iter().all(|value| safe_identity(value)));
+
     let mut hasher = domain_hasher(RECEIPT_DOMAIN);
     for value in identities {
         hash_part(&mut hasher, value);
     }
     hash_part(&mut hasher, input.model_label);
+    let identity = hasher.finalize().to_hex().to_string();
+    debug_assert!(safe_identity(&identity));
     Ok(Receipt {
-        identity: hasher.finalize().to_hex().to_string(),
+        identity,
         model_label: input.model_label.to_string(),
         status: input.status.to_string(),
         physical_route: "unknown",
@@ -370,12 +396,12 @@ pub fn project_receipt(input: &ReceiptInput<'_>) -> Result<Receipt, ReceiptError
     })
 }
 
-fn domain_hasher(domain: &str) -> Hasher {
-    let mut hasher = Hasher::new();
+fn domain_hasher(domain: &str) -> blake3::Hasher {
+    let mut hasher = blake3::Hasher::new();
     hasher.update(domain.as_bytes());
     hasher
 }
-fn hash_part(hasher: &mut Hasher, value: &str) {
+fn hash_part(hasher: &mut blake3::Hasher, value: &str) {
     hasher.update(&[0]);
     hasher.update(value.as_bytes());
 }
@@ -383,7 +409,6 @@ fn hash_part(hasher: &mut Hasher, value: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloc::format;
     fn row(id: &'static str) -> CatalogRow<'static> {
         CatalogRow {
             id,
@@ -501,7 +526,7 @@ mod tests {
         })
         .unwrap();
         assert_eq!(receipt.physical_route, "unknown");
-        assert!(!format!("{receipt:?}").contains("prompt"));
+        assert!(!alloc::format!("{receipt:?}").contains("prompt"));
         assert_eq!(
             project_receipt(&ReceiptInput {
                 endpoint_identity: "/private/path",

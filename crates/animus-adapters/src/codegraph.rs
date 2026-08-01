@@ -1,16 +1,13 @@
 //! Pure transport-neutral codebase-graph contracts and deterministic reducers.
 
-use alloc::collections::BTreeSet;
-use alloc::string::{String, ToString};
-#[cfg(test)]
-use alloc::vec;
-use alloc::vec::Vec;
+use alloc::string::ToString;
 
 const PROFILE_DOMAIN: &str = "animus.codebase-graph.profile.v1";
 const GRAPH_DOMAIN: &str = "animus.codebase-graph.index.v1";
 const CACHE_DOMAIN: &str = "animus.codebase-graph.cache.v1";
 const RECEIPT_DOMAIN: &str = "animus.codebase-graph.receipt.v1";
 const BLAKE3_HEX_LENGTH: usize = 64;
+const MAX_SAFE_LABEL_BYTES: usize = 128;
 
 /// Supported syntactic symbol class.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -25,15 +22,15 @@ pub enum CodeGraphSymbolKind {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CodeGraphProfile {
     /// Stable profile label.
-    pub profile_id: String,
+    pub profile_id: alloc::string::String,
     /// Exact language label.
-    pub language: String,
+    pub language: alloc::string::String,
     /// Exact parser cohort.
-    pub parser_cohort: String,
+    pub parser_cohort: alloc::string::String,
     /// Exact query cohort.
-    pub query_cohort: String,
+    pub query_cohort: alloc::string::String,
     /// Capability root label, never a host path.
-    pub root_label: String,
+    pub root_label: alloc::string::String,
     /// Maximum admitted files.
     pub max_files: usize,
     /// Maximum bytes per file.
@@ -41,7 +38,7 @@ pub struct CodeGraphProfile {
     /// Maximum returned results.
     pub max_results: usize,
     /// Derived profile identity.
-    pub profile_identity: String,
+    pub profile_identity: alloc::string::String,
 }
 
 /// Draft used to construct a validated profile.
@@ -89,11 +86,11 @@ pub enum CodeGraphError {
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct CodeGraphSymbol {
     /// Symbol text.
-    pub name: String,
+    pub name: alloc::string::String,
     /// Syntactic class.
     pub kind: CodeGraphSymbolKind,
     /// Capability-root-relative source path.
-    pub relative_path: String,
+    pub relative_path: alloc::string::String,
     /// Start byte in the admitted file.
     pub start_byte: usize,
     /// End byte in the admitted file.
@@ -104,11 +101,11 @@ pub struct CodeGraphSymbol {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CodeGraphContribution {
     /// Capability-root-relative source path.
-    pub relative_path: String,
+    pub relative_path: alloc::string::String,
     /// BLAKE3 source identity.
-    pub source_identity: String,
+    pub source_identity: alloc::string::String,
     /// Deterministically ordered symbols.
-    pub symbols: Vec<CodeGraphSymbol>,
+    pub symbols: alloc::vec::Vec<CodeGraphSymbol>,
 }
 
 /// Trusted freshness state.
@@ -126,9 +123,9 @@ pub struct CodeGraphIndex {
     /// Current freshness.
     pub freshness: CodeGraphFreshness,
     /// Sorted per-file contributions.
-    pub contributions: Vec<CodeGraphContribution>,
+    pub contributions: alloc::vec::Vec<CodeGraphContribution>,
     /// Derived graph identity.
-    pub graph_identity: String,
+    pub graph_identity: alloc::string::String,
 }
 
 /// Explicit host event class.
@@ -176,7 +173,7 @@ pub struct CodeGraphQuery<'a> {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CodeGraphQueryResult {
     /// Ordered syntactic matches.
-    pub matches: Vec<CodeGraphSymbol>,
+    pub matches: alloc::vec::Vec<CodeGraphSymbol>,
     /// Whether additional matches were omitted.
     pub truncated: bool,
     /// Explicit evidence boundary.
@@ -250,9 +247,9 @@ pub struct CodeGraphDispatchAdmission {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CodeGraphReceipt {
     /// Profile identity.
-    pub profile_identity: String,
+    pub profile_identity: alloc::string::String,
     /// Graph identity.
-    pub graph_identity: String,
+    pub graph_identity: alloc::string::String,
     /// Freshness at projection time.
     pub freshness: CodeGraphFreshness,
     /// Bounded file count.
@@ -262,7 +259,7 @@ pub struct CodeGraphReceipt {
     /// Syntactic-only evidence marker.
     pub evidence_class: &'static str,
     /// Receipt identity.
-    pub receipt_identity: String,
+    pub receipt_identity: alloc::string::String,
 }
 
 /// Validates and canonicalizes a profile without host effects.
@@ -286,6 +283,11 @@ pub fn validate_code_graph_profile(
     if draft.max_files == 0 || draft.max_file_bytes == 0 || draft.max_results == 0 {
         return Err(CodeGraphError::InvalidBudget);
     }
+    debug_assert!(labels.iter().all(|label| safe_label(label)));
+    debug_assert!(draft.max_files > 0);
+    debug_assert!(draft.max_file_bytes > 0);
+    debug_assert!(draft.max_results > 0);
+
     let payload = alloc::format!(
         "{PROFILE_DOMAIN}\0{}\0{}\0{}\0{}\0{}\0{}\0{}\0{}",
         draft.profile_id,
@@ -297,6 +299,8 @@ pub fn validate_code_graph_profile(
         draft.max_file_bytes,
         draft.max_results
     );
+    let profile_identity = blake3_hex(payload.as_bytes());
+    debug_assert!(valid_identity(&profile_identity));
     Ok(CodeGraphProfile {
         profile_id: draft.profile_id.to_string(),
         language: draft.language.to_string(),
@@ -306,7 +310,7 @@ pub fn validate_code_graph_profile(
         max_files: draft.max_files,
         max_file_bytes: draft.max_file_bytes,
         max_results: draft.max_results,
-        profile_identity: blake3_hex(payload.as_bytes()),
+        profile_identity,
     })
 }
 
@@ -319,7 +323,7 @@ pub fn admit_code_graph_file(
     profile: &CodeGraphProfile,
     relative_path: &str,
     bytes: &[u8],
-) -> Result<String, CodeGraphError> {
+) -> Result<alloc::string::String, CodeGraphError> {
     if !safe_relative_path(relative_path) {
         return Err(CodeGraphError::UnsafePath);
     }
@@ -365,7 +369,7 @@ pub fn normalize_code_graph_contribution(
 /// Returns a stable diagnostic for duplicate paths, malformed contributions, or excess files.
 pub fn build_code_graph_index(
     profile: &CodeGraphProfile,
-    contributions: Vec<CodeGraphContribution>,
+    contributions: alloc::vec::Vec<CodeGraphContribution>,
 ) -> Result<CodeGraphIndex, CodeGraphError> {
     if contributions.len() > profile.max_files {
         return Err(CodeGraphError::BudgetExceeded);
@@ -373,16 +377,24 @@ pub fn build_code_graph_index(
     let mut normalized = contributions
         .into_iter()
         .map(normalize_code_graph_contribution)
-        .collect::<Result<Vec<_>, _>>()?;
+        .collect::<Result<alloc::vec::Vec<_>, _>>()?;
     normalized.sort_by(|left, right| left.relative_path.cmp(&right.relative_path));
-    let mut paths = BTreeSet::new();
+    let mut paths = alloc::collections::BTreeSet::new();
     if normalized
         .iter()
         .any(|entry| !paths.insert(entry.relative_path.clone()))
     {
         return Err(CodeGraphError::InvalidLabel);
     }
+    debug_assert!(normalized.len() <= profile.max_files);
+    debug_assert!(
+        normalized
+            .windows(2)
+            .all(|pair| pair[0].relative_path < pair[1].relative_path)
+    );
+
     let identity = graph_identity(profile, &normalized);
+    debug_assert!(valid_identity(&identity));
     Ok(CodeGraphIndex {
         freshness: CodeGraphFreshness::Fresh,
         contributions: normalized,
@@ -411,8 +423,14 @@ pub fn apply_code_graph_event(
     if !safe_relative_path(event.relative_path) {
         return Err(CodeGraphError::UnsafePath);
     }
+    debug_assert!(safe_relative_path(event.relative_path));
     let mut contributions = index.contributions.clone();
     contributions.retain(|item| item.relative_path != event.relative_path);
+    debug_assert!(
+        contributions
+            .iter()
+            .all(|item| item.relative_path != event.relative_path)
+    );
     match event.kind {
         CodeGraphEventKind::Delete => {}
         CodeGraphEventKind::Create | CodeGraphEventKind::Modify => {
@@ -452,6 +470,10 @@ pub fn query_code_graph(
     {
         return Err(CodeGraphError::InvalidBudget);
     }
+    debug_assert_eq!(index.freshness, CodeGraphFreshness::Fresh);
+    debug_assert!(!query.symbol.is_empty());
+    debug_assert!(query.max_results <= profile.max_results);
+
     let mut matches = index
         .contributions
         .iter()
@@ -460,13 +482,13 @@ pub fn query_code_graph(
             symbol.name == query.symbol && query.kind.is_none_or(|kind| kind == symbol.kind)
         })
         .cloned()
-        .collect::<Vec<_>>();
+        .collect::<alloc::vec::Vec<_>>();
     matches.sort();
-    let truncated = matches.len() > query.max_results;
+    let is_truncated = matches.len() > query.max_results;
     matches.truncate(query.max_results);
     Ok(CodeGraphQueryResult {
         matches,
-        truncated,
+        truncated: is_truncated,
         evidence_class: "syntactic-only",
     })
 }
@@ -478,7 +500,7 @@ pub fn query_code_graph(
 /// Returns a stable diagnostic when an identity or schema label is malformed.
 pub fn code_graph_cache_identity(
     draft: &CodeGraphCacheDraft<'_>,
-) -> Result<String, CodeGraphError> {
+) -> Result<alloc::string::String, CodeGraphError> {
     let identities = [
         draft.workspace_identity,
         draft.source_identity,
@@ -492,6 +514,9 @@ pub fn code_graph_cache_identity(
     {
         return Err(CodeGraphError::InvalidIdentity);
     }
+    debug_assert!(identities.iter().all(|identity| valid_identity(identity)));
+    debug_assert!(safe_label(draft.schema_identity));
+
     let payload = alloc::format!(
         "{CACHE_DOMAIN}\0{}\0{}\0{}\0{}\0{}\0{}\0{}",
         draft.workspace_identity,
@@ -502,7 +527,9 @@ pub fn code_graph_cache_identity(
         draft.schema_identity,
         draft.graph_identity
     );
-    Ok(blake3_hex(payload.as_bytes()))
+    let cache_identity = blake3_hex(payload.as_bytes());
+    debug_assert!(valid_identity(&cache_identity));
+    Ok(cache_identity)
 }
 
 /// Plans caller-owned cache handling without cache I/O.
@@ -532,14 +559,26 @@ pub fn evaluate_code_graph_cache(
 pub fn admit_code_graph_dispatch(
     admission: &CodeGraphDispatchAdmission,
 ) -> Result<(), CodeGraphError> {
-    if admission.mutation_requested
-        || !admission.caller_admitted
-        || !admission.capability_admitted
-        || !admission.retrieval_budget_available
-        || !admission.service_available
-    {
+    if admission.mutation_requested {
         return Err(CodeGraphError::InvalidLabel);
     }
+    if !admission.caller_admitted {
+        return Err(CodeGraphError::InvalidLabel);
+    }
+    if !admission.capability_admitted {
+        return Err(CodeGraphError::InvalidLabel);
+    }
+    if !admission.retrieval_budget_available {
+        return Err(CodeGraphError::InvalidLabel);
+    }
+    if !admission.service_available {
+        return Err(CodeGraphError::InvalidLabel);
+    }
+    debug_assert!(!admission.mutation_requested);
+    debug_assert!(admission.caller_admitted);
+    debug_assert!(admission.capability_admitted);
+    debug_assert!(admission.retrieval_budget_available);
+    debug_assert!(admission.service_available);
     Ok(())
 }
 
@@ -561,6 +600,13 @@ pub fn project_code_graph_receipt(
         index.contributions.len(),
         symbol_count
     );
+    let receipt_identity = blake3_hex(payload.as_bytes());
+    debug_assert_eq!(receipt_identity.len(), BLAKE3_HEX_LENGTH);
+    debug_assert!(
+        receipt_identity
+            .bytes()
+            .all(|byte| byte.is_ascii_hexdigit())
+    );
     CodeGraphReceipt {
         profile_identity: profile.profile_identity.clone(),
         graph_identity: index.graph_identity.clone(),
@@ -568,11 +614,14 @@ pub fn project_code_graph_receipt(
         file_count: index.contributions.len(),
         symbol_count,
         evidence_class: "syntactic-only",
-        receipt_identity: blake3_hex(payload.as_bytes()),
+        receipt_identity,
     }
 }
 
-fn graph_identity(profile: &CodeGraphProfile, contributions: &[CodeGraphContribution]) -> String {
+fn graph_identity(
+    profile: &CodeGraphProfile,
+    contributions: &[CodeGraphContribution],
+) -> alloc::string::String {
     let mut hasher = blake3::Hasher::new();
     hasher.update(GRAPH_DOMAIN.as_bytes());
     hasher.update(profile.profile_identity.as_bytes());
@@ -591,7 +640,7 @@ fn graph_identity(profile: &CodeGraphProfile, contributions: &[CodeGraphContribu
 
 fn safe_label(value: &str) -> bool {
     !value.is_empty()
-        && value.len() <= 128
+        && value.len() <= MAX_SAFE_LABEL_BYTES
         && value.bytes().all(|byte| {
             byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b':' | b'/')
         })
@@ -610,7 +659,7 @@ fn valid_identity(value: &str) -> bool {
     value.len() == BLAKE3_HEX_LENGTH && value.bytes().all(|byte| byte.is_ascii_hexdigit())
 }
 
-fn blake3_hex(bytes: &[u8]) -> String {
+fn blake3_hex(bytes: &[u8]) -> alloc::string::String {
     blake3::hash(bytes).to_hex().to_string()
 }
 
@@ -636,14 +685,19 @@ mod tests {
         .expect("valid profile")
     }
 
-    fn contribution(path: &str, name: &str) -> CodeGraphContribution {
+    struct ContributionFixture<'a> {
+        path: &'a str,
+        name: &'a str,
+    }
+
+    fn contribution(fixture: &ContributionFixture<'_>) -> CodeGraphContribution {
         CodeGraphContribution {
-            relative_path: path.to_string(),
-            source_identity: blake3_hex(path.as_bytes()),
+            relative_path: fixture.path.to_string(),
+            source_identity: blake3_hex(fixture.path.as_bytes()),
             symbols: alloc::vec![CodeGraphSymbol {
-                name: name.to_string(),
+                name: fixture.name.to_string(),
                 kind: CodeGraphSymbolKind::Definition,
-                relative_path: path.to_string(),
+                relative_path: fixture.path.to_string(),
                 start_byte: 1,
                 end_byte: 2,
             }],
@@ -654,8 +708,14 @@ mod tests {
     fn positive_build_query_event_cache_and_receipt() {
         let profile = profile();
         assert!(admit_code_graph_file(&profile, "src/lib.rs", b"fn run() {}").is_ok());
-        let index = build_code_graph_index(&profile, vec![contribution("src/lib.rs", "run")])
-            .expect("index");
+        let index = build_code_graph_index(
+            &profile,
+            alloc::vec![contribution(&ContributionFixture {
+                path: "src/lib.rs",
+                name: "run",
+            })],
+        )
+        .expect("index");
         let result = query_code_graph(
             &profile,
             &index,
@@ -674,7 +734,10 @@ mod tests {
                 kind: CodeGraphEventKind::Modify,
                 relative_path: "src/lib.rs",
                 new_relative_path: None,
-                contribution: Some(contribution("src/lib.rs", "next")),
+                contribution: Some(contribution(&ContributionFixture {
+                    path: "src/lib.rs",
+                    name: "next",
+                })),
             },
         )
         .expect("update");
@@ -722,8 +785,14 @@ mod tests {
             admit_code_graph_file(&profile, "src/x", &[0]),
             Err(CodeGraphError::UnsupportedText)
         );
-        let index = build_code_graph_index(&profile, vec![contribution("src/lib.rs", "run")])
-            .expect("index");
+        let index = build_code_graph_index(
+            &profile,
+            alloc::vec![contribution(&ContributionFixture {
+                path: "src/lib.rs",
+                name: "run",
+            })],
+        )
+        .expect("index");
         let stale = apply_code_graph_event(
             &profile,
             &index,

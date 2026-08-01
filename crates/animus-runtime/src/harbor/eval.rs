@@ -1,11 +1,9 @@
 //! Pure deterministic planning, ATIF projection, reward reduction, and receipts.
 
-use std::collections::BTreeSet;
-
 /// Maximum admitted trials in one local job.
 pub const MAX_TRIALS: usize = 256;
 /// Maximum admitted concurrency.
-pub const MAX_CONCURRENCY: usize = 16;
+pub const MAX_CONCURRENCY: u32 = 16;
 /// Maximum ATIF steps.
 pub const MAX_ATIF_STEPS: usize = 4_096;
 /// Maximum tool calls or observations in one step.
@@ -85,20 +83,23 @@ pub enum PlanError {
 pub fn plan_trials(
     tasks: &[Task<'_>],
     routes: &[Route<'_>],
-    concurrency: usize,
+    concurrency: u32,
     completed: &[&str],
 ) -> Result<Vec<TrialPlan>, PlanError> {
     if concurrency == 0 || concurrency > MAX_CONCURRENCY {
         return Err(PlanError::Concurrency);
     }
-    if tasks.is_empty()
-        || routes.is_empty()
-        || tasks.len().saturating_mul(routes.len()) > MAX_TRIALS
-    {
+    let trial_count = tasks.len().saturating_mul(routes.len());
+    if tasks.is_empty() || routes.is_empty() || trial_count > MAX_TRIALS {
         return Err(PlanError::TrialLimit);
     }
-    let mut identities = BTreeSet::new();
-    let mut plans = Vec::new();
+    debug_assert!(concurrency > 0);
+    debug_assert!(concurrency <= MAX_CONCURRENCY);
+    debug_assert!(trial_count > 0);
+    debug_assert!(trial_count <= MAX_TRIALS);
+
+    let mut identities = std::collections::BTreeSet::new();
+    let mut plans = Vec::with_capacity(trial_count);
     for task in tasks {
         if !task.separate_verifier {
             return Err(PlanError::VerifierIsolation);
@@ -135,10 +136,13 @@ pub fn plan_trials(
             });
         }
     }
+    debug_assert_eq!(plans.len(), trial_count);
+    debug_assert_eq!(identities.len(), trial_count);
     if completed.iter().any(|value| !identities.contains(*value)) {
         return Err(PlanError::StaleResume);
     }
     plans.retain(|plan| !completed.contains(&plan.identity.as_str()));
+    debug_assert!(plans.len() <= trial_count);
     Ok(plans)
 }
 
@@ -242,21 +246,28 @@ pub fn project_atif(value: &AtifTrajectory<'_>) -> Result<AtifProjection, AtifEr
     if !safe(value.identity) || value.steps.is_empty() || value.steps.len() > MAX_ATIF_STEPS {
         return Err(AtifError::Bound);
     }
-    let subagents: BTreeSet<_> = value.subagents.iter().copied().collect();
+    debug_assert_eq!(value.schema, animus_adapters::harbor::ATIF_SCHEMA);
+    debug_assert!(safe(value.identity));
+    debug_assert!(!value.steps.is_empty());
+    debug_assert!(value.steps.len() <= MAX_ATIF_STEPS);
+
+    let subagents: std::collections::BTreeSet<_> = value.subagents.iter().copied().collect();
     if subagents.len() != value.subagents.len() || value.subagents.iter().any(|item| !safe(item)) {
         return Err(AtifError::Lineage);
     }
+    debug_assert_eq!(subagents.len(), value.subagents.len());
     let mut calls_total = 0usize;
     let mut observations_total = 0usize;
     let mut redactions = 0usize;
     for (index, step) in value.steps.iter().enumerate() {
-        if step.id != index + 1
+        let expected_step_id = index.saturating_add(1);
+        if step.id != expected_step_id
             || step.calls.len() > MAX_STEP_ITEMS
             || step.observations.len() > MAX_STEP_ITEMS
         {
             return Err(AtifError::Sequence);
         }
-        let calls: BTreeSet<_> = step.calls.iter().map(|call| call.id).collect();
+        let calls: std::collections::BTreeSet<_> = step.calls.iter().map(|call| call.id).collect();
         if calls.len() != step.calls.len()
             || step
                 .calls
@@ -279,13 +290,15 @@ pub fn project_atif(value: &AtifTrajectory<'_>) -> Result<AtifProjection, AtifEr
                 return Err(AtifError::Lineage);
             }
         }
-        calls_total += step.calls.len();
-        observations_total += step.observations.len();
-        redactions += usize::from(step.hidden_reasoning_omitted);
+        calls_total = calls_total.saturating_add(step.calls.len());
+        observations_total = observations_total.saturating_add(step.observations.len());
+        redactions = redactions.saturating_add(usize::from(step.hidden_reasoning_omitted));
     }
     if !value.steps.last().is_some_and(|step| step.terminal) {
         return Err(AtifError::Sequence);
     }
+    debug_assert!(value.steps.last().is_some_and(|step| step.terminal));
+    debug_assert!(redactions <= value.steps.len());
     Ok(AtifProjection {
         identity: value.identity.into(),
         steps: value.steps.len(),
@@ -339,8 +352,9 @@ pub enum RewardError {
 /// # Errors
 /// Returns identity, duplicate, or non-finite failures without dropping invalid values.
 pub fn reduce_rewards(rewards: &[Reward<'_>]) -> Result<Vec<RewardSummary>, RewardError> {
-    let mut seen = BTreeSet::new();
-    let mut metrics: Vec<RewardSummary> = Vec::new();
+    let mut seen = std::collections::BTreeSet::new();
+    let mut metrics: Vec<RewardSummary> = Vec::with_capacity(rewards.len());
+    debug_assert!(metrics.capacity() >= rewards.len());
     for reward in rewards {
         if !safe(reward.trial) || !safe(reward.metric) || !safe(reward.verifier) {
             return Err(RewardError::Identity);
@@ -351,11 +365,16 @@ pub fn reduce_rewards(rewards: &[Reward<'_>]) -> Result<Vec<RewardSummary>, Rewa
         if !seen.insert((reward.trial, reward.metric)) {
             return Err(RewardError::Duplicate);
         }
+        debug_assert!(safe(reward.metric));
+        debug_assert!(reward.value.is_finite());
         if let Some(summary) = metrics.iter_mut().find(|item| item.metric == reward.metric) {
-            summary.mean = (summary.mean * f64::from(summary.count) + reward.value)
-                / f64::from(summary.count + 1);
-            summary.count += 1;
-            summary.advisory_count += u32::from(reward.advisory);
+            let next_count = summary.count.saturating_add(1);
+            summary.mean =
+                (summary.mean * f64::from(summary.count) + reward.value) / f64::from(next_count);
+            summary.count = next_count;
+            summary.advisory_count = summary
+                .advisory_count
+                .saturating_add(u32::from(reward.advisory));
         } else {
             metrics.push(RewardSummary {
                 metric: reward.metric.into(),
@@ -365,6 +384,7 @@ pub fn reduce_rewards(rewards: &[Reward<'_>]) -> Result<Vec<RewardSummary>, Rewa
             });
         }
     }
+    debug_assert!(metrics.len() <= rewards.len());
     Ok(metrics)
 }
 
@@ -374,9 +394,9 @@ pub struct EvaluationReceipt {
     /// Job identity.
     pub job_identity: String,
     /// Planned trials.
-    pub planned: usize,
+    pub planned: u32,
     /// Completed trials.
-    pub completed: usize,
+    pub completed: u32,
     /// ATIF projection identities.
     pub trajectories: Vec<String>,
     /// Explicit non-claims.
@@ -390,20 +410,29 @@ pub struct EvaluationReceipt {
 pub fn receipt(
     job: &str,
     plans: &[TrialPlan],
-    completed: usize,
+    completed: u32,
     trajectories: &[AtifProjection],
 ) -> Result<EvaluationReceipt, PlanError> {
-    if !safe(job) || completed > plans.len() {
+    let planned = u32::try_from(plans.len()).map_err(|_| PlanError::TrialLimit)?;
+    if !safe(job) {
         return Err(PlanError::Identity);
     }
+    if completed > planned {
+        return Err(PlanError::Identity);
+    }
+    debug_assert!(safe(job));
+    debug_assert!(completed <= planned);
+
+    let trajectory_identities = trajectories
+        .iter()
+        .map(|item| item.identity.clone())
+        .collect::<Vec<_>>();
+    debug_assert_eq!(trajectory_identities.len(), trajectories.len());
     Ok(EvaluationReceipt {
         job_identity: job.into(),
-        planned: plans.len(),
+        planned,
         completed,
-        trajectories: trajectories
-            .iter()
-            .map(|item| item.identity.clone())
-            .collect(),
+        trajectories: trajectory_identities,
         non_claims: vec![
             "not-verifier-soundness",
             "not-benchmark-superiority",

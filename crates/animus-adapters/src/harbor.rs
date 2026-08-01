@@ -1,8 +1,5 @@
 //! Implementation-free ports for the optional Harbor-compatible evaluation lane.
 
-use alloc::string::String;
-use alloc::vec::Vec;
-
 /// Exact reviewed Harbor release.
 pub const HARBOR_RELEASE: &str = "v0.18.0";
 /// Exact reviewed Harbor commit.
@@ -16,19 +13,19 @@ pub const ATIF_SCHEMA: &str = "ATIF-v1.7";
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TrialRequest {
     /// Stable trial identity.
-    pub trial_identity: String,
+    pub trial_identity: alloc::string::String,
     /// Exact task identity.
-    pub task_identity: String,
+    pub task_identity: alloc::string::String,
     /// Exact agent identity.
-    pub agent_identity: String,
+    pub agent_identity: alloc::string::String,
     /// Exact model-route identity.
-    pub model_route_identity: String,
+    pub model_route_identity: alloc::string::String,
     /// Exact environment identity.
-    pub environment_identity: String,
+    pub environment_identity: alloc::string::String,
     /// Exact verifier identity.
-    pub verifier_identity: String,
+    pub verifier_identity: alloc::string::String,
     /// Bounded artifact identities.
-    pub artifacts: Vec<String>,
+    pub artifacts: alloc::vec::Vec<alloc::string::String>,
 }
 
 /// Bounded observed outcome class.
@@ -54,15 +51,15 @@ pub enum OutcomeClass {
 #[derive(Clone, Debug, PartialEq)]
 pub struct TrialObservation {
     /// Stable trial identity.
-    pub trial_identity: String,
+    pub trial_identity: alloc::string::String,
     /// Outcome class.
     pub outcome: OutcomeClass,
     /// ATIF projection identity.
-    pub trajectory_identity: Option<String>,
+    pub trajectory_identity: Option<alloc::string::String>,
     /// Finite attributed rewards.
-    pub rewards: Vec<(String, f64)>,
+    pub rewards: alloc::vec::Vec<(alloc::string::String, f64)>,
     /// Bounded artifact identities.
-    pub artifacts: Vec<String>,
+    pub artifacts: alloc::vec::Vec<alloc::string::String>,
 }
 
 /// Environment preparation and trial execution port.

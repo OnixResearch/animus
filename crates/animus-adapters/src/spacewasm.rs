@@ -1,7 +1,6 @@
 //! Pure admission and receipt contracts for the opt-in SpaceWasm diagnostic lane.
 
-use alloc::string::{String, ToString};
-use alloc::vec::Vec;
+use alloc::string::ToString;
 
 /// Exact reviewed NASA `SpaceWasm` revision.
 pub const SPACEWASM_REVISION: &str = "e24cf09355a90497148eb5029fdb8e3400bd63e3";
@@ -23,6 +22,13 @@ pub const MAX_INPUT_BYTES: u64 = 4_096;
 pub const MAX_OUTPUT_BYTES: u64 = 4_096;
 /// Maximum admitted fuel observation.
 pub const MAX_FUEL: u64 = 1_000_000;
+const BLAKE3_PREFIX: &str = "b3:";
+const BLAKE3_PREFIX_BYTES: usize = 3;
+const BLAKE3_IDENTITY_BYTES: usize = 67;
+const OCTET_PROFILE: &str = "spacewasm-mvp";
+const REQUIRED_PROPOSAL: &str = "wasm1";
+#[cfg(test)]
+const RECEIPT_NON_CLAIM_COUNT: usize = 5;
 
 /// Static profile supplied by the checked Nickel projection.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -129,19 +135,19 @@ pub enum Error {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Receipt {
     /// Exact guest identity.
-    pub artifact_identity: String,
+    pub artifact_identity: alloc::string::String,
     /// Exact runtime cohort.
-    pub runtime_cohort: String,
+    pub runtime_cohort: alloc::string::String,
     /// Octet profile.
-    pub octet_profile: String,
+    pub octet_profile: alloc::string::String,
     /// Input identity.
-    pub input_identity: String,
+    pub input_identity: alloc::string::String,
     /// Optional output identity.
-    pub output_identity: Option<String>,
+    pub output_identity: Option<alloc::string::String>,
     /// Result class.
     pub result: ResultClass,
     /// Stable non-claims.
-    pub non_claims: Vec<&'static str>,
+    pub non_claims: alloc::vec::Vec<&'static str>,
 }
 
 /// Admit a checked profile and exact static artifact report.
@@ -153,36 +159,103 @@ pub fn admit(profile: &Profile<'_>, artifact: &ArtifactFacts<'_>) -> Result<(), 
     if !profile.enabled {
         return Err(Error::Disabled);
     }
-    if profile.target != PRODUCER_TARGET
-        || profile.runtime_revision != SPACEWASM_REVISION
-        || profile.runtime_cohort != SPACEWASM_COHORT
-        || profile.source_lock != SPACEWASM_LOCK
-    {
+    validate_profile_cohort(profile)?;
+    validate_surface(profile, artifact)?;
+    validate_resource_limits(profile, artifact)?;
+    validate_artifact_evidence(profile, artifact)
+}
+
+fn validate_profile_cohort(profile: &Profile<'_>) -> Result<(), Error> {
+    if profile.target != PRODUCER_TARGET {
         return Err(Error::CohortDrift);
     }
-    if profile.exports != [REQUIRED_EXPORT]
-        || !profile.imports.is_empty()
-        || artifact.exports != [REQUIRED_EXPORT]
-        || !artifact.imports.is_empty()
-        || artifact.proposals != ["wasm1"]
-    {
+    if profile.runtime_revision != SPACEWASM_REVISION {
+        return Err(Error::CohortDrift);
+    }
+    if profile.runtime_cohort != SPACEWASM_COHORT {
+        return Err(Error::CohortDrift);
+    }
+    if profile.source_lock != SPACEWASM_LOCK {
+        return Err(Error::CohortDrift);
+    }
+    debug_assert_eq!(profile.target, PRODUCER_TARGET);
+    debug_assert_eq!(profile.runtime_revision, SPACEWASM_REVISION);
+    debug_assert_eq!(profile.runtime_cohort, SPACEWASM_COHORT);
+    debug_assert_eq!(profile.source_lock, SPACEWASM_LOCK);
+    Ok(())
+}
+
+fn validate_surface(profile: &Profile<'_>, artifact: &ArtifactFacts<'_>) -> Result<(), Error> {
+    if profile.exports != [REQUIRED_EXPORT] {
         return Err(Error::SurfaceWidening);
     }
-    if profile.max_artifact_bytes != MAX_ARTIFACT_BYTES
-        || profile.max_input_bytes != MAX_INPUT_BYTES
-        || profile.max_output_bytes != MAX_OUTPUT_BYTES
-        || profile.max_fuel != MAX_FUEL
-        || artifact.artifact_bytes > profile.max_artifact_bytes
-    {
+    if !profile.imports.is_empty() {
+        return Err(Error::SurfaceWidening);
+    }
+    if artifact.exports != [REQUIRED_EXPORT] {
+        return Err(Error::SurfaceWidening);
+    }
+    if !artifact.imports.is_empty() {
+        return Err(Error::SurfaceWidening);
+    }
+    if artifact.proposals != [REQUIRED_PROPOSAL] {
+        return Err(Error::SurfaceWidening);
+    }
+    debug_assert_eq!(profile.exports, [REQUIRED_EXPORT]);
+    debug_assert!(profile.imports.is_empty());
+    debug_assert_eq!(artifact.exports, [REQUIRED_EXPORT]);
+    debug_assert!(artifact.imports.is_empty());
+    debug_assert_eq!(artifact.proposals, [REQUIRED_PROPOSAL]);
+    Ok(())
+}
+
+fn validate_resource_limits(
+    profile: &Profile<'_>,
+    artifact: &ArtifactFacts<'_>,
+) -> Result<(), Error> {
+    if profile.max_artifact_bytes != MAX_ARTIFACT_BYTES {
         return Err(Error::ResourceLimit);
     }
-    if !safe_identity(artifact.artifact_identity)
-        || artifact.octet_profile != "spacewasm-mvp"
-        || artifact.octet_artifact_identity != artifact.artifact_identity
-        || artifact.octet_cohort != profile.runtime_cohort
-    {
+    if profile.max_input_bytes != MAX_INPUT_BYTES {
+        return Err(Error::ResourceLimit);
+    }
+    if profile.max_output_bytes != MAX_OUTPUT_BYTES {
+        return Err(Error::ResourceLimit);
+    }
+    if profile.max_fuel != MAX_FUEL {
+        return Err(Error::ResourceLimit);
+    }
+    if artifact.artifact_bytes > profile.max_artifact_bytes {
+        return Err(Error::ResourceLimit);
+    }
+    debug_assert_eq!(profile.max_artifact_bytes, MAX_ARTIFACT_BYTES);
+    debug_assert_eq!(profile.max_input_bytes, MAX_INPUT_BYTES);
+    debug_assert_eq!(profile.max_output_bytes, MAX_OUTPUT_BYTES);
+    debug_assert_eq!(profile.max_fuel, MAX_FUEL);
+    debug_assert!(artifact.artifact_bytes <= profile.max_artifact_bytes);
+    Ok(())
+}
+
+fn validate_artifact_evidence(
+    profile: &Profile<'_>,
+    artifact: &ArtifactFacts<'_>,
+) -> Result<(), Error> {
+    if !safe_identity(artifact.artifact_identity) {
         return Err(Error::EvidenceMismatch);
     }
+    if artifact.octet_profile != OCTET_PROFILE {
+        return Err(Error::EvidenceMismatch);
+    }
+    if artifact.octet_artifact_identity != artifact.artifact_identity {
+        return Err(Error::EvidenceMismatch);
+    }
+    if artifact.octet_cohort != profile.runtime_cohort {
+        return Err(Error::EvidenceMismatch);
+    }
+    debug_assert!(safe_identity(artifact.artifact_identity));
+    debug_assert_eq!(artifact.octet_profile, OCTET_PROFILE);
+    debug_assert_eq!(artifact.octet_artifact_identity, artifact.artifact_identity);
+    debug_assert_eq!(artifact.octet_cohort, profile.runtime_cohort);
     Ok(())
 }
 
@@ -197,24 +270,43 @@ pub fn classify(
     observation: &Observation<'_>,
 ) -> Result<Receipt, Error> {
     admit(profile, artifact)?;
-    if observation.artifact_identity != artifact.artifact_identity
-        || observation.runtime_cohort != profile.runtime_cohort
-        || !safe_identity(observation.input_identity)
-        || observation
-            .output_identity
-            .is_some_and(|value| !safe_identity(value))
+    if observation.artifact_identity != artifact.artifact_identity {
+        return Err(Error::EvidenceMismatch);
+    }
+    if observation.runtime_cohort != profile.runtime_cohort {
+        return Err(Error::EvidenceMismatch);
+    }
+    if !safe_identity(observation.input_identity) {
+        return Err(Error::EvidenceMismatch);
+    }
+    if observation
+        .output_identity
+        .is_some_and(|value| !safe_identity(value))
     {
         return Err(Error::EvidenceMismatch);
     }
-    if observation.input_bytes > profile.max_input_bytes
-        || observation.output_bytes > profile.max_output_bytes
-        || observation.fuel > profile.max_fuel
-    {
+    debug_assert_eq!(observation.artifact_identity, artifact.artifact_identity);
+    debug_assert_eq!(observation.runtime_cohort, profile.runtime_cohort);
+    debug_assert!(safe_identity(observation.input_identity));
+    debug_assert!(observation.output_identity.is_none_or(safe_identity));
+
+    if observation.input_bytes > profile.max_input_bytes {
         return Err(Error::ResourceLimit);
     }
+    if observation.output_bytes > profile.max_output_bytes {
+        return Err(Error::ResourceLimit);
+    }
+    if observation.fuel > profile.max_fuel {
+        return Err(Error::ResourceLimit);
+    }
+    debug_assert!(observation.input_bytes <= profile.max_input_bytes);
+    debug_assert!(observation.output_bytes <= profile.max_output_bytes);
+    debug_assert!(observation.fuel <= profile.max_fuel);
+
     if observation.result == ResultClass::RuntimeFailure {
         return Err(Error::MalformedObservation);
     }
+    debug_assert_ne!(observation.result, ResultClass::RuntimeFailure);
     Ok(Receipt {
         artifact_identity: observation.artifact_identity.to_string(),
         runtime_cohort: observation.runtime_cohort.to_string(),
@@ -255,9 +347,11 @@ pub fn validate_receipt_text(text: &str) -> Result<(), Error> {
 }
 
 fn safe_identity(value: &str) -> bool {
-    value.starts_with("b3:")
-        && value.len() == 67
-        && value.as_bytes()[3..].iter().all(u8::is_ascii_hexdigit)
+    value.starts_with(BLAKE3_PREFIX)
+        && value.len() == BLAKE3_IDENTITY_BYTES
+        && value.as_bytes()[BLAKE3_PREFIX_BYTES..]
+            .iter()
+            .all(u8::is_ascii_hexdigit)
 }
 
 #[cfg(test)]
@@ -286,12 +380,12 @@ mod tests {
         ArtifactFacts {
             artifact_identity: ID,
             artifact_bytes: 128,
-            octet_profile: "spacewasm-mvp",
+            octet_profile: OCTET_PROFILE,
             octet_artifact_identity: ID,
             octet_cohort: SPACEWASM_COHORT,
             exports: &[REQUIRED_EXPORT],
             imports: &[],
-            proposals: &["wasm1"],
+            proposals: &[REQUIRED_PROPOSAL],
         }
     }
 
@@ -310,7 +404,7 @@ mod tests {
         let first = classify(&profile(), &artifact(), &observation).expect("admitted");
         let second = classify(&profile(), &artifact(), &observation).expect("admitted");
         assert_eq!(first, second);
-        assert_eq!(first.non_claims.len(), 5);
+        assert_eq!(first.non_claims.len(), RECEIPT_NON_CLAIM_COUNT);
     }
 
     #[test]
@@ -349,7 +443,7 @@ mod tests {
             "b3:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
         assert_eq!(admit(&profile(), &stale), Err(Error::EvidenceMismatch));
         let mut huge = artifact();
-        huge.artifact_bytes = MAX_ARTIFACT_BYTES + 1;
+        huge.artifact_bytes = MAX_ARTIFACT_BYTES.saturating_add(1);
         assert_eq!(admit(&profile(), &huge), Err(Error::ResourceLimit));
     }
 
