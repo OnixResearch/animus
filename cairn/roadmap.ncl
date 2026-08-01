@@ -506,6 +506,12 @@ let change_entries = [
     "agent_harness_runtime.sandlock_sandbox.fail_closed",
     "agent_harness_runtime.clash_ucan.capability_request",
   ] ["adapt-sandlock-sandbox-enforcement", "add-concrete-std-runtime-adapters", "split-std-host-adapter-crates"],
+  change "add-bubblewrap-agent-guardrail-host" host_role "concrete-adapters" [
+    "add-sandlock-linux-host-adapter",
+    "split-std-host-adapter-crates",
+    "agent_harness_runtime.sandlock_sandbox.platform",
+    "agent_harness_runtime.clash_ucan.capability_request",
+  ] ["bind-session-runtime-authority-profile"],
   change "add-branchfs-speculative-host-adapter" host_role "concrete-adapters" [
     "agent_harness_runtime.branchfs_workspace.adapter",
     "agent_harness_runtime.branchfs_workspace.fail_closed",
@@ -539,7 +545,23 @@ let change_entries = [
     "agent_harness_runtime.pi_headless_protocol.command_response",
     "agent_harness_runtime.pi_headless_protocol.queueing",
     "agent_harness_runtime.pi_event_lifecycle.mode_neutral",
-  ] ["add-fake-backed-headless-dogfood-shell", "add-tui-app-shell-and-event-loop", "add-redacted-session-tree-export"],
+  ] ["add-fake-backed-headless-dogfood-shell", "add-tui-app-shell-and-event-loop", "add-redacted-session-tree-export", "bind-session-runtime-authority-profile", "add-acp-stdio-host-adapter"],
+  change "bind-session-runtime-authority-profile" core_role "ui-headless" [
+    "add-coding-session-host-facade",
+    "add-durable-session-store-host",
+    "add-per-model-runtime-profiles",
+    "add-sandlock-linux-host-adapter",
+  ] ["add-acp-stdio-host-adapter", "add-codebase-graph-host-adapter", "add-redacted-session-tree-export"],
+  change "add-codebase-graph-host-adapter" host_role "ui-headless" [
+    "add-host-tool-executor-capability-packs",
+    "adopt-cap-std-context-boundary",
+    "bind-session-runtime-authority-profile",
+  ] ["add-coding-session-host-facade", "document-ingest-adapter-boundary"],
+  change "add-acp-stdio-host-adapter" product_role "ui-headless" [
+    "add-coding-session-host-facade",
+    "bind-session-runtime-authority-profile",
+    "agent_harness_runtime.goose_acp_mcp_interop.verification",
+  ] ["extract-host-control-protocol", "add-tui-app-shell-and-event-loop"],
   change "adapt-tau-provider-retry-execution" host_role "concrete-adapters" [
     "add-concrete-provider-dispatch-adapter",
     "agent_harness_runtime.provider_dispatch_adapter.plan",
@@ -552,6 +574,68 @@ let change_entries = [
     "agent_harness_runtime.pi_session_tree.ledger_contract",
     "agent_harness_runtime.hf_dataset_export.policy",
   ] ["add-current-head-release-evidence-index", "add-host-session-persistence-adapter"],
+  change "add-aeneas-proof-campaign-recipe" product_role "ui-headless" [
+    "add-capability-bound-agent-roles",
+    "add-per-model-runtime-profiles",
+    "add-tool-executor-kit",
+    "receipt-authoritative-agent-completion",
+  ] ["adapt-hermes-scoped-validation-planner", "receipt-authoritative-agent-completion"],
+  change "add-lean4-agent-loop-fabric" optional_role "optional-references" [
+    "agent_harness_runtime.composability.loop_fabric_trait",
+    "agent_harness_runtime.loop.contract",
+    "agent_harness_runtime.clankers_safe_receipts.closeout",
+  ] ["add-aeneas-proof-campaign-recipe", "add-acp-stdio-host-adapter", "split-std-host-adapter-crates"],
+  change "add-mesh-llm-provider-adapter" host_role "concrete-adapters" [
+    "add-canonical-model-message-contracts",
+    "define-model-router-execution-service",
+    "add-concrete-provider-streaming-adapters",
+    "add-per-model-runtime-profiles",
+  ] ["adapt-tau-provider-retry-execution", "negotiate-model-capability-matrix"],
+  change "adopt-standalone-nickel-export-shell" optional_role "optional-references" [
+    "agent_harness_runtime.nickel_policy_contracts.projection_freshness",
+    "agent_harness_runtime.nickel_policy_contracts.authority_boundary",
+  ] ["add-per-model-runtime-profiles", "add-capability-bound-agent-roles"],
+  change "add-trajectory-transcript-adapter" host_role "concrete-adapters" [
+    "agent_harness_runtime.clankers_process_job_profiles.resolution",
+    "agent_harness_runtime.clankers_batch_runner.output",
+    "agent_harness_runtime.provenance_ledger.session_ledger",
+    "agent_harness_runtime.hf_dataset_export.session_source",
+  ] ["adapt-clankers-batch-trajectory-runner", "add-redacted-session-tree-export"],
+  change "add-canonical-conversation-view-projection" core_role "session-ledger" [
+    "agent_harness_runtime.pi_session_tree.ledger_contract",
+    "agent_harness_runtime.pi_event_lifecycle.mode_neutral",
+  ] ["add-tui-conversation-render-model", "add-durable-active-turn-recovery", "add-redacted-session-tree-export"],
+  change "add-durable-active-turn-recovery" host_role "concrete-adapters" [
+    "add-durable-session-store-host",
+    "adapt-tau-interrupted-tool-call-repair",
+    "adapt-tau-provider-retry-execution",
+  ] ["add-agent-control-pubsub", "add-coding-session-host-facade", "add-canonical-conversation-view-projection"],
+  change "add-secretspec-sops-host-resolution" host_role "concrete-adapters" [
+    "evaluate-bounded-execution-contract",
+    "split-std-host-adapter-crates",
+  ] ["bind-session-runtime-authority-profile", "add-sandlock-linux-host-adapter"],
+  change "evaluate-bounded-execution-contract" evaluation_role "evaluation" [
+    "agent_harness_runtime.clankers_process_job_profiles.resolution",
+    "agent_harness_runtime.sandlock_sandbox.platform",
+    "agent_harness_runtime.nickel_policy_contracts.authority_boundary",
+  ] ["add-secretspec-sops-host-resolution", "add-sandlock-linux-host-adapter"],
+  change "add-harbor-atif-json-adapter" host_role "export-surfaces" [
+    "add-trajectory-transcript-adapter",
+    "agent_harness_runtime.clankers_batch_runner.output",
+    "add-redacted-session-tree-export",
+  ] ["add-ledger-session-adapter-seam", "add-current-head-release-evidence-index"],
+  change "add-skill-source-lifecycle-contracts" core_role "policy-guidance" [
+    "agent_harness_runtime.hermes_skill_manifest.descriptor",
+    "agent_harness_runtime.hermes_skill_manifest.layout_boundary",
+  ] ["adapt-hermes-host-asset-reconciliation", "add-per-model-runtime-profiles"],
+  change "pilot-application-host-binding" product_role "ui-headless" [
+    "bind-session-runtime-authority-profile",
+    "add-fake-backed-headless-dogfood-shell",
+  ] ["add-acp-stdio-host-adapter", "add-codebase-graph-host-adapter"],
+  change "type-acp-session-identities" product_role "ui-headless" [
+    "add-acp-stdio-host-adapter",
+    "bind-session-runtime-authority-profile",
+  ] ["extract-host-control-protocol", "pilot-application-host-binding"],
 ]
 in
 
@@ -608,6 +692,7 @@ let overlap_entries = [
   overlap "receipt-authoritative-completion" "receipt-authoritative-agent-completion" ["adapt-hermes-scoped-validation-planner", "add-current-head-release-evidence-index"],
   overlap "standalone-host-control-protocol" "extract-host-control-protocol" ["split-adapter-family-crates"],
   overlap "sandlock-linux-host-enforcement" "add-sandlock-linux-host-adapter" ["split-std-host-adapter-crates"],
+  overlap "bubblewrap-agent-guardrail-host" "add-bubblewrap-agent-guardrail-host" ["add-sandlock-linux-host-adapter", "split-std-host-adapter-crates", "bind-session-runtime-authority-profile"],
   overlap "branchfs-speculative-host-workspaces" "add-branchfs-speculative-host-adapter" ["split-std-host-adapter-crates"],
   overlap "component-catalog-lego-map" "add-component-catalog" ["split-adapter-family-crates", "split-runtime-kernel-feature-packs", "split-std-host-adapter-crates", "split-preserves-boundary-bridges", "add-tool-executor-kit", "add-ledger-session-adapter-seam"],
   overlap "adapter-family-crate-split" "split-adapter-family-crates" ["add-component-catalog", "split-preserves-boundary-bridges", "add-tool-executor-kit"],
@@ -619,9 +704,25 @@ let overlap_entries = [
   overlap "spacewasm-diagnostic-host-and-wasm-surface" "define-spacewasm-embedded-compatibility-profile" ["add-component-catalog", "split-runtime-kernel-feature-packs"],
   overlap "interrupted-tool-call-transcript-repair" "adapt-tau-interrupted-tool-call-repair" ["add-durable-session-store-host", "add-coding-session-host-facade", "add-ledger-session-adapter-seam"],
   overlap "durable-session-store-host" "add-durable-session-store-host" ["add-host-session-persistence-adapter", "add-ledger-session-adapter-seam", "add-coding-session-host-facade", "add-redacted-session-tree-export"],
-  overlap "coding-session-host-facade" "add-coding-session-host-facade" ["add-fake-backed-headless-dogfood-shell", "add-tui-app-shell-and-event-loop", "add-durable-session-store-host"],
+  overlap "coding-session-host-facade" "add-coding-session-host-facade" ["add-fake-backed-headless-dogfood-shell", "add-tui-app-shell-and-event-loop", "add-durable-session-store-host", "bind-session-runtime-authority-profile", "add-acp-stdio-host-adapter"],
+  overlap "session-runtime-authority-profile" "bind-session-runtime-authority-profile" ["add-durable-session-store-host", "add-coding-session-host-facade", "add-per-model-runtime-profiles", "add-sandlock-linux-host-adapter", "add-codebase-graph-host-adapter", "add-acp-stdio-host-adapter"],
+  overlap "codebase-graph-retrieval" "add-codebase-graph-host-adapter" ["adopt-cap-std-context-boundary", "add-host-tool-executor-capability-packs", "bind-session-runtime-authority-profile"],
+  overlap "acp-stdio-host" "add-acp-stdio-host-adapter" ["add-coding-session-host-facade", "bind-session-runtime-authority-profile", "extract-host-control-protocol", "add-tui-app-shell-and-event-loop"],
   overlap "provider-retry-execution" "adapt-tau-provider-retry-execution" ["add-concrete-provider-dispatch-adapter", "add-concrete-provider-streaming-adapters"],
   overlap "redacted-session-tree-export" "add-redacted-session-tree-export" ["add-durable-session-store-host", "add-coding-session-host-facade", "add-current-head-release-evidence-index"],
+  overlap "aeneas-proof-campaign-recipe" "add-aeneas-proof-campaign-recipe" ["add-capability-bound-agent-roles", "add-per-model-runtime-profiles", "add-tool-executor-kit", "receipt-authoritative-agent-completion"],
+  overlap "lean4-agent-loop-fabric" "add-lean4-agent-loop-fabric" ["add-aeneas-proof-campaign-recipe", "add-acp-stdio-host-adapter", "split-std-host-adapter-crates"],
+  overlap "mesh-llm-provider-adapter" "add-mesh-llm-provider-adapter" ["add-canonical-model-message-contracts", "define-model-router-execution-service", "add-concrete-provider-streaming-adapters", "adapt-tau-provider-retry-execution"],
+  overlap "standalone-nickel-export-shell" "adopt-standalone-nickel-export-shell" ["add-per-model-runtime-profiles", "add-capability-bound-agent-roles"],
+  overlap "trajectory-transcript-normalization" "add-trajectory-transcript-adapter" ["add-ledger-session-adapter-seam", "add-redacted-session-tree-export"],
+  overlap "canonical-conversation-view-projection" "add-canonical-conversation-view-projection" ["add-tui-conversation-render-model", "add-durable-active-turn-recovery", "add-redacted-session-tree-export"],
+  overlap "durable-active-turn-recovery" "add-durable-active-turn-recovery" ["add-durable-session-store-host", "adapt-tau-interrupted-tool-call-repair", "add-agent-control-pubsub"],
+  overlap "secretspec-sops-host-resolution" "add-secretspec-sops-host-resolution" ["evaluate-bounded-execution-contract", "add-sandlock-linux-host-adapter", "bind-session-runtime-authority-profile"],
+  overlap "bounded-execution-contract-evaluation" "evaluate-bounded-execution-contract" ["add-sandlock-linux-host-adapter", "add-secretspec-sops-host-resolution"],
+  overlap "harbor-atif-json-interchange" "add-harbor-atif-json-adapter" ["add-trajectory-transcript-adapter", "add-redacted-session-tree-export"],
+  overlap "skill-source-lifecycle" "add-skill-source-lifecycle-contracts" ["adapt-hermes-host-asset-reconciliation", "add-per-model-runtime-profiles"],
+  overlap "application-host-binding-pilot" "pilot-application-host-binding" ["bind-session-runtime-authority-profile", "add-acp-stdio-host-adapter", "add-codebase-graph-host-adapter"],
+  overlap "typed-acp-session-identities" "type-acp-session-identities" ["add-acp-stdio-host-adapter", "extract-host-control-protocol", "pilot-application-host-binding"],
 ]
 in
 
