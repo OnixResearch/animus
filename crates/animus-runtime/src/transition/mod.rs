@@ -273,3 +273,13 @@ pub fn complete_with_fabric_error(state: TurnState, message: String) -> crate::R
         failure: crate::RuntimeFailure::Fabric { message },
     })
 }
+
+pub(crate) fn complete_with_agent_control_stop(
+    state: TurnState,
+    reason: &'static str,
+) -> crate::RunReport {
+    let state = state.with_event(crate::RuntimeEvent::Cancelled {
+        reason: String::from(reason),
+    });
+    state.complete(crate::RuntimeStatus::Stopped)
+}

@@ -19,6 +19,12 @@ Animus models host control as UI-neutral DTOs and pure validation, not as a term
 
 Animus maps its existing opaque host/resource IDs, live or durable selector lifetimes, revision-scoped topology operations, status vocabulary, bounded observations, layout DTOs, waits, and envelopes directly to the standalone core. Unsupported or lossy consumer states fail closed rather than being coerced. Tile adoption is an independent consumer lifecycle and does not make either product the semantic owner.
 
+## Agent-control relationship
+
+The separate [agent-control feature](agent-control-pubsub.md) owns pause, resume, cancellation, safe-checkpoint waiting, and bounded run-control events. Host control can resolve a UI selector and publish to that explicit run handle.
+
+Host control does not own the agent-control state machine. Agent control does not own topology, selectors, sockets, layouts, PTYs, or transport authorization.
+
 ## ACP relationship
 
 The optional [ACP stdio host](acp-stdio-host.md) is a separate bounded local protocol adapter, not a replacement host-control owner. It delegates lifecycle actions to the coding-session facade and does not gain process, daemon, remote-control, endpoint-discovery, credential, or host-shutdown authority.

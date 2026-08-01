@@ -1,0 +1,15 @@
+[package]
+name = "animus-std-control"
+description = "Authority-scoped blocking agent-control host for animus."
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+animus-adapters = { path = "../animus-adapters", version = "0.1.0" }
+animus-runtime = { path = "../animus-runtime", version = "0.1.0", default-features = false, features = ["loop"] }

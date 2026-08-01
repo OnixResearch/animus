@@ -108,6 +108,7 @@ dependencies = [
  "animus-runtime",
  "animus-std",
  "animus-std-agent-guardrail",
+ "animus-std-control",
  "animus-std-lean-loop",
  "animus-steel",
  "animus-tui",
@@ -237,6 +238,14 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
+]
+
+[[package]]
+name = "animus-std-control"
+version = "0.1.0"
+dependencies = [
+ "animus-adapters",
+ "animus-runtime",
 ]
 
 [[package]]

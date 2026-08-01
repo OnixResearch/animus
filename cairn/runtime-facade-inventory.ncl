@@ -49,6 +49,7 @@ let preserves = "crates/animus-preserves/src/lib.rs" in
 let runtime = "crates/animus-runtime/src/lib.rs" in
 let std_shell = "crates/animus-std/src/lib.rs" in
 let std_observability = "crates/animus-std-observability/src/lib.rs" in
+let std_control = "crates/animus-std-control/src/lib.rs" in
 let steel = "crates/animus-steel/src/lib.rs" in
 let tui = "crates/animus-tui/src/lib.rs" in
 let router = "crates/animus-router/src/lib.rs" in
@@ -59,6 +60,8 @@ let syndicate_feature = "syndicate-host" in
 let syndicate_family = "preserves" in
 let acp_feature = "acp-stdio-host" in
 let acp_family = "acp" in
+let agent_control_feature = "agent-control" in
+let agent_control_family = "agent-control" in
 let lean_loop_feature = "lean-loop" in
 let lean_loop_family = "loop" in
 let agent_guardrail_feature = "agent-guardrail" in
@@ -153,8 +156,56 @@ let agent_guardrail_record = fun export_path_value owning_crate_value source_val
   capability_family = agent_guardrail_family,
 }
 in
+let agent_control_record = fun export_path_value owning_crate_value source_value review_note_value => {
+  export_path = export_path_value,
+  owning_crate = owning_crate_value,
+  source = source_value,
+  class = shell,
+  side_effect = shell_owned,
+  stability = optional_stability,
+  review_note = review_note_value,
+  feature_gate = agent_control_feature,
+  required_authority = shell_owned,
+  depends_on = ["animus-adapters::AgentControlWait", "animus-runtime::AgentControlState"],
+  composes_with = ["animus-std::coding_session_host"],
+  capability_family = agent_control_family,
+}
+in
 
 let entry_values = [
+  entry "animus-adapters::AgentControlAction" "animus-adapters" adapters reusable none stable "transport-neutral external agent-control action",
+  entry "animus-adapters::AgentControlCheckpoint" "animus-adapters" adapters reusable none stable "exact run-bound safe checkpoint",
+  entry "animus-adapters::AgentControlCheckpointKind" "animus-adapters" adapters reusable none stable "safe runtime checkpoint class",
+  entry "animus-adapters::AgentControlCommand" "animus-adapters" adapters reusable none stable "revision-fenced external control command",
+  entry "animus-adapters::AgentControlCommandId" "animus-adapters" adapters reusable none stable "validated command idempotence identity",
+  entry "animus-adapters::AgentControlEvent" "animus-adapters" adapters reusable none stable "metadata-only control transition event",
+  entry "animus-adapters::AgentControlEventKind" "animus-adapters" adapters reusable none stable "safe control event class",
+  entry "animus-adapters::AgentControlIdentityError" "animus-adapters" adapters reusable none stable "bounded control identity validation error",
+  entry "animus-adapters::AgentControlPermit" "animus-adapters" adapters reusable none stable "continue or cancel runtime permit",
+  entry "animus-adapters::AgentControlPhase" "animus-adapters" adapters reusable none stable "revisioned control phase",
+  entry "animus-adapters::AgentControlRunId" "animus-adapters" adapters reusable none stable "validated exact run identity",
+  entry "animus-adapters::AgentControlWait" "animus-adapters" adapters injection injected stable "implementation-free host control wait port",
+  entry "animus-adapters::AgentControlWaitError" "animus-adapters" adapters reusable none stable "typed fail-closed wait error",
+  entry "animus-adapters::MAX_AGENT_CONTROL_ID_BYTES" "animus-adapters" adapters reusable none stable "agent-control identity byte bound",
+  entry "animus-runtime::AgentControlCheckpointDecision" "animus-runtime" runtime reusable none stable "pure safe-checkpoint decision",
+  entry "animus-runtime::AgentControlCheckpointTransition" "animus-runtime" runtime reusable none stable "pure safe-checkpoint transition",
+  entry "animus-runtime::AgentControlCommandDisposition" "animus-runtime" runtime reusable none stable "applied or duplicate command outcome",
+  entry "animus-runtime::AgentControlCommandTransition" "animus-runtime" runtime reusable none stable "pure revisioned command transition",
+  entry "animus-runtime::AgentControlReductionError" "animus-runtime" runtime reusable none stable "pure control reduction error",
+  entry "animus-runtime::AgentControlState" "animus-runtime" runtime reusable none stable "pure revisioned run-control state",
+  entry "animus-runtime::AgentControlTerminalTransition" "animus-runtime" runtime reusable none stable "pure terminal transition",
+  entry "animus-runtime::reduce_agent_control_checkpoint" "animus-runtime" runtime reusable none stable "pure safe-checkpoint reducer",
+  entry "animus-runtime::reduce_agent_control_command" "animus-runtime" runtime reusable none stable "pure external command reducer",
+  entry "animus-runtime::reduce_agent_control_terminal" "animus-runtime" runtime reusable none stable "pure terminal-state reducer",
+  agent_control_record "animus-std-control::AgentControlAcknowledgement" "animus-std-control" std_control "metadata-only publication acknowledgement",
+  agent_control_record "animus-std-control::AgentControlHostError" "animus-std-control" std_control "typed synchronized-host failure",
+  agent_control_record "animus-std-control::AgentControlHub" "animus-std-control" std_control "explicit synchronized control host",
+  agent_control_record "animus-std-control::AgentControlPublisher" "animus-std-control" std_control "clonable external command publisher",
+  agent_control_record "animus-std-control::AgentControlSnapshot" "animus-std-control" std_control "metadata-only control snapshot",
+  agent_control_record "animus-std-control::AgentControlSubscriber" "animus-std-control" std_control "bounded revision-cursor event subscriber",
+  agent_control_record "animus-std-control::AgentControlSubscriptionOutcome" "animus-std-control" std_control "event, lag, pending, or closed subscription outcome",
+  agent_control_record "animus-std-control::AgentControlWaiter" "animus-std-control" std_control "predicate-based condition-variable waiter",
+  agent_control_record "animus::agent_control" "animus" root "root feature facade for the focused blocking agent-control host",
   router_record "animus::animus_router" "animus" root router_feature optional_stability "optional model routing decision crate reexport",
   router_record "animus-adapters::router" "animus-adapters" adapters default_feature stable "transition module shim for model routing decisions",
   router_record "animus-router::AdapterContractError" "animus-router" router router_feature stable "model routing adapter field validation error",

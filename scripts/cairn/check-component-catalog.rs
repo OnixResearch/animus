@@ -90,6 +90,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "coding-session-host",
     "codebase-graph-host",
     "acp-stdio-host",
+    "agent-control",
     "agent-guardrail",
     "lean-loop",
     "sandlock-host",
@@ -120,6 +121,7 @@ const ALLOWED_AUTHORITIES: &[&str] = &[
 
 const ALLOWED_FAMILIES: &[&str] = &[
     "adapter-contracts",
+    "agent-control",
     "agent-role",
     "compatibility",
     "batch",

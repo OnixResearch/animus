@@ -294,6 +294,10 @@ let change_entries = [
     "agent_harness_runtime.pi_headless_protocol.queueing",
     "agent_harness_runtime.host_control.events_waits",
   ] ["adapt-goose-session-branching-controls", "adapt-goose-remote-server-admission"],
+  change "add-agent-control-pubsub" core_role "event-hooks" [
+    "adapt-goose-message-queue-interrupts",
+    "agent_harness_runtime.host_control.events_waits",
+  ] ["add-coding-session-host-facade", "add-tui-agent-control-and-queue-dashboard", "extract-host-control-protocol"],
   change "adapt-goose-code-mode-tool-planning" core_role "policy-guidance" [
     "agent_harness_runtime.pi_tool_contracts.definition_metadata",
     "agent_harness_runtime.pi_tool_contracts.argument_validation",
@@ -573,7 +577,8 @@ let overlap_entries = [
   overlap "memory-routing-quality" "add-memory-routing-contracts" ["add-cognitive-memory-taxonomy", "enrich-memory-retrieval-quality-policy", "add-production-memory-policy-descriptors", "add-memory-evaluation-rail"],
   overlap "router-round-robin-selection" "add-router-round-robin-selection" ["define-router-execution-plan", "gate-router-budget-and-fallback", "wire-router-into-runtime-loop"],
   overlap "goose-session-branching-controls" "adapt-goose-session-branching-controls" ["adapt-goose-message-queue-interrupts", "adapt-goose-remote-server-admission"],
-  overlap "goose-queued-control-events" "adapt-goose-message-queue-interrupts" ["adapt-goose-session-branching-controls", "adapt-goose-remote-server-admission"],
+  overlap "goose-queued-control-events" "adapt-goose-message-queue-interrupts" ["adapt-goose-session-branching-controls", "adapt-goose-remote-server-admission", "add-agent-control-pubsub"],
+  overlap "live-agent-control-pause-resume" "add-agent-control-pubsub" ["adapt-goose-message-queue-interrupts", "add-coding-session-host-facade", "add-tui-agent-control-and-queue-dashboard", "extract-host-control-protocol"],
   overlap "goose-typed-code-mode-tool-planning" "adapt-goose-code-mode-tool-planning" ["adapt-goose-message-queue-interrupts"],
   overlap "goose-remote-backend-admission" "adapt-goose-remote-server-admission" ["adapt-goose-session-branching-controls", "adapt-goose-message-queue-interrupts", "adapt-openclaw-gateway-control-plane"],
   overlap "hermes-review-quality-loop" "adapt-hermes-done-review-lifecycle" ["adapt-hermes-corrective-memory-metrics", "adapt-hermes-scoped-validation-planner", "adapt-hermes-roi-recommendation-contracts"],

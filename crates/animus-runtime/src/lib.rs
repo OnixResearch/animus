@@ -80,6 +80,8 @@ mod fresh_context_tasks;
 pub mod harbor_eval;
 mod headless;
 mod hooks;
+#[path = "control.rs"]
+mod runstate;
 #[path = "interrupted_tool_repair/mod.rs"]
 mod session_recovery;
 /// Pure active-branch diagnosis and append-only interrupted tool-call repair.

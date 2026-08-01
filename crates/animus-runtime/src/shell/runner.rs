@@ -1,3 +1,6 @@
+const AGENT_CONTROL_CANCELLED: &str = "agent_control_cancelled";
+const AGENT_CONTROL_WAIT_FAILED: &str = "agent_control_wait_failed";
+
 #[derive(Debug, Eq, PartialEq)]
 pub(super) enum Step {
     Continue { state: crate::TurnState },
@@ -38,6 +41,14 @@ where
     Tool: animus_adapters::ToolAdapter,
     Tool::Error: core::fmt::Display,
 {
+    let state = match wait_for_agent_control(
+        state,
+        animus_adapters::AgentControlCheckpointKind::BeforeFabric,
+        adapters,
+    ) {
+        Ok(ready) => ready,
+        Err(report) => return Step::Complete { report },
+    };
     let decision = match fabric.decide(turn) {
         Ok(decision) => decision,
         Err(error) => {
@@ -89,10 +100,47 @@ where
     Tool::Error: core::fmt::Display,
 {
     match step {
-        DispatchStep::Dispatch { state, request } => apply_adapter_step(
-            crate::apply_adapter_outcome(state, dispatch_adapter(request, adapters)),
-        ),
+        DispatchStep::Dispatch { state, request } => {
+            let checkpoint = dispatch_checkpoint(&request);
+            match wait_for_agent_control(state, checkpoint, adapters) {
+                Ok(ready) => apply_adapter_step(crate::apply_adapter_outcome(
+                    ready,
+                    dispatch_adapter(request, adapters),
+                )),
+                Err(report) => Step::Complete { report },
+            }
+        }
         DispatchStep::Complete { report } => Step::Complete { report },
+    }
+}
+
+fn dispatch_checkpoint(
+    request: &crate::AdapterRequest,
+) -> animus_adapters::AgentControlCheckpointKind {
+    match request {
+        crate::AdapterRequest::Model { .. } => {
+            animus_adapters::AgentControlCheckpointKind::BeforeModel
+        }
+        crate::AdapterRequest::Tool { .. } => {
+            animus_adapters::AgentControlCheckpointKind::BeforeTool
+        }
+    }
+}
+
+fn wait_for_agent_control<Model, Tool>(
+    state: crate::TurnState,
+    checkpoint: animus_adapters::AgentControlCheckpointKind,
+    adapters: &mut super::RuntimeAdapters<'_, Model, Tool>,
+) -> Result<crate::TurnState, crate::RunReport> {
+    match adapters.wait_for_agent_control(checkpoint) {
+        Ok(animus_adapters::AgentControlPermit::Continue) => Ok(state),
+        Ok(animus_adapters::AgentControlPermit::Cancel) => Err(
+            crate::transition::complete_with_agent_control_stop(state, AGENT_CONTROL_CANCELLED),
+        ),
+        Err(_error) => Err(crate::transition::complete_with_agent_control_stop(
+            state,
+            AGENT_CONTROL_WAIT_FAILED,
+        )),
     }
 }
 

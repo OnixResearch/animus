@@ -1,0 +1,61 @@
+# Agent-control implementation evidence
+
+## Outcome
+
+The in-memory external agent-control feature is implemented. It pauses at safe checkpoints, blocks without polling, resumes through a revisioned state latch, and exposes bounded event subscriptions.
+
+Durable parked control remains blocked on `add-durable-active-turn-recovery`. This change stays active and is not archive-ready.
+
+## Baseline
+
+Before core implementation, the adapter, runtime, and standard-host baseline command passed:
+
+```text
+nix develop -c cargo test -p animus-adapters -p animus-runtime -p animus-std
+```
+
+The direct host `cargo` command was unavailable outside the Nix development shell. The Nix command established the usable baseline.
+
+## Implemented boundaries
+
+- `animus-adapters` owns typed commands, identities, phases, checkpoints, permits, metadata-only events, and the injected wait port.
+- `animus-runtime` owns pure command, checkpoint, duplicate, stale, cancellation, and terminal reduction.
+- The runtime shell gates loop-fabric, model, and tool dispatch.
+- `CodingSessionAgentControlGate` lets prerequisite commits continue and gates provider, tool, and summarizer effects.
+- `animus-std-control` owns explicit `Mutex` and `Condvar` synchronization plus a bounded revisioned event journal.
+- The root `agent-control` feature re-exports the focused host crate.
+- External transport, authentication, selector resolution, and persistence remain consumer-owned.
+
+## Passing evidence
+
+- Focused adapter, runtime, standard-host, coding-session, root-feature, and Wasm rail: passed.
+- Focused rail source identity: `60010f90bf03c194d1039cff251073ca91e120ee39c8af8ca228100494e50a65`.
+- `nix build .#checks.x86_64-linux.agent-control --no-link -L`: passed with the same source identity.
+- Focused Clippy for `animus-std-control`, `animus-runtime`, and coding-session `animus-std`: passed with warnings denied.
+- `cargo fmt --all -- --check`: passed.
+- `nix run .#cargo-tigerstyle -- check`: passed after explicit assertion, searchable-path, parameter, and unit-name repairs.
+- `scripts/cairn/check-component-catalog --root .`: passed with positive and negative fixtures.
+- `scripts/cairn/check-request-lifecycle --root .`: passed with positive and negative fixtures.
+- Cairn repository validation and proposal, design, and tasks gates: passed.
+
+## Bounded repository blockers
+
+The runtime facade inventory rail still reports 47 unclassified exports from pre-existing worktree changes. No agent-control export remains in that diagnostic set.
+
+The roadmap rail classifies `add-agent-control-pubsub`, but eight other active changes remain unclassified. This change did not modify those packages.
+
+Dry-run sync remains blocked by malformed accepted-spec structure that predates this delta. The accepted spec has duplicate `## Requirements` sections and existing requirement blocks with multiple bare identities.
+
+Dry-run archive is blocked because durable parked control task H3 remains open. No sync or archive mutation ran.
+
+## Concurrency audit
+
+The implementation uses one mutex for the state predicate and event journal. Publishers mutate state before `notify_all`. Waiters evaluate state in a loop after every wake.
+
+Tests cover resume-before-wait, blocked resume, cancellation wake, stale run and revision rejection, duplicate command identity, journal lag, wrong-run checkpoints, and explicit host closure.
+
+An advisory secondary review suggested separate locks, timeout polling, and reduced notification scope. Those suggestions were rejected because they weaken the shared predicate or conflict with indefinite token-free pause semantics.
+
+## Non-claims
+
+This evidence does not prove external transport delivery, controller authorization, provider cancellation, tool rollback, process durability, exactly-once effects, task completion, production readiness, or release eligibility.

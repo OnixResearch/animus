@@ -206,6 +206,81 @@ pub trait CodingSessionEffectGate {
     ) -> Result<(), CodingSessionServiceIssue>;
 }
 
+/// Additive agent-control gate for coding-session provider, tool, and summarizer effects.
+pub struct CodingSessionAgentControlGate<'a, Waiter>
+where
+    Waiter: animus_adapters::AgentControlWait + ?Sized,
+{
+    waiter: &'a mut Waiter,
+}
+
+impl<'a, Waiter> CodingSessionAgentControlGate<'a, Waiter>
+where
+    Waiter: animus_adapters::AgentControlWait + ?Sized,
+{
+    /// Builds a coding-session gate over one explicit control waiter.
+    #[must_use]
+    pub const fn new(waiter: &'a mut Waiter) -> Self {
+        Self { waiter }
+    }
+}
+
+impl<Waiter> CodingSessionEffectGate for CodingSessionAgentControlGate<'_, Waiter>
+where
+    Waiter: animus_adapters::AgentControlWait + ?Sized,
+{
+    fn admit(
+        &mut self,
+        effect: &CodingSessionEffectRequest,
+    ) -> Result<(), CodingSessionServiceIssue> {
+        // r[impl agent_harness_runtime.agent_control.runtime.gate]
+        let Some(checkpoint) = coding_session_control_checkpoint(effect)? else {
+            return Ok(());
+        };
+        match self.waiter.wait_until_runnable(&checkpoint) {
+            Ok(animus_adapters::AgentControlPermit::Continue) => Ok(()),
+            Ok(animus_adapters::AgentControlPermit::Cancel) => {
+                Err(CodingSessionServiceIssue::Cancelled)
+            }
+            Err(animus_adapters::AgentControlWaitError::RunMismatch) => {
+                Err(CodingSessionServiceIssue::Stale)
+            }
+            Err(
+                animus_adapters::AgentControlWaitError::Closed
+                | animus_adapters::AgentControlWaitError::SynchronizationFailed
+                | animus_adapters::AgentControlWaitError::Unavailable,
+            ) => Err(CodingSessionServiceIssue::Unavailable),
+        }
+    }
+}
+
+fn coding_session_control_checkpoint(
+    effect: &CodingSessionEffectRequest,
+) -> Result<Option<animus_adapters::AgentControlCheckpoint>, CodingSessionServiceIssue> {
+    let (run_id, kind) = match effect {
+        CodingSessionEffectRequest::Provider(request) => (
+            request.run_id(),
+            animus_adapters::AgentControlCheckpointKind::BeforeModel,
+        ),
+        CodingSessionEffectRequest::Tool(request) => (
+            request.run_id(),
+            animus_adapters::AgentControlCheckpointKind::BeforeTool,
+        ),
+        CodingSessionEffectRequest::Summarizer(request) => (
+            request.run_id(),
+            animus_adapters::AgentControlCheckpointKind::BeforeSummarizer,
+        ),
+        CodingSessionEffectRequest::Commit(_)
+        | CodingSessionEffectRequest::Cancellation(_)
+        | CodingSessionEffectRequest::Recovery(_) => return Ok(None),
+    };
+    let run_id = animus_adapters::AgentControlRunId::new(run_id)
+        .map_err(|_error| CodingSessionServiceIssue::Malformed)?;
+    Ok(Some(animus_adapters::AgentControlCheckpoint::new(
+        run_id, kind,
+    )))
+}
+
 struct AdmitCodingSessionEffects;
 
 impl CodingSessionEffectGate for AdmitCodingSessionEffects {

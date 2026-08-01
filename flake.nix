@@ -214,6 +214,7 @@
                 || baseName == "check-dogfood-readiness"
                 || baseName == "check-durable-session-store"
                 || baseName == "check-coding-session-host"
+                || baseName == "check-agent-control"
                 || baseName == "check-codebase-graph"
                 || baseName == "check-mesh-provider"
                 || baseName == "check-spacewasm-compat"
@@ -588,6 +589,12 @@
             pkgs.b3sum
           ] ''
             sh scripts/cairn/check-coding-session-host --root .
+          '';
+
+          agent-control = cargoCheck "animus-agent-control" [
+            pkgs.b3sum
+          ] ''
+            sh scripts/cairn/check-agent-control --root .
           '';
 
           acp-stdio-host = cargoCheck "animus-acp-stdio-host" [

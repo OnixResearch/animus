@@ -281,6 +281,12 @@ pub use crate::researchspec::{
     validate_research_baseline, validate_research_hypothesis, validate_research_run,
     validate_research_study_contract,
 };
+pub use crate::runstate::{
+    AgentControlCheckpointDecision, AgentControlCheckpointTransition,
+    AgentControlCommandDisposition, AgentControlCommandTransition, AgentControlReductionError,
+    AgentControlState, AgentControlTerminalTransition, reduce_agent_control_checkpoint,
+    reduce_agent_control_command, reduce_agent_control_terminal,
+};
 pub use crate::runtime_dag::{
     RuntimeDagBlockedNode, RuntimeDagBounds, RuntimeDagEdge, RuntimeDagGraph, RuntimeDagIssueKind,
     RuntimeDagNode, RuntimeDagReceipt, RuntimeDagReceiptLeak, RuntimeDagRedactionStatus,

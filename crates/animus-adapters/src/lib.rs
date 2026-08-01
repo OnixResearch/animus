@@ -56,6 +56,8 @@ mod modelevidence;
 mod multimodal;
 /// Optional OpenClaw-inspired node capability-host DTOs.
 pub mod node;
+#[path = "control.rs"]
+mod runstate;
 /// Compatibility facade for the dedicated observability adapter-family crate.
 pub mod observability {
     pub use animus_adapter_observability::{
@@ -231,6 +233,12 @@ pub use recover::{
     MutationProtection, ProtectedMutationDecision, ProtectedMutationInput,
     RollbackConfirmationStatus, RollbackValidation, RollbackValidationInput,
     evaluate_protected_mutation, validate_checkpoint_receipt_text, validate_rollback,
+};
+pub use runstate::{
+    AgentControlAction, AgentControlCheckpoint, AgentControlCheckpointKind, AgentControlCommand,
+    AgentControlCommandId, AgentControlEvent, AgentControlEventKind, AgentControlIdentityError,
+    AgentControlPermit, AgentControlPhase, AgentControlRunId, AgentControlWait,
+    AgentControlWaitError, MAX_AGENT_CONTROL_ID_BYTES,
 };
 pub use versioning::{BoundaryContractIdentity, parse_boundary_contract_identity};
 

@@ -4,6 +4,11 @@ const NO_PLANNING_STEPS_REMAINING: usize = 0;
 const PLANNING_GUARD_EXHAUSTED: &str = "runtime planning step guard exhausted";
 const OBSERVABILITY_SINK_FAILED: &str = "observability_sink_failed";
 
+struct RuntimeAgentControl<'a> {
+    run_id: animus_adapters::AgentControlRunId,
+    waiter: &'a mut dyn animus_adapters::AgentControlWait,
+}
+
 /// Borrowed injected model/tool service bundle used by runtime runners.
 pub struct RuntimeAdapters<'a, Model, Tool> {
     model: Option<&'a mut Model>,
@@ -11,6 +16,7 @@ pub struct RuntimeAdapters<'a, Model, Tool> {
     middleware: crate::RuntimeMiddlewareStack<'a>,
     capabilities: crate::RuntimeCapabilityRegistry,
     tool_definitions: Vec<animus_adapters::tool::Definition>,
+    agent_control: Option<RuntimeAgentControl<'a>>,
 }
 
 impl<'a, Model, Tool> RuntimeAdapters<'a, Model, Tool> {
@@ -23,6 +29,7 @@ impl<'a, Model, Tool> RuntimeAdapters<'a, Model, Tool> {
             middleware: crate::RuntimeMiddlewareStack::empty(),
             capabilities: crate::RuntimeCapabilityRegistry::model_tool_presence(true, true),
             tool_definitions: Vec::new(),
+            agent_control: None,
         }
     }
 
@@ -40,6 +47,7 @@ impl<'a, Model, Tool> RuntimeAdapters<'a, Model, Tool> {
                 is_tool_present,
             ),
             tool_definitions: Vec::new(),
+            agent_control: None,
         }
     }
 
@@ -68,6 +76,28 @@ impl<'a, Model, Tool> RuntimeAdapters<'a, Model, Tool> {
     ) -> Self {
         self.tool_definitions = tool_definitions;
         self
+    }
+
+    /// Adds an explicit host-owned control waiter for one exact run.
+    #[must_use]
+    pub fn with_agent_control(
+        mut self,
+        run_id: animus_adapters::AgentControlRunId,
+        waiter: &'a mut dyn animus_adapters::AgentControlWait,
+    ) -> Self {
+        self.agent_control = Some(RuntimeAgentControl { run_id, waiter });
+        self
+    }
+
+    fn wait_for_agent_control(
+        &mut self,
+        kind: animus_adapters::AgentControlCheckpointKind,
+    ) -> Result<animus_adapters::AgentControlPermit, animus_adapters::AgentControlWaitError> {
+        let Some(control) = self.agent_control.as_mut() else {
+            return Ok(animus_adapters::AgentControlPermit::Continue);
+        };
+        let checkpoint = animus_adapters::AgentControlCheckpoint::new(control.run_id.clone(), kind);
+        control.waiter.wait_until_runnable(&checkpoint)
     }
 
     /// Returns the explicit capability registry used for dispatch admission.

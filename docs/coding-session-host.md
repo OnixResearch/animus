@@ -50,6 +50,14 @@ The reducer returns next state, ordered events, and at most one explicit effect 
 
 One session admits at most one active or cancelling run. An overlapping ordinary prompt, stale run or cancellation identity, stale effect, malformed recovery snapshot, unavailable required service, failed commit, or ambiguous leaf fails closed. Cancellation is a correlated request and observation; it is not proof that an external provider, tool, process, filesystem, or network effect rolled back.
 
+## External pause and resume
+
+`CodingSessionAgentControlGate` composes an injected `AgentControlWait` port with `drive_one_pending_with_gate` or `drive_pending_with_gate`.
+
+The gate lets prerequisite commit, recovery, and cancellation effects continue. It blocks provider, tool, and summarizer effects at their declared safe checkpoints.
+
+`ResumeRun` means live control recovery. Existing `CodingSessionCommand::Resume` still means durable session recovery. See [external agent control](agent-control-pubsub.md).
+
 ## Recovery and restart
 
 `resume` must run before prompt or continuation when the state declares recovery required. The host reopens only the explicitly supplied durable store, consumes its validated committed head and active leaf, decodes bounded messages, compares the committed and current requested authority profiles, and asks the pure reducer to validate lineage and tool bindings. A clean unmatched tool call produces a synthetic terminal repair that must commit before recovery becomes ready. Incomplete tails, committed corruption, cursor or leaf disagreement, malformed tool bindings, or unavailable persistence keep the session blocked.
@@ -72,6 +80,7 @@ Run from the repository root:
 
 ```sh
 scripts/cairn/check-coding-session-host --root .
+cargo test -p animus-std-control --locked
 cargo test -p animus-runtime sessionhost::tests --locked
 cargo test -p animus-std --features coding-session-host --locked
 cargo test -p animus-tui frontend --locked

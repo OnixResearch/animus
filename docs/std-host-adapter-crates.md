@@ -37,6 +37,14 @@ use animus_std_observability::{InMemorySink, NoopSink};
 
 Building `animus-std` with `--no-default-features` omits the observability sink facade. The pure authority catalog remains available so composition code can return a typed `Disabled` or `Missing` plan instead of discovering an ambient sink.
 
+## External agent control
+
+`animus-std-control` is a focused direct std crate. It uses an explicit mutex state latch, condition variable, and bounded event journal over the pure runtime reducer.
+
+The root `agent-control` feature re-exports this crate as `animus::agent_control`. The host owns no socket, network, persistence, clock, process, credential, terminal, or global-registry authority.
+
+A blocked waiter performs no polling and consumes no model tokens. Slow subscribers receive an explicit lag outcome and cannot block command publication. See [external agent control](agent-control-pubsub.md).
+
 ## Optional Sandlock enforcement
 
 The non-default Linux-only `sandlock-host` feature adds the `animus_std::sandlock_host` authority block. Its pure planner binds prior authorization, normalized sandbox intent, safe relative capability-root bindings, exact command and policy identities, required mechanisms, and BLAKE3 plan/receipt identities. Its Linux shell alone resolves concrete paths, probes the exact pinned `sandlock-core` cohort, launches a process, drains bounded output, observes timeout/cancellation, and classifies COW and cleanup. Unsupported platforms and unavailable mechanisms fail closed without fallback.
@@ -77,6 +85,8 @@ Focused checks:
 
 ```sh
 cargo test -p animus-std-observability --locked
+cargo test -p animus-std-control --locked
+cargo check -p animus --features agent-control --locked
 cargo test -p animus-std hostadapters --locked
 cargo test -p animus-std observability --locked
 cargo check -p animus-std --no-default-features --locked
@@ -94,4 +104,4 @@ scripts/cairn/check-request-lifecycle --root .
 
 Positive fixtures cover explicit available blocks and direct/facade observability sinks. Negative fixtures cover missing, disabled, denied, unavailable, closed, unsafe-record, and ambient-fallback paths.
 
-This split does not add live providers, default credential discovery, default persistence, default network transport, daemon behavior, terminal ownership, or product CLI behavior.
+This split does not add live providers, default credential discovery, default persistence, default network transport, daemon behavior, terminal ownership, or product CLI behavior. Agent-control waiting does not prove external delivery, durable pause, provider cancellation, tool rollback, or exactly-once effects.

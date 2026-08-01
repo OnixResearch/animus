@@ -235,6 +235,39 @@ impl CodingSessionTimerService for MissingTimer {
     }
 }
 
+struct ScriptedControlWaiter {
+    outcomes: std::collections::VecDeque<
+        Result<animus_adapters::AgentControlPermit, animus_adapters::AgentControlWaitError>,
+    >,
+    checkpoints: Vec<animus_adapters::AgentControlCheckpointKind>,
+}
+
+impl ScriptedControlWaiter {
+    fn new(
+        outcome: Result<
+            animus_adapters::AgentControlPermit,
+            animus_adapters::AgentControlWaitError,
+        >,
+    ) -> Self {
+        Self {
+            outcomes: [outcome].into_iter().collect(),
+            checkpoints: Vec::new(),
+        }
+    }
+}
+
+impl animus_adapters::AgentControlWait for ScriptedControlWaiter {
+    fn wait_until_runnable(
+        &mut self,
+        checkpoint: &animus_adapters::AgentControlCheckpoint,
+    ) -> Result<animus_adapters::AgentControlPermit, animus_adapters::AgentControlWaitError> {
+        self.checkpoints.push(checkpoint.kind());
+        self.outcomes
+            .pop_front()
+            .unwrap_or(Ok(animus_adapters::AgentControlPermit::Continue))
+    }
+}
+
 #[test]
 fn host_runs_fake_provider_over_commit_before_effect_boundaries() {
     // r[verify agent_harness_runtime.coding_session_host.facade]
@@ -620,6 +653,66 @@ fn real_file_host_reopens_and_resumes_committed_messages_without_provider_contac
     let services = resumed.into_services();
     assert_eq!(services.provider.dispatch_count, 0);
     services.persistence.close().expect("close reopened store");
+}
+
+#[test]
+fn agent_control_gate_allows_commit_then_gates_provider_dispatch() {
+    // r[verify agent_harness_runtime.agent_control.runtime.gate]
+    let mut host = memory_host(false).expect("host");
+    host.begin_without_driving(&CodingSessionCommand::Prompt {
+        run_id: String::from(TEST_RUN),
+        entry_id: String::from(TEST_USER_ENTRY),
+        input: input(TEST_PROMPT),
+    })
+    .expect("prompt must reduce");
+    let mut waiter = ScriptedControlWaiter::new(Ok(animus_adapters::AgentControlPermit::Continue));
+    let mut gate = CodingSessionAgentControlGate::new(&mut waiter);
+
+    assert!(
+        host.drive_one_pending_with_gate(&mut gate)
+            .expect("commit must run")
+    );
+    assert!(
+        host.drive_one_pending_with_gate(&mut gate)
+            .expect("provider must run")
+    );
+    assert_eq!(
+        waiter.checkpoints,
+        [animus_adapters::AgentControlCheckpointKind::BeforeModel]
+    );
+    assert_eq!(
+        host.into_services().provider.dispatch_count,
+        EXPECTED_SINGLE_PROVIDER_DISPATCH
+    );
+}
+
+#[test]
+fn agent_control_gate_cancellation_blocks_provider_after_commit() {
+    // r[verify agent_harness_runtime.agent_control.concurrency.cancel]
+    // r[verify agent_harness_runtime.agent_control.verification.negative]
+    let mut host = memory_host(false).expect("host");
+    host.begin_without_driving(&CodingSessionCommand::Prompt {
+        run_id: String::from(TEST_RUN),
+        entry_id: String::from(TEST_USER_ENTRY),
+        input: input(TEST_PROMPT),
+    })
+    .expect("prompt must reduce");
+    let mut waiter = ScriptedControlWaiter::new(Ok(animus_adapters::AgentControlPermit::Cancel));
+    let mut gate = CodingSessionAgentControlGate::new(&mut waiter);
+
+    assert!(
+        host.drive_one_pending_with_gate(&mut gate)
+            .expect("commit must run")
+    );
+    assert!(
+        host.drive_one_pending_with_gate(&mut gate)
+            .expect("provider denial must reduce")
+    );
+    assert_eq!(
+        waiter.checkpoints,
+        [animus_adapters::AgentControlCheckpointKind::BeforeModel]
+    );
+    assert_eq!(host.into_services().provider.dispatch_count, 0);
 }
 
 type MemoryCodingSessionHost = CodingSessionHost<

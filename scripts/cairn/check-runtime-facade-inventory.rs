@@ -82,6 +82,7 @@ const PUBLIC_EXPORT_SOURCES: &[(&str, &str)] = &[
         "animus-std-observability",
         "crates/animus-std-observability/src/lib.rs",
     ),
+    ("animus-std-control", "crates/animus-std-control/src/lib.rs"),
     ("animus-steel", "crates/animus-steel/src/lib.rs"),
     ("animus-tui", "crates/animus-tui/src/lib.rs"),
 ];
@@ -101,6 +102,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     FEATURE_STEEL,
     "all-families",
     "acp-stdio-host",
+    "agent-control",
     "agent-guardrail",
     "batch",
     "compaction",
@@ -135,6 +137,7 @@ const ALLOWED_AUTHORITIES: &[&str] = &[
 const ALLOWED_FAMILIES: &[&str] = &[
     FAMILY_COMPATIBILITY,
     "acp",
+    "agent-control",
     "batch",
     "compaction",
     "dataset-export",

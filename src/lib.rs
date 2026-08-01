@@ -38,6 +38,10 @@ pub use animus_std::{
     load_runtime, run, run_with_model,
 };
 
+/// Non-default blocking host for external pause, resume, cancellation, and subscriptions.
+#[cfg(feature = "agent-control")]
+pub use animus_std_control as agent_control;
+
 /// Re-export of the host-owned generated semantic role configuration loader.
 #[cfg(feature = "agent-role-profiles")]
 pub use animus_std::{

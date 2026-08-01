@@ -15,6 +15,8 @@ A current trusted lifecycle observation owns semantic state for its target and s
 
 Presentation fields such as titles, display agent names, activity text, and custom labels are visual-only. They never change semantic state, waits, notifications, rollups, or policy decisions.
 
+The [agent-control state machine](agent-control-pubsub.md) owns live pause, resume, and cancellation. A host can project its current phase as a trusted lifecycle observation. Status selection cannot wake or resume a controlled run.
+
 ## Evidence safety
 
 Durable status explanations include safe hashes and bounded summaries only. Raw prompts, terminal snapshots, provider payloads, credentials, and unbounded detector transcripts must stay outside reusable runtime evidence.

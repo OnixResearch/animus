@@ -1,0 +1,81 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+readonly RECEIPT_RELATIVE_PATH=target/cairn/focused-rails/agent-control.md
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+
+if [ "${1:-}" = "--root" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  repo_root=$(CDPATH= cd -- "$2" && pwd)
+fi
+
+cd "${repo_root}"
+
+for command in cargo b3sum grep; do
+  if ! command -v "${command}" >/dev/null 2>&1; then
+    printf 'error: required command not found: %s\n' "${command}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+cargo test -p animus-adapters control --locked
+cargo test -p animus-runtime control --locked
+cargo test -p animus-std-control --locked
+cargo test -p animus-std --features coding-session-host agent_control --locked
+cargo check -p animus --features agent-control --locked
+cargo check -p animus-adapters --target wasm32-unknown-unknown --locked
+
+grep -F 'pub trait AgentControlWait' crates/animus-adapters/src/control.rs >/dev/null
+grep -F 'Condvar' crates/animus-std-control/src/lib.rs >/dev/null
+grep -F 'Lagged' crates/animus-std-control/src/lib.rs >/dev/null
+grep -F 'This feature does not prove transport delivery' docs/agent-control-pubsub.md >/dev/null
+grep -F 'std.agent-control-host' cairn/component-catalog.ncl >/dev/null
+grep -F 'animus-std-control::AgentControlHub' cairn/runtime-facade-inventory.ncl >/dev/null
+
+source_identity=$(
+  b3sum \
+    crates/animus-adapters/src/control.rs \
+    crates/animus-runtime/src/control.rs \
+    crates/animus-runtime/src/shell/mod.rs \
+    crates/animus-runtime/src/shell/runner.rs \
+    crates/animus-runtime/src/shell/tests/control.rs \
+    crates/animus-std-control/src/lib.rs \
+    crates/animus-std/src/codingsession.rs \
+    crates/animus-std/src/codingsession/tests.rs \
+    docs/agent-control-pubsub.md \
+    cairn/component-catalog.ncl \
+    cairn/runtime-facade-inventory.ncl \
+    scripts/cairn/check-agent-control \
+    | b3sum \
+    | awk '{print $1}'
+)
+
+mkdir -p "$(dirname "${RECEIPT_RELATIVE_PATH}")"
+cat > "${RECEIPT_RELATIVE_PATH}" <<EOF
+# Agent-control focused rail
+
+- status: passed
+- source identity (BLAKE3): ${source_identity}
+- adapter positive and negative tests: passed
+- pure reducer positive and negative tests: passed
+- runtime safe-checkpoint tests: passed
+- condition-variable race and closure tests: passed
+- coding-session provider gate tests: passed
+- root feature facade: passed
+- adapter Wasm compile boundary: passed
+- transport delivery: not claimed
+- controller authorization: not claimed
+- durable pause: not claimed
+- provider cancellation: not claimed
+- exactly-once effects: not claimed
+- production readiness: not claimed
+EOF
+
+printf 'agent_control_source_b3=%s\n' "${source_identity}"
+printf 'agent_control_receipt=%s\n' "${RECEIPT_RELATIVE_PATH}"
