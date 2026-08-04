@@ -105,6 +105,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "research",
     "scaffold",
     "worker-team",
+    "weave-adapter",
 ];
 
 const ALLOWED_AUTHORITIES: &[&str] = &[
@@ -151,6 +152,7 @@ const ALLOWED_FAMILIES: &[&str] = &[
     "steel",
     "tool",
     "tui",
+    "weave",
     "worker-team",
     "workspace",
 ];
