@@ -101,6 +101,7 @@ name = "animus"
 version = "0.1.0"
 dependencies = [
  "animus-acp-stdio-host",
+ "animus-adapter-weave",
  "animus-adapters",
  "animus-core",
  "animus-preserves",
@@ -142,6 +143,14 @@ dependencies = [
 [[package]]
 name = "animus-adapter-safe"
 version = "0.1.0"
+
+[[package]]
+name = "animus-adapter-weave"
+version = "0.1.0"
+dependencies = [
+ "blake3",
+ "universal-weave",
+]
 
 [[package]]
 name = "animus-adapters"
@@ -799,6 +808,17 @@ name = "constant_time_eq"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d52eff69cd5e647efe296129160853a42795992097e8af39800e1060caeea9b"
+
+[[package]]
+name = "contracts"
+version = "0.6.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "80771e396e09e4d428c6d034440a3fc62f3927334b66e13c8b8689d3f8785e42"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 3.0.3",
+]
 
 [[package]]
 name = "convert_case"
@@ -3568,6 +3588,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "syn"
+version = "3.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "53e9bae58849f64dfa4f5d5ae372c8341f7305f82a3868709269343628b659a3"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "unicode-ident",
+]
+
+[[package]]
 name = "synstructure"
 version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4121,6 +4152,17 @@ name = "unicode-xid"
 version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ebc1c04c71510c7f702b52b7c350734c9ff1295c464a03335b00bb84fc54f853"
+
+[[package]]
+name = "universal-weave"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "73d3e16ddf00e9b597111a05c2c7e0738646fac49f98784da64f761fe8879eeb"
+dependencies = [
+ "contracts",
+ "hashbrown 0.17.1",
+ "indexmap 2.14.0",
+]
 
 [[package]]
 name = "untrusted"

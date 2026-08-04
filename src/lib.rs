@@ -183,6 +183,14 @@ pub use cairn_core;
 #[cfg(feature = "trellis-reference")]
 pub use trellis;
 
+/// Re-export of the optional universal-weave branching adapter.
+///
+/// The adapter wraps the pinned `universal-weave` DAG weave behind
+/// Animus-owned DTOs, named bounds, and metadata-only receipts. The neutral
+/// session ledger remains the owner of replay and persistence semantics.
+#[cfg(feature = "weave-adapter")]
+pub use animus_adapter_weave as weave_adapter;
+
 /// Re-export of the optional broad Preserves compatibility facade.
 ///
 /// Adapter-only consumers should depend on `animus-preserves-adapter` directly;
