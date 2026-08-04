@@ -1546,10 +1546,6 @@ r[agent_harness_runtime.clankers_steel_policy.closeout]
 
 r[agent_harness_runtime.clankers_focused_rails.receipts_artifacts] Animus MUST provide focused rails for safe receipt validation, leak rejection, BLAKE3 artifact determinism, and redaction-class display behavior.
 
-r[agent_harness_runtime.clankers_focused_rails.ledger] Animus MUST provide focused rails for neutral ledger replay, unsupported-entry failure, safe metadata counts, and missing ledger service behavior.
-
-r[agent_harness_runtime.clankers_focused_rails.injected_services] Animus MUST provide focused rails or tests for injected provider/tool service boundaries, absence of ambient provider behavior, and fail-closed missing/denied/cancelled/malformed outcomes.
-
 #### Scenario: Boundary rails cover negative cases
 
 r[agent_harness_runtime.clankers_focused_rails.boundary_negative]
@@ -1557,6 +1553,14 @@ r[agent_harness_runtime.clankers_focused_rails.boundary_negative]
 - WHEN focused rails run
 - THEN each unsafe or unavailable case returns a typed failure or redacted result
 - AND no rail accepts leaked sensitive material or false success evidence.
+
+### Requirement: Ledger rails
+
+r[agent_harness_runtime.clankers_focused_rails.ledger] Animus MUST provide focused rails for neutral ledger replay, unsupported-entry failure, safe metadata counts, and missing ledger service behavior.
+
+### Requirement: Injected service rails
+
+r[agent_harness_runtime.clankers_focused_rails.injected_services] Animus MUST provide focused rails or tests for injected provider/tool service boundaries, absence of ambient provider behavior, and fail-closed missing/denied/cancelled/malformed outcomes.
 
 ### Requirement: Stable rails wire into Nix checks
 
@@ -2125,10 +2129,6 @@ r[agent_harness_runtime.clankers_runtime_facade_inventory.classification.fail_cl
 
 r[agent_harness_runtime.clankers_runtime_facade_inventory.rail] Animus MUST provide a focused static rail or equivalent deterministic test that fails on unclassified runtime-facing public exports, missing owner metadata, class and side-effect contradictions, and unsafe evidence fields.
 
-r[agent_harness_runtime.clankers_runtime_facade_inventory.positive] The inventory rail MUST accept fixtures or real exports for pure DTOs, validation helpers, adapter traits, and deny-by-default host service seams.
-
-r[agent_harness_runtime.clankers_runtime_facade_inventory.negative] The inventory rail MUST reject fixtures or real exports that classify ambient filesystem, environment, credential, clock, network, provider, TUI, daemon, plugin, process, or persistence behavior as reusable contracts.
-
 #### Scenario: Positive and negative fixtures guard classification
 
 r[agent_harness_runtime.clankers_runtime_facade_inventory.rail.fixtures]
@@ -2145,11 +2145,17 @@ r[agent_harness_runtime.clankers_runtime_facade_inventory.rail.unclassified]
 - THEN it fails with an actionable diagnostic naming the missing classification
 - AND it does not require live providers, host credentials, plugin runtimes, daemon sessions, or TUI state.
 
+### Requirement: Focused inventory rail positive coverage
+
+r[agent_harness_runtime.clankers_runtime_facade_inventory.positive] The inventory rail MUST accept fixtures or real exports for pure DTOs, validation helpers, adapter traits, and deny-by-default host service seams.
+
+### Requirement: Focused inventory rail negative coverage
+
+r[agent_harness_runtime.clankers_runtime_facade_inventory.negative] The inventory rail MUST reject fixtures or real exports that classify ambient filesystem, environment, credential, clock, network, provider, TUI, daemon, plugin, process, or persistence behavior as reusable contracts.
+
 ### Requirement: Safe inventory evidence and docs
 
 r[agent_harness_runtime.clankers_runtime_facade_inventory.evidence] Inventory evidence MUST include schema/status, checked crates, class counts, fixture names, safe diagnostics, and content hashes when needed, and MUST omit raw prompts, provider payloads, credentials, environment values, full host paths, and tool output.
-
-r[agent_harness_runtime.clankers_runtime_facade_inventory.docs] Animus README or architecture docs MUST link to an inventory summary that tells embedders which surfaces are default-safe reusable contracts, host-owned injection points, or shell-only adapters.
 
 #### Scenario: Closeout evidence separates claims from non-claims
 
@@ -2158,6 +2164,10 @@ r[agent_harness_runtime.clankers_runtime_facade_inventory.closeout]
 - WHEN closeout validation runs
 - THEN evidence includes the focused inventory rail, positive and negative fixtures, dependency checks, docs links, Cairn validation, and Cairn gates
 - AND skipped checks or non-claims such as live providers, TUI dogfood, daemon tests, plugin runtime tests, VM checks, or production readiness are identified explicitly.
+
+### Requirement: Safe inventory documentation link
+
+r[agent_harness_runtime.clankers_runtime_facade_inventory.docs] Animus README or architecture docs MUST link to an inventory summary that tells embedders which surfaces are default-safe reusable contracts, host-owned injection points, or shell-only adapters.
 
 ### Requirement: Plugin manifests are bounded descriptor references
 
@@ -2752,8 +2762,6 @@ r[agent_harness_runtime.clankers_provider_parity.message_conversion.fixture]
 
 r[agent_harness_runtime.clankers_provider_parity.streaming] Future streaming provider claims MUST include parser-entrypoint tests that feed raw stream bytes through the real parser.
 
-r[agent_harness_runtime.clankers_provider_parity.fail_closed_prefix] Future provider-qualified model IDs MUST fail closed for known-but-unavailable providers rather than falling back silently.
-
 #### Scenario: Provider parity closeout is evidenced
 
 r[agent_harness_runtime.clankers_provider_parity.closeout]
@@ -2761,6 +2769,10 @@ r[agent_harness_runtime.clankers_provider_parity.closeout]
 - WHEN closeout validation runs
 - THEN evidence includes scope docs, request-field criteria, constructor-inventory pattern, message-conversion fixtures, streaming parser-entrypoint criteria, fail-closed prefix criteria, Cairn validation, and Cairn gates
 - AND skipped checks record a blocker and next-best validation.
+
+### Requirement: Provider-prefix failures fail closed
+
+r[agent_harness_runtime.clankers_provider_parity.fail_closed_prefix] Future provider-qualified model IDs MUST fail closed for known-but-unavailable providers rather than falling back silently.
 
 ### Requirement: Deterministic fixture adapters
 
@@ -15519,7 +15531,6 @@ r[agent_harness_runtime.bubblewrap_agent_guardrail.verification] The Bubblewrap 
 - THEN it MUST include passing profile, planner, authorization, preflight, transport, receipt, default-feature, and negative fixtures plus Cairn gates
 - AND unavailable real-kernel checks MUST be recorded as blocked with exact prerequisites and a next-best check rather than reported as passed.
 
-
 ### Requirement: Standalone shell source is immutable
 
 r[agent_harness_runtime.nickel_export_cutover.source] Animus MUST pin `github.com/OnixResearch/nickel-export` revision `257fafc1c746f1faf156207043a4c826bfb16d49` and an exact supported Nickel evaluator cohort in its release graph.
@@ -15957,10 +15968,6 @@ Mesh provider adoption MUST include positive and negative tests for boundary iso
 - THEN focused provider, runtime, std, projection/parser, policy, composition, safe-receipt, dogfood-hygiene, Cairn, and relevant Nix checks MUST pass
 - AND absent live Mesh, GPU, OnixOS deployment, split, WAN, or production evidence MUST remain explicit non-claims rather than blocking fixture-scoped conformance.
 
-Define an opt-in diagnostic profile that compiles and executes a bounded test guest over selected Animus no-std behavior under one exact SpaceWasm cohort without broadening Animus's generic Wasm compile, runtime, plugin, or authority claims.
-
-## Requirements
-
 ### Requirement: SpaceWasm compatibility uses a typed non-default profile
 
 r[agent_harness_runtime.spacewasm_compat.profile] Animus MUST define a typed Nickel `spacewasm-embedded-compat` profile binding the exact crate/feature/export surface, producer target/toolchain, guest wrapper, runtime/materialization cohort, Octet report, limits, expected outcomes, and non-claims, and MUST consume a fresh deterministic export.
@@ -16306,7 +16313,6 @@ r[agent_harness_runtime.harbor_eval.verification] The Harbor evaluation change M
 - THEN the fixture MUST fail with the expected typed diagnostic before the prohibited effect or claim
 - AND failure evidence MUST remain bounded and deterministic.
 
-
 ### Requirement: Cross-consumer inventory precedes extraction
 
 r[agent_harness_runtime.host_control.repository_extraction.inventory] Animus MUST record a reviewed inventory of host-control semantics in Animus and Tile before selecting a standalone protocol boundary.
@@ -16503,3 +16509,103 @@ r[agent_harness_runtime.host_control.repository_extraction.validation.non_claims
 - GIVEN standalone and Animus cutover validation passes
 - WHEN an operator reviews the result
 - THEN it MUST state that conformance does not prove daemon correctness, transport confidentiality or authentication, process or PTY preservation, terminal-output truth, policy authorization, arbitrary host compatibility, or whole-product readiness.
+
+### Requirement: Universal Weave remains a pinned optional boundary
+
+r[agent_harness_runtime.universal_weave.boundary] Animus MUST adapt `universal-weave` branching through a non-default adapter crate pinned to an exact reviewed crate version with default Cargo features disabled, and reusable, default, no-std, and Wasm-supported surfaces MUST NOT acquire `universal-weave`, `rkyv`, `loro`, `serde`-lane, filesystem, process, network, credential, clock, terminal, provider, or persistence dependencies.
+
+#### Scenario: Exact pinned cohort is selected
+
+r[agent_harness_runtime.universal_weave.boundary.exact_cohort]
+- GIVEN a host enables the reviewed `animus-adapter-weave` crate pinned to `universal-weave` `=0.4.1` with default features disabled
+- WHEN the optional adapter is composed
+- THEN Animus MAY admit DAG weave operations behind Animus-owned DTOs
+- AND default or reusable builds MUST NOT require the upstream crate.
+
+#### Scenario: Excluded upstream lane is requested
+
+r[agent_harness_runtime.universal_weave.boundary.excluded_lane]
+- GIVEN a caller requests the tree weave, the loro CRDT lane, rkyv or serde serialization, the dedup wrapper, or the undo wrapper
+- WHEN adapter admission runs
+- THEN Animus MUST return a typed unsupported-surface outcome or fail to compile
+- AND it MUST NOT silently widen authority, serialization, or compatibility claims.
+
+### Requirement: Weave adapter core is pure and mutable-model only
+
+r[agent_harness_runtime.universal_weave.adapter_core] The adapter MUST wrap the DAG `IndependentWeave` over an Animus-owned text content type with validated add, edit, split, merge-with-parent, move, bookmark, activation, and removal operations, and reusable logic MUST NOT read files, inspect environment, spawn processes, access clocks, perform network I/O, mutate the neutral session ledger, or expose upstream types in its public API.
+
+#### Scenario: Valid operation mutates the weave
+
+r[agent_harness_runtime.universal_weave.adapter_core.valid_operation]
+- GIVEN a constructed adapter and a request that passes policy admission with existing parent identifiers and fresh node identifiers
+- WHEN the operation runs
+- THEN the adapter MUST apply it through the upstream weave and report the resulting bounded counts
+- AND the operation MUST NOT touch any session ledger, persistence, provider, filesystem, or clock.
+
+#### Scenario: Operation targets missing or stale identifiers
+
+r[agent_harness_runtime.universal_weave.adapter_core.stale_target]
+- GIVEN a request that names a missing node, a duplicate node identifier, a missing parent, or a split point outside the content
+- WHEN the operation runs
+- THEN the adapter MUST fail closed with a typed error
+- AND the weave MUST remain unchanged.
+
+### Requirement: Weave bounds are named policy data enforced before mutation
+
+r[agent_harness_runtime.universal_weave.bounds] The adapter MUST define a typed policy with named bounds for maximum node count, maximum content bytes, and maximum parents per node, MUST validate the policy at construction, and MUST revalidate every request against the policy before any weave mutation.
+
+#### Scenario: Bounded request is admitted
+
+r[agent_harness_runtime.universal_weave.bounds.valid]
+- GIVEN a policy with finite positive bounds and a request within every bound
+- WHEN admission runs
+- THEN the adapter MUST admit the request deterministically
+- AND admission MUST NOT perform any weave mutation by itself.
+
+#### Scenario: Request or policy exceeds a bound
+
+r[agent_harness_runtime.universal_weave.bounds.exceeded]
+- GIVEN a zero policy bound, content longer than the byte bound, more parents than the fan-in bound, or a weave already at the node bound
+- WHEN construction or admission runs
+- THEN validation MUST fail closed with a typed error naming the violated bound
+- AND no weave state may change.
+
+### Requirement: Weave evidence is metadata-only with BLAKE3 identity
+
+r[agent_harness_runtime.universal_weave.evidence] Adapter receipts and snapshots MUST bind operation class, target identifiers, bounded node, root, active, and bookmark counts, policy identity, content lengths, content BLAKE3 digests, and a domain-separated BLAKE3 receipt identity, and MUST exclude raw node text, raw prompts, provider payloads, credentials, full paths, and host store material.
+
+#### Scenario: Receipt proves a bounded operation fact
+
+r[agent_harness_runtime.universal_weave.evidence.receipt]
+- GIVEN a completed admitted operation
+- WHEN receipt projection runs
+- THEN the receipt MUST contain only safe operation metadata, bounded counts, and a lowercase BLAKE3 hex identity
+- AND equal operation sequences MUST produce equal receipt identities.
+
+#### Scenario: Evidence leaks raw content
+
+r[agent_harness_runtime.universal_weave.evidence.leak]
+- GIVEN any attempted receipt or snapshot containing raw node text, prompt bodies, provider payloads, credentials, or full paths
+- WHEN evidence validation runs
+- THEN validation MUST reject the material
+- AND no durable evidence may be emitted.
+
+### Requirement: Weave adapter verification covers positive and negative paths
+
+r[agent_harness_runtime.universal_weave.verification] The adapter MUST ship paired positive and negative tests for every operation class, bound, and evidence rule, a focused verification rail, component catalog registration, and documentation with explicit non-claims.
+
+#### Scenario: Focused rail validates the boundary
+
+r[agent_harness_runtime.universal_weave.verification.rail]
+- GIVEN the adapter crate, its tests, catalog row, and docs
+- WHEN the focused rail runs
+- THEN it MUST verify the exact pin, disabled default features, no_std and unsafe-forbid markers, forbidden-authority absence, and registration metadata
+- AND it MUST fail closed on drift.
+
+#### Scenario: Default and Wasm surfaces stay clean
+
+r[agent_harness_runtime.universal_weave.verification.isolation]
+- GIVEN a default workspace build or a Wasm-supported surface check
+- WHEN dependencies resolve
+- THEN `universal-weave` MUST appear only behind the opt-in crate
+- AND the supported Wasm surface MUST remain unchanged unless separate evidence promotes the adapter crate.

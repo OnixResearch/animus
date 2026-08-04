@@ -35,6 +35,12 @@
 - The adapter does not read or write the neutral session ledger and does not persist weave state.
 - The `contracts` crate evaluates upstream design-by-contract assertions at runtime. Animus relies only on the explicit `check_consistency` result and its own admission checks.
 
+## Sync and archive
+
+- Accepted-spec repair before sync: the accepted `agent-harness-runtime` spec on `main` carried pre-existing shapes that the Cairn delta merger rejects. Four accepted requirements held multiple bare `r[...]` identities before their first scenario, and one earlier sync had left a duplicate `## Requirements` section plus an orphaned purpose sentence. The repair split the four requirements into one-identity blocks (`Ledger rails`, `Injected service rails`, `Focused inventory rail positive coverage`, `Focused inventory rail negative coverage`, `Safe inventory documentation link`, `Provider-prefix failures fail closed`) and removed the duplicate section. No requirement identity or text changed.
+- Sync: `nix run .#cairn -- sync add-universal-weave-adapter --root . --execute` mutated only `cairn/specs/agent-harness-runtime/spec.md`. All five `r[agent_harness_runtime.universal_weave.*]` requirement identities and ten scenario identities are present in the accepted spec. Sync receipt hash `6a59878be26be051e374b1ac7c435c0a2821d61b4205a8ece1a6b9968e2f5a33`.
+- Post-sync validation: `nix run .#cairn -- validate --root .` reports `"valid": true`.
+
 ## Blockers
 
 None.

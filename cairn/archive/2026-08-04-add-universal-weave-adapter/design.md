@@ -30,7 +30,7 @@ A bounded search considered three routes: reimplementing weave semantics inside 
 
 ### Decision: enforce named bounds before mutation
 
-**Choice:** `WeaveAdapterPolicy` names `max_nodes`, `max_content_bytes`, and `max_parents_per_node`. The adapter validates the policy once at construction and revalidates every request against it before touching the weave. Violations fail closed with typed errors and leave the weave unchanged.
+**Choice:** `WeaveAdapterPolicy` names `node_limit`, `content_byte_limit`, and `parent_fan_in_limit`. The adapter validates the policy once at construction and revalidates every request against it before touching the weave. Violations fail closed with typed errors and leave the weave unchanged.
 
 **Rationale:** An unbounded weave is an unbounded memory surface. Bounds are policy data, not literals buried in logic.
 
