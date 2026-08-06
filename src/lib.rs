@@ -56,6 +56,13 @@ pub use animus_std::{
     parse_model_runtime_profiles_json,
 };
 
+/// Re-export of canonical conversation projection policy and cache fixtures.
+#[cfg(feature = "conversation-view-projection")]
+pub use animus_std::{
+    ConversationMemoryCache, ConversationProjectionConfigError,
+    load_conversation_projection_policy, parse_conversation_projection_policy_json,
+};
+
 /// Re-export of the non-default durable coding-session host facade.
 #[cfg(feature = "coding-session-host")]
 pub use animus_std::coding_session_host;

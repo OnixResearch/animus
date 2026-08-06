@@ -48,6 +48,8 @@ mod branching;
 mod capmap;
 mod caps;
 mod checkpoint;
+/// Pure canonical conversation projection and cache reconciliation.
+pub mod conversation_projection;
 #[path = "codingsession/mod.rs"]
 mod sessionhost;
 /// Pure coding-session lifecycle facade and effect-request state machine.

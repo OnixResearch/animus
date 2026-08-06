@@ -38,6 +38,8 @@ pub mod coding_session_host {
 }
 mod config;
 mod context;
+#[cfg(feature = "conversation-view-projection")]
+mod conversationprojection;
 #[cfg(feature = "syndicate-host")]
 mod dataspace;
 mod document;
@@ -105,6 +107,11 @@ pub use authoritativecompletion::{
 #[cfg(feature = "codebase-graph-host")]
 pub use codegraph::{
     CodeGraphHost, CodeGraphHostError, CodeGraphHostEvent, parse_code_graph_profile_json,
+};
+#[cfg(feature = "conversation-view-projection")]
+pub use conversationprojection::{
+    ConversationMemoryCache, ConversationProjectionConfigError,
+    load_conversation_projection_policy, parse_conversation_projection_policy_json,
 };
 /// Backwards-compatible name for deterministic fixture bundles.
 pub type FixtureAdapters = Fixtures;
