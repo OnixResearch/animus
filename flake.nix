@@ -224,6 +224,7 @@
                 || baseName == "check-acp-stdio-host"
                 || baseName == "check-lean4-loop-fabric"
                 || baseName == "check-session-authority-profile"
+                || baseName == "check-runtime-authority-seal"
                 || baseName == "check-adapter-conformance-index"
                 || baseName == "check-adapter-family-crates"
                 || baseName == "check-ast-grep-agent-boundary-audits"
@@ -620,6 +621,14 @@
             pkgs.nickel
           ] ''
             sh scripts/cairn/check-session-authority-profile --root .
+          '';
+
+          runtime-authority-seal = cargoCheck "animus-runtime-authority-seal" [
+            pkgs.b3sum
+            pkgs.clippy
+            pkgs.rustfmt
+          ] ''
+            sh scripts/cairn/check-runtime-authority-seal --root .
           '';
 
           exec-policy = cargoCheck "animus-exec-policy" [ pkgs.nickel ] ''

@@ -66,6 +66,9 @@ mod providers;
 #[cfg(feature = "session-tree-export")]
 #[path = "sessiontreeexport.rs"]
 mod redactedwriter;
+#[cfg(feature = "runtime-authority-seal")]
+#[path = "runtimeauthorityseal.rs"]
+mod runtime_authority_seal;
 #[cfg(feature = "sandlock-host")]
 #[path = "sandlockhost/mod.rs"]
 pub mod sandlock_host;
@@ -186,6 +189,11 @@ pub use providerretry::{
     execute_provider_retry_wait, load_provider_retry_policy, parse_provider_retry_policy_json,
     retry_model_request_hash,
 };
+/// Non-default host shell for one sealed runtime-authority dispatch.
+#[cfg(feature = "runtime-authority-seal")]
+pub mod runtime_authority_seal_host {
+    pub use super::runtime_authority_seal::*;
+}
 pub use providers::{
     ApiKind, CredentialHandle, CredentialRequirement, CredentialSource, EndpointIdentity,
     InputModality, MissingCredentialDiagnostic, ModelCapabilities, ModelCapabilitiesDraft,

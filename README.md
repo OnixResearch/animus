@@ -53,6 +53,8 @@ See [docs/nickel-policy-contracts.md](docs/nickel-policy-contracts.md) for share
 
 See [docs/session-runtime-authority-profile.md](docs/session-runtime-authority-profile.md) for canonical metadata-only authority identities, durable binding and drift admission, explicit transition planning, current host re-probes, and evidence non-claims.
 
+See [docs/runtime-authority-seal.md](docs/runtime-authority-seal.md) for immutable per-dispatch authority units, exact runtime-view binding, monotonic transitions, pre-effect receipt commit, current enforcement rechecks, and evidence non-claims.
+
 ## Development shell
 
 Enter the pinned Nix development shell:
@@ -150,6 +152,7 @@ scripts/cairn/check-request-lifecycle --root .
 scripts/cairn/check-steel-runtime-policy --root .
 scripts/cairn/check-neutral-ledger --root .
 scripts/cairn/check-injected-services --root .
+sh scripts/cairn/check-runtime-authority-seal --root .
 scripts/cairn/check-composition-conformance --root .
 scripts/cairn/check-adapter-conformance-index --root .
 scripts/cairn/check-component-catalog --root .
@@ -222,6 +225,7 @@ Repository-owned Animus crates are `MIT OR Apache-2.0`; complete texts are in [L
 
 ## References
 
+- [Redox OS](https://gitlab.redox-os.org/redox-os/redox) — bounded design reference for explicit resource handles and narrow process boundaries. Animus does not adopt Redox runtime, syscall, namespace, scheme, capability, or isolation mechanisms in the runtime-authority seal.
 - [Host Control](https://github.com/OnixResearch/host-control) — independently versioned no-std topology, selector, bounded-observation, layout, event, wait, error, feature, and snapshot-first stream semantics. Animus pins an exact revision and retains only compatibility re-exports; product authority remains consumer-owned.
 - [Basalt](https://github.com/OnixResearch/basalt) — hardened UCAN contract boundaries for Nickel policy artifacts and Steel DTO evaluation backends. Added as the optional Cargo feature `basalt-reference` through the SSH-pinned `basalt` package and as a flake source input.
 - [Cairn](https://github.com/OnixResearch/cairn) — Rust lifecycle engine for native repository lifecycle work. Added as the optional Cargo feature `cairn-reference` through the SSH-pinned `cairn-core` package and as a flake source input.

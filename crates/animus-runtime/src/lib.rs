@@ -58,6 +58,12 @@ mod sessionauthority;
 pub mod session_authority_profile {
     pub use super::sessionauthority::*;
 }
+#[path = "authorityseal/mod.rs"]
+mod authorityseal;
+/// Pure per-dispatch runtime-authority seal contracts.
+pub mod runtime_authority_seal {
+    pub use super::authorityseal::*;
+}
 #[path = "composition/conformance.rs"]
 mod composition_conformance;
 mod context_layering;
