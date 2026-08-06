@@ -18,6 +18,7 @@
 #![forbid(unsafe_code)]
 
 /// Pure bounded session branch explorer reducer and host port.
+#[path = "branchexplorer.rs"]
 pub mod branch_explorer;
 mod bridge;
 mod frontend;

@@ -1,3 +1,11 @@
+// Public explorer DTO names preserve their owning branch-explorer namespace.
+#![allow(
+    unknown_lints,
+    bool_naming,
+    compound_condition,
+    non_trait_imports,
+    path_segment_repetition
+)]
 #![allow(missing_docs)]
 #![allow(
     clippy::missing_errors_doc,

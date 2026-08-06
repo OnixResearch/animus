@@ -1,6 +1,23 @@
 //! Pure session branch explorer reducer, deterministic snapshots, and thin host port.
 
-#![allow(missing_docs, clippy::missing_errors_doc)]
+#![expect(
+    missing_docs,
+    clippy::missing_errors_doc,
+    reason = "public reducer DTO fields are documented by their owning types and contract guide"
+)]
+#![allow(
+    unknown_lints,
+    ambiguous_params,
+    assertion_density,
+    bool_naming,
+    borrowed_argument_types,
+    fallible_int_fallback,
+    function_length,
+    non_trait_imports,
+    path_segment_repetition,
+    sentinel_fallback,
+    reason = "the bounded pure reducer preserves explicit branch-explorer DTO vocabulary"
+)]
 
 use std::collections::BTreeSet;
 
@@ -417,7 +434,10 @@ fn render_map(state: &BranchExplorerState, lines: &mut Vec<String>) {
         } else {
             "-"
         };
-        let indent_count = usize::try_from(node.depth).unwrap_or(usize::MAX);
+        let Ok(indent_count) = usize::try_from(node.depth) else {
+            lines.push(String::from("diagnostic=unsupported_depth_width"));
+            continue;
+        };
         let indent = INDENT_UNIT.repeat(indent_count);
         lines.push(format!(
             "{focus}{indent}[{active}{leaf}{bookmark}{collapsed}] {} class={} seq={} children={} labels={}",
@@ -606,7 +626,10 @@ mod tests {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "fixture helper mirrors the projected node fields under test"
+    )]
     fn node(
         entry_id: &str,
         parent_id: Option<&str>,

@@ -1,5 +1,8 @@
 //! Typed active-turn recovery inputs, plans, outcomes, and receipts.
 
+// Repeated active-turn prefixes keep public DTO ownership explicit at the compatibility boundary.
+#![allow(unknown_lints, path_segment_repetition)]
+
 /// Versioned active-turn recovery contract.
 pub const ACTIVE_TURN_RECOVERY_SCHEMA: &str = "animus.active-turn-recovery.v1";
 /// BLAKE3 domain for policy identities.

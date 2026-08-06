@@ -1,5 +1,15 @@
 //! Metadata-only active-turn recovery receipts.
 
+// Receipt field names remain explicit and count conversion stays checked at the public boundary.
+#![allow(
+    unknown_lints,
+    assertion_density,
+    bool_naming,
+    non_trait_imports,
+    path_segment_repetition,
+    usize_in_public_api
+)]
+
 use super::data::{
     ACTIVE_TURN_RECEIPT_HASH_DOMAIN, ACTIVE_TURN_RECOVERY_SCHEMA, ActiveTurnRecoveryError,
     ActiveTurnRecoveryIssue, ActiveTurnRecoveryPlan, ActiveTurnRecoveryPolicy,

@@ -1,3 +1,11 @@
+// Receipt validation keeps explicit metadata predicates and owner-qualified DTO imports.
+#![allow(
+    unknown_lints,
+    ambiguous_params,
+    assertion_density,
+    bool_naming,
+    non_trait_imports
+)]
 #![allow(clippy::missing_errors_doc)]
 
 use super::core::hash_parts;

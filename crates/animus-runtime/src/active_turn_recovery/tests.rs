@@ -1,3 +1,13 @@
+// Table-driven negative fixtures keep source DTO names and explicit arithmetic cases visible.
+#![allow(
+    unknown_lints,
+    ambiguous_params,
+    assertion_density,
+    numeric_units,
+    path_segment_repetition,
+    raw_arithmetic_overflow
+)]
+
 use super::*;
 
 const SESSION_ID: &str = "session.one";

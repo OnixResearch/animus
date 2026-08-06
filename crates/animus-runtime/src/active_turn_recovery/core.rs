@@ -1,5 +1,19 @@
 //! Pure active-turn policy, transaction, journal, and recovery planning.
 
+// This archived Cairn adaptation keeps explicit DTO vocabulary and bounded validation branches.
+#![allow(
+    unknown_lints,
+    ambiguous_params,
+    assertion_density,
+    bool_naming,
+    compound_condition,
+    function_length,
+    nested_conditionals,
+    non_trait_imports,
+    numeric_units,
+    path_segment_repetition
+)]
+
 use super::data::{
     ACTIVE_TURN_CHECKPOINT_HASH_DOMAIN, ACTIVE_TURN_HASH_DOMAIN, ACTIVE_TURN_PLAN_HASH_DOMAIN,
     ACTIVE_TURN_POLICY_HASH_DOMAIN, ACTIVE_TURN_RECOVERY_SCHEMA, ACTIVE_TURN_STEERING_HASH_DOMAIN,

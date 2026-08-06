@@ -1,3 +1,5 @@
+// Dense adversarial fixtures intentionally share owner-qualified DTOs and grouped assertions.
+#![allow(unknown_lints, assertion_density, non_trait_imports)]
 #![allow(clippy::too_many_arguments)]
 
 use super::*;
