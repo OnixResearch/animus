@@ -12,6 +12,10 @@ The reusable surface lives in `animus-runtime::zerostack_midturn` and is re-expo
 
 `plan_zerostack_midturn_compaction` evaluates calibrated pressure against policy-owned context window, response reserve, and threshold basis points. If mid-turn compaction is disabled, the policy-selected continue/warn/fail outcome is returned without hidden compaction. If pressure crosses the threshold and services are ready, runtime returns an explicit stop/compact/resume plan. Missing ledger or summarizer services fail closed and do not fall back to model or tool dispatch.
 
+## Persistent RLM kernel state
+
+Mid-turn stop, compact, and resume planning does not clear an active model-facing Steel kernel. The optional RLM plan records kernel-held context as counts and identities. The summary can reference that retained state instead of repeating its values. An implicit clear fails before summary append or resume.
+
 ## Explicit ledger summaries
 
 Mid-turn compaction is represented as an explicit summary append requirement rather than an unrecorded transcript rewrite. `validate_zerostack_midturn_summary` accepts only supported summary kinds, bounded non-empty summary text, safe metadata labels, and BLAKE3 source/summary hashes. Empty, overlong, unsupported, unsafe-marker, and non-BLAKE3 summaries are rejected before ledger append.

@@ -85,6 +85,9 @@ const ALLOWED_FEATURES: &[&str] = &[
     "spacewasm-diagnostic",
     "model-runtime-profiles",
     "agent-role-profiles",
+    "active-turn-recovery",
+    "conversation-view-projection",
+    "session-branch-explorer",
     "provider-retry",
     "branchfs-host",
     "coding-session-host",
@@ -93,6 +96,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "agent-control",
     "agent-guardrail",
     "lean-loop",
+    "rlm-kernel",
     "sandlock-host",
     "session-tree-export",
     "durable-session-store",
@@ -105,6 +109,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "research",
     "scaffold",
     "worker-team",
+    "weave-adapter",
 ];
 
 const ALLOWED_AUTHORITIES: &[&str] = &[
@@ -151,6 +156,7 @@ const ALLOWED_FAMILIES: &[&str] = &[
     "steel",
     "tool",
     "tui",
+    "weave",
     "worker-team",
     "workspace",
 ];

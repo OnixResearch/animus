@@ -1,0 +1,31 @@
+#!/usr/bin/env sh
+set -eu
+
+ROOT="."
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --root)
+      shift
+      ROOT="$1"
+      ;;
+    *)
+      echo "WEAVE_ADAPTER_UNKNOWN_ARG: $1" >&2
+      exit 1
+      ;;
+  esac
+  shift
+done
+
+cd "$ROOT"
+
+TMPDIR_ROOT="${TMPDIR:-/tmp}/animus-universal-weave-adapter.$$"
+mkdir -p "$TMPDIR_ROOT"
+trap 'rm -rf "$TMPDIR_ROOT"' EXIT INT TERM
+
+rustc scripts/cairn/check-universal-weave-adapter.rs -o "$TMPDIR_ROOT/check-universal-weave-adapter"
+"$TMPDIR_ROOT/check-universal-weave-adapter" --root .
+
+cargo test -p animus-adapter-weave --locked
+cargo check -p animus-adapter-weave --target wasm32-unknown-unknown --locked
+
+echo "universal weave adapter rail: ok"

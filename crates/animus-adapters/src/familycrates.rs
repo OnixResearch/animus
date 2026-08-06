@@ -95,3 +95,18 @@ fn unsafe_receipt_labels_are_rejected() {
         Err(animus_adapter_safe::Error::UnsafeMetadata { .. })
     ));
 }
+
+#[test]
+fn rlm_kernel_types_match_facade() {
+    let direct = animus_adapter_rlm_kernel::HostOperationClass::ContextRead;
+    let facade: crate::rlm_kernel::HostOperationClass = direct;
+    assert_eq!(facade.as_str(), "context_read");
+    assert_eq!(
+        crate::rlm_kernel::STEEL_REPL_TOOL_NAME,
+        animus_adapter_rlm_kernel::STEEL_REPL_TOOL_NAME
+    );
+    assert_eq!(
+        crate::rlm_kernel::RLM_KERNEL_POLICY_SCHEMA,
+        animus_adapter_rlm_kernel::RLM_KERNEL_POLICY_SCHEMA
+    );
+}

@@ -17,6 +17,8 @@ mod error;
 mod fabric;
 mod policy;
 mod quoting;
+#[cfg(feature = "rlm-kernel")]
+mod rlm;
 mod turn;
 
 /// Next action selected by the Steel loop fabric.
@@ -65,6 +67,8 @@ pub type SteelHostAction = policy::HostAction;
 pub type SteelPolicyReceiptRedaction = policy::ReceiptRedaction;
 
 pub use policy::DEFAULT_RUNTIME_HOST_ACTIONS;
+#[cfg(feature = "rlm-kernel")]
+pub use rlm::{SteelRlmError, SteelRlmEvaluation, SteelRlmKernel, SteelRlmToolAdapter};
 
 /// Returns the canonical BLAKE3 hash for a Steel script body.
 #[must_use]

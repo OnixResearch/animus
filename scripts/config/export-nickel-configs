@@ -12,10 +12,14 @@ recipe_source_file=${repo_root}/config/recipe-workflows.ncl
 model_profile_source_file=${repo_root}/config/model-runtime-profiles.ncl
 agent_role_source_file=${repo_root}/config/agent-role-profiles.ncl
 aeneas_proof_campaign_source_file=${repo_root}/config/aeneas-proof-campaign.ncl
+active_turn_recovery_source_file=${repo_root}/config/active-turn-recovery-policy.ncl
+conversation_projection_source_file=${repo_root}/config/conversation-projection-policy.ncl
+session_branch_explorer_source_file=${repo_root}/config/session-branch-explorer-policy.ncl
 provider_retry_source_file=${repo_root}/config/provider-retry-policy.ncl
 session_tree_export_source_file=${repo_root}/config/session-tree-export-policy.ncl
 durable_session_store_source_file=${repo_root}/config/durable-session-store-policy.ncl
 session_authority_profile_source_file=${repo_root}/config/session-authority-profile.ncl
+rlm_kernel_profile_source_file=${repo_root}/config/rlm-kernel-profile.ncl
 lean_loop_profile_source_file=${repo_root}/config/lean-loop-profile.ncl
 agent_guardrail_profile_source_file=${repo_root}/config/agent-guardrail-profile.ncl
 codebase_graph_profile_source_file=${repo_root}/config/codebase-graph-profile.ncl
@@ -42,10 +46,14 @@ nickel export --format json --field recipe_workflow_catalog "${recipe_source_fil
 nickel export --format json --field model_runtime_profile_set "${model_profile_source_file}" > "${target_root}/config/generated/model-runtime-profiles.json"
 nickel export --format json --field agent_role_catalog "${agent_role_source_file}" > "${target_root}/config/generated/agent-role-profiles.json"
 nickel export --format json --field aeneas_proof_campaign_bundle "${aeneas_proof_campaign_source_file}" > "${target_root}/config/generated/aeneas-proof-campaign.json"
+nickel export --format json --field active_turn_recovery_policy "${active_turn_recovery_source_file}" > "${target_root}/config/generated/active-turn-recovery-policy.json"
+nickel export --format json --field conversation_projection_policy "${conversation_projection_source_file}" > "${target_root}/config/generated/conversation-projection-policy.json"
+nickel export --format json --field session_branch_explorer_policy "${session_branch_explorer_source_file}" > "${target_root}/config/generated/session-branch-explorer-policy.json"
 nickel export --format json --field provider_retry_policy "${provider_retry_source_file}" > "${target_root}/config/generated/provider-retry-policy.json"
 nickel export --format json --field session_tree_export_policy "${session_tree_export_source_file}" > "${target_root}/config/generated/session-tree-export-policy.json"
 nickel export --format json --field durable_session_store_policy "${durable_session_store_source_file}" > "${target_root}/config/generated/durable-session-store-policy.json"
 nickel export --format json --field session_authority_profile "${session_authority_profile_source_file}" > "${target_root}/config/generated/session-authority-profile.json"
+nickel export --format json --field rlm_kernel_policy "${rlm_kernel_profile_source_file}" > "${target_root}/config/generated/rlm-kernel-profile.json"
 nickel export --format json --field lean_loop_profile "${lean_loop_profile_source_file}" > "${target_root}/config/generated/lean-loop-profile.json"
 nickel export --format json --field agent_guardrail_profile "${agent_guardrail_profile_source_file}" > "${target_root}/config/generated/agent-guardrail-profile.json"
 nickel export --format json --field codebase_graph_profile "${codebase_graph_profile_source_file}" > "${target_root}/config/generated/codebase-graph-profile.json"

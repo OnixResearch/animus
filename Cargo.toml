@@ -1,7 +1,9 @@
 [workspace]
 members = [
   "crates/animus-adapter-observability",
+  "crates/animus-adapter-rlm-kernel",
   "crates/animus-adapter-safe",
+  "crates/animus-adapter-weave",
   "crates/animus-acp-stdio-host",
   "crates/animus-adapters",
   "crates/animus-core",
@@ -80,11 +82,14 @@ workspace = true
 
 [features]
 default = ["std"]
+active-turn-recovery = ["std", "runtime", "animus-std/active-turn-recovery"]
 agent-control = ["runtime", "dep:animus-std-control"]
 agent-role-profiles = ["std", "animus-std/agent-role-profiles"]
 acp-stdio-host = ["std", "coding-session-host", "dep:animus-acp-stdio-host"]
 branchfs-host = ["std", "animus-std/branchfs-host"]
 coding-session-host = ["std", "runtime", "animus-std/coding-session-host"]
+conversation-view-projection = ["std", "runtime", "animus-std/conversation-view-projection"]
+session-branch-explorer = ["std", "runtime", "tui", "animus-std/session-branch-explorer"]
 codebase-graph-host = ["std", "animus-std/codebase-graph-host"]
 durable-session-store = ["std", "runtime", "animus-std/durable-session-store"]
 agent-guardrail = ["dep:animus-std-agent-guardrail"]
@@ -103,14 +108,24 @@ syndicate-host = ["std", "animus-std/syndicate-host"]
 basalt-reference = ["dep:basalt"]
 cairn-reference = ["dep:cairn_core"]
 trellis-reference = ["dep:trellis"]
+weave-adapter = ["dep:animus-adapter-weave"]
 preserves = ["dep:animus-preserves"]
 router = ["dep:animus-router"]
 runtime = ["std", "dep:animus-runtime"]
+rlm-kernel = [
+  "runtime",
+  "steel",
+  "dep:animus-adapter-rlm-kernel",
+  "animus-runtime/rlm-kernel",
+  "animus-steel/rlm-kernel",
+]
 steel = ["dep:animus-steel"]
 tui = ["std", "dep:animus-tui"]
 
 [dependencies]
 animus-acp-stdio-host = { path = "crates/animus-acp-stdio-host", version = "0.1.0", optional = true }
+animus-adapter-rlm-kernel = { path = "crates/animus-adapter-rlm-kernel", version = "0.1.0", optional = true }
+animus-adapter-weave = { path = "crates/animus-adapter-weave", version = "0.1.0", optional = true }
 animus-adapters = { path = "crates/animus-adapters", version = "0.1.0" }
 animus-core = { path = "crates/animus-core", version = "0.1.0" }
 animus-preserves = { path = "crates/animus-preserves", version = "0.1.0", optional = true }

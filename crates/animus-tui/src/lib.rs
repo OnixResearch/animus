@@ -17,6 +17,8 @@
 #![allow(unknown_lints, module_file_count, excessive_file_length)]
 #![forbid(unsafe_code)]
 
+/// Pure bounded session branch explorer reducer and host port.
+pub mod branch_explorer;
 mod bridge;
 mod frontend;
 mod runner;

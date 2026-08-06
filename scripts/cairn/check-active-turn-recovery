@@ -1,0 +1,108 @@
+#!/usr/bin/env sh
+# r[impl agent_harness_runtime.active_turn_recovery.verification]
+# r[verify agent_harness_runtime.active_turn_recovery.verification]
+set -eu
+
+readonly FAILURE=1
+readonly RAIL_NAME='active-turn-recovery'
+readonly RECEIPT_SCHEMA='animus.focused-rail-receipt.v1'
+readonly POLICY_SOURCE='config/active-turn-recovery-policy.ncl'
+readonly GENERATED_POLICY='config/generated/active-turn-recovery-policy.json'
+readonly POLICY_FIXTURES='config/active-turn-recovery-policy/fixtures'
+readonly RUNTIME_SOURCE='crates/animus-runtime/src/active_turn_recovery'
+readonly RUNTIME_ROOT='crates/animus-runtime/src/lib.rs'
+readonly STD_SOURCE='crates/animus-std/src/activeturnrecovery.rs'
+readonly CONTRACT_DOC='docs/active-turn-recovery.md'
+
+root='.'
+if [ "${1:-}" = '--root' ]; then
+  root=${2:-.}
+fi
+cd "${root}"
+
+for command_name in cargo nickel b3sum; do
+  if ! command -v "${command_name}" >/dev/null 2>&1; then
+    printf 'error: %s is required for active-turn recovery checks\n' "${command_name}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+for marker in \
+  'validate_active_turn_recovery_policy' \
+  'plan_active_turn_acceptance' \
+  'evaluate_active_turn_acceptance' \
+  'prepare_active_turn_checkpoint_replacement' \
+  'plan_active_turn_steering_append' \
+  'plan_active_turn_recovery' \
+  'project_active_turn_recovery_receipt'
+do
+  if ! grep -R -F "${marker}" "${RUNTIME_SOURCE}" --include='*.rs' >/dev/null; then
+    printf 'error: active-turn recovery marker is missing: %s\n' "${marker}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+if ! grep -F 'pub mod active_turn_recovery;' "${RUNTIME_ROOT}" >/dev/null; then
+  printf '%s\n' 'error: active-turn recovery public module is missing' >&2
+  exit "${FAILURE}"
+fi
+if ! grep -F 'does not prove power-loss durability' "${CONTRACT_DOC}" >/dev/null; then
+  printf '%s\n' 'error: active-turn recovery non-claims are incomplete' >&2
+  exit "${FAILURE}"
+fi
+if grep -R -E 'std::fs|std::process|Command::new|std::env|TcpStream|UdpSocket|SystemTime::now|Instant::now|execute_admitted_tool' \
+  "${RUNTIME_SOURCE}" --include='*.rs' >/dev/null 2>&1
+then
+  printf '%s\n' 'error: active-turn recovery pure core gained ambient host or executor authority' >&2
+  exit "${FAILURE}"
+fi
+
+nickel export --format json --field active_turn_recovery_policy "${POLICY_SOURCE}" >/dev/null
+nickel export --format json --field fixture "${POLICY_FIXTURES}/valid-minimal.ncl" >/dev/null
+fixture_error=$(mktemp)
+trap 'rm -f "${fixture_error}"' EXIT HUP INT TERM
+for fixture in "${POLICY_FIXTURES}"/negative-*.ncl; do
+  expected_issue=$(nickel export --format raw --field expected_issue "${fixture}")
+  if nickel export --format json --field fixture "${fixture}" >/dev/null 2>"${fixture_error}"; then
+    printf 'error: negative active-turn fixture unexpectedly passed: %s\n' "${fixture}" >&2
+    exit "${FAILURE}"
+  fi
+  if ! grep -F "${expected_issue}" "${fixture_error}" >/dev/null; then
+    printf 'error: active-turn fixture missed issue %s: %s\n' "${expected_issue}" "${fixture}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+cargo test -p animus-runtime --locked active_turn_recovery
+cargo test -p animus-std --features active-turn-recovery --locked activeturnrecovery
+cargo test -p animus-runtime --locked session_recovery
+cargo test -p animus-runtime --locked resilience
+cargo clippy -p animus-runtime --all-targets --locked -- -D warnings
+cargo clippy -p animus-std --all-targets --features active-turn-recovery --locked -- -D warnings
+cargo check -p animus-runtime --no-default-features --locked
+cargo check -p animus-std --no-default-features --locked
+cargo check -p animus --no-default-features --locked
+
+source_hash=$(
+  b3sum \
+    "${POLICY_SOURCE}" \
+    "${POLICY_FIXTURES}"/*.ncl \
+    "${GENERATED_POLICY}" \
+    "${RUNTIME_SOURCE}"/*.rs \
+    "${RUNTIME_ROOT}" \
+    "${STD_SOURCE}" \
+    "${CONTRACT_DOC}" | b3sum | cut -d ' ' -f 1
+)
+mkdir -p target/cairn/focused-rails
+receipt_path=target/cairn/focused-rails/${RAIL_NAME}.md
+cat > "${receipt_path}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+source_blake3: ${source_hash}
+claims: durable-acceptance-before-provider,atomic-checkpoint-plan,stable-turn-identity,durable-steering-gate,fail-closed-corruption,no-tool-rerun,terminal-before-cleanup,metadata-only-receipt
+non_claims: store-correctness,power-loss-durability,provider-acceptance,exactly-once-effects,task-completion,production-readiness
+EOF
+
+printf '%s\n' 'focused rail active-turn-recovery: pass'
+printf 'receipt: %s\n' "${receipt_path}"

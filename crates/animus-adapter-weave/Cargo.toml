@@ -1,0 +1,15 @@
+[package]
+name = "animus-adapter-weave"
+description = "no_std universal-weave branching adapter behind Animus-owned DTO contracts."
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+blake3 = { version = "1.8.5", default-features = false }
+universal-weave = { version = "=0.4.1", default-features = false }

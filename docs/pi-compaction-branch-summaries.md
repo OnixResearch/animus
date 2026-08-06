@@ -34,6 +34,10 @@ Compaction does not repair an assistant call that lacks a result. Before compact
 
 `evaluate_required_pi_summarizer` prepares a `PiCompactionSummarizerRequest` only when compaction is required and an injected summarizer is ready. Missing, denied, cancelled, or malformed summarizer states halt the required compaction and do not fall back to constructing provider/model/tool clients inside runtime core.
 
+## Persistent RLM kernel state
+
+If the non-default `rlm-kernel` feature is active, the host also gets a `KernelCompactionPlan`. This plan records retained binding and definition counts. It marks kernel state as preserved while the prompt context shrinks. Pi compaction cannot clear the kernel. Only an explicit host clear can reset it and produce a separate receipt.
+
 ## Safe summary metadata
 
 `validate_pi_summary_entry` accepts bounded summary text, positive source counts, redacted resource IDs, cumulative read/modified resource metadata, and BLAKE3 content hashes. It rejects raw tool output markers, provider payload markers, credential-looking markers, unredacted host paths, invalid hashes, empty text, and overlong text.

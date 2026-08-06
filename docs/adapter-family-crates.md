@@ -8,6 +8,7 @@ Animus is splitting low-risk adapter families into focused no-std crates while p
 | --- | --- | --- | --- | --- |
 | Safe receipts | `animus-adapter-safe` | `animus-adapters` safe receipt aliases remain available | reusable DTO validation only; no filesystem, process, network, credential, terminal, clock, or persistence authority | `cargo test -p animus-adapter-safe --locked`; `cargo test -p animus-adapters familycrates --locked`; `scripts/cairn/check-adapter-family-crates --root .` |
 | Observability | `animus-adapter-observability` | `animus-adapters::{MetricSample, LogRecord, MetricsAdapter, LoggingAdapter}` re-export direct crate items | reusable metric/log DTO validation only; concrete sinks remain host-owned | `cargo test -p animus-adapter-observability --locked`; `cargo test -p animus-adapters familycrates --locked`; `scripts/cairn/check-adapter-family-crates --root .` |
+| RLM kernel | `animus-adapter-rlm-kernel` | `animus-adapters::rlm_kernel` re-exports pure contracts | reusable policy, state, request, child, compaction, and receipt validation only; Steel evaluation and all host effects remain outside this crate | `cargo test -p animus-adapter-rlm-kernel --locked`; `cargo check -p animus-adapter-rlm-kernel --target wasm32-unknown-unknown --locked`; `scripts/cairn/check-rlm-kernel --root .` |
 
 ## Migration rule
 

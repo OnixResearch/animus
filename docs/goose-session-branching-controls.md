@@ -1,5 +1,7 @@
 # Goose session branching controls
 
+The [session branch explorer](session-branch-explorer.md) uses these controls only for append-only fork plans. It rejects edit-in-place, suffix deletion, merge, and reparent operations.
+
 Animus adapts Goose-style edit, fork, duplicate, and label controls as pure session-branch plans. Reusable runtime code validates already-loaded ledger summaries and policy inputs; hosts keep UI widgets, storage mutation, checkpoints, rollback execution, provider replay, live processes, credentials, and transcript bodies.
 
 ## Reusable contract

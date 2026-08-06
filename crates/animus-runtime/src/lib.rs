@@ -29,6 +29,8 @@
 )]
 #![forbid(unsafe_code)]
 
+/// Pure active-turn durability, transaction, recovery, and receipt contracts.
+pub mod active_turn_recovery;
 mod admission;
 #[allow(excessive_file_length)]
 #[path = "aeneasproofcampaign.rs"]
@@ -42,10 +44,14 @@ mod background;
 #[allow(excessive_file_length)]
 mod batch;
 mod boundary;
+/// Pure bounded session branch projection, control planning, comparison, and evidence.
+pub mod branch_explorer;
 mod branching;
 mod capmap;
 mod caps;
 mod checkpoint;
+/// Pure canonical conversation projection and cache reconciliation.
+pub mod conversation_projection;
 #[path = "codingsession/mod.rs"]
 mod sessionhost;
 /// Pure coding-session lifecycle facade and effect-request state machine.
@@ -123,6 +129,9 @@ mod redactedview;
 mod researchspec;
 #[path = "researchspecpromotiondag.rs"]
 pub mod researchspec_promotion_dag;
+#[cfg(feature = "rlm-kernel")]
+#[path = "rlmkernel.rs"]
+pub mod rlm_kernel;
 mod runtime_dag;
 mod scaffold;
 /// Pure redaction-first session-tree export contracts.

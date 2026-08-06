@@ -56,6 +56,20 @@ pub use animus_std::{
     parse_model_runtime_profiles_json,
 };
 
+/// Re-export of canonical conversation projection policy and cache fixtures.
+#[cfg(feature = "conversation-view-projection")]
+pub use animus_std::{
+    ConversationMemoryCache, ConversationProjectionConfigError,
+    load_conversation_projection_policy, parse_conversation_projection_policy_json,
+};
+
+/// Re-export of session branch explorer policy and deterministic fixture host.
+#[cfg(feature = "session-branch-explorer")]
+pub use animus_std::{
+    SessionBranchExplorerConfigError, SessionBranchFixtureFailure, SessionBranchMemoryHost,
+    load_session_branch_explorer_policy, parse_session_branch_explorer_policy_json,
+};
+
 /// Re-export of the non-default durable coding-session host facade.
 #[cfg(feature = "coding-session-host")]
 pub use animus_std::coding_session_host;
@@ -113,6 +127,14 @@ pub use animus_std_agent_guardrail as agent_guardrail;
 /// Re-export of the non-default bounded Lean 4 loop-fabric host adapter.
 #[cfg(feature = "lean-loop")]
 pub use animus_std_lean_loop as lean_loop;
+
+/// Re-export of active-turn recovery contracts and the non-default fixture host.
+#[cfg(feature = "active-turn-recovery")]
+pub use animus_std::{
+    ActiveTurnFixtureFailure, ActiveTurnMemoryHost, ActiveTurnRecoveryConfigError,
+    ActiveTurnRecoveryJsonErrorKind, load_active_turn_recovery_policy,
+    parse_active_turn_recovery_policy_json,
+};
 
 /// Re-export of host-owned provider retry policy and injected effect seams.
 #[cfg(feature = "provider-retry")]
@@ -183,6 +205,14 @@ pub use cairn_core;
 #[cfg(feature = "trellis-reference")]
 pub use trellis;
 
+/// Re-export of the optional universal-weave branching adapter.
+///
+/// The adapter wraps the pinned `universal-weave` DAG weave behind
+/// Animus-owned DTOs, named bounds, and metadata-only receipts. The neutral
+/// session ledger remains the owner of replay and persistence semantics.
+#[cfg(feature = "weave-adapter")]
+pub use animus_adapter_weave as weave_adapter;
+
 /// Re-export of the optional broad Preserves compatibility facade.
 ///
 /// Adapter-only consumers should depend on `animus-preserves-adapter` directly;
@@ -197,6 +227,10 @@ pub use animus_router;
 /// Re-export of the optional reusable agent-loop runtime.
 #[cfg(feature = "runtime")]
 pub use animus_runtime;
+
+/// Re-export of the no-std model-facing RLM kernel contract family.
+#[cfg(feature = "rlm-kernel")]
+pub use animus_adapter_rlm_kernel as rlm_kernel_contracts;
 
 /// Re-export of the optional Steel Scheme loop fabric.
 #[cfg(feature = "steel")]

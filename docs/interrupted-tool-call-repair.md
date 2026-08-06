@@ -39,6 +39,10 @@ A tail plan appends synthetic results after the active tool-call batch. If later
 
 Hosts return typed durability, replay-validation, active-leaf, committed-action, prior-plan, and executor-non-invocation observations. Provider continuation is admitted only for an originally clean diagnosis or a complete durable application whose replay is clean and whose plan/new-leaf identities match. Partial writes, store failure, stale heads, missing replay validation, and any tool-executor invocation remain blockers. Re-observing an already-applied plan and current repaired leaf yields `already_applied` without another append.
 
+## Active-turn composition
+
+[Active-turn recovery](active-turn-recovery.md) protects accepted work before this repair boundary starts. It delegates unmatched calls here and cannot construct a tool request.
+
 ## Receipt safety and non-claims
 
 Repair receipts contain only schema, mode/status/reason classes, old/new leaf hashes, plan hash, bounded action count, redaction marker, non-claim, and receipt BLAKE3 identity. Raw prompts, tool arguments/results, provider payloads, credentials, private paths, exceptions, and transcripts are rejected.
@@ -52,6 +56,7 @@ A passing repair receipt establishes only that supplied metadata describes a com
 ```text
 cargo test -p animus-runtime --locked session_recovery
 scripts/cairn/check-interrupted-tool-repair --root .
+scripts/cairn/check-active-turn-recovery --root .
 scripts/cairn/check-safe-receipts-artifacts --root .
 scripts/cairn/check-neutral-ledger --root .
 scripts/cairn/check-composition-conformance --root .

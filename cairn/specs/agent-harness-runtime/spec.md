@@ -1546,10 +1546,6 @@ r[agent_harness_runtime.clankers_steel_policy.closeout]
 
 r[agent_harness_runtime.clankers_focused_rails.receipts_artifacts] Animus MUST provide focused rails for safe receipt validation, leak rejection, BLAKE3 artifact determinism, and redaction-class display behavior.
 
-r[agent_harness_runtime.clankers_focused_rails.ledger] Animus MUST provide focused rails for neutral ledger replay, unsupported-entry failure, safe metadata counts, and missing ledger service behavior.
-
-r[agent_harness_runtime.clankers_focused_rails.injected_services] Animus MUST provide focused rails or tests for injected provider/tool service boundaries, absence of ambient provider behavior, and fail-closed missing/denied/cancelled/malformed outcomes.
-
 #### Scenario: Boundary rails cover negative cases
 
 r[agent_harness_runtime.clankers_focused_rails.boundary_negative]
@@ -1557,6 +1553,14 @@ r[agent_harness_runtime.clankers_focused_rails.boundary_negative]
 - WHEN focused rails run
 - THEN each unsafe or unavailable case returns a typed failure or redacted result
 - AND no rail accepts leaked sensitive material or false success evidence.
+
+### Requirement: Ledger rails
+
+r[agent_harness_runtime.clankers_focused_rails.ledger] Animus MUST provide focused rails for neutral ledger replay, unsupported-entry failure, safe metadata counts, and missing ledger service behavior.
+
+### Requirement: Injected service rails
+
+r[agent_harness_runtime.clankers_focused_rails.injected_services] Animus MUST provide focused rails or tests for injected provider/tool service boundaries, absence of ambient provider behavior, and fail-closed missing/denied/cancelled/malformed outcomes.
 
 ### Requirement: Stable rails wire into Nix checks
 
@@ -2125,10 +2129,6 @@ r[agent_harness_runtime.clankers_runtime_facade_inventory.classification.fail_cl
 
 r[agent_harness_runtime.clankers_runtime_facade_inventory.rail] Animus MUST provide a focused static rail or equivalent deterministic test that fails on unclassified runtime-facing public exports, missing owner metadata, class and side-effect contradictions, and unsafe evidence fields.
 
-r[agent_harness_runtime.clankers_runtime_facade_inventory.positive] The inventory rail MUST accept fixtures or real exports for pure DTOs, validation helpers, adapter traits, and deny-by-default host service seams.
-
-r[agent_harness_runtime.clankers_runtime_facade_inventory.negative] The inventory rail MUST reject fixtures or real exports that classify ambient filesystem, environment, credential, clock, network, provider, TUI, daemon, plugin, process, or persistence behavior as reusable contracts.
-
 #### Scenario: Positive and negative fixtures guard classification
 
 r[agent_harness_runtime.clankers_runtime_facade_inventory.rail.fixtures]
@@ -2145,11 +2145,17 @@ r[agent_harness_runtime.clankers_runtime_facade_inventory.rail.unclassified]
 - THEN it fails with an actionable diagnostic naming the missing classification
 - AND it does not require live providers, host credentials, plugin runtimes, daemon sessions, or TUI state.
 
+### Requirement: Focused inventory rail positive coverage
+
+r[agent_harness_runtime.clankers_runtime_facade_inventory.positive] The inventory rail MUST accept fixtures or real exports for pure DTOs, validation helpers, adapter traits, and deny-by-default host service seams.
+
+### Requirement: Focused inventory rail negative coverage
+
+r[agent_harness_runtime.clankers_runtime_facade_inventory.negative] The inventory rail MUST reject fixtures or real exports that classify ambient filesystem, environment, credential, clock, network, provider, TUI, daemon, plugin, process, or persistence behavior as reusable contracts.
+
 ### Requirement: Safe inventory evidence and docs
 
 r[agent_harness_runtime.clankers_runtime_facade_inventory.evidence] Inventory evidence MUST include schema/status, checked crates, class counts, fixture names, safe diagnostics, and content hashes when needed, and MUST omit raw prompts, provider payloads, credentials, environment values, full host paths, and tool output.
-
-r[agent_harness_runtime.clankers_runtime_facade_inventory.docs] Animus README or architecture docs MUST link to an inventory summary that tells embedders which surfaces are default-safe reusable contracts, host-owned injection points, or shell-only adapters.
 
 #### Scenario: Closeout evidence separates claims from non-claims
 
@@ -2158,6 +2164,10 @@ r[agent_harness_runtime.clankers_runtime_facade_inventory.closeout]
 - WHEN closeout validation runs
 - THEN evidence includes the focused inventory rail, positive and negative fixtures, dependency checks, docs links, Cairn validation, and Cairn gates
 - AND skipped checks or non-claims such as live providers, TUI dogfood, daemon tests, plugin runtime tests, VM checks, or production readiness are identified explicitly.
+
+### Requirement: Safe inventory documentation link
+
+r[agent_harness_runtime.clankers_runtime_facade_inventory.docs] Animus README or architecture docs MUST link to an inventory summary that tells embedders which surfaces are default-safe reusable contracts, host-owned injection points, or shell-only adapters.
 
 ### Requirement: Plugin manifests are bounded descriptor references
 
@@ -2752,8 +2762,6 @@ r[agent_harness_runtime.clankers_provider_parity.message_conversion.fixture]
 
 r[agent_harness_runtime.clankers_provider_parity.streaming] Future streaming provider claims MUST include parser-entrypoint tests that feed raw stream bytes through the real parser.
 
-r[agent_harness_runtime.clankers_provider_parity.fail_closed_prefix] Future provider-qualified model IDs MUST fail closed for known-but-unavailable providers rather than falling back silently.
-
 #### Scenario: Provider parity closeout is evidenced
 
 r[agent_harness_runtime.clankers_provider_parity.closeout]
@@ -2761,6 +2769,10 @@ r[agent_harness_runtime.clankers_provider_parity.closeout]
 - WHEN closeout validation runs
 - THEN evidence includes scope docs, request-field criteria, constructor-inventory pattern, message-conversion fixtures, streaming parser-entrypoint criteria, fail-closed prefix criteria, Cairn validation, and Cairn gates
 - AND skipped checks record a blocker and next-best validation.
+
+### Requirement: Provider-prefix failures fail closed
+
+r[agent_harness_runtime.clankers_provider_parity.fail_closed_prefix] Future provider-qualified model IDs MUST fail closed for known-but-unavailable providers rather than falling back silently.
 
 ### Requirement: Deterministic fixture adapters
 
@@ -15519,7 +15531,6 @@ r[agent_harness_runtime.bubblewrap_agent_guardrail.verification] The Bubblewrap 
 - THEN it MUST include passing profile, planner, authorization, preflight, transport, receipt, default-feature, and negative fixtures plus Cairn gates
 - AND unavailable real-kernel checks MUST be recorded as blocked with exact prerequisites and a next-best check rather than reported as passed.
 
-
 ### Requirement: Standalone shell source is immutable
 
 r[agent_harness_runtime.nickel_export_cutover.source] Animus MUST pin `github.com/OnixResearch/nickel-export` revision `257fafc1c746f1faf156207043a4c826bfb16d49` and an exact supported Nickel evaluator cohort in its release graph.
@@ -15957,10 +15968,6 @@ Mesh provider adoption MUST include positive and negative tests for boundary iso
 - THEN focused provider, runtime, std, projection/parser, policy, composition, safe-receipt, dogfood-hygiene, Cairn, and relevant Nix checks MUST pass
 - AND absent live Mesh, GPU, OnixOS deployment, split, WAN, or production evidence MUST remain explicit non-claims rather than blocking fixture-scoped conformance.
 
-Define an opt-in diagnostic profile that compiles and executes a bounded test guest over selected Animus no-std behavior under one exact SpaceWasm cohort without broadening Animus's generic Wasm compile, runtime, plugin, or authority claims.
-
-## Requirements
-
 ### Requirement: SpaceWasm compatibility uses a typed non-default profile
 
 r[agent_harness_runtime.spacewasm_compat.profile] Animus MUST define a typed Nickel `spacewasm-embedded-compat` profile binding the exact crate/feature/export surface, producer target/toolchain, guest wrapper, runtime/materialization cohort, Octet report, limits, expected outcomes, and non-claims, and MUST consume a fresh deterministic export.
@@ -16306,7 +16313,6 @@ r[agent_harness_runtime.harbor_eval.verification] The Harbor evaluation change M
 - THEN the fixture MUST fail with the expected typed diagnostic before the prohibited effect or claim
 - AND failure evidence MUST remain bounded and deterministic.
 
-
 ### Requirement: Cross-consumer inventory precedes extraction
 
 r[agent_harness_runtime.host_control.repository_extraction.inventory] Animus MUST record a reviewed inventory of host-control semantics in Animus and Tile before selecting a standalone protocol boundary.
@@ -16503,3 +16509,803 @@ r[agent_harness_runtime.host_control.repository_extraction.validation.non_claims
 - GIVEN standalone and Animus cutover validation passes
 - WHEN an operator reviews the result
 - THEN it MUST state that conformance does not prove daemon correctness, transport confidentiality or authentication, process or PTY preservation, terminal-output truth, policy authorization, arbitrary host compatibility, or whole-product readiness.
+
+### Requirement: Universal Weave remains a pinned optional boundary
+
+r[agent_harness_runtime.universal_weave.boundary] Animus MUST adapt `universal-weave` branching through a non-default adapter crate pinned to an exact reviewed crate version with default Cargo features disabled, and reusable, default, no-std, and Wasm-supported surfaces MUST NOT acquire `universal-weave`, `rkyv`, `loro`, `serde`-lane, filesystem, process, network, credential, clock, terminal, provider, or persistence dependencies.
+
+#### Scenario: Exact pinned cohort is selected
+
+r[agent_harness_runtime.universal_weave.boundary.exact_cohort]
+- GIVEN a host enables the reviewed `animus-adapter-weave` crate pinned to `universal-weave` `=0.4.1` with default features disabled
+- WHEN the optional adapter is composed
+- THEN Animus MAY admit DAG weave operations behind Animus-owned DTOs
+- AND default or reusable builds MUST NOT require the upstream crate.
+
+#### Scenario: Excluded upstream lane is requested
+
+r[agent_harness_runtime.universal_weave.boundary.excluded_lane]
+- GIVEN a caller requests the tree weave, the loro CRDT lane, rkyv or serde serialization, the dedup wrapper, or the undo wrapper
+- WHEN adapter admission runs
+- THEN Animus MUST return a typed unsupported-surface outcome or fail to compile
+- AND it MUST NOT silently widen authority, serialization, or compatibility claims.
+
+### Requirement: Weave adapter core is pure and mutable-model only
+
+r[agent_harness_runtime.universal_weave.adapter_core] The adapter MUST wrap the DAG `IndependentWeave` over an Animus-owned text content type with validated add, edit, split, merge-with-parent, move, bookmark, activation, and removal operations, and reusable logic MUST NOT read files, inspect environment, spawn processes, access clocks, perform network I/O, mutate the neutral session ledger, or expose upstream types in its public API.
+
+#### Scenario: Valid operation mutates the weave
+
+r[agent_harness_runtime.universal_weave.adapter_core.valid_operation]
+- GIVEN a constructed adapter and a request that passes policy admission with existing parent identifiers and fresh node identifiers
+- WHEN the operation runs
+- THEN the adapter MUST apply it through the upstream weave and report the resulting bounded counts
+- AND the operation MUST NOT touch any session ledger, persistence, provider, filesystem, or clock.
+
+#### Scenario: Operation targets missing or stale identifiers
+
+r[agent_harness_runtime.universal_weave.adapter_core.stale_target]
+- GIVEN a request that names a missing node, a duplicate node identifier, a missing parent, or a split point outside the content
+- WHEN the operation runs
+- THEN the adapter MUST fail closed with a typed error
+- AND the weave MUST remain unchanged.
+
+### Requirement: Weave bounds are named policy data enforced before mutation
+
+r[agent_harness_runtime.universal_weave.bounds] The adapter MUST define a typed policy with named bounds for maximum node count, maximum content bytes, and maximum parents per node, MUST validate the policy at construction, and MUST revalidate every request against the policy before any weave mutation.
+
+#### Scenario: Bounded request is admitted
+
+r[agent_harness_runtime.universal_weave.bounds.valid]
+- GIVEN a policy with finite positive bounds and a request within every bound
+- WHEN admission runs
+- THEN the adapter MUST admit the request deterministically
+- AND admission MUST NOT perform any weave mutation by itself.
+
+#### Scenario: Request or policy exceeds a bound
+
+r[agent_harness_runtime.universal_weave.bounds.exceeded]
+- GIVEN a zero policy bound, content longer than the byte bound, more parents than the fan-in bound, or a weave already at the node bound
+- WHEN construction or admission runs
+- THEN validation MUST fail closed with a typed error naming the violated bound
+- AND no weave state may change.
+
+### Requirement: Weave evidence is metadata-only with BLAKE3 identity
+
+r[agent_harness_runtime.universal_weave.evidence] Adapter receipts and snapshots MUST bind operation class, target identifiers, bounded node, root, active, and bookmark counts, policy identity, content lengths, content BLAKE3 digests, and a domain-separated BLAKE3 receipt identity, and MUST exclude raw node text, raw prompts, provider payloads, credentials, full paths, and host store material.
+
+#### Scenario: Receipt proves a bounded operation fact
+
+r[agent_harness_runtime.universal_weave.evidence.receipt]
+- GIVEN a completed admitted operation
+- WHEN receipt projection runs
+- THEN the receipt MUST contain only safe operation metadata, bounded counts, and a lowercase BLAKE3 hex identity
+- AND equal operation sequences MUST produce equal receipt identities.
+
+#### Scenario: Evidence leaks raw content
+
+r[agent_harness_runtime.universal_weave.evidence.leak]
+- GIVEN any attempted receipt or snapshot containing raw node text, prompt bodies, provider payloads, credentials, or full paths
+- WHEN evidence validation runs
+- THEN validation MUST reject the material
+- AND no durable evidence may be emitted.
+
+### Requirement: Weave adapter verification covers positive and negative paths
+
+r[agent_harness_runtime.universal_weave.verification] The adapter MUST ship paired positive and negative tests for every operation class, bound, and evidence rule, a focused verification rail, component catalog registration, and documentation with explicit non-claims.
+
+#### Scenario: Focused rail validates the boundary
+
+r[agent_harness_runtime.universal_weave.verification.rail]
+- GIVEN the adapter crate, its tests, catalog row, and docs
+- WHEN the focused rail runs
+- THEN it MUST verify the exact pin, disabled default features, no_std and unsafe-forbid markers, forbidden-authority absence, and registration metadata
+- AND it MUST fail closed on drift.
+
+#### Scenario: Default and Wasm surfaces stay clean
+
+r[agent_harness_runtime.universal_weave.verification.isolation]
+- GIVEN a default workspace build or a Wasm-supported surface check
+- WHEN dependencies resolve
+- THEN `universal-weave` MUST appear only behind the opt-in crate
+- AND the supported Wasm surface MUST remain unchanged unless separate evidence promotes the adapter crate.
+
+### Requirement: RLM kernel remains an exact optional boundary
+
+r[agent_harness_runtime.rlm_kernel.boundary] Animus MUST provide the model-facing persistent kernel as a focused non-default profile over `animus-steel` pinned to the reviewed prime-agent cohort, and reusable, default, no-std, and Wasm surfaces MUST NOT acquire filesystem, process, network, environment, credential, clock, scheduler, or persistence authority from the kernel.
+
+#### Scenario: Model-facing Steel profile is selected
+
+r[agent_harness_runtime.rlm_kernel.boundary.selected]
+- GIVEN an embedder selects the reviewed RLM kernel profile and supplies a host executor
+- WHEN the kernel is composed
+- THEN Animus MAY expose a persistent Steel environment, typed host requests, and bounded child spawn to the model
+- AND the existing Steel fabric, subagent, compaction, tool-executor, and receipt owners MUST remain authoritative.
+
+#### Scenario: Ambient authority is requested
+
+r[agent_harness_runtime.rlm_kernel.boundary.no_ambient]
+- GIVEN model code or a caller expects the kernel to read files, spawn processes, open sockets, or persist state directly
+- WHEN admission runs
+- THEN Animus MUST return a typed unsupported-authority outcome before the effect
+- AND it MUST NOT substitute an ambient implementation or widen the admitted operation set.
+
+### Requirement: RLM kernel policy is Nickel-authored and revalidated
+
+r[agent_harness_runtime.rlm_kernel.profile] Human-authored kernel policy MUST use typed Nickel contracts for exact cohort identity, fuel, depth, allocation, environment-size, child-spawn budgets, admitted host-operation classes, receipt fields, and required non-claims, and generated runtime policy MUST be deterministically exported and revalidated by Rust before use.
+
+#### Scenario: Reviewed bounded policy is admitted
+
+r[agent_harness_runtime.rlm_kernel.profile.valid]
+- GIVEN a checked profile names the exact cohort, finite bounds, explicit operation classes, and required non-claims
+- WHEN Rust revalidates the generated profile
+- THEN it MUST return a deterministic policy decision and domain-separated BLAKE3 policy identity
+- AND no evaluation, host request, or receipt emission may occur before admission.
+
+#### Scenario: Policy drifts or leaves an unsafe default implicit
+
+r[agent_harness_runtime.rlm_kernel.profile.invalid]
+- GIVEN generated policy is stale, omits a bound, admits an ambient operation class, or weakens claim boundaries
+- WHEN profile validation runs
+- THEN validation MUST fail closed with a bounded typed issue
+- AND no kernel evaluation or host request may proceed.
+
+### Requirement: Kernel environment persists prompt context as variables
+
+r[agent_harness_runtime.rlm_kernel.environment] The kernel MUST bind admitted prompt context to named variables, preserve variables, imports, and helper definitions across turns, and enforce named bounds on environment size, evaluation fuel, recursion depth, and allocation with pure deterministic evaluation results.
+
+#### Scenario: Context persists across turns
+
+r[agent_harness_runtime.rlm_kernel.environment.persists]
+- GIVEN an admitted environment holds variables and helper definitions from earlier turns
+- WHEN a new model evaluation runs against the same kernel
+- THEN the evaluation MUST observe the persisted bindings within admitted bounds
+- AND repeated evaluation of identical code, environment, and policy MUST return the same result or the same bounded diagnostics.
+
+#### Scenario: Evaluation exceeds a named bound
+
+r[agent_harness_runtime.rlm_kernel.environment.bounded]
+- GIVEN model code exceeds fuel, depth, allocation, or environment-size bounds
+- WHEN evaluation runs
+- THEN it MUST stop with a bounded typed outcome naming the violated bound
+- AND it MUST NOT partially mutate environment state, emit host requests, or consume unbounded resources.
+
+### Requirement: Typed host requests are the only effect channel
+
+r[agent_harness_runtime.rlm_kernel.host_requests] Kernel code MUST perform effects only by returning typed host requests, the runtime MUST revalidate every request against the admitted policy before host execution, and reusable crates MUST NOT execute filesystem, process, network, credential, or persistence effects on behalf of model code.
+
+#### Scenario: Admitted host request executes through the adapter boundary
+
+r[agent_harness_runtime.rlm_kernel.host_requests.admitted]
+- GIVEN model code returns a host request whose operation class is admitted by policy
+- WHEN runtime admission runs
+- THEN it MUST revalidate the request fields and forward it to the host-injected executor
+- AND the bounded result MUST return to the kernel as a typed value.
+
+#### Scenario: Unadmitted or malformed host request is returned
+
+r[agent_harness_runtime.rlm_kernel.host_requests.rejected]
+- GIVEN model code returns an unadmitted operation class, a malformed request, or a request exceeding named bounds
+- WHEN admission runs
+- THEN it MUST fail closed with a typed denial receipt
+- AND no effect, partial effect, or ambient fallback may occur.
+
+### Requirement: Child spawn is bounded and typed
+
+r[agent_harness_runtime.rlm_kernel.children] The `rlm(...)` operation MUST name a child profile, an explicit context slice, and result expectations, and the runtime MUST enforce depth, fan-out, token, wall-clock, and result-size budgets before spawn and return typed child results with lineage into the existing subagent contracts.
+
+#### Scenario: Bounded child spawn succeeds
+
+r[agent_harness_runtime.rlm_kernel.children.spawn]
+- GIVEN a child request fits admitted depth, fan-out, and budget limits and names an admitted child profile
+- WHEN the runtime processes the request
+- THEN it MUST delegate lifecycle to the existing subagent owners
+- AND the child result MUST return to the parent kernel as a typed value with lineage metadata.
+
+#### Scenario: Child spawn exceeds budgets or requests ambient authority
+
+r[agent_harness_runtime.rlm_kernel.children.rejected]
+- GIVEN a child request exceeds depth, fan-out, budget, or result-size limits, or expects ambient discovery or cross-session spawn
+- WHEN admission runs
+- THEN it MUST return a typed denial before spawn
+- AND no child session, message, or ambient registration may be created.
+
+### Requirement: Kernel state survives compaction
+
+r[agent_harness_runtime.rlm_kernel.compaction_survival] Compaction MUST NOT clear kernel variables, imports, or definitions, compaction plans MUST record kernel-held context so summaries reference rather than repeat it, and kernel clear MUST remain an explicit host action with its own receipt.
+
+#### Scenario: Compaction runs during a long task
+
+r[agent_harness_runtime.rlm_kernel.compaction_survival.preserved]
+- GIVEN an active kernel holds task state and compaction triggers on context pressure
+- WHEN the compaction plan executes
+- THEN prompt context MUST shrink while kernel bindings remain observable to later evaluations
+- AND the compaction receipt MUST record that kernel state was preserved.
+
+#### Scenario: Implicit kernel clear is attempted
+
+r[agent_harness_runtime.rlm_kernel.compaction_survival.no_implicit_clear]
+- GIVEN a compaction, goal change, or child completion attempts to clear the kernel implicitly
+- WHEN the transition is validated
+- THEN it MUST be rejected with a typed outcome
+- AND only an explicit host-initiated clear with its own receipt MAY reset the environment.
+
+### Requirement: RLM kernel evidence is metadata-only
+
+r[agent_harness_runtime.rlm_kernel.evidence] Kernel receipts MUST bind only policy identity, operation classes, bounded counts, child lineage, compaction-survival status, required non-claims, and domain-separated BLAKE3 identities, and MUST exclude variable values, model-written code bodies, child transcripts, credentials, and raw paths.
+
+#### Scenario: Safe kernel receipt is projected
+
+r[agent_harness_runtime.rlm_kernel.evidence.safe]
+- GIVEN evaluation, host requests, and child spawns complete under the admitted profile
+- WHEN receipt projection runs
+- THEN the receipt MUST bind safe identities, counts, statuses, and required non-claims
+- AND it MUST describe only bounded processing of admitted operations.
+
+#### Scenario: Receipt contains kernel contents or overclaims
+
+r[agent_harness_runtime.rlm_kernel.evidence.rejects]
+- GIVEN a receipt draft includes variable values, code bodies, transcripts, credentials, raw paths, or a sandbox, correctness, or task-success claim
+- WHEN receipt validation runs
+- THEN it MUST reject the draft with a bounded typed issue without echoing the material
+- AND the rejected receipt MUST NOT contribute to lifecycle, completion, or release evidence.
+
+### Requirement: RLM kernel adoption has positive and negative conformance evidence
+
+r[agent_harness_runtime.rlm_kernel.verification] The RLM kernel MUST include positive and negative tests through production environment, admission, child-spawn, compaction, and receipt entrypoints; cohort fixture parity; default and no-std dependency isolation; and a focused deterministic rail.
+
+#### Scenario: Exact fixture cohort passes
+
+r[agent_harness_runtime.rlm_kernel.verification.positive]
+- GIVEN fixtures cover variable persistence, admitted host requests, bounded child spawn, typed results, and kernel survival across compaction
+- WHEN the focused conformance rail runs
+- THEN production entrypoints MUST agree with the reviewed prime-agent semantics for the admitted subset
+- AND fixture provenance and any semantic limitation MUST remain explicit.
+
+#### Scenario: Adversarial fixture fails before widening
+
+r[agent_harness_runtime.rlm_kernel.verification.negative]
+- GIVEN a fixture attempts direct effects, unadmitted operations, bound violations, ambient or over-limit child spawn, implicit kernel clear, receipt content leakage, or authority widening
+- WHEN the focused conformance rail runs
+- THEN the fixture MUST fail with the expected bounded typed diagnostic before the prohibited effect or claim
+- AND default, reusable, no-std, and Wasm surfaces MUST remain free of new effect authority.
+
+#### Scenario: Change is ready to archive
+
+r[agent_harness_runtime.rlm_kernel.verification.closeout]
+- GIVEN maintainers intend to sync and archive the RLM kernel change
+- WHEN closeout validation runs
+- THEN focused kernel, Steel, runtime, Nickel, no-std/Wasm, component/facade, composition, safe-receipt, Cairn, and relevant Nix checks MUST pass with current positive and negative fixtures
+- AND security sandboxing, model correctness, task completion, production readiness, and release eligibility MUST remain separate non-claims.
+
+### Requirement: Active-turn recovery keeps host authority explicit
+
+r[agent_harness_runtime.active_turn_recovery.boundary] Animus MUST model active-turn recovery as pure validation and planning over supplied facts. Hosts MUST retain storage, transaction, clock, provider, tool, cancellation, and cleanup authority.
+
+#### Scenario: Host supplies bounded recovery facts
+
+r[agent_harness_runtime.active_turn_recovery.boundary.supplied]
+- GIVEN a host supplies an admitted session, branch, policy, accepted-message sequence, journal snapshot, authority state, and terminal observations
+- WHEN pure active-turn recovery validation runs
+- THEN Animus MUST return a deterministic validated state, blocked outcome, or recovery plan
+- AND reusable code MUST NOT read storage, allocate ambient identifiers, call providers, run tools, inspect clocks, or clean host state.
+
+#### Scenario: Ambient recovery authority is requested
+
+r[agent_harness_runtime.active_turn_recovery.boundary.ambient]
+- GIVEN a caller expects reusable recovery code to discover a database, read a global session, use a clock, contact a provider, or execute a tool
+- WHEN recovery admission runs
+- THEN Animus MUST reject the request before the effect
+- AND it MUST NOT substitute a default host service or infer missing authority.
+
+### Requirement: Active-turn recovery policy is typed and bounded
+
+r[agent_harness_runtime.active_turn_recovery.policy] Human-authored recovery policy MUST use typed Nickel contracts. Rust MUST revalidate generated policy before journal admission, recovery planning, provider continuation, or receipt projection.
+
+#### Scenario: Complete recovery policy is admitted
+
+r[agent_harness_runtime.active_turn_recovery.policy.valid]
+- GIVEN generated policy names supported schemas, finite entry and aggregate bounds, replacement rules, corruption posture, retention, terminal classes, receipt fields, and non-claims
+- WHEN Rust validates the policy
+- THEN it MUST return a deterministic decision and domain-separated BLAKE3 policy identity
+- AND later plans MUST bind that exact identity.
+
+#### Scenario: Recovery policy is stale or incomplete
+
+r[agent_harness_runtime.active_turn_recovery.policy.invalid]
+- GIVEN policy is stale, malformed, unbounded, permits row skipping, omits transaction evidence, or weakens receipt and authority boundaries
+- WHEN policy validation runs
+- THEN validation MUST fail closed with bounded diagnostics
+- AND no journal mutation, recovery continuation, provider dispatch, tool dispatch, cleanup, or receipt success may occur.
+
+### Requirement: Durable acceptance precedes provider and steering delivery
+
+r[agent_harness_runtime.active_turn_recovery.journal] A host MUST commit accepted user work before provider dispatch. It MUST commit steering work before runtime delivery and replace checkpoints through one evidence-bound atomic transaction.
+
+#### Scenario: Accepted message becomes provider-eligible
+
+r[agent_harness_runtime.active_turn_recovery.journal.accepted]
+- GIVEN a valid user message has an admitted session, branch, turn sequence, policy, and expected prior journal generation
+- WHEN the host durably commits the accepted message and active marker in one transaction
+- THEN the host MAY request provider dispatch for the exact resulting turn identity
+- AND provider dispatch MUST remain blocked without matching durable acceptance evidence.
+
+#### Scenario: Checkpoint replacement is prepared and committed
+
+r[agent_harness_runtime.active_turn_recovery.journal.replace]
+- GIVEN every bounded replacement entry is fully prepared and its manifest matches the expected active turn and prior generation
+- WHEN the host executes the compare-and-swap replacement transaction
+- THEN it MUST expose one complete new generation or a typed blocked result
+- AND it MUST NOT delete the prior valid checkpoint before replacement preparation completes.
+
+#### Scenario: Steering message becomes delivery-eligible
+
+r[agent_harness_runtime.active_turn_recovery.journal.steering]
+- GIVEN an active turn accepts a valid steering message with the next monotonic steering sequence
+- WHEN the host durably appends the exact steering identity
+- THEN the runtime MAY attempt one correlated delivery under current policy
+- AND missing, stale, duplicate, or mismatched append evidence MUST block delivery.
+
+### Requirement: Stable recovery identities bind typed facts
+
+r[agent_harness_runtime.active_turn_recovery.identity] Animus MUST derive domain-separated BLAKE3 identities for turns, checkpoints, steering work, recovery plans, and receipts from typed admitted facts and explicit monotonic sequences.
+
+#### Scenario: Repeated content remains distinct
+
+r[agent_harness_runtime.active_turn_recovery.identity.distinct]
+- GIVEN two accepted messages have equal text or equal timestamps but distinct admitted turn sequences
+- WHEN canonical turn identities are derived
+- THEN the identities MUST remain distinct and deterministic
+- AND timestamps, insertion order, random identifiers, or physical row locations MUST NOT serve as canonical content identity.
+
+#### Scenario: Recovery identity drifts
+
+r[agent_harness_runtime.active_turn_recovery.identity.drift]
+- GIVEN supplied session, branch, sequence, policy, generation, entry manifest, or terminal facts differ from the bound recovery plan
+- WHEN continuation admission runs
+- THEN Animus MUST return a stale or mismatched outcome
+- AND it MUST authorize no provider, tool, steering, cleanup, or completion effect.
+
+### Requirement: Recovery composes without rerunning interrupted tools
+
+r[agent_harness_runtime.active_turn_recovery.recovery] Active-turn recovery MUST preserve completed tool results and delegate dangling model-visible calls to the existing interrupted tool repair contract. It MUST NOT rerun tools.
+
+#### Scenario: Failure occurs before first provider event
+
+r[agent_harness_runtime.active_turn_recovery.recovery.pre_provider]
+- GIVEN durable acceptance exists and no provider event or terminal turn record exists
+- WHEN recovery evaluates the exact active checkpoint
+- THEN it MUST preserve the accepted user message and MAY plan continuation under current authority and exact provider-plan gates
+- AND it MUST retain the same canonical turn identity.
+
+#### Scenario: Tool result already exists
+
+r[agent_harness_runtime.active_turn_recovery.recovery.real_result]
+- GIVEN the journal contains one valid model-visible tool call and its exact completed real result
+- WHEN recovery planning runs
+- THEN it MUST preserve that result and MAY plan model continuation
+- AND it MUST NOT construct, authorize, or dispatch another tool request.
+
+#### Scenario: Tool result is missing
+
+r[agent_harness_runtime.active_turn_recovery.recovery.interrupted_tool]
+- GIVEN the journal contains one valid model-visible tool call without a compatible terminal result
+- WHEN recovery composes interrupted tool repair
+- THEN only the existing evidence-bound synthetic failure plan MAY close the call before provider continuation
+- AND active-turn recovery MUST NOT infer success, infer cancellation, or invoke the tool executor.
+
+#### Scenario: Recovery state is corrupt or ambiguous
+
+r[agent_harness_runtime.active_turn_recovery.recovery.corrupt]
+- GIVEN records are malformed, missing, reordered, duplicated, mixed across generations, over budget, unsupported, stale, or terminally conflicting
+- WHEN recovery validation runs
+- THEN Animus MUST return a typed blocked outcome without skipping or guessing records
+- AND no partial transcript, provider continuation, tool effect, steering delivery, cleanup, completion, or success receipt may occur.
+
+### Requirement: Active-turn recovery evidence is metadata-only
+
+r[agent_harness_runtime.active_turn_recovery.evidence] Recovery receipts MUST contain bounded identity, generation, count, crash-window, action, repair, terminal, redaction, and non-claim metadata only.
+
+#### Scenario: Safe recovery receipt is projected
+
+r[agent_harness_runtime.active_turn_recovery.evidence.safe]
+- GIVEN a recovery plan and supplied host observations pass exact validation
+- WHEN receipt projection runs
+- THEN the receipt MUST bind policy, turn, checkpoint, plan, repair, terminal, and receipt identities with bounded status metadata
+- AND it MUST describe only the validated supplied recovery facts.
+
+#### Scenario: Receipt contains private data or an overclaim
+
+r[agent_harness_runtime.active_turn_recovery.evidence.rejects]
+- GIVEN a receipt draft includes messages, prompts, reasoning, tool bodies, provider data, credentials, environment values, physical paths, raw errors, or unsupported durability and completion claims
+- WHEN receipt validation runs
+- THEN it MUST reject the draft without echoing the private value
+- AND the rejected receipt MUST NOT contribute to continuation, completion, lifecycle, or release evidence.
+
+### Requirement: Active-turn recovery has positive and negative crash evidence
+
+r[agent_harness_runtime.active_turn_recovery.verification] Active-turn recovery MUST include deterministic positive and negative tests for every declared crash window, transaction boundary, corruption class, no-rerun invariant, and receipt boundary.
+
+#### Scenario: Declared crash windows pass
+
+r[agent_harness_runtime.active_turn_recovery.verification.positive]
+- GIVEN fixtures cover accepted work, checkpoint replacement, real tool results, interrupted calls, steering work, terminal commit, and cleanup interruption
+- WHEN the focused recovery rail runs
+- THEN production core and host-adapter entrypoints MUST return the expected deterministic plans and outcomes
+- AND repeated runs over identical supplied facts MUST return identical canonical identities and ordered diagnostics.
+
+#### Scenario: Adversarial recovery attempt fails
+
+r[agent_harness_runtime.active_turn_recovery.verification.negative]
+- GIVEN a fixture attempts pre-acceptance dispatch, partial replacement, stale replay, corruption, tool rerun, silent truncation, authority expansion, private receipt data, or overclaiming
+- WHEN the focused recovery rail runs
+- THEN the attempt MUST fail before the prohibited effect or claim
+- AND existing session, repair, retry, tool, completion, and host authority boundaries MUST remain intact.
+
+#### Scenario: Change is ready to archive
+
+r[agent_harness_runtime.active_turn_recovery.verification.closeout]
+- GIVEN maintainers intend to sync and archive the active-turn recovery change
+- WHEN closeout validation runs
+- THEN focused runtime, adapter, std-host, Nickel, crash-window, composition, no-std, Wasm, Cairn, and relevant Nix checks MUST pass
+- AND store correctness, power-loss durability, provider acceptance, exactly-once effects, task completion, and production readiness MUST remain explicit non-claims.
+
+### Requirement: Conversation views remain derived projections
+
+r[agent_harness_runtime.conversation_view_projection.boundary] Animus MUST project conversation views from one selected admitted ledger branch. Render caches and UI hosts MUST NOT gain model-context, ledger-mutation, tool-correlation, authority, or completion ownership.
+
+#### Scenario: Admitted ledger snapshot is projected
+
+r[agent_harness_runtime.conversation_view_projection.boundary.projected]
+- GIVEN a host supplies one admitted session branch, leaf, ledger generation, ordered entries, projection policy, and optional active-turn state
+- WHEN pure projection validation runs
+- THEN Animus MUST return a deterministic snapshot, delta, rebuild plan, heal plan, no-op, or blocked outcome
+- AND reusable code MUST NOT read storage, render a UI, inspect clocks, mutate the ledger, or contact a transport.
+
+#### Scenario: Render cache is offered as model context
+
+r[agent_harness_runtime.conversation_view_projection.boundary.no_reverse_authority]
+- GIVEN a caller offers rendered items, UI cache rows, transport frames, or healed metadata as provider context or ledger truth
+- WHEN projection or runtime admission runs
+- THEN Animus MUST reject the reverse flow before model or tool dispatch
+- AND it MUST NOT infer canonical conversation facts from display state.
+
+### Requirement: Conversation projection identities bind canonical source facts
+
+r[agent_harness_runtime.conversation_view_projection.identity] Animus MUST derive domain-separated BLAKE3 identities for projection streams, cursors, items, actions, snapshots, deltas, rebuilds, heals, and receipts from typed canonical source facts.
+
+#### Scenario: Equal content and timestamps remain distinct
+
+r[agent_harness_runtime.conversation_view_projection.identity.distinct]
+- GIVEN two source entries have equal visible content or equal timestamps but different canonical entry or turn identities
+- WHEN view-item identities are derived
+- THEN their identities MUST remain distinct and deterministic
+- AND content comparison, timestamps, row locations, random values, or parsed counts MUST NOT replace canonical source identity.
+
+#### Scenario: Cursor source facts drift
+
+r[agent_harness_runtime.conversation_view_projection.identity.cursor_drift]
+- GIVEN a cursor differs in schema, policy, session, branch, leaf, generation, source anchor, sequence, or active-turn identity
+- WHEN top-up admission runs
+- THEN Animus MUST return a rebuild plan or blocked outcome
+- AND it MUST NOT continue incrementally from the stale cursor.
+
+### Requirement: Conversation projection streams are snapshot-first
+
+r[agent_harness_runtime.conversation_view_projection.stream] A projection stream MUST emit one accepted redaction-safe snapshot before incremental updates. Every update MUST bind the stream, source revision, projection sequence, item identity, and mutation class.
+
+#### Scenario: Snapshot starts a projection stream
+
+r[agent_harness_runtime.conversation_view_projection.stream.snapshot]
+- GIVEN one valid bounded source snapshot and admitted projection policy
+- WHEN a host starts a projection stream
+- THEN the first accepted record MUST be the complete redaction-safe snapshot for that stream identity
+- AND later updates MUST start after the snapshot sequence and bind the same source lineage.
+
+#### Scenario: Incremental stream order is invalid
+
+r[agent_harness_runtime.conversation_view_projection.stream.invalid_order]
+- GIVEN an update arrives before a snapshot, repeats or skips a sequence, names another stream, uses a stale revision, or carries an unsupported mutation
+- WHEN stream validation runs
+- THEN Animus MUST reject the update with a bounded typed diagnostic
+- AND the update MUST NOT mutate cache, ledger, model context, tool state, or completion state.
+
+### Requirement: One active turn maps to one stable assistant item
+
+r[agent_harness_runtime.conversation_view_projection.active_turn] All admitted assistant entries for one exact active-turn identity MUST fold into one stable visible assistant item in canonical order. Interposed steering work MUST retain explicit ordered markers.
+
+#### Scenario: Multiple provider turns fold into one item
+
+r[agent_harness_runtime.conversation_view_projection.active_turn.fold]
+- GIVEN one agent turn contains multiple ordered assistant entries with the same canonical turn and branch identity
+- WHEN snapshot or delta projection runs
+- THEN Animus MUST fold their admitted visible parts into one assistant item with one stable identity
+- AND replay, reconnect, recovery, or terminal projection MUST NOT create duplicate items for that turn.
+
+#### Scenario: Steering occurs between assistant entries
+
+r[agent_harness_runtime.conversation_view_projection.active_turn.steering]
+- GIVEN a valid steering entry occurs between two assistant entries of the same turn
+- WHEN conversation projection runs
+- THEN it MUST place one typed steering marker at the exact canonical position
+- AND it MUST NOT convert the steering fact into assistant text, drop it during rebuild, or merge it by timestamp.
+
+#### Scenario: Unrelated writer targets the same visible content
+
+r[agent_harness_runtime.conversation_view_projection.active_turn.unrelated]
+- GIVEN another source item has equal text but a different turn, branch, generation lineage, or policy identity
+- WHEN cache action validation runs
+- THEN it MUST receive a distinct item identity or a conflict outcome
+- AND it MUST NOT replace the active-turn item through content equality.
+
+### Requirement: Conversation caches rebuild through exact cursor evidence
+
+r[agent_harness_runtime.conversation_view_projection.rebuild] Hosts MUST treat conversation caches as disposable projections. Top-up, rebuild, and heal actions MUST use exact revision, cursor, action, and resulting-state evidence.
+
+#### Scenario: Matching cursor permits idempotent top-up
+
+r[agent_harness_runtime.conversation_view_projection.rebuild.top_up]
+- GIVEN a cache cursor exactly matches the projection schema, policy, source lineage, last entry, sequence, and active-turn state
+- WHEN pure top-up planning runs
+- THEN it MAY emit deterministic actions after the exact anchor
+- AND applying an already applied action MUST be an exact no-op with no duplicate visible item.
+
+#### Scenario: Stale or partial cache requires rebuild
+
+r[agent_harness_runtime.conversation_view_projection.rebuild.stale]
+- GIVEN the cursor is stale, an anchor is missing, a prior action is partial, cache content diverges, or source generation changed
+- WHEN cache reconciliation runs
+- THEN Animus MUST plan a full bounded rebuild or return a blocked outcome
+- AND rebuild execution MUST clear only the declared cache after preflight without altering the source ledger.
+
+#### Scenario: Legacy metadata has one exact source join
+
+r[agent_harness_runtime.conversation_view_projection.rebuild.heal]
+- GIVEN a legacy item lacks admitted metadata and exactly one validated source identity matches under current migration policy
+- WHEN pure heal planning runs
+- THEN Animus MAY add only admitted metadata while preserving item identity, role, visible parts, unknown safe metadata, and source ledger bytes
+- AND ambiguous timestamps, equal content, missing identity, or active-turn races MUST produce no heal action.
+
+### Requirement: Conversation projection evidence is metadata-only
+
+r[agent_harness_runtime.conversation_view_projection.evidence] Projection receipts MUST contain bounded source revision, stream, cursor, action, item-count, fold, steering, rebuild, heal, cache-outcome, redaction, and non-claim metadata only.
+
+#### Scenario: Safe projection receipt is emitted
+
+r[agent_harness_runtime.conversation_view_projection.evidence.safe]
+- GIVEN source validation, projection planning, and supplied cache evidence pass exact checks
+- WHEN receipt projection runs
+- THEN the receipt MUST bind policy, source, stream, cursor, projection, cache outcome, and receipt identities with bounded counts and classes
+- AND it MUST describe only the supplied and validated projection facts.
+
+#### Scenario: Projection receipt contains private data or an overclaim
+
+r[agent_harness_runtime.conversation_view_projection.evidence.rejects]
+- GIVEN a receipt draft includes transcript text, reasoning, tool bodies, provider payloads, credentials, environment values, physical paths, raw UI state, or unsupported truth and delivery claims
+- WHEN receipt validation runs
+- THEN it MUST reject the draft without echoing the private value
+- AND the rejected receipt MUST NOT contribute to model context, completion, lifecycle, or release evidence.
+
+### Requirement: Conversation projection has reconnect and rebuild evidence
+
+r[agent_harness_runtime.conversation_view_projection.verification] Conversation projection MUST include deterministic positive and negative tests for identity, snapshot, delta, reconnect, active-turn folding, steering, cursor, cache, rebuild, heal, redaction, and receipt behavior.
+
+#### Scenario: Positive projection matrix passes
+
+r[agent_harness_runtime.conversation_view_projection.verification.positive]
+- GIVEN fixtures cover initial snapshot, matching-cursor top-up, reconnect no-op, active-turn folding, steering, terminal replay, rebuild, and exact healing
+- WHEN the focused projection rail runs
+- THEN production reducers and host-cache entrypoints MUST return the expected deterministic actions and outcomes
+- AND repeated runs over identical source facts MUST return identical identities, sequences, and ordered diagnostics.
+
+#### Scenario: Adversarial projection attempt fails
+
+r[agent_harness_runtime.conversation_view_projection.verification.negative]
+- GIVEN a fixture attempts identity collision, incremental-before-snapshot, stale cursor, sequence gap, partial cache write, divergent writer, ambiguous heal, private projection, ledger mutation, or overclaiming
+- WHEN the focused projection rail runs
+- THEN the attempt MUST fail before the prohibited effect or claim
+- AND ledger, model, tool, authority, completion, host-cache, and consumer boundaries MUST remain intact.
+
+#### Scenario: Change is ready to archive
+
+r[agent_harness_runtime.conversation_view_projection.verification.closeout]
+- GIVEN maintainers intend to sync and archive the conversation-view projection change
+- WHEN closeout validation runs
+- THEN focused runtime, adapter, std-host, headless, TUI, Nickel, redaction, reconnect, rebuild, Cairn, and relevant Nix checks MUST pass
+- AND transcript truth, UI delivery, cache durability, renderer correctness, task completion, and production readiness MUST remain explicit non-claims.
+
+### Requirement: Session branch exploration preserves ledger authority
+
+r[agent_harness_runtime.session_branch_explorer.boundary] Animus MUST derive branch-explorer facts from one validated session ledger. Explorer state MUST NOT become model context, ledger truth, tool authority, or completion evidence.
+
+#### Scenario: Validated ledger enters branch projection
+
+r[agent_harness_runtime.session_branch_explorer.boundary.validated]
+- GIVEN a caller supplies one validated session ledger, revision, projection policy, annotations, and expected active leaf
+- WHEN pure branch-explorer validation runs
+- THEN Animus MUST return a deterministic projection, operation plan, diagnostic, or blocked outcome
+- AND reusable code MUST NOT read storage, inspect clocks, contact providers, render terminals, or mutate the ledger.
+
+#### Scenario: Independent DAG is offered as conversation history
+
+r[agent_harness_runtime.session_branch_explorer.boundary.rejects_dag]
+- GIVEN a caller offers a multi-parent node, evidence edge, comparison edge, or equivalence edge as model-history order
+- WHEN branch-explorer admission runs
+- THEN Animus MUST reject the topology before replay or host mutation
+- AND evidence and synthesis links MUST remain separate from the single-parent conversation tree.
+
+### Requirement: Session branch projection is bounded and redaction-first
+
+r[agent_harness_runtime.session_branch_explorer.projection] Animus MUST produce a bounded branch projection with exact source identity, revision, parent, storage sequence, child count, leaf state, active-path state, safe annotation, artifact-reference, and truncation facts.
+
+#### Scenario: Complete bounded tree is projected
+
+r[agent_harness_runtime.session_branch_explorer.projection.complete]
+- GIVEN one valid tree fits the admitted node, depth, label, and reference bounds
+- WHEN branch projection runs
+- THEN every projected node MUST bind its exact source identity and structural facts under the current policy
+- AND repeated projection over identical inputs MUST preserve node identities, order, active-path marks, and diagnostics.
+
+#### Scenario: Projection input is unsafe or overbound
+
+r[agent_harness_runtime.session_branch_explorer.projection.rejects]
+- GIVEN input has a missing parent, cycle, duplicate identity, unsupported node, false leaf, unsafe field, or exceeded bound
+- WHEN branch projection runs
+- THEN Animus MUST return explicit truncation or a bounded typed rejection according to policy
+- AND it MUST NOT expose transcript text, reasoning, raw tool bodies, provider payloads, credentials, physical paths, or host handles.
+
+### Requirement: Branch annotations cannot change replay
+
+r[agent_harness_runtime.session_branch_explorer.annotations] Animus MUST validate bookmarks, safe labels, and sibling presentation order as sidecar metadata. Annotations MUST NOT change storage order, parentage, active-path replay, model context, provenance, or tool correlation.
+
+#### Scenario: Partial sibling order is admitted
+
+r[agent_harness_runtime.session_branch_explorer.annotations.partial_order]
+- GIVEN an annotation names distinct current children of one parent in a partial presentation order
+- WHEN annotation validation runs
+- THEN named children MUST appear in that order and omitted children MUST retain deterministic ledger order
+- AND the ledger bytes and replay order MUST remain unchanged.
+
+#### Scenario: Annotation targets invalid topology
+
+r[agent_harness_runtime.session_branch_explorer.annotations.rejects]
+- GIVEN an annotation names an unknown entry, repeats a child, crosses parent boundaries, carries an unsafe label, or binds a stale revision
+- WHEN annotation validation runs
+- THEN Animus MUST reject the annotation with a bounded diagnostic
+- AND it MUST NOT repair, reparent, remove, reorder, or activate any ledger node.
+
+### Requirement: Branch selection distinguishes inspect, activate, and fork
+
+r[agent_harness_runtime.session_branch_explorer.selection] Animus MUST plan inspection, active-leaf selection, and fork-from-node as distinct operations with exact source revision, expected active leaf, target, policy, and external-state posture.
+
+#### Scenario: Current leaf is activated
+
+r[agent_harness_runtime.session_branch_explorer.selection.activate]
+- GIVEN the target is a true leaf in the expected current revision and policy admits selection
+- WHEN active-leaf planning runs
+- THEN Animus MUST return one compare-and-set host plan that changes only the selected active leaf
+- AND the plan MUST NOT replay tools, rewrite entries, claim world-state rollback, or infer effect isolation.
+
+#### Scenario: Internal node becomes a fork point
+
+r[agent_harness_runtime.session_branch_explorer.selection.fork]
+- GIVEN the target is an admitted internal node and the operator requests continuation from that point
+- WHEN fork planning runs
+- THEN Animus MUST return an append-only child-lineage plan through accepted branch controls
+- AND it MUST preserve the original branch without destructive split, merge, reparent, suffix deletion, or content rewrite.
+
+#### Scenario: Selection facts are stale or ambiguous
+
+r[agent_harness_runtime.session_branch_explorer.selection.rejects]
+- GIVEN the source revision changed, expected active leaf differs, target is unknown, activation target has children, or external-state posture is missing
+- WHEN selection planning runs
+- THEN Animus MUST return a stale, invalid-target, or unknown-effect blocked outcome before host mutation
+- AND it MUST NOT dispatch model, tool, filesystem, network, provider, or persistence effects.
+
+### Requirement: Branch comparison reports exact bounded facts
+
+r[agent_harness_runtime.session_branch_explorer.comparison] Animus MUST compare two admitted branch targets through their exact common ancestor, ordered suffix identities, bounded entry-class counts, usage summaries, model-profile identities, safe references, annotations, and unavailable facts.
+
+#### Scenario: Two branches share an ancestor
+
+r[agent_harness_runtime.session_branch_explorer.comparison.shared]
+- GIVEN two current targets belong to one admitted session tree and share one exact ancestor
+- WHEN branch comparison runs
+- THEN Animus MUST return the ancestor identity and both ordered suffixes with bounded safe metadata
+- AND it MUST NOT claim response quality, correctness, semantic superiority, effect equivalence, or winner status.
+
+#### Scenario: Comparison targets cannot be joined safely
+
+r[agent_harness_runtime.session_branch_explorer.comparison.rejects]
+- GIVEN targets cross session or generation boundaries, lack a visible common ancestor, exceed bounds, or require unauthorized content
+- WHEN branch comparison runs
+- THEN Animus MUST return a bounded blocked or truncated outcome
+- AND it MUST NOT guess joins from timestamps, equal content, labels, row positions, or model names.
+
+### Requirement: Sibling equivalence preserves every branch
+
+r[agent_harness_runtime.session_branch_explorer.equivalence] Animus MAY mark sibling leaves equivalent only through a domain-separated BLAKE3 generation identity over complete admitted source, model, parameter, tool-plan, effect-receipt, and response-artifact facts.
+
+#### Scenario: Complete generation identities match
+
+r[agent_harness_runtime.session_branch_explorer.equivalence.matches]
+- GIVEN two sibling leaves have equal complete generation identities under current policy
+- WHEN equivalence validation runs
+- THEN Animus MAY emit one equivalence sidecar that keeps both leaves present and selectable
+- AND no delete, merge, rewrite, reparent, or canonical-winner action may result.
+
+#### Scenario: Equal response text hides different effects
+
+r[agent_harness_runtime.session_branch_explorer.equivalence.different_effects]
+- GIVEN two siblings have equal visible response text but different tool plans, effect receipts, model profiles, parameters, or response artifacts
+- WHEN equivalence validation runs
+- THEN Animus MUST keep their generation identities distinct or report incomplete evidence
+- AND text equality MUST NOT trigger deduplication or history removal.
+
+### Requirement: The reference TUI remains a pure presentation host
+
+r[agent_harness_runtime.session_branch_explorer.tui] `animus-tui` MUST present bounded read and map views through a pure reducer. It MUST dispatch typed operations through host ports without direct ledger, persistence, model, tool, or transport authority.
+
+#### Scenario: Operator navigates the branch map
+
+r[agent_harness_runtime.session_branch_explorer.tui.navigate]
+- GIVEN one admitted branch projection and selected canonical conversation projection
+- WHEN the operator focuses, collapses, inspects, bookmarks, compares, refreshes, or requests activation
+- THEN the pure reducer MUST produce deterministic view state and typed host intents
+- AND deterministic text snapshots MUST expose active, leaf, bookmark, truncation, stale, and external-state indicators.
+
+#### Scenario: Host operation fails or projection becomes stale
+
+r[agent_harness_runtime.session_branch_explorer.tui.failure]
+- GIVEN a host port rejects an operation, drops a response, or reports a newer ledger revision
+- WHEN the reducer applies the outcome
+- THEN the TUI MUST preserve prior validated state and show one bounded diagnostic or refresh requirement
+- AND it MUST NOT assume that a bookmark, activation, fork, comparison, or continuation succeeded.
+
+### Requirement: Branch-explorer evidence is metadata-only
+
+r[agent_harness_runtime.session_branch_explorer.evidence] Branch-explorer receipts MUST bind policy, source revision, projection, annotation, selection, comparison, equivalence, TUI action, external-state posture, outcome, redaction, and non-claim metadata only.
+
+#### Scenario: Safe explorer receipt is emitted
+
+r[agent_harness_runtime.session_branch_explorer.evidence.safe]
+- GIVEN projection or operation planning completes with supplied host evidence
+- WHEN receipt projection runs
+- THEN the receipt MUST bind exact identities, bounded counts, operation class, result class, and external-state posture
+- AND it MUST describe only validated branch-explorer facts.
+
+#### Scenario: Receipt leaks private data or overclaims effects
+
+r[agent_harness_runtime.session_branch_explorer.evidence.rejects]
+- GIVEN a receipt draft includes transcript text, reasoning, raw tool bodies, provider payloads, credentials, environment values, physical paths, raw UI state, rollback claims, or quality claims
+- WHEN receipt validation runs
+- THEN Animus MUST reject the draft without echoing the private value
+- AND the draft MUST NOT contribute to model context, authority, completion, lifecycle, or release evidence.
+
+### Requirement: Session branch exploration has positive and negative evidence
+
+r[agent_harness_runtime.session_branch_explorer.verification] Session branch exploration MUST include deterministic positive and negative tests for topology, bounds, annotations, selection, comparison, equivalence, TUI behavior, redaction, receipts, and dependency isolation.
+
+#### Scenario: Positive branch-explorer matrix passes
+
+r[agent_harness_runtime.session_branch_explorer.verification.positive]
+- GIVEN fixtures cover roots, internal nodes, leaves, active paths, forks, bookmarks, partial order, common ancestors, equivalence, refresh, and text snapshots
+- WHEN the focused branch-explorer rail runs
+- THEN production reducers and host entrypoints MUST return the expected deterministic identities, plans, views, and diagnostics
+- AND repeated runs over identical facts MUST return identical results.
+
+#### Scenario: Adversarial branch operation fails
+
+r[agent_harness_runtime.session_branch_explorer.verification.negative]
+- GIVEN a fixture attempts a cycle, missing parent, false leaf, stale activation, cross-parent order, unsafe label, guessed comparison, content deduplication, direct ledger write, private receipt, or rollback claim
+- WHEN the focused branch-explorer rail runs
+- THEN the attempt MUST fail before the prohibited mutation, disclosure, or claim
+- AND ledger, model, tool, authority, persistence, UI, and consumer boundaries MUST remain intact.
+
+#### Scenario: Change is ready to archive
+
+r[agent_harness_runtime.session_branch_explorer.verification.closeout]
+- GIVEN maintainers intend to sync and archive the session branch explorer
+- WHEN closeout validation runs
+- THEN focused core, adapter, std-host, TUI, Nickel, redaction, receipt, Cairn, and relevant Nix checks MUST pass
+- AND transcript truth, effect rollback, world isolation, semantic quality, UI delivery, accessibility, production readiness, and release eligibility MUST remain explicit non-claims.

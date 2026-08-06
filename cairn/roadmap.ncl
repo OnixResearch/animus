@@ -636,6 +636,29 @@ let change_entries = [
     "add-acp-stdio-host-adapter",
     "bind-session-runtime-authority-profile",
   ] ["extract-host-control-protocol", "pilot-application-host-binding"],
+  change "add-native-evaluation-core" core_role "runtime-loop" [
+    "agent_harness_runtime.harbor_eval.planning",
+    "agent_harness_runtime.clankers_batch_runner.resume",
+    "agent_harness_runtime.pi_session_tree.ledger_contract",
+    "agent_harness_runtime.agent_role_profiles.separation",
+  ] ["add-evaluation-adapter-family", "add-std-evaluation-host", "add-evaluation-composition-conformance", "add-harbor-atif-json-adapter"],
+  change "add-evaluation-adapter-family" host_role "injected-services" [
+    "add-native-evaluation-core",
+    "agent_harness_runtime.harbor_eval.execution_ports",
+    "agent_harness_runtime.model_streaming.adapter_contract",
+  ] ["add-std-evaluation-host", "add-evaluation-composition-conformance", "add-harbor-atif-json-adapter"],
+  change "add-std-evaluation-host" host_role "concrete-adapters" [
+    "add-native-evaluation-core",
+    "add-evaluation-adapter-family",
+    "add-durable-active-turn-recovery",
+    "add-coding-session-host-facade",
+  ] ["add-evaluation-composition-conformance", "add-concrete-provider-streaming-adapters", "add-harbor-atif-json-adapter"],
+  change "add-evaluation-composition-conformance" evaluation_role "evaluation" [
+    "add-native-evaluation-core",
+    "add-evaluation-adapter-family",
+    "add-std-evaluation-host",
+    "agent_harness_runtime.composability.conformance_matrix",
+  ] ["add-provider-projection-conformance-fixtures", "add-harbor-atif-json-adapter", "add-durable-active-turn-recovery"],
 ]
 in
 
@@ -723,6 +746,10 @@ let overlap_entries = [
   overlap "skill-source-lifecycle" "add-skill-source-lifecycle-contracts" ["adapt-hermes-host-asset-reconciliation", "add-per-model-runtime-profiles"],
   overlap "application-host-binding-pilot" "pilot-application-host-binding" ["bind-session-runtime-authority-profile", "add-acp-stdio-host-adapter", "add-codebase-graph-host-adapter"],
   overlap "typed-acp-session-identities" "type-acp-session-identities" ["add-acp-stdio-host-adapter", "extract-host-control-protocol", "pilot-application-host-binding"],
+  overlap "native-evaluation-core" "add-native-evaluation-core" ["add-evaluation-adapter-family", "add-std-evaluation-host", "add-evaluation-composition-conformance", "add-harbor-atif-json-adapter"],
+  overlap "native-evaluation-service-ports" "add-evaluation-adapter-family" ["add-native-evaluation-core", "add-std-evaluation-host", "add-harbor-atif-json-adapter"],
+  overlap "native-evaluation-host" "add-std-evaluation-host" ["add-evaluation-adapter-family", "add-durable-active-turn-recovery", "add-concrete-provider-streaming-adapters", "add-harbor-atif-json-adapter"],
+  overlap "native-evaluation-conformance" "add-evaluation-composition-conformance" ["add-native-evaluation-core", "add-evaluation-adapter-family", "add-std-evaluation-host", "add-provider-projection-conformance-fixtures", "add-harbor-atif-json-adapter"],
 ]
 in
 

@@ -1,0 +1,35 @@
+#!/usr/bin/env sh
+# r[verify agent_harness_runtime.conversation_view_projection.verification]
+set -eu
+readonly FAILURE=1
+readonly SOURCE='crates/animus-runtime/src/conversation_projection.rs'
+readonly STD_SOURCE='crates/animus-std/src/conversationprojection.rs'
+readonly POLICY='config/conversation-projection-policy.ncl'
+readonly FIXTURES='config/conversation-projection-policy/fixtures'
+root='.'
+if [ "${1:-}" = '--root' ]; then root=${2:-.}; fi
+cd "${root}"
+for command_name in cargo nickel b3sum; do command -v "${command_name}" >/dev/null 2>&1 || { printf 'error: %s is required\n' "${command_name}" >&2; exit "${FAILURE}"; }; done
+for marker in validate_conversation_projection_policy project_conversation_snapshot plan_conversation_top_up validate_conversation_update plan_conversation_legacy_heal validate_conversation_cache_evidence project_conversation_projection_receipt; do grep -F "${marker}" "${SOURCE}" >/dev/null || { printf 'error: missing marker %s\n' "${marker}" >&2; exit "${FAILURE}"; }; done
+if grep -E 'std::fs|std::process|std::env|SystemTime::now|TcpStream|Command::new' "${SOURCE}" >/dev/null; then printf '%s\n' 'error: projection core gained ambient authority' >&2; exit "${FAILURE}"; fi
+nickel export --format json --field conversation_projection_policy "${POLICY}" >/dev/null
+nickel export --format json --field fixture "${FIXTURES}/valid-minimal.ncl" >/dev/null
+fixture_error=$(mktemp); trap 'rm -f "${fixture_error}"' EXIT HUP INT TERM
+for fixture in "${FIXTURES}"/negative-*.ncl; do expected=$(nickel export --format raw --field expected_issue "${fixture}"); if nickel export --format json --field fixture "${fixture}" >/dev/null 2>"${fixture_error}"; then printf 'error: negative fixture passed: %s\n' "${fixture}" >&2; exit "${FAILURE}"; fi; grep -F "${expected}" "${fixture_error}" >/dev/null || { printf 'error: expected %s\n' "${expected}" >&2; exit "${FAILURE}"; }; done
+cargo test -p animus-runtime conversation_projection --locked
+cargo test -p animus-std --features conversation-view-projection conversationprojection --locked
+cargo clippy -p animus-runtime --all-targets --locked -- -D warnings
+cargo clippy -p animus-std --all-targets --features conversation-view-projection --locked -- -D warnings
+cargo check -p animus-runtime --no-default-features --locked
+cargo check -p animus-std --no-default-features --locked
+source_hash=$(b3sum "${SOURCE}" "${STD_SOURCE}" "${POLICY}" "${FIXTURES}"/*.ncl | b3sum | cut -d ' ' -f 1)
+mkdir -p target/cairn/focused-rails
+cat > target/cairn/focused-rails/conversation-projection.md <<EOF
+schema: animus.focused-rail-receipt.v1
+rail: conversation-projection
+status: pass
+source_blake3: ${source_hash}
+claims: canonical-source,snapshot-first,revision-cursor,active-turn-folding,ordered-steering,disposable-cache,metadata-only-receipts
+non_claims: transcript-truth,ui-delivery,cache-durability,renderer-correctness,task-completion,production-readiness
+EOF
+printf '%s\n' 'focused rail conversation-projection: pass'
