@@ -54,6 +54,8 @@ pub mod harbor;
 mod hostadapters;
 #[cfg(feature = "iroh-host")]
 mod iroh;
+#[cfg(feature = "session-branch-explorer")]
+mod sessionbranchexplorer;
 // r[impl agent_harness_runtime.syndicate_iroh_bridge.feature]
 #[cfg(feature = "iroh-syndicate-host")]
 mod irohsyndicate;
@@ -112,6 +114,11 @@ pub use codegraph::{
 pub use conversationprojection::{
     ConversationMemoryCache, ConversationProjectionConfigError,
     load_conversation_projection_policy, parse_conversation_projection_policy_json,
+};
+#[cfg(feature = "session-branch-explorer")]
+pub use sessionbranchexplorer::{
+    SessionBranchExplorerConfigError, SessionBranchFixtureFailure, SessionBranchMemoryHost,
+    load_session_branch_explorer_policy, parse_session_branch_explorer_policy_json,
 };
 /// Backwards-compatible name for deterministic fixture bundles.
 pub type FixtureAdapters = Fixtures;

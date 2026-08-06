@@ -1,0 +1,40 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=${1:-}
+if [ "${repo_root}" = "--root" ]; then
+  repo_root=${2:-}
+fi
+if [ -z "${repo_root}" ]; then
+  repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+fi
+cd "${repo_root}"
+
+nickel export --format json --field session_branch_explorer_policy config/session-branch-explorer-policy.ncl >/dev/null
+nickel export --format json config/session-branch-explorer-policy/fixtures/valid-minimal.ncl >/dev/null
+for fixture in config/session-branch-explorer-policy/fixtures/negative-*.ncl; do
+  if nickel export --format json "${fixture}" >/dev/null 2>&1; then
+    printf 'negative fixture unexpectedly passed: %s\n' "${fixture}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+cargo test -p animus-runtime branch_explorer --locked
+cargo test -p animus-std --features session-branch-explorer sessionbranchexplorer --locked
+cargo test -p animus-tui branch_explorer --locked
+cargo check -p animus-runtime --no-default-features --locked
+cargo check -p animus-runtime --target wasm32-unknown-unknown --no-default-features --locked
+cargo check --no-default-features --features session-branch-explorer --locked
+
+if grep -Eq 'std::fs|std::process|std::net|SystemTime|Command::new|TcpStream|UdpSocket' crates/animus-runtime/src/branch_explorer/*.rs; then
+  printf '%s\n' 'branch explorer pure core gained ambient authority' >&2
+  exit "${FAILURE}"
+fi
+if grep -Eq 'universal[_-]weave|loro|rkyv' crates/animus-runtime/Cargo.toml crates/animus-tui/Cargo.toml; then
+  printf '%s\n' 'branch explorer gained a rejected runtime dependency' >&2
+  exit "${FAILURE}"
+fi
+
+printf '%s\n' 'focused rail session-branch-explorer: pass'

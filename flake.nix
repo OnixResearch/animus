@@ -252,6 +252,7 @@
                 || baseName == "check-authoritative-agent-completion"
                 || baseName == "check-active-turn-recovery"
                 || baseName == "check-conversation-projection"
+                || baseName == "check-session-branch-explorer"
                 || baseName == "check-injected-services"
                 || baseName == "check-interrupted-tool-repair"
                 || baseName == "check-provider-retry"
@@ -561,6 +562,14 @@
             pkgs.nickel
           ] ''
             sh scripts/cairn/check-conversation-projection --root .
+          '';
+
+          session-branch-explorer = cargoCheck "animus-session-branch-explorer" [
+            pkgs.b3sum
+            pkgs.clippy
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-session-branch-explorer --root .
           '';
 
           interrupted-tool-repair = cargoCheck "animus-interrupted-tool-repair" [

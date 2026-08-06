@@ -1,5 +1,7 @@
 # Pi session tree ledger adaptation
 
+The [session branch explorer](session-branch-explorer.md) derives its bounded map from one fully validated ledger snapshot. The map has no reverse authority over ledger bytes or replay.
+
 Animus adapts Pi's branchable session history as a neutral, in-memory runtime contract. The contract is append-only and selected by an active leaf; storage remains host-owned.
 
 ## DTO shape

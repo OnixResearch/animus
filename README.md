@@ -51,6 +51,8 @@ See [docs/rlm-kernel.md](docs/rlm-kernel.md) for the optional `steel_repl` tool 
 
 See [docs/provider-retry-execution.md](docs/provider-retry-execution.md) for typed provider-failure classification, bounded same-plan retry, semantic-stream replay denial, injected cancellable timers, provider-neutral progress, and metadata-only receipts.
 
+See [docs/session-branch-explorer.md](docs/session-branch-explorer.md) for bounded redaction-first topology, sidecar annotations, freshness-fenced branch controls, exact comparisons, and the pure reference TUI.
+
 See [docs/canonical-conversation-view-projection.md](docs/canonical-conversation-view-projection.md) for one-ledger snapshot-first conversation views, revision-fenced cursors, active-turn folding, disposable caches, and metadata-only receipts.
 
 See [docs/active-turn-recovery.md](docs/active-turn-recovery.md) for durable acceptance, atomic checkpoint replacement, steering recovery, no-rerun composition, and metadata-only receipts.
@@ -159,6 +161,7 @@ scripts/cairn/check-agent-role-profiles --root .
 scripts/cairn/check-provider-retry --root .
 scripts/cairn/check-active-turn-recovery --root .
 scripts/cairn/check-conversation-projection --root .
+scripts/cairn/check-session-branch-explorer --root .
 scripts/cairn/check-clankers-product-surfaces --root .
 scripts/cairn/check-dogfood-readiness --root .
 scripts/cairn/check-packaged-headless-dogfood-smoke --root .

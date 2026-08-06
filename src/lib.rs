@@ -63,6 +63,13 @@ pub use animus_std::{
     load_conversation_projection_policy, parse_conversation_projection_policy_json,
 };
 
+/// Re-export of session branch explorer policy and deterministic fixture host.
+#[cfg(feature = "session-branch-explorer")]
+pub use animus_std::{
+    SessionBranchExplorerConfigError, SessionBranchFixtureFailure, SessionBranchMemoryHost,
+    load_session_branch_explorer_policy, parse_session_branch_explorer_policy_json,
+};
+
 /// Re-export of the non-default durable coding-session host facade.
 #[cfg(feature = "coding-session-host")]
 pub use animus_std::coding_session_host;

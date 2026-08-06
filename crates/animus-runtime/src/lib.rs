@@ -44,6 +44,8 @@ mod background;
 #[allow(excessive_file_length)]
 mod batch;
 mod boundary;
+/// Pure bounded session branch projection, control planning, comparison, and evidence.
+pub mod branch_explorer;
 mod branching;
 mod capmap;
 mod caps;

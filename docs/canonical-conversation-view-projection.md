@@ -1,5 +1,7 @@
 # Canonical conversation view projection
 
+The [session branch explorer](session-branch-explorer.md) selects one admitted leaf and binds this projection to the same session and ledger generation. Explorer caches cannot become conversation context.
+
 Animus derives each visible conversation from one admitted ledger branch. The ledger remains the only model-context and tool-correlation owner.
 
 `animus_runtime::conversation_projection` validates safe source facts and creates snapshot-first projections. Exact BLAKE3 identities bind the policy, source lineage, stream, cursor, items, actions, snapshots, plans, and receipts.

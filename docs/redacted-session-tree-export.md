@@ -1,5 +1,7 @@
 # Redacted session-tree export
 
+The [session branch explorer](session-branch-explorer.md) uses the same redaction-first topology boundary for interactive map facts. Export artifacts and TUI state remain separate consumers.
+
 Animus exposes a deterministic human-debug export for already-loaded, validated session metadata. It preserves branch topology and storage order without accepting transcript bodies. It is not a raw journal backup, training dataset, or release-evidence export.
 
 ## Boundary

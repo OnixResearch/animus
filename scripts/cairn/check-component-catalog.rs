@@ -87,6 +87,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "agent-role-profiles",
     "active-turn-recovery",
     "conversation-view-projection",
+    "session-branch-explorer",
     "provider-retry",
     "branchfs-host",
     "coding-session-host",
