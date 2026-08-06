@@ -85,6 +85,8 @@ const ALLOWED_FEATURES: &[&str] = &[
     "spacewasm-diagnostic",
     "model-runtime-profiles",
     "agent-role-profiles",
+    "active-turn-recovery",
+    "conversation-view-projection",
     "provider-retry",
     "branchfs-host",
     "coding-session-host",

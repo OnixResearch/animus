@@ -62,6 +62,8 @@ The gate lets prerequisite commit, recovery, and cancellation effects continue. 
 
 `resume` must run before prompt or continuation when the state declares recovery required. The host reopens only the explicitly supplied durable store, consumes its validated committed head and active leaf, decodes bounded messages, compares the committed and current requested authority profiles, and asks the pure reducer to validate lineage and tool bindings. A clean unmatched tool call produces a synthetic terminal repair that must commit before recovery becomes ready. Incomplete tails, committed corruption, cursor or leaf disagreement, malformed tool bindings, or unavailable persistence keep the session blocked.
 
+The separate [active-turn recovery](active-turn-recovery.md) contract protects accepted work before provider dispatch. Host integration must bind its transaction evidence to this session authority.
+
 Child-process tests prove that a committed session reopens after process exit and that an incomplete trailing transaction does not become continuation authority. These tests do not prove filesystem, kernel, device-cache, power-loss, backup, replication, encryption, or production-recovery correctness.
 
 ## Safe evidence

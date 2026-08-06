@@ -82,11 +82,13 @@ workspace = true
 
 [features]
 default = ["std"]
+active-turn-recovery = ["std", "runtime", "animus-std/active-turn-recovery"]
 agent-control = ["runtime", "dep:animus-std-control"]
 agent-role-profiles = ["std", "animus-std/agent-role-profiles"]
 acp-stdio-host = ["std", "coding-session-host", "dep:animus-acp-stdio-host"]
 branchfs-host = ["std", "animus-std/branchfs-host"]
 coding-session-host = ["std", "runtime", "animus-std/coding-session-host"]
+conversation-view-projection = ["std", "runtime", "animus-std/conversation-view-projection"]
 codebase-graph-host = ["std", "animus-std/codebase-graph-host"]
 durable-session-store = ["std", "runtime", "animus-std/durable-session-store"]
 agent-guardrail = ["dep:animus-std-agent-guardrail"]

@@ -63,6 +63,10 @@ Pure planning returns a bounded delay, correlated timer request, and threaded wa
 
 The deterministic schedule does not replace a host request deadline or total elapsed-time budget. A host deadline remains an independent authority ceiling and appears to the core only as a typed timer timeout. These seams do not claim timer implementation correctness, remote cancellation, provider cancellation, or exactly-once remote effects. Timer requests and gates are cloneable evidence; hosts must thread the returned wait and attempt states serially, and receipts do not prove that a host did so.
 
+## Active-turn composition
+
+[Active-turn recovery](active-turn-recovery.md) requires durable accepted-work evidence before the first provider dispatch. Provider retry remains a separate same-plan decision after a provider failure.
+
 ## Progress events
 
 Retry progress is a separate provider-neutral DTO. It carries only:

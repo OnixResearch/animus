@@ -56,6 +56,13 @@ pub use animus_std::{
     parse_model_runtime_profiles_json,
 };
 
+/// Re-export of canonical conversation projection policy and cache fixtures.
+#[cfg(feature = "conversation-view-projection")]
+pub use animus_std::{
+    ConversationMemoryCache, ConversationProjectionConfigError,
+    load_conversation_projection_policy, parse_conversation_projection_policy_json,
+};
+
 /// Re-export of the non-default durable coding-session host facade.
 #[cfg(feature = "coding-session-host")]
 pub use animus_std::coding_session_host;
@@ -113,6 +120,14 @@ pub use animus_std_agent_guardrail as agent_guardrail;
 /// Re-export of the non-default bounded Lean 4 loop-fabric host adapter.
 #[cfg(feature = "lean-loop")]
 pub use animus_std_lean_loop as lean_loop;
+
+/// Re-export of active-turn recovery contracts and the non-default fixture host.
+#[cfg(feature = "active-turn-recovery")]
+pub use animus_std::{
+    ActiveTurnFixtureFailure, ActiveTurnMemoryHost, ActiveTurnRecoveryConfigError,
+    ActiveTurnRecoveryJsonErrorKind, load_active_turn_recovery_policy,
+    parse_active_turn_recovery_policy_json,
+};
 
 /// Re-export of host-owned provider retry policy and injected effect seams.
 #[cfg(feature = "provider-retry")]
