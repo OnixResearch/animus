@@ -17,7 +17,7 @@ r[agent_harness_runtime.pijul_adapter.boundary.exact_cohort]
 #### Scenario: Excluded effectful surface is requested
 
 r[agent_harness_runtime.pijul_adapter.boundary.excluded_surfaces]
-- GIVEN a caller requests `libpijul` linking, direct Sanakirja database access, `clone`, `pull`, `push`, remote management, Nest integration, identity creation or proving, key custody, or signing ceremonies
+- GIVEN a caller requests `libpijul` linking or direct Sanakirja database access outside this change's CLI-only cohort, or requests `clone`, `pull`, `push`, remote management, Nest integration, identity creation or proving, key custody, or signing ceremonies
 - WHEN adapter admission runs
 - THEN Animus MUST return a typed unsupported-surface outcome
 - AND it MUST NOT silently widen the local CLI adapter's authority or compatibility claim.

@@ -8,11 +8,11 @@ A bounded architecture search considered linking `libpijul` into a Rust adapter 
 
 ## Decisions
 
-### Decision: pin one exact CLI cohort, never link libpijul
+### Decision: pin one exact CLI cohort, keep linking a future option
 
-**Choice:** The initial adapter supports a reviewed `pijul` CLI release in the `1.0.0-beta` line at a recorded upstream source revision, with its change-hash format, `--output-format` machine-output identity, and GPL-2.0-family license cohort bound together in policy and conformance evidence. Animus crates never link `libpijul`, `sanakirja`, or any Pijul crate, and never open `.pijul` databases directly.
+**Choice:** The initial adapter supports a reviewed `pijul` CLI release in the `1.0.0-beta` line at a recorded upstream source revision, with its change-hash format, `--output-format` machine-output identity, and GPL-2.0-family license cohort recorded in policy and conformance evidence. Reusable, default, no-std, and Wasm crates never link `libpijul`, `sanakirja`, or any Pijul crate, and never open `.pijul` databases directly. Licensing is not the driver: Animus accepts AGPL-compatible relicensing if a later change selects an in-process `libpijul` backend, and the backend service port is shaped so a linked host adapter could implement the same port without touching reusable cores.
 
-**Rationale:** Pijul is beta software whose internal formats and APIs evolve independently of the CLI surface. Linking would couple Animus to copyleft crates and to unstable internals; the CLI process boundary keeps license separation clean and makes the exact reviewed behavior set explicit.
+**Rationale:** Pijul is beta software whose internal formats and APIs evolve independently of the CLI surface. Linking would couple a host crate to unstable internals and the Sanakirja on-disk format, and would still have to sit behind the same injected-service boundary to keep reusable crates authority-free. The CLI process boundary makes the exact reviewed behavior set explicit and defers, rather than forecloses, an in-process backend.
 
 ### Decision: read-only by default, protected mutations behind policy and confirmation
 
@@ -66,7 +66,7 @@ A bounded architecture search considered linking `libpijul` into a Rust adapter 
 
 ### Link libpijul directly
 
-Rejected because it imports GPL-2.0/AGPL-3.0 crates into Animus' dependency graph, couples to beta-internal APIs and the Sanakirja format, and grants reusable crates ambient database and filesystem authority.
+Deferred, not rejected on licensing grounds: Animus accepts AGPL-compatible relicensing, so a future change may add an in-process `libpijul` host adapter behind the existing backend service port. It is excluded from this change because it couples to beta-internal APIs and the Sanakirja format, and because reusable crates would still need the same effect-free port to avoid ambient database and filesystem authority.
 
 ### Open Sanakirja databases read-only from a reusable crate
 
@@ -83,11 +83,12 @@ Rejected because checkpoint, snapshot, provenance, and workspace owners already 
 ## Risks / Trade-offs
 
 - The `1.0.0-beta` CLI surface may shift between releases; exact pinning means deliberate cohort updates and a recorded output-format identity per update.
-- A child-process boundary adds argv/stdout protocol work and loses streaming access to internal APIs, but keeps authority and licensing explicit.
+- A child-process boundary adds argv/stdout protocol work and loses streaming access to internal APIs; if that cost dominates, the recorded license posture permits a future linked backend instead of a workaround.
+- Adopting AGPL-compatible relicensing for a future linked backend is a repo-wide licensing decision and must not happen silently inside an adapter change.
 - Pijul's lack of a native staging-area model and its interactive defaults mean the host adapter must force non-interactive flags and fail closed on prompt-like output.
 - Hash prefixes are user-facing conveniences; the validator must reject ambiguous prefixes rather than guess.
 - Partial-clone and change-commutation features are powerful for agent fan-out, but enabling them would widen claim scope, so the initial adapter stays local and conservative.
 
 ## Non-Claims
 
-This design does not establish Pijul CLI or format stability across releases, repository or database integrity, semantic or build correctness of recorded content, merge-safety guarantees for any specific content, authorship or signature authenticity, identity custody, network or Nest compatibility, partial-clone correctness, conflict-resolution quality, license advice beyond the recorded cohort boundary, production readiness of a beta VCS, or release eligibility.
+This design does not establish Pijul CLI or format stability across releases, repository or database integrity, semantic or build correctness of recorded content, merge-safety guarantees for any specific content, authorship or signature authenticity, identity custody, network or Nest compatibility, partial-clone correctness, conflict-resolution quality, license advice beyond the recorded cohort boundary, a commitment to or against future AGPL-compatible relicensing, production readiness of a beta VCS, or release eligibility.
