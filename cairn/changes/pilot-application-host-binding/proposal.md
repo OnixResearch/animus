@@ -12,6 +12,7 @@ A bounded pilot can test whether the Roc-inspired application/platform presentat
 - Bind the application artifact, entrypoint, input/output schemas, closed symbolic effect summary, one existing session runtime authority profile, adapter cohort, resource profile, and non-claims.
 - Consume one exact accepted Kamacite binding schema and producer cohort through frozen fixtures before considering a direct dependency.
 - Require the binding to be committed before dependent model or tool effects in the pilot path.
+- Consume the accepted runtime-authority-unit seal before those effects instead of defining a second seal model.
 - Keep current authorization, capability probes, sandbox checks, adapter readiness, and per-run observations authoritative.
 - Add a read-only explanation surface that shows the full effective binding without exposing prompts, credentials, provider payloads, or host paths.
 - Add positive and negative conformance fixtures and one focused repository check.

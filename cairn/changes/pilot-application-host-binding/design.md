@@ -48,9 +48,15 @@ This rule applies to the pilot executable unit. It does not require one profile 
 
 **Rationale:** Later evidence can identify the exact application and host contract that preceded the observed effects.
 
+### Decision: Consume the accepted runtime-authority-unit seal
+
+**Choice:** After both bindings commit, the pilot prepares and seals one runtime-authority unit before dependent effects. A later grant, profile, adapter, or resource change creates a new unit and cannot widen the active unit.
+
+**Rationale:** The application-host binding describes composition. The shared seal freezes the exact admitted dispatch view without creating another authority model.
+
 ### Decision: Recheck current enforcement
 
-**Choice:** A matching binding never skips current authorization, capability probes, adapter-cohort checks, tool and provider readiness, credential admission, sandbox preflight, cancellation, or per-run resource checks.
+**Choice:** A matching binding or seal never skips current authorization, capability probes, adapter-cohort checks, tool and provider readiness, credential admission, sandbox preflight, cancellation, or per-run resource checks.
 
 **Rationale:** Binding continuity is identity evidence, not current enforcement evidence.
 
@@ -68,9 +74,9 @@ This rule applies to the pilot executable unit. It does not require one profile 
 
 ## Test Design
 
-Positive tests cover canonical projection, one selected host profile, closed symbolic effects, stable metadata changes, pre-effect commit order, and safe explanation output.
+Positive tests cover canonical projection, one selected host profile, closed symbolic effects, stable metadata changes, pre-effect binding and seal order, and safe explanation output.
 
-Negative tests cover missing or multiple hosts, open or unknown effects, undeclared operations, stale Kamacite schema, stale session profile, wrong adapter or resource cohort, binding after effect dispatch, unsafe output fields, and authority overclaims.
+Negative tests cover missing or multiple hosts, open or unknown effects, undeclared operations, stale Kamacite schema, stale session profile, wrong adapter or resource cohort, missing or widened seals, binding after effect dispatch, unsafe output fields, and authority overclaims.
 
 The focused conformance rail validates the frozen Animus projection with the exact Kamacite fixture contract. It records an exact blocker when the upstream schema is unavailable.
 
