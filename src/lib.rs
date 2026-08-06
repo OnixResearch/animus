@@ -114,6 +114,14 @@ pub use animus_std_agent_guardrail as agent_guardrail;
 #[cfg(feature = "lean-loop")]
 pub use animus_std_lean_loop as lean_loop;
 
+/// Re-export of active-turn recovery contracts and the non-default fixture host.
+#[cfg(feature = "active-turn-recovery")]
+pub use animus_std::{
+    ActiveTurnFixtureFailure, ActiveTurnMemoryHost, ActiveTurnRecoveryConfigError,
+    ActiveTurnRecoveryJsonErrorKind, load_active_turn_recovery_policy,
+    parse_active_turn_recovery_policy_json,
+};
+
 /// Re-export of host-owned provider retry policy and injected effect seams.
 #[cfg(feature = "provider-retry")]
 pub use animus_std::{

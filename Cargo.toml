@@ -82,6 +82,7 @@ workspace = true
 
 [features]
 default = ["std"]
+active-turn-recovery = ["std", "runtime", "animus-std/active-turn-recovery"]
 agent-control = ["runtime", "dep:animus-std-control"]
 agent-role-profiles = ["std", "animus-std/agent-role-profiles"]
 acp-stdio-host = ["std", "coding-session-host", "dep:animus-acp-stdio-host"]

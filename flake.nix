@@ -110,6 +110,7 @@
               diff -u ${./config/generated/model-runtime-profiles.json} "$tmp_dir/config/generated/model-runtime-profiles.json"
               diff -u ${./config/generated/agent-role-profiles.json} "$tmp_dir/config/generated/agent-role-profiles.json"
               diff -u ${./config/generated/aeneas-proof-campaign.json} "$tmp_dir/config/generated/aeneas-proof-campaign.json"
+              diff -u ${./config/generated/active-turn-recovery-policy.json} "$tmp_dir/config/generated/active-turn-recovery-policy.json"
               diff -u ${./config/generated/provider-retry-policy.json} "$tmp_dir/config/generated/provider-retry-policy.json"
               diff -u ${./config/generated/session-tree-export-policy.json} "$tmp_dir/config/generated/session-tree-export-policy.json"
               diff -u ${./config/generated/durable-session-store-policy.json} "$tmp_dir/config/generated/durable-session-store-policy.json"
@@ -248,6 +249,7 @@
                 || baseName == "check-agent-role-profiles"
                 || baseName == "check-aeneas-proof-campaign"
                 || baseName == "check-authoritative-agent-completion"
+                || baseName == "check-active-turn-recovery"
                 || baseName == "check-injected-services"
                 || baseName == "check-interrupted-tool-repair"
                 || baseName == "check-provider-retry"
@@ -541,6 +543,14 @@
           ] ''
             export CAIRN_COMPLETION_MODE=saved
             sh scripts/cairn/check-authoritative-agent-completion --root .
+          '';
+
+          active-turn-recovery = cargoCheck "animus-active-turn-recovery" [
+            pkgs.b3sum
+            pkgs.clippy
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-active-turn-recovery --root .
           '';
 
           interrupted-tool-repair = cargoCheck "animus-interrupted-tool-repair" [

@@ -51,6 +51,8 @@ See [docs/rlm-kernel.md](docs/rlm-kernel.md) for the optional `steel_repl` tool 
 
 See [docs/provider-retry-execution.md](docs/provider-retry-execution.md) for typed provider-failure classification, bounded same-plan retry, semantic-stream replay denial, injected cancellable timers, provider-neutral progress, and metadata-only receipts.
 
+See [docs/active-turn-recovery.md](docs/active-turn-recovery.md) for durable acceptance, atomic checkpoint replacement, steering recovery, no-rerun composition, and metadata-only receipts.
+
 See [docs/redacted-session-tree-export.md](docs/redacted-session-tree-export.md) for validated-metadata topology projection, redaction-first Nickel policy, deterministic script-free artifacts, explicit destination-capability writes, and exact metadata-only receipts.
 
 See [docs/nickel-policy-contracts.md](docs/nickel-policy-contracts.md) for shared authoring-time contracts, checked policy projections, Rust DTO parity, authority ownership, and projection non-claims.
@@ -153,6 +155,7 @@ scripts/cairn/check-nickel-policy-contracts --root .
 scripts/cairn/check-model-runtime-profiles --root .
 scripts/cairn/check-agent-role-profiles --root .
 scripts/cairn/check-provider-retry --root .
+scripts/cairn/check-active-turn-recovery --root .
 scripts/cairn/check-clankers-product-surfaces --root .
 scripts/cairn/check-dogfood-readiness --root .
 scripts/cairn/check-packaged-headless-dogfood-smoke --root .

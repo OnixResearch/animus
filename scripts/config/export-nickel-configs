@@ -12,6 +12,7 @@ recipe_source_file=${repo_root}/config/recipe-workflows.ncl
 model_profile_source_file=${repo_root}/config/model-runtime-profiles.ncl
 agent_role_source_file=${repo_root}/config/agent-role-profiles.ncl
 aeneas_proof_campaign_source_file=${repo_root}/config/aeneas-proof-campaign.ncl
+active_turn_recovery_source_file=${repo_root}/config/active-turn-recovery-policy.ncl
 provider_retry_source_file=${repo_root}/config/provider-retry-policy.ncl
 session_tree_export_source_file=${repo_root}/config/session-tree-export-policy.ncl
 durable_session_store_source_file=${repo_root}/config/durable-session-store-policy.ncl
@@ -43,6 +44,7 @@ nickel export --format json --field recipe_workflow_catalog "${recipe_source_fil
 nickel export --format json --field model_runtime_profile_set "${model_profile_source_file}" > "${target_root}/config/generated/model-runtime-profiles.json"
 nickel export --format json --field agent_role_catalog "${agent_role_source_file}" > "${target_root}/config/generated/agent-role-profiles.json"
 nickel export --format json --field aeneas_proof_campaign_bundle "${aeneas_proof_campaign_source_file}" > "${target_root}/config/generated/aeneas-proof-campaign.json"
+nickel export --format json --field active_turn_recovery_policy "${active_turn_recovery_source_file}" > "${target_root}/config/generated/active-turn-recovery-policy.json"
 nickel export --format json --field provider_retry_policy "${provider_retry_source_file}" > "${target_root}/config/generated/provider-retry-policy.json"
 nickel export --format json --field session_tree_export_policy "${session_tree_export_source_file}" > "${target_root}/config/generated/session-tree-export-policy.json"
 nickel export --format json --field durable_session_store_policy "${durable_session_store_source_file}" > "${target_root}/config/generated/durable-session-store-policy.json"

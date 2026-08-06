@@ -29,6 +29,8 @@
 )]
 #![forbid(unsafe_code)]
 
+/// Pure active-turn durability, transaction, recovery, and receipt contracts.
+pub mod active_turn_recovery;
 mod admission;
 #[allow(excessive_file_length)]
 #[path = "aeneasproofcampaign.rs"]

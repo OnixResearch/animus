@@ -15,6 +15,8 @@
 #![allow(clippy::module_name_repetitions)]
 #![forbid(unsafe_code)]
 
+#[cfg(feature = "active-turn-recovery")]
+mod activeturnrecovery;
 mod adapters;
 #[cfg(feature = "agent-role-profiles")]
 mod agentroles;
@@ -74,6 +76,12 @@ pub mod spacewasm;
 #[cfg(feature = "syndicate-host")]
 mod syndicate;
 
+#[cfg(feature = "active-turn-recovery")]
+pub use activeturnrecovery::{
+    ActiveTurnFixtureFailure, ActiveTurnMemoryHost, ActiveTurnRecoveryConfigError,
+    ActiveTurnRecoveryJsonErrorKind, load_active_turn_recovery_policy,
+    parse_active_turn_recovery_policy_json,
+};
 pub use adapters::{
     AdapterDescriptor, AdapterFamily, AdapterIssue, AdapterPlan, AdapterVerdict, CredentialState,
     EffectExposure, EffectPrerequisites, FixtureKind, FixtureModelAdapter, FixtureOutput,
