@@ -114,6 +114,7 @@
               diff -u ${./config/generated/session-tree-export-policy.json} "$tmp_dir/config/generated/session-tree-export-policy.json"
               diff -u ${./config/generated/durable-session-store-policy.json} "$tmp_dir/config/generated/durable-session-store-policy.json"
               diff -u ${./config/generated/session-authority-profile.json} "$tmp_dir/config/generated/session-authority-profile.json"
+              diff -u ${./config/generated/rlm-kernel-profile.json} "$tmp_dir/config/generated/rlm-kernel-profile.json"
               diff -u ${./config/generated/lean-loop-profile.json} "$tmp_dir/config/generated/lean-loop-profile.json"
               diff -u ${./config/generated/agent-guardrail-profile.json} "$tmp_dir/config/generated/agent-guardrail-profile.json"
               diff -u ${./config/generated/codebase-graph-profile.json} "$tmp_dir/config/generated/codebase-graph-profile.json"
@@ -224,6 +225,7 @@
                 || baseName == "check-acp-stdio-host"
                 || baseName == "check-lean4-loop-fabric"
                 || baseName == "check-session-authority-profile"
+                || baseName == "check-rlm-kernel"
                 || baseName == "check-adapter-conformance-index"
                 || baseName == "check-adapter-family-crates"
                 || baseName == "check-ast-grep-agent-boundary-audits"
@@ -491,6 +493,14 @@
 
           steel-runtime-policy = cargoCheck "animus-steel-runtime-policy" [ pkgs.nickel ] ''
             sh scripts/cairn/check-steel-runtime-policy --root .
+          '';
+
+          rlm-kernel = cargoCheck "animus-rlm-kernel" [
+            pkgs.b3sum
+            pkgs.diffutils
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-rlm-kernel --root .
           '';
 
           nickel-policy-contracts = cargoCheck "animus-nickel-policy-contracts" [

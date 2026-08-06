@@ -1,0 +1,111 @@
+#!/usr/bin/env sh
+# r[verify agent_harness_runtime.rlm_kernel.verification]
+set -eu
+
+readonly FAILURE=1
+readonly RAIL_NAME='rlm-kernel'
+readonly RECEIPT_SCHEMA='animus.focused-rail-receipt.v1'
+readonly POLICY_SOURCE='config/rlm-kernel-profile.ncl'
+readonly GENERATED_POLICY='config/generated/rlm-kernel-profile.json'
+readonly FIXTURE_ROOT='config/rlm-kernel-profile/fixtures'
+readonly CONTRACT_SOURCE='crates/animus-adapter-rlm-kernel/src'
+readonly STEEL_SOURCE='crates/animus-steel/src/rlm.rs'
+readonly RUNTIME_SOURCE='crates/animus-runtime/src/rlmkernel.rs'
+readonly COHORT_FIXTURE='fixtures/rlm-kernel/prime-agent-c5991bc.md'
+readonly COHORT_REVISION='c5991bc853d27754aed345c13ff4d2e05c40f1f4'
+
+root='.'
+if [ "${1:-}" = '--root' ]; then
+  root=${2:-.}
+fi
+cd "${root}"
+
+for tool in nickel cargo diff grep b3sum; do
+  if ! command -v "${tool}" >/dev/null 2>&1; then
+    printf 'error: %s is required for the RLM kernel rail\n' "${tool}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/animus-rlm-kernel.XXXXXX")
+trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
+
+nickel typecheck "${POLICY_SOURCE}"
+nickel export --format json --field rlm_kernel_policy "${POLICY_SOURCE}" > "${tmp_dir}/policy.json"
+diff -u "${GENERATED_POLICY}" "${tmp_dir}/policy.json"
+
+positive_count=0
+negative_count=0
+for fixture in "${FIXTURE_ROOT}"/*.ncl; do
+  case "${fixture}" in
+    */valid-*)
+      nickel eval --field fixture "${fixture}" >/dev/null
+      positive_count=$((positive_count + 1))
+      ;;
+    *)
+      if nickel eval --field fixture "${fixture}" >"${tmp_dir}/fixture.out" 2>"${tmp_dir}/fixture.err"; then
+        printf 'error: negative RLM kernel fixture unexpectedly passed: %s\n' "${fixture}" >&2
+        exit "${FAILURE}"
+      fi
+      expected_issue=$(nickel export --format raw --field expected_issue "${fixture}" 2>/dev/null)
+      grep -F "${expected_issue}" "${tmp_dir}/fixture.err" >/dev/null || {
+        printf 'error: fixture %s missed issue %s\n' "${fixture}" "${expected_issue}" >&2
+        exit "${FAILURE}"
+      }
+      negative_count=$((negative_count + 1))
+      ;;
+  esac
+done
+if [ "${positive_count}" -eq 0 ] || [ "${negative_count}" -eq 0 ]; then
+  printf '%s\n' 'error: RLM kernel fixtures require positive and negative cases' >&2
+  exit "${FAILURE}"
+fi
+
+cargo test -p animus-adapter-rlm-kernel --locked
+cargo check -p animus-adapter-rlm-kernel --all-targets --locked
+cargo check -p animus-adapter-rlm-kernel --target wasm32-unknown-unknown --locked
+cargo test -p animus-steel --features rlm-kernel rlm --locked
+cargo test -p animus-runtime --features rlm-kernel rlm_kernel --locked
+cargo check -p animus-runtime --no-default-features --locked
+cargo check -p animus --features rlm-kernel --locked
+cargo check -p animus --no-default-features --target wasm32-unknown-unknown --locked
+
+if grep -R -E 'std::fs|std::process|Command::new|std::env|TcpStream|UdpSocket|SystemTime::now|Instant::now' \
+  "${CONTRACT_SOURCE}" --include='*.rs' >/dev/null 2>&1; then
+  printf '%s\n' 'error: no-std RLM kernel contracts gained ambient host authority' >&2
+  exit "${FAILURE}"
+fi
+if grep -R -E 'variable_value: Some|code_body: Some|child_transcript: Some|credential: Some|raw_path: Some' \
+  "${STEEL_SOURCE}" "${RUNTIME_SOURCE}" >/dev/null 2>&1; then
+  printf '%s\n' 'error: RLM production receipt path retains prohibited payload content' >&2
+  exit "${FAILURE}"
+fi
+
+grep -F 'Engine::new_sandboxed' "${STEEL_SOURCE}" >/dev/null
+grep -F 'admit_host_request' "${RUNTIME_SOURCE}" >/dev/null
+grep -F 'ImplicitKernelClearDenied' "${CONTRACT_SOURCE}/environment.rs" >/dev/null
+grep -F 'ReceiptLeakClass::CodeBody' "${CONTRACT_SOURCE}/receipt.rs" >/dev/null
+grep -F "${COHORT_REVISION}" "${POLICY_SOURCE}" "${COHORT_FIXTURE}" >/dev/null
+grep -F 'License: MIT' "${COHORT_FIXTURE}" >/dev/null
+grep -F 'packages/coding-agent/docs/rlm.md' "${COHORT_FIXTURE}" >/dev/null
+
+mkdir -p target/cairn/focused-rails
+receipt_path="target/cairn/focused-rails/${RAIL_NAME}.md"
+policy_hash=$(b3sum "${POLICY_SOURCE}" | cut -d ' ' -f 1)
+generated_hash=$(b3sum "${GENERATED_POLICY}" | cut -d ' ' -f 1)
+source_hash=$(b3sum "${CONTRACT_SOURCE}"/*.rs "${STEEL_SOURCE}" "${RUNTIME_SOURCE}" "${COHORT_FIXTURE}" | b3sum | cut -d ' ' -f 1)
+cat > "${receipt_path}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+policy_source_blake3: ${policy_hash}
+generated_policy_blake3: ${generated_hash}
+source_set_blake3: ${source_hash}
+positive_fixtures: ${positive_count}
+negative_fixtures: ${negative_count}
+claims: model-facing-persistent-steel,typed-host-requests,bounded-child-spawn,compaction-preservation,metadata-only-receipts,no-std-contracts
+non_claims: security-sandboxing,model-correctness,task-completion,production-readiness,release-eligibility
+EOF
+
+printf '%s\n' 'focused rail rlm-kernel: pass'
+printf 'receipt: %s\n' "${receipt_path}"

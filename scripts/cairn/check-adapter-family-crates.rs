@@ -3,7 +3,11 @@ use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-const FAMILY_CRATES: &[&str] = &["animus-adapter-safe", "animus-adapter-observability"];
+const FAMILY_CRATES: &[&str] = &[
+    "animus-adapter-safe",
+    "animus-adapter-observability",
+    "animus-adapter-rlm-kernel",
+];
 const FORBIDDEN_AUTHORITY_MARKERS: &[&str] = &[
     "std::fs",
     "std::process",
@@ -159,6 +163,18 @@ fn validate_facade(config: &Config) -> ValidationResult {
         &tests,
         "observability_types_match_facade",
         "ADAPTER_FAMILY_PARITY_TEST_MISSING",
+        &mut errors,
+    );
+    require_contains(
+        &adapters_lib,
+        "pub mod rlm_kernel {",
+        "ADAPTER_FAMILY_RLM_KERNEL_FACADE",
+        &mut errors,
+    );
+    require_contains(
+        &tests,
+        "rlm_kernel_types_match_facade",
+        "ADAPTER_FAMILY_RLM_KERNEL_PARITY_TEST_MISSING",
         &mut errors,
     );
     require_contains(

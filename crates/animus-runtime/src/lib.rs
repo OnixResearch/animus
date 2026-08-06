@@ -117,6 +117,9 @@ mod redactedview;
 mod researchspec;
 #[path = "researchspecpromotiondag.rs"]
 pub mod researchspec_promotion_dag;
+#[cfg(feature = "rlm-kernel")]
+#[path = "rlmkernel.rs"]
+pub mod rlm_kernel;
 mod runtime_dag;
 mod scaffold;
 /// Pure redaction-first session-tree export contracts.

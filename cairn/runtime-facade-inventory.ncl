@@ -64,6 +64,8 @@ let agent_control_feature = "agent-control" in
 let agent_control_family = "agent-control" in
 let lean_loop_feature = "lean-loop" in
 let lean_loop_family = "loop" in
+let rlm_kernel_feature = "rlm-kernel" in
+let rlm_kernel_family = "steel" in
 let agent_guardrail_feature = "agent-guardrail" in
 let agent_guardrail_family = "policy" in
 let syndicate_record = fun export_path_value owning_crate_value source_value class_value side_effect_value review_note_value => {
@@ -139,6 +141,21 @@ let lean_loop_record = fun export_path_value owning_crate_value source_value rev
   depends_on = ["animus-runtime::LoopFabric"],
   composes_with = ["animus-steel::SteelLoopFabric"],
   capability_family = lean_loop_family,
+}
+in
+let rlm_kernel_record = fun export_path_value owning_crate_value source_value class_value side_effect_value review_note_value required_authority_value => {
+  export_path = export_path_value,
+  owning_crate = owning_crate_value,
+  source = source_value,
+  class = class_value,
+  side_effect = side_effect_value,
+  stability = optional_stability,
+  review_note = review_note_value,
+  feature_gate = rlm_kernel_feature,
+  required_authority = required_authority_value,
+  depends_on = [],
+  composes_with = ["animus-runtime::tool_executor_kit"],
+  capability_family = rlm_kernel_family,
 }
 in
 let agent_guardrail_record = fun export_path_value owning_crate_value source_value review_note_value => {
@@ -1122,6 +1139,10 @@ let entry_values = [
   entry "animus-steel::LoopError" "animus-steel" steel reusable none optional_stability "Steel loop error",
   entry "animus-steel::SteelLoopFabric" "animus-steel" steel reusable none optional_stability "Steel loop fabric handle",
   entry "animus-steel::LoopTurn" "animus-steel" steel reusable none optional_stability "Steel turn input DTO",
+  rlm_kernel_record "animus-steel::SteelRlmKernel" "animus-steel" steel injection injected "persistent transactional model-facing Steel evaluator" injected,
+  rlm_kernel_record "animus-steel::SteelRlmToolAdapter" "animus-steel" steel injection injected "persistent Steel REPL implementation of the generic tool port" injected,
+  rlm_kernel_record "animus-steel::SteelRlmEvaluation" "animus-steel" steel reusable none "typed bounded value or host-request evaluation outcome" none,
+  rlm_kernel_record "animus-steel::SteelRlmError" "animus-steel" steel reusable none "bounded model-facing Steel diagnostic" none,
 
   entry "animus-adapters::AcpDescriptor" "animus-adapters" adapters reusable none stable "auto-classified public export for composition inventory",
   entry "animus-adapters::AcpDescriptorDraft" "animus-adapters" adapters reusable none stable "auto-classified public export for composition inventory",
@@ -2097,6 +2118,7 @@ let entry_values = [
   entry "animus-runtime::durable_session_store" "animus-runtime" runtime reusable none stable "pure generated-policy validation bounded private framing exact lineage commit recovery and metadata-only receipts",
   entry "animus-runtime::session_persistence" "animus-runtime" runtime injection injected stable "host-injected ledger/session seam with pure replay and receipt planning",
   entry "animus-runtime::tool_executor_kit" "animus-runtime" runtime injection injected stable "pure executor admission and receipt core with an explicit host-injected service shell",
+  rlm_kernel_record "animus-runtime::rlm_kernel" "animus-runtime" runtime injection injected "revalidated injected execution seam for typed model-facing Steel requests" injected,
   entry "animus-runtime::tool_executor_packs" "animus-runtime" runtime reusable none stable "tool executor pack descriptor module",
   entry "animus-runtime::turnstone_eval" "animus-runtime" runtime reusable none stable "pure intent evaluation module",
   entry "animus-runtime::ProviderStreamChannel" "animus-runtime" runtime reusable none stable "provider stream channel capability DTO",
@@ -2929,6 +2951,56 @@ let entry_values = [
   acp_record "animus::acp_stdio_host" "animus" root "root feature facade for the non-default bounded ACP stdio host; implementation ownership remains in animus-acp-stdio-host",
   agent_guardrail_record "animus::agent_guardrail" "animus" root "root feature facade for the non-default Linux Bubblewrap agent guardrail; implementation ownership remains in animus-std-agent-guardrail",
   lean_loop_record "animus::lean_loop" "animus" root "root feature facade for the non-default bounded Lean 4 LoopFabric host; implementation ownership remains in animus-std-lean-loop",
+  entry "animus-adapters::rlm_kernel" "animus-adapters" adapters reusable none stable "compatibility facade for pure model-facing RLM kernel contracts",
+  entry "animus-runtime::RuntimeCompletionCandidate" "animus-runtime" runtime reusable none stable "validated advisory completion candidate",
+  entry "animus-runtime::aeneas_proof_campaign" "animus-runtime" runtime reusable none stable "pure Aeneas proof-campaign contracts",
+  entry "animus-runtime::authoritative_completion" "animus-runtime" runtime injection injected stable "authoritative completion contracts and injected service seams",
+  entry "animus-steel::SteelCompletionCandidate" "animus-steel" steel reusable none optional_stability "validated advisory completion candidate from Steel",
+  entry "animus-std::AgentCheckExecutionRequest" "animus-std" std_shell shell shell_owned stable "host check execution request",
+  entry "animus-std::AgentCheckExecutionService" "animus-std" std_shell shell shell_owned stable "injected host check execution service",
+  entry "animus-std::AgentCheckRegistryConfigError" "animus-std" std_shell shell shell_owned stable "agent check registry configuration error",
+  entry "animus-std::CairnCompletionSummary" "animus-std" std_shell shell shell_owned stable "host-loaded Cairn completion summary",
+  entry "animus-std::CairnCompletionValidationRequest" "animus-std" std_shell shell shell_owned stable "Cairn completion validation request",
+  entry "animus-std::CairnCompletionValidationService" "animus-std" std_shell shell shell_owned stable "injected Cairn completion validation service",
+  entry "animus-std::ChangedArtifactObservationRequest" "animus-std" std_shell shell shell_owned stable "changed-artifact observation request",
+  entry "animus-std::ChangedArtifactObservationService" "animus-std" std_shell shell shell_owned stable "injected changed-artifact observation service",
+  entry "animus-std::CodeGraphHostError" "animus-std" std_shell shell shell_owned optional_stability "code graph host error",
+  entry "animus-std::CodeGraphHostEvent" "animus-std" std_shell shell shell_owned optional_stability "code graph host event",
+  entry "animus-std::CompletionArtifactPersistenceRequest" "animus-std" std_shell shell shell_owned stable "completion artifact persistence request",
+  entry "animus-std::CompletionArtifactPersistenceService" "animus-std" std_shell shell shell_owned stable "injected completion artifact persistence service",
+  entry "animus-std::FinalSubjectHashRequest" "animus-std" std_shell shell shell_owned stable "final subject hash request",
+  entry "animus-std::FinalSubjectHashService" "animus-std" std_shell shell shell_owned stable "injected final subject hash service",
+  entry "animus-std::HostArtifactObservation" "animus-std" std_shell shell shell_owned stable "host artifact observation",
+  entry "animus-std::HostCheckExecutionObservation" "animus-std" std_shell shell shell_owned stable "host check execution observation",
+  entry "animus-std::ObservedChangedArtifact" "animus-std" std_shell shell shell_owned stable "observed changed artifact metadata",
+  entry "animus-std::load_agent_check_registry" "animus-std" std_shell shell shell_owned stable "explicit-path agent check registry loader",
+  entry "animus-std::parse_agent_check_registry_json" "animus-std" std_shell shell shell_owned stable "agent check registry JSON parser",
+  entry "animus-std::parse_code_graph_profile_json" "animus-std" std_shell shell shell_owned optional_stability "code graph profile JSON parser",
+  entry "animus-std::sandlock_host" "animus-std" std_shell shell shell_owned optional_stability "Sandlock host facade",
+  entry "animus::CodeGraphHost" "animus" root shell shell_owned optional_stability "root code graph host reexport",
+  entry "animus::CodeGraphHostError" "animus" root shell shell_owned optional_stability "root code graph host error reexport",
+  entry "animus::CodeGraphHostEvent" "animus" root shell shell_owned optional_stability "root code graph host event reexport",
+  entry "animus::DiagnosticService" "animus" root shell shell_owned optional_stability "root diagnostic service reexport",
+  entry "animus::ExecutionRequest" "animus" root shell shell_owned optional_stability "root evaluation execution request reexport",
+  entry "animus::HostError" "animus" root shell shell_owned optional_stability "root host error reexport",
+  entry "animus::InferenceRequest" "animus" root shell shell_owned optional_stability "root inference request reexport",
+  entry "animus::MeshHostError" "animus" root shell shell_owned optional_stability "root Mesh host error reexport",
+  entry "animus::MeshProfile" "animus" root shell shell_owned optional_stability "root Mesh profile reexport",
+  entry "animus::MeshTransport" "animus" root shell shell_owned optional_stability "root Mesh transport reexport",
+  entry "animus::ProfileError" "animus" root shell shell_owned optional_stability "root profile error reexport",
+  entry "animus::ProviderObservation" "animus" root shell shell_owned optional_stability "root provider observation reexport",
+  entry "animus::ServiceError" "animus" root shell shell_owned optional_stability "root service error reexport",
+  entry "animus::TransportOutcome" "animus" root shell shell_owned optional_stability "root transport outcome reexport",
+  entry "animus::TransportRequest" "animus" root shell shell_owned optional_stability "root transport request reexport",
+  entry "animus::TransportStatus" "animus" root shell shell_owned optional_stability "root transport status reexport",
+  entry "animus::execute" "animus" root shell shell_owned optional_stability "root evaluation execution shell reexport",
+  entry "animus::execute_separate_verifier" "animus" root shell shell_owned optional_stability "root separate verifier shell reexport",
+  entry "animus::parse_code_graph_profile_json" "animus" root shell shell_owned optional_stability "root code graph profile parser reexport",
+  entry "animus::parse_profile" "animus" root shell shell_owned optional_stability "root profile parser reexport",
+  rlm_kernel_record "animus::rlm_kernel_contracts" "animus" root reusable none "root facade for pure RLM kernel contracts" none,
+  entry "animus::sandlock_host" "animus" root shell shell_owned optional_stability "root Sandlock host facade",
+  entry "animus::validate_profile_json" "animus" root shell shell_owned optional_stability "root profile validation reexport",
+  entry "animus::weave_adapter" "animus" root reusable none optional_stability "root universal-weave adapter facade",
   entry "animus-tui::CodingSessionRenderModel" "animus-tui" tui shell shell_owned optional_stability "shared TUI adapter over provider-neutral runtime events",
   entry "animus-tui::rats" "animus-tui" tui shell shell_owned optional_stability "terminal widget shell reexport",
 ]

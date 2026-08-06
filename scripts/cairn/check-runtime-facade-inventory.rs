@@ -110,6 +110,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "dogfood-smoke",
     "headless",
     "lean-loop",
+    "rlm-kernel",
     "loop",
     "policy",
     "provenance",

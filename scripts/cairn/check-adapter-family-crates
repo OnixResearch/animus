@@ -27,8 +27,10 @@ rustc scripts/cairn/check-adapter-family-crates.rs -o "$TMPDIR_ROOT/check-adapte
 
 cargo test -p animus-adapter-safe --locked
 cargo test -p animus-adapter-observability --locked
+cargo test -p animus-adapter-rlm-kernel --locked
 cargo test -p animus-adapters familycrates --locked
 cargo check -p animus-adapter-safe --target wasm32-unknown-unknown --locked
 cargo check -p animus-adapter-observability --target wasm32-unknown-unknown --locked
+cargo check -p animus-adapter-rlm-kernel --target wasm32-unknown-unknown --locked
 
 echo "adapter family crates rail: ok"

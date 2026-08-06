@@ -206,6 +206,10 @@ pub use animus_router;
 #[cfg(feature = "runtime")]
 pub use animus_runtime;
 
+/// Re-export of the no-std model-facing RLM kernel contract family.
+#[cfg(feature = "rlm-kernel")]
+pub use animus_adapter_rlm_kernel as rlm_kernel_contracts;
+
 /// Re-export of the optional Steel Scheme loop fabric.
 #[cfg(feature = "steel")]
 pub use animus_steel;

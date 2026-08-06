@@ -101,6 +101,7 @@ name = "animus"
 version = "0.1.0"
 dependencies = [
  "animus-acp-stdio-host",
+ "animus-adapter-rlm-kernel",
  "animus-adapter-weave",
  "animus-adapters",
  "animus-core",
@@ -141,6 +142,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "animus-adapter-rlm-kernel"
+version = "0.1.0"
+dependencies = [
+ "blake3",
+ "serde_json",
+]
+
+[[package]]
 name = "animus-adapter-safe"
 version = "0.1.0"
 
@@ -157,6 +166,7 @@ name = "animus-adapters"
 version = "0.1.0"
 dependencies = [
  "animus-adapter-observability",
+ "animus-adapter-rlm-kernel",
  "animus-adapter-safe",
  "animus-core",
  "animus-router",
@@ -211,6 +221,7 @@ dependencies = [
 name = "animus-runtime"
 version = "0.1.0"
 dependencies = [
+ "animus-adapter-rlm-kernel",
  "animus-adapters",
  "animus-core",
  "animus-steel",
@@ -279,6 +290,7 @@ dependencies = [
 name = "animus-steel"
 version = "0.1.0"
 dependencies = [
+ "animus-adapter-rlm-kernel",
  "animus-adapters",
  "animus-core",
  "blake3",

@@ -36,6 +36,7 @@ This document is the maintained ownership map for request processing. It is a re
 | Workflow command planning | `animus-runtime` | `WorkflowCommandManifest`, `WorkflowCommandRegistry`, `WorkflowInvocationBinding`, `WorkflowCommandOutputContract` | Manifests and parsed arguments are host-supplied; reusable planning only validates, binds, and policy-checks. |
 | Neutral fabric input | `animus-runtime` | `RuntimeLoopTurn`, `TurnState`, `LoopFabric` | Fabric is injected; no concrete providers or tools are constructed. |
 | Steel decision | `animus-steel` | `LoopDecision`, `SteelLoopFabric`, `LoopError` | Canonical scriptable fabric; no adapter dispatch until Rust revalidation passes. |
+| Model-facing Steel kernel | `animus-adapter-rlm-kernel`, `animus-steel`, `animus-runtime` | `SteelRlmKernel`, `SteelRlmToolAdapter`, `HostRequest`, `RlmKernelHostExecutor` | Non-default persistent tool environment; every effect request is typed, revalidated, and executed only by an injected host. |
 | Lean candidate decision | `animus-std-lean-loop` | `LeanLoopFabric`, checked profile/artifact/protocol DTOs | Non-default process shell; exact candidate identity and current Rust DTO reconstruction precede dispatch. |
 | Model/tool DTOs | `animus-adapters` | `ModelRequest`, `ModelResponse`, current-shape `ToolRequest`, bounded `ToolResponse` | No implementation authority; no legacy raw tool payloads. |
 | Status observation DTOs | `animus-adapters` | `AgentStatusObservation`, `HostStatusRequest`, `HostStatusObservationBatch` | Typed observations only. |
@@ -73,7 +74,9 @@ This document is the maintained ownership map for request processing. It is a re
 
 ### Steel boundary
 
-`animus-steel` may evaluate Steel scripts, but every script-produced action must re-enter Rust validation through `LoopDecision`, `ModelRequest`, current-shape `ToolRequest`, bounded `ToolResponse`, or `ModelResponse` before dispatch. Tool calls must use the structured `(animus-tool name schema args correlation budget targets caps approval)` shape. It must not silently bypass adapter contracts, weaken policy, or persist host state. Validate with `cargo test -p animus-steel`.
+`animus-steel` may evaluate Steel scripts, but every script-produced action must re-enter Rust validation through `LoopDecision`, `ModelRequest`, current-shape `ToolRequest`, bounded `ToolResponse`, or `ModelResponse` before dispatch. Tool calls must use the structured `(animus-tool name schema args correlation budget targets caps approval)` shape. It must not silently bypass adapter contracts, weaken policy, or persist host state.
+
+The non-default model-facing kernel uses a separate trust profile. `SteelRlmToolAdapter` persists successful model-written cells, but each file, shell, tool, context, child, or clear request returns typed data. `animus-runtime::rlm_kernel` revalidates this data before an injected host receives it. Failed cells and prompt compaction do not clear committed kernel state. Validate this surface with `scripts/cairn/check-rlm-kernel --root .`.
 
 ### Reusable runtime boundary
 

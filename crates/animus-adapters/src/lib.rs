@@ -66,6 +66,10 @@ pub mod observability {
         MetricsAdapter, SinkFailureClass, SinkOutcome, evaluate_delivery,
     };
 }
+/// Compatibility facade for pure model-facing RLM kernel contracts.
+pub mod rlm_kernel {
+    pub use animus_adapter_rlm_kernel::*;
+}
 #[cfg(test)]
 mod familycrates;
 /// OpenClaw-inspired security audit and plugin guardrail DTOs.

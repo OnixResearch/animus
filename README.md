@@ -8,6 +8,7 @@
 - `crates/animus-adapters` is the `#![no_std]` component boundary crate. It defines implementation-free adapter contracts and DTOs for swappable harness components such as models and tools.
 - `crates/animus-preserves-schema` owns authority-free schema identities and family catalog metadata; `crates/animus-preserves-adapter` is the minimal adapter-only text/binary bridge with no runtime dependency; `crates/animus-preserves` remains the compatibility facade and owns runtime, dataspace, provenance/session, and policy-visible family modules.
 - `crates/animus-steel` is the canonical Steel Scheme loop fabric. It lets embedders script the agent turn loop while Rust revalidates every selected model/tool/response action at adapter boundaries.
+- `crates/animus-adapter-rlm-kernel` is the no-std contract core for the optional model-facing persistent Steel environment. `animus-steel::SteelRlmToolAdapter` exposes it through the normal tool port, and `animus-runtime::rlm_kernel` keeps host effects injected.
 - `crates/animus-runtime` is the reusable agent-loop runtime. It drives typed Steel/fabric decisions through injected model and tool adapters, emits ordered runtime events/reports, and provides exact per-model prompt/skill/memory/tool composition, capability-bound semantic role composition and separation, a coherent metadata-only tool catalog, pure admission, injected executor, bounded output, and safe receipt kits while keeping provider, filesystem, process, network, UI, and persistence authority outside the runtime core.
 - `crates/animus-std` is the standard-library host compatibility shell. It owns environment/config parsing, feature-gated generated model-profile and semantic-role loading, process-facing orchestration, a pure authority catalog, and facade re-exports for authority-scoped host blocks.
 - `crates/animus-std-observability` is the first direct authority-scoped std block. It supplies deterministic no-op and in-memory observability sinks without pulling unrelated context, provider, ingest, transport, credential, persistence, or terminal behavior.
@@ -45,6 +46,8 @@ See [docs/goose-message-queue-interrupts.md](docs/goose-message-queue-interrupts
 See [docs/portfolio-search.md](docs/portfolio-search.md) for the pure bounded portfolio state machine, mechanism registry, delayed cross-pollination, gap-strength gates, adversarial audit, honest terminal outcomes, and safe receipt boundary.
 
 See [docs/interrupted-tool-call-repair.md](docs/interrupted-tool-call-repair.md) for exact active-branch tool binding, evidence-bound synthetic failures, append-only repair planning, durable provider gating, idempotence, and metadata-only receipts.
+
+See [docs/rlm-kernel.md](docs/rlm-kernel.md) for the optional `steel_repl` tool adapter, persistent model-facing Steel environment, typed host requests, bounded `rlm(...)`, compaction survival, and non-claims.
 
 See [docs/provider-retry-execution.md](docs/provider-retry-execution.md) for typed provider-failure classification, bounded same-plan retry, semantic-stream replay denial, injected cancellable timers, provider-neutral progress, and metadata-only receipts.
 
@@ -89,6 +92,7 @@ The supported Wasm compile boundary targets `wasm32-unknown-unknown` for determi
 ```sh
 cargo check -p animus-core --target wasm32-unknown-unknown --locked
 cargo check -p animus-adapter-safe --target wasm32-unknown-unknown --locked
+cargo check -p animus-adapter-rlm-kernel --target wasm32-unknown-unknown --locked
 cargo check -p animus-adapter-observability --target wasm32-unknown-unknown --locked
 cargo check -p animus-adapters --target wasm32-unknown-unknown --locked
 cargo check -p animus-router --target wasm32-unknown-unknown --locked
@@ -117,6 +121,9 @@ cargo test -p animus-preserves
 cargo test -p animus-preserves syndicate --locked
 scripts/cairn/check-preserves-boundary-schemas --root .
 cargo test -p animus-steel
+cargo test -p animus-adapter-rlm-kernel
+cargo test -p animus-runtime --features rlm-kernel rlm_kernel
+cargo check -p animus --features rlm-kernel
 cargo test -p animus-runtime
 cargo test -p animus-runtime session_persistence --locked
 cargo test -p animus-std
@@ -153,6 +160,7 @@ scripts/cairn/check-clash-ucan-authority --root .
 scripts/cairn/check-plugin-manifest-runtime-neutral --root .
 scripts/cairn/check-request-lifecycle --root .
 scripts/cairn/check-steel-runtime-policy --root .
+scripts/cairn/check-rlm-kernel --root .
 scripts/cairn/check-neutral-ledger --root .
 scripts/cairn/check-injected-services --root .
 scripts/cairn/check-composition-conformance --root .

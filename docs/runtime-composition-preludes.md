@@ -16,6 +16,7 @@ Use the smallest prelude that matches the integration seam:
 | `worker_prelude` | worker-team delegation DTOs and supplied worker-service calls | host-injection surface |
 | `policy_prelude` | lifecycle hooks, middleware, guards, and trust records | host-injection surface |
 | `status_prelude` | semantic status observations, selection, evidence summaries, and presentations | reusable contracts |
+| `rlm_kernel` | revalidated host execution for the optional persistent model-facing Steel environment | injected host effects behind the `rlm-kernel` feature |
 
 The flat root exports remain compatibility surfaces. Do not remove or silently rename them when adding a prelude; add migration guidance first.
 
@@ -23,7 +24,7 @@ The flat root exports remain compatibility surfaces. Do not remove or silently r
 
 `LoopFabric` consumes `RuntimeLoopTurn` and returns `RuntimeLoopDecision`, so custom Rust, replay, or test fabrics do not construct Steel values. The default Steel runner is an adapter behind the `steel` feature, enabled by the default `compat` bundle. The non-default `lean-loop` feature adds a separately compiled Lean 4 process-backed fabric through the same neutral trait; Rust revalidates every candidate, and Steel remains the canonical scriptable fabric. See [the Lean 4 loop fabric](lean4-loop-fabric.md).
 
-The Nickel-governed Steel policy includes `default-loop` for a simple model-then-response fabric and `ralph-loop` for a bounded Ralph-style profile. `ralph-loop` repeats model turns until the previous model message is exactly `COMPLETE` after trimming or the runtime turn budget ends. That exact response is only a completion candidate: controller continuation waits for repository-selected passing evidence and a matching Cairn completion receipt when authoritative evidence is required. All PRD/progress loading, fresh sessions, VCS, validation, shell, browser, Cairn invocation, and persistence effects remain host-owned.
+The Nickel-governed Steel policy includes `default-loop` for a simple model-then-response fabric and `ralph-loop` for a bounded Ralph-style profile. The separate non-default `rlm-kernel` feature adds `SteelRlmKernel` and `SteelRlmToolAdapter`. This model-facing profile retains successful Steel cells across tool calls and returns typed host requests instead of performing effects. `ralph-loop` repeats model turns until the previous model message is exactly `COMPLETE` after trimming or the runtime turn budget ends. That exact response is only a completion candidate: controller continuation waits for repository-selected passing evidence and a matching Cairn completion receipt when authoritative evidence is required. All PRD/progress loading, fresh sessions, VCS, validation, shell, browser, Cairn invocation, and persistence effects remain host-owned.
 
 Focused checks:
 
@@ -32,6 +33,8 @@ scripts/cairn/check-runtime-kernel-split --root .
 cargo test -p animus-runtime admission::tests --locked
 cargo test -p animus-runtime shell::tests --locked
 cargo test -p animus-runtime --locked
+cargo test -p animus-runtime --features rlm-kernel rlm_kernel --locked
+cargo test -p animus-steel --features rlm-kernel rlm --locked
 cargo check -p animus-runtime --no-default-features --locked
 cargo test -p animus-runtime kernel --no-default-features --locked
 ```
