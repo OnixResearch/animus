@@ -9,12 +9,17 @@
 )]
 
 use super::*;
+use animus_adapters::AgentControlCommand as ControlInput;
 
 const SESSION_ID: &str = "session.one";
 const BRANCH_ID: &str = "branch.active";
 const POLICY_ID: &str = "durable-active-turn";
 const RETENTION_CLASS: &str = "host_managed";
 const CALL_ID: &str = "call.one";
+const CONTROL_RUN_ID: &str = "run.control";
+const PAUSE_COMMAND_ID: &str = "command.pause";
+const RESUME_COMMAND_ID: &str = "command.resume";
+const CANCEL_COMMAND_ID: &str = "command.cancel";
 const TURN_SEQUENCE: u64 = 7;
 const PRIOR_GENERATION: u64 = 4;
 const NEXT_GENERATION: u64 = 5;
@@ -173,6 +178,132 @@ fn pre_provider_recovery_preserves_turn_identity() {
     assert_eq!(first, second);
     assert_eq!(first.action(), ActiveTurnRecoveryAction::ContinueProvider);
     assert!(first.provider_continuation_allowed());
+}
+
+#[test]
+fn durable_parked_control_blocks_recovery_until_exact_resume() {
+    // r[verify agent_harness_runtime.agent_control.runtime.gate]
+    // r[verify agent_harness_runtime.agent_control.runtime.recovery]
+    // r[verify agent_harness_runtime.agent_control.verification.positive]
+    let (policy, mut snapshot) = snapshot(
+        ActiveTurnRepairState::Clean,
+        ActiveTurnTerminalClass::Active,
+    );
+    let run_id = animus_adapters::AgentControlRunId::new(CONTROL_RUN_ID).expect("run id");
+    let initial = crate::AgentControlState::new(run_id.clone());
+    let pause = ControlInput::new(
+        run_id.clone(),
+        animus_adapters::AgentControlCommandId::new(PAUSE_COMMAND_ID).expect("pause command id"),
+        initial.revision(),
+        animus_adapters::AgentControlAction::Pause,
+    );
+    let requested = crate::reduce_agent_control_command(&initial, &pause)
+        .expect("pause transition")
+        .into_state();
+    let checkpoint = animus_adapters::AgentControlCheckpoint::new(
+        run_id.clone(),
+        animus_adapters::AgentControlCheckpointKind::BeforeModel,
+    );
+    let paused = crate::reduce_agent_control_checkpoint(&requested, &checkpoint)
+        .expect("paused checkpoint")
+        .into_state();
+    let parked_sequence = u32::try_from(snapshot.entries.len()).expect("bounded entry count");
+    let parked = prepare_active_turn_control_entry(
+        &policy,
+        ActiveTurnControlEntryDraft {
+            turn_hash: snapshot.turn_hash.as_str(),
+            sequence: parked_sequence,
+            prepared_bytes: PREPARED_ENTRY_BYTES,
+            control: &paused,
+        },
+    )
+    .expect("parked entry");
+    assert_eq!(parked.kind, ActiveTurnJournalEntryKind::ControlParked);
+    snapshot.entries.push(parked);
+    snapshot.checkpoint_hash = active_turn_checkpoint_hash(
+        &policy,
+        snapshot.turn_hash.as_str(),
+        snapshot.generation,
+        snapshot.entries.as_slice(),
+    )
+    .expect("parked checkpoint hash");
+
+    let parked_plan = plan_active_turn_recovery(&policy, &snapshot).expect("parked plan");
+    assert_eq!(parked_plan.action(), ActiveTurnRecoveryAction::Parked);
+    assert!(!parked_plan.provider_continuation_allowed());
+
+    let resume = ControlInput::new(
+        run_id,
+        animus_adapters::AgentControlCommandId::new(RESUME_COMMAND_ID).expect("resume command id"),
+        paused.revision(),
+        animus_adapters::AgentControlAction::ResumeRun,
+    );
+    let running = crate::reduce_agent_control_command(&paused, &resume)
+        .expect("resume transition")
+        .into_state();
+    let running_sequence = u32::try_from(snapshot.entries.len()).expect("bounded entry count");
+    let running_entry = prepare_active_turn_control_entry(
+        &policy,
+        ActiveTurnControlEntryDraft {
+            turn_hash: snapshot.turn_hash.as_str(),
+            sequence: running_sequence,
+            prepared_bytes: PREPARED_ENTRY_BYTES,
+            control: &running,
+        },
+    )
+    .expect("running entry");
+    assert_eq!(
+        running_entry.kind,
+        ActiveTurnJournalEntryKind::ControlRunning
+    );
+    snapshot.entries.push(running_entry);
+    snapshot.checkpoint_hash = active_turn_checkpoint_hash(
+        &policy,
+        snapshot.turn_hash.as_str(),
+        snapshot.generation,
+        snapshot.entries.as_slice(),
+    )
+    .expect("running checkpoint hash");
+
+    let running_plan = plan_active_turn_recovery(&policy, &snapshot).expect("running plan");
+    assert_eq!(
+        running_plan.action(),
+        ActiveTurnRecoveryAction::ContinueProvider
+    );
+    assert!(running_plan.provider_continuation_allowed());
+}
+
+#[test]
+fn cancelling_control_cannot_be_persisted_as_parked_or_runnable() {
+    // r[verify agent_harness_runtime.agent_control.verification.negative]
+    let (policy, snapshot) = snapshot(
+        ActiveTurnRepairState::Clean,
+        ActiveTurnTerminalClass::Active,
+    );
+    let run_id = animus_adapters::AgentControlRunId::new(CONTROL_RUN_ID).expect("run id");
+    let initial = crate::AgentControlState::new(run_id.clone());
+    let cancel = ControlInput::new(
+        run_id,
+        animus_adapters::AgentControlCommandId::new(CANCEL_COMMAND_ID).expect("cancel command id"),
+        initial.revision(),
+        animus_adapters::AgentControlAction::Cancel,
+    );
+    let cancelling = crate::reduce_agent_control_command(&initial, &cancel)
+        .expect("cancel transition")
+        .into_state();
+    let sequence = u32::try_from(snapshot.entries.len()).expect("bounded entry count");
+
+    let failure = prepare_active_turn_control_entry(
+        &policy,
+        ActiveTurnControlEntryDraft {
+            turn_hash: snapshot.turn_hash.as_str(),
+            sequence,
+            prepared_bytes: PREPARED_ENTRY_BYTES,
+            control: &cancelling,
+        },
+    )
+    .expect_err("cancellation uses the dedicated recovery field");
+    assert_eq!(failure.issue(), ActiveTurnRecoveryIssue::InvalidInput);
 }
 
 #[test]

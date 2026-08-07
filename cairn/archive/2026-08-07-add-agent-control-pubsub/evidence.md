@@ -2,9 +2,11 @@
 
 ## Outcome
 
-The in-memory external agent-control feature is implemented. It pauses at safe checkpoints, blocks without polling, resumes through a revisioned state latch, and exposes bounded event subscriptions.
+The external agent-control feature is implemented. It pauses at safe checkpoints, blocks without polling, resumes through a revisioned state latch, and exposes bounded event subscriptions.
 
-Durable parked control remains blocked on `add-durable-active-turn-recovery`. This change stays active and is not archive-ready.
+The archived `add-durable-active-turn-recovery` contract now supplies the parked-state composition. Exact parked checkpoint entries recover without provider continuation.
+
+A later exact running entry restores eligibility for the other recovery gates. Consumer hosts retain checkpoint storage and transaction durability.
 
 ## Baseline
 
@@ -24,13 +26,18 @@ The direct host `cargo` command was unavailable outside the Nix development shel
 - `CodingSessionAgentControlGate` lets prerequisite commits continue and gates provider, tool, and summarizer effects.
 - `animus-std-control` owns explicit `Mutex` and `Condvar` synchronization plus a bounded revisioned event journal.
 - The root `agent-control` feature re-exports the focused host crate.
-- External transport, authentication, selector resolution, and persistence remain consumer-owned.
+- Active-turn control entries bind the turn, run, revision, and phase with a domain-separated BLAKE3 identity.
+- Recovery returns `Parked` for the latest parked entry and resumes only after a later exact running entry.
+- External transport, authentication, selector resolution, checkpoint storage, and durability remain consumer-owned.
 
 ## Passing evidence
 
-- Focused adapter, runtime, standard-host, coding-session, root-feature, and Wasm rail: passed.
-- Focused rail source identity: `60010f90bf03c194d1039cff251073ca91e120ee39c8af8ca228100494e50a65`.
-- `nix build .#checks.x86_64-linux.agent-control --no-link -L`: passed with the same source identity.
+- Focused adapter, runtime, standard-host, coding-session, active-turn, root-feature, and Wasm rail: passed.
+- Agent-control rail source identity: `ac81a6a44439603d017752e965d2a6b63f5dcb0a0ac7cd2f2160d6a732e0ba79`.
+- Active-turn recovery rail source identity: `71a91a47c1b76cd93323a084fcf2d0c063c33cb2f557c6e84525e0127ec8de0e`.
+- Positive recovery tests prove that a parked entry blocks continuation until an exact running entry exists.
+- Negative recovery tests reject cancellation as a parked or runnable checkpoint entry.
+- `nix build .#checks.x86_64-linux.agent-control --no-link -L`: passed for the earlier in-memory implementation.
 - Focused Clippy for `animus-std-control`, `animus-runtime`, and coding-session `animus-std`: passed with warnings denied.
 - `cargo fmt --all -- --check`: passed.
 - `nix run .#cargo-tigerstyle -- check`: passed after explicit assertion, searchable-path, parameter, and unit-name repairs.
@@ -42,11 +49,9 @@ The direct host `cargo` command was unavailable outside the Nix development shel
 
 The runtime facade inventory rail still reports 47 unclassified exports from pre-existing worktree changes. No agent-control export remains in that diagnostic set.
 
-The roadmap rail classifies `add-agent-control-pubsub`, but eight other active changes remain unclassified. This change did not modify those packages.
+The roadmap rail classifies `add-agent-control-pubsub`, but other active changes remain unclassified. This change does not modify those packages.
 
-Dry-run sync remains blocked by malformed accepted-spec structure that predates this delta. The accepted spec has duplicate `## Requirements` sections and existing requirement blocks with multiple bare identities.
-
-Dry-run archive is blocked because durable parked control task H3 remains open. No sync or archive mutation ran.
+The final sync and archive results appear in the closeout history for this change.
 
 ## Concurrency audit
 
@@ -58,4 +63,4 @@ An advisory secondary review suggested separate locks, timeout polling, and redu
 
 ## Non-claims
 
-This evidence does not prove external transport delivery, controller authorization, provider cancellation, tool rollback, process durability, exactly-once effects, task completion, production readiness, or release eligibility.
+This evidence does not prove external transport delivery, controller authorization, provider cancellation, tool rollback, store durability, exactly-once effects, task completion, production readiness, or release eligibility.

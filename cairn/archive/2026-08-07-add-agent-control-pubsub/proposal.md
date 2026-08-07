@@ -34,7 +34,7 @@ Animus needs a transport-neutral control contract that lets an external publishe
 
 - Provider or tool preemption after an external call starts.
 - Ambient sockets, network clients, global registries, authentication, or process signals in reusable crates.
-- Durable paused state across process restart before active-turn recovery is complete.
+- Claims about checkpoint storage durability, power-loss behavior, or exact recovery after a host storage failure.
 - Claims for transport delivery, provider cancellation, exactly-once effects, or production readiness.
 
 ## Affected Specs

@@ -13,7 +13,8 @@ The root compatibility feature is `agent-control`. The focused standard host is 
 | Mutex, condition variable, blocked thread, and bounded event journal | `animus-std-control` |
 | Socket, ACP, Iroh, Syndicate, or TUI command source | Consumer host |
 | Authentication, selector resolution, and controller policy | Consumer host |
-| Durable paused state after restart | Future active-turn recovery composition |
+| Parked-state checkpoint identity and recovery decision | `animus-runtime::active_turn_recovery` |
+| Checkpoint storage and transaction durability | Consumer host |
 
 Reusable crates do not open sockets, read clocks, send signals, discover controllers, or create global registries.
 
@@ -54,6 +55,12 @@ The publisher mutates state before it notifies waiters. Thus, a resume that arri
 Spurious wakeups are safe because the waiter evaluates the state again. Host closure wakes all waiters and returns a typed error. The runtime then stops without a running fallback.
 
 The blocked operating-system thread remains allocated. It performs no polling and consumes no model tokens.
+
+A host can prepare an active-turn control entry from the exact control state. The entry binds the turn, run, revision, and phase.
+
+A checkpoint with a current parked entry recovers as `Parked`. A later exact running entry makes provider continuation eligible again.
+
+The pure plan does not write the checkpoint. The host must provide the storage transaction and its evidence.
 
 ## Event subscriptions
 
@@ -106,7 +113,7 @@ A transport bridge must resolve authorization and the exact run before it calls 
 
 ## Non-claims
 
-This feature does not prove transport delivery, publisher authorization, provider cancellation, tool rollback, process durability, fairness, exactly-once effects, task completion, production readiness, or release eligibility.
+This feature does not prove transport delivery, publisher authorization, provider cancellation, tool rollback, store durability, fairness, exactly-once effects, task completion, production readiness, or release eligibility.
 
 ## Focused validation
 

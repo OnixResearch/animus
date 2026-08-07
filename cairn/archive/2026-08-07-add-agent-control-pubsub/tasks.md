@@ -14,7 +14,7 @@
 - [x] [serial] R1 Add optional loop-fabric, model, and tool safe-checkpoint gates without changing absent-control behavior or planning budgets. r[agent_harness_runtime.agent_control.runtime] r[agent_harness_runtime.agent_control.port]
 - [x] [serial] H1 Add the focused `animus-std-control` crate with a mutex state latch, predicate-based condition-variable waiter, publisher, explicit closure, and bounded event journal. r[agent_harness_runtime.agent_control.host] r[agent_harness_runtime.agent_control.concurrency]
 - [x] [parallel] H2 Add positive and negative race tests for resume-before-wait, spurious wakes, cancellation precedence, stale publishers, journal lag, and host closure. r[agent_harness_runtime.agent_control.host] r[agent_harness_runtime.agent_control.verification]
-- [ ] [depends:add-durable-active-turn-recovery] H3 Compose durable parked control with active-turn recovery after that contract is accepted. r[agent_harness_runtime.agent_control.runtime]
+- [x] [depends:add-durable-active-turn-recovery] H3 Compose durable parked control with active-turn recovery after that contract is accepted. r[agent_harness_runtime.agent_control.runtime]
 
 ## Phase 4: Composition and documentation
 

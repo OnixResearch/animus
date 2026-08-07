@@ -15,11 +15,12 @@
 )]
 
 use super::data::{
-    ACTIVE_TURN_CHECKPOINT_HASH_DOMAIN, ACTIVE_TURN_HASH_DOMAIN, ACTIVE_TURN_PLAN_HASH_DOMAIN,
-    ACTIVE_TURN_POLICY_HASH_DOMAIN, ACTIVE_TURN_RECOVERY_SCHEMA, ACTIVE_TURN_STEERING_HASH_DOMAIN,
-    ACTIVE_TURN_TRANSACTION_HASH_DOMAIN, ActiveTurnAcceptanceDraft, ActiveTurnAcceptanceOutcome,
-    ActiveTurnAcceptancePlan, ActiveTurnAcceptanceState, ActiveTurnCancellationState,
-    ActiveTurnCleanupState, ActiveTurnContinuationAuthority, ActiveTurnJournalEntryKind,
+    ACTIVE_TURN_CHECKPOINT_HASH_DOMAIN, ACTIVE_TURN_CONTROL_HASH_DOMAIN, ACTIVE_TURN_HASH_DOMAIN,
+    ACTIVE_TURN_PLAN_HASH_DOMAIN, ACTIVE_TURN_POLICY_HASH_DOMAIN, ACTIVE_TURN_RECOVERY_SCHEMA,
+    ACTIVE_TURN_STEERING_HASH_DOMAIN, ACTIVE_TURN_TRANSACTION_HASH_DOMAIN,
+    ActiveTurnAcceptanceDraft, ActiveTurnAcceptanceOutcome, ActiveTurnAcceptancePlan,
+    ActiveTurnAcceptanceState, ActiveTurnCancellationState, ActiveTurnCleanupState,
+    ActiveTurnContinuationAuthority, ActiveTurnControlEntryDraft, ActiveTurnJournalEntryKind,
     ActiveTurnPreparedEntry, ActiveTurnRecoveryAction, ActiveTurnRecoveryError,
     ActiveTurnRecoveryIssue, ActiveTurnRecoveryPlan, ActiveTurnRecoveryPolicy,
     ActiveTurnRecoveryPolicyInput, ActiveTurnRecoverySnapshot, ActiveTurnRepairState,
@@ -367,6 +368,53 @@ pub fn active_turn_steering_delivery_allowed(
         && observation.complete_manifest)
 }
 
+/// Prepares a durable active-turn entry from one exact agent-control state.
+///
+/// Running state produces a runnable record. Pause-requested or paused state
+/// produces a parked record. Cancellation and terminal state use their existing
+/// active-turn fields and fail closed here.
+///
+/// # Errors
+///
+/// Returns [`ActiveTurnRecoveryError`] for malformed turn identity, invalid
+/// size, or a control phase that cannot be represented as parked or runnable.
+// r[impl agent_harness_runtime.agent_control.runtime]
+// r[impl agent_harness_runtime.agent_control.runtime.recovery]
+pub fn prepare_active_turn_control_entry(
+    policy: &ActiveTurnRecoveryPolicy,
+    draft: ActiveTurnControlEntryDraft<'_>,
+) -> Result<ActiveTurnPreparedEntry, ActiveTurnRecoveryError> {
+    lowercase_blake3(draft.turn_hash, FIELD_RECOVERY)?;
+    if draft.prepared_bytes == 0 || draft.prepared_bytes > policy.max_entry_bytes() {
+        return Err(error(ActiveTurnRecoveryIssue::InvalidInput, FIELD_RECOVERY));
+    }
+    let kind = match draft.control.phase() {
+        animus_adapters::AgentControlPhase::Running => ActiveTurnJournalEntryKind::ControlRunning,
+        animus_adapters::AgentControlPhase::PauseRequested
+        | animus_adapters::AgentControlPhase::Paused => ActiveTurnJournalEntryKind::ControlParked,
+        animus_adapters::AgentControlPhase::Cancelling
+        | animus_adapters::AgentControlPhase::Terminal => {
+            return Err(error(ActiveTurnRecoveryIssue::InvalidInput, FIELD_RECOVERY));
+        }
+    };
+    let entry_hash = hash_owned_parts(
+        ACTIVE_TURN_CONTROL_HASH_DOMAIN,
+        &[
+            draft.turn_hash.to_string(),
+            draft.control.run_id().as_str().to_string(),
+            draft.control.revision().to_string(),
+            draft.control.phase().as_str().to_string(),
+        ],
+    );
+    Ok(ActiveTurnPreparedEntry {
+        sequence: draft.sequence,
+        kind,
+        entry_hash,
+        prepared_bytes: draft.prepared_bytes,
+        tool_call_id: None,
+    })
+}
+
 /// Produces one deterministic recovery action from a validated supplied snapshot.
 ///
 /// No returned type can construct or dispatch a tool request.
@@ -381,6 +429,7 @@ pub fn plan_active_turn_recovery(
     snapshot: &ActiveTurnRecoverySnapshot,
 ) -> Result<ActiveTurnRecoveryPlan, ActiveTurnRecoveryError> {
     validate_recovery_snapshot(policy, snapshot)?;
+    let control_is_parked = latest_control_is_parked(snapshot.entries.as_slice());
     let action = if snapshot.terminal == ActiveTurnTerminalClass::Conflicting {
         return Err(error(
             ActiveTurnRecoveryIssue::CorruptJournal,
@@ -398,6 +447,8 @@ pub fn plan_active_turn_recovery(
         || snapshot.repair_state == ActiveTurnRepairState::Blocked
     {
         ActiveTurnRecoveryAction::Blocked
+    } else if control_is_parked {
+        ActiveTurnRecoveryAction::Parked
     } else if snapshot.repair_state == ActiveTurnRepairState::RepairRequired {
         ActiveTurnRecoveryAction::PlanInterruptedToolRepair
     } else {
@@ -426,9 +477,23 @@ pub fn plan_active_turn_recovery(
         !matches!(plan.action, ActiveTurnRecoveryAction::ContinueProvider)
             || (snapshot.acceptance == ActiveTurnAcceptanceState::Durable
                 && snapshot.authority == ActiveTurnContinuationAuthority::Allowed
-                && snapshot.cancellation == ActiveTurnCancellationState::Active)
+                && snapshot.cancellation == ActiveTurnCancellationState::Active
+                && !control_is_parked)
     );
+    debug_assert!(!matches!(plan.action, ActiveTurnRecoveryAction::Parked) || control_is_parked);
     Ok(plan)
+}
+
+fn latest_control_is_parked(entries: &[ActiveTurnPreparedEntry]) -> bool {
+    let mut parked = false;
+    for entry in entries {
+        match entry.kind {
+            ActiveTurnJournalEntryKind::ControlParked => parked = true,
+            ActiveTurnJournalEntryKind::ControlRunning => parked = false,
+            _other => {}
+        }
+    }
+    parked
 }
 
 fn validate_recovery_snapshot(

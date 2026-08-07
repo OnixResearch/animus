@@ -10,8 +10,9 @@ Animus protects accepted work before provider dispatch. The pure runtime core pl
 - BLAKE3 identities for policy, turns, checkpoints, steering, plans, and receipts;
 - accepted-message transaction plans;
 - complete checkpoint replacement plans;
+- exact parked and running control-entry identities;
 - provider and steering gates;
-- recovery and terminal-cleanup plans;
+- recovery, parked-state, and terminal-cleanup plans;
 - metadata-only receipts.
 
 The runtime core does not read storage or clocks. It does not call providers or tools. It does not clean host state.
@@ -32,6 +33,10 @@ For steering, commit the steering identity before delivery. A missing, stale, pa
 
 For checkpoint replacement, prepare and bound every entry before mutation. Then use one compare-and-swap transaction for the complete checkpoint.
 
+For agent control, prepare an entry from the exact run, revision, and phase. A current parked entry blocks provider continuation after recovery.
+
+A later running entry makes the turn eligible for the other recovery gates. The host owns the checkpoint transaction and durable storage.
+
 ## Crash windows
 
 | Crash window | Recovery result |
@@ -43,6 +48,8 @@ For checkpoint replacement, prepare and bound every entry before mutation. Then 
 | After a tool call | The existing interrupted-tool repair core can plan one synthetic failure. |
 | After a real tool result | Recovery preserves the real result and does not request another tool effect. |
 | After steering acceptance | The durable steering identity remains eligible for one correlated delivery attempt. |
+| While control is parked | Recovery returns `Parked` and does not admit provider continuation. |
+| After an exact resume record | Recovery applies the other authority, cancellation, repair, and terminal gates. |
 | After terminal commit | Recovery does not dispatch providers or tools. Cleanup remains a separate host action. |
 
 ## Tool and provider composition
@@ -51,7 +58,9 @@ Active-turn recovery does not own a tool-request type. A missing tool result del
 
 A real tool result remains in the ordered checkpoint. Recovery never replaces it and never converts provider retry into tool retry.
 
-Provider continuation also needs current authority, cancellation, repair, and exact provider-plan gates. Durable acceptance alone does not grant authority.
+Provider continuation also needs current authority, cancellation, repair, agent-control, and exact provider-plan gates. Durable acceptance alone does not grant authority.
+
+A cancelling or terminal control phase cannot become a parked or running entry. Existing cancellation and terminal fields own those outcomes.
 
 ## Policy and receipts
 
@@ -67,7 +76,7 @@ Animus does not use camelAI as a runtime dependency. It does not adopt Cloudflar
 
 ## Non-claims
 
-This contract does not prove power-loss durability. It does not prove store correctness, provider acceptance, or exactly-once effects.
+This contract does not prove power-loss durability. It does not prove store correctness, control-entry persistence, provider acceptance, or exactly-once effects.
 
 It does not prove tool non-execution, transcript completeness, task completion, production readiness, or release eligibility.
 
