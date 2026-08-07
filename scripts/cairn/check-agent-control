@@ -26,6 +26,7 @@ done
 
 cargo test -p animus-adapters control --locked
 cargo test -p animus-runtime control --locked
+cargo test -p animus-runtime active_turn_recovery --locked
 cargo test -p animus-std-control --locked
 cargo test -p animus-std --features coding-session-host agent_control --locked
 cargo check -p animus --features agent-control --locked
@@ -42,6 +43,9 @@ source_identity=$(
   b3sum \
     crates/animus-adapters/src/control.rs \
     crates/animus-runtime/src/control.rs \
+    crates/animus-runtime/src/active_turn_recovery/core.rs \
+    crates/animus-runtime/src/active_turn_recovery/data.rs \
+    crates/animus-runtime/src/active_turn_recovery/tests.rs \
     crates/animus-runtime/src/shell/mod.rs \
     crates/animus-runtime/src/shell/runner.rs \
     crates/animus-runtime/src/shell/tests/control.rs \
@@ -49,6 +53,7 @@ source_identity=$(
     crates/animus-std/src/codingsession.rs \
     crates/animus-std/src/codingsession/tests.rs \
     docs/agent-control-pubsub.md \
+    docs/active-turn-recovery.md \
     cairn/component-catalog.ncl \
     cairn/runtime-facade-inventory.ncl \
     scripts/cairn/check-agent-control \
@@ -65,13 +70,14 @@ cat > "${RECEIPT_RELATIVE_PATH}" <<EOF
 - adapter positive and negative tests: passed
 - pure reducer positive and negative tests: passed
 - runtime safe-checkpoint tests: passed
+- durable parked-control recovery tests: passed
 - condition-variable race and closure tests: passed
 - coding-session provider gate tests: passed
 - root feature facade: passed
 - adapter Wasm compile boundary: passed
 - transport delivery: not claimed
 - controller authorization: not claimed
-- durable pause: not claimed
+- storage durability: not claimed
 - provider cancellation: not claimed
 - exactly-once effects: not claimed
 - production readiness: not claimed

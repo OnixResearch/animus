@@ -127,6 +127,21 @@ let change_entries = [
     "add-tui-session-context-status-rail",
     "add-tui-agent-control-and-queue-dashboard",
   ] ["add-tui-conversation-render-model"],
+  change "adopt-latest-rats-image-protocol-adapters" product_role "ui-headless" [
+    "add-tui-streaming-markdown-view",
+    "add-tui-app-shell-and-event-loop",
+    "agent_harness_runtime.ratatui_tool_host.boundary",
+    "agent_harness_runtime.multimodal_image_payloads.typed_parts",
+  ] ["add-provider-video-payload-contracts", "add-bounded-terminal-video-playback"],
+  change "add-provider-video-payload-contracts" host_role "concrete-adapters" [
+    "add-canonical-model-message-contracts",
+    "negotiate-model-capability-matrix",
+    "agent_harness_runtime.multimodal_image_payloads.typed_parts",
+  ] ["adopt-latest-rats-image-protocol-adapters", "add-bounded-terminal-video-playback"],
+  change "add-bounded-terminal-video-playback" product_role "ui-headless" [
+    "adopt-latest-rats-image-protocol-adapters",
+    "add-tui-app-shell-and-event-loop",
+  ] ["add-provider-video-payload-contracts"],
   change "introduce-router-crate-barrier" foundation_role "router-crate" [
     "agent_harness_runtime.vllm_semantic_router_recipes.selection",
   ] ["define-router-execution-plan", "project-router-request-signals", "negotiate-router-capability-eligibility", "add-router-policy-contracts", "preserve-router-boundary-dtos"],
@@ -665,7 +680,10 @@ in
 let overlap_entries = [
   overlap "canonical-request-provider-projection" "add-canonical-model-message-contracts" ["add-provider-projection-conformance-fixtures"],
   overlap "capability-negotiation-provider-claims" "negotiate-model-capability-matrix" ["add-provider-projection-conformance-fixtures"],
-  overlap "tui-render-model" "add-tui-conversation-render-model" ["add-tui-streaming-markdown-view", "add-tui-prompt-input-and-keymap", "add-tui-tool-call-and-approval-panels", "add-tui-session-context-status-rail", "add-tui-agent-control-and-queue-dashboard", "add-tui-app-shell-and-event-loop"],
+  overlap "tui-render-model" "add-tui-conversation-render-model" ["add-tui-streaming-markdown-view", "add-tui-prompt-input-and-keymap", "add-tui-tool-call-and-approval-panels", "add-tui-session-context-status-rail", "add-tui-agent-control-and-queue-dashboard", "add-tui-app-shell-and-event-loop", "adopt-latest-rats-image-protocol-adapters", "add-bounded-terminal-video-playback"],
+  overlap "terminal-image-protocols" "adopt-latest-rats-image-protocol-adapters" ["add-tui-streaming-markdown-view", "add-tui-app-shell-and-event-loop", "add-bounded-terminal-video-playback"],
+  overlap "provider-video-payloads" "add-provider-video-payload-contracts" ["add-canonical-model-message-contracts", "negotiate-model-capability-matrix", "adopt-latest-rats-image-protocol-adapters", "add-bounded-terminal-video-playback"],
+  overlap "terminal-video-playback" "add-bounded-terminal-video-playback" ["adopt-latest-rats-image-protocol-adapters", "add-provider-video-payload-contracts", "add-tui-app-shell-and-event-loop"],
   overlap "router-execution-plan-materialization" "define-router-execution-plan" ["wire-router-into-runtime-loop", "gate-router-budget-and-fallback"],
   overlap "router-signal-projection" "project-router-request-signals" ["add-supra-router-signal-adapter"],
   overlap "router-receipt-assembly" "emit-router-safe-receipts" ["wire-router-into-runtime-loop", "evaluate-router-recipe-coverage"],

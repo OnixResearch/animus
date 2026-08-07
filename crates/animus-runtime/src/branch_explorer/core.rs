@@ -1,3 +1,21 @@
+// This archived Cairn adaptation keeps explicit topology facts and bounded validation branches.
+#![allow(
+    unknown_lints,
+    ambiguous_params,
+    assertion_density,
+    bool_naming,
+    borrowed_argument_types,
+    compound_condition,
+    fallible_int_fallback,
+    function_length,
+    no_recursion,
+    non_trait_imports,
+    numeric_units,
+    path_segment_repetition,
+    sentinel_fallback,
+    too_many_parameters,
+    unbounded_collection_growth
+)]
 #![allow(clippy::too_many_arguments, clippy::missing_errors_doc)]
 
 use std::collections::{BTreeMap, BTreeSet};

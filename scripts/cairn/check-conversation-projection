@@ -2,7 +2,7 @@
 # r[verify agent_harness_runtime.conversation_view_projection.verification]
 set -eu
 readonly FAILURE=1
-readonly SOURCE='crates/animus-runtime/src/conversation_projection.rs'
+readonly SOURCE='crates/animus-runtime/src/conversationprojection.rs'
 readonly STD_SOURCE='crates/animus-std/src/conversationprojection.rs'
 readonly POLICY='config/conversation-projection-policy.ncl'
 readonly FIXTURES='config/conversation-projection-policy/fixtures'

@@ -62,6 +62,14 @@ r[agent_harness_runtime.agent_control.runtime.in_flight]
 - THEN the first version MUST allow the in-flight call to return through normal validation
 - AND it MUST block before the next declared external dispatch.
 
+#### Scenario: Parked control survives active-turn recovery
+
+r[agent_harness_runtime.agent_control.runtime.recovery]
+- GIVEN an exact parked control entry exists in the current active-turn checkpoint
+- WHEN recovery plans provider continuation
+- THEN it MUST return a parked action without provider or tool dispatch
+- AND only a later exact running entry MAY restore eligibility for the other recovery gates.
+
 ### Requirement: The standard host waits without lost wakeups
 
 r[agent_harness_runtime.agent_control.host] The standard agent-control host MUST use predicate-based synchronized waiting over explicit state and MUST expose bounded event subscriptions.

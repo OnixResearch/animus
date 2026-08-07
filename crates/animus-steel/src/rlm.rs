@@ -455,8 +455,12 @@ fn parse_host_request(
         return Ok(None);
     };
     let items = list.iter().cloned().collect::<Vec<_>>();
-    if items.len() < TAGGED_REQUEST_ARITY || symbol(&items, TAG_INDEX)? != HOST_REQUEST_TAG {
+    if items.len() < TAGGED_REQUEST_ARITY {
         return Ok(None);
+    }
+    match items.get(TAG_INDEX) {
+        Some(steel::SteelVal::SymbolV(value)) if value.as_str() == HOST_REQUEST_TAG => {}
+        _other => return Ok(None),
     }
     let request = request_from_items(&items, policy)?;
     let admission = animus_adapter_rlm_kernel::admit_host_request(policy, &request)?;
@@ -537,13 +541,6 @@ fn child_request(
         animus_adapter_rlm_kernel::admit_child_spawn(policy, &request)?;
         Ok(request)
     })?)
-}
-
-fn symbol(items: &[steel::SteelVal], index: usize) -> Result<&str, SteelRlmError> {
-    match items.get(index) {
-        Some(steel::SteelVal::SymbolV(value)) => Ok(value.as_str()),
-        _other => Err(invalid_host_request("expected symbol tag")),
-    }
 }
 
 fn string(items: &[steel::SteelVal], index: usize) -> Result<&str, SteelRlmError> {
@@ -749,6 +746,30 @@ mod tests {
                 ..
             } if admission.operation() == animus_adapter_rlm_kernel::HostOperationClass::FileRead
         ));
+    }
+
+    #[test]
+    fn ordinary_list_values_are_not_misclassified_as_host_requests() {
+        let mut kernel = SteelRlmKernel::new(policy()).expect("kernel must initialize");
+        let result = kernel
+            .evaluate("(list \"pi\" \"steel\" \"repl\")")
+            .expect("ordinary list value must succeed");
+        let SteelRlmEvaluation::Value { value, .. } = result else {
+            panic!("ordinary list returned a host request");
+        };
+        assert_eq!(value, "'(\"pi\" \"steel\" \"repl\")");
+
+        let malformed = kernel
+            .evaluate("(define leaked-list-cell 99) (list 'animus-host-request \"subagent\")")
+            .expect_err("tagged malformed host request must fail");
+        assert!(matches!(
+            malformed,
+            SteelRlmError::InvalidHostRequest { .. }
+        ));
+        assert!(
+            kernel.evaluate("leaked-list-cell").is_err(),
+            "malformed host-request cells must remain transactional",
+        );
     }
 
     #[test]

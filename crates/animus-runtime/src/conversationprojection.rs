@@ -4,6 +4,19 @@
 //! already-classified source facts. Hosts own storage, cache mutation, transport,
 //! clocks, UI rendering, and ledger access.
 
+// This archived Cairn adaptation keeps explicit projection DTOs and bounded reconciliation branches.
+#![allow(
+    unknown_lints,
+    ambiguous_params,
+    assertion_density,
+    compound_condition,
+    function_length,
+    nested_conditionals,
+    numeric_units,
+    path_segment_repetition,
+    unbounded_collection_growth
+)]
+
 /// Projection schema.
 pub const CONVERSATION_PROJECTION_SCHEMA: &str = "animus.conversation-projection.v1";
 const POLICY_DOMAIN: &str = "animus.conversation-projection-policy.v1";

@@ -1,5 +1,8 @@
 //! Typed active-turn recovery inputs, plans, outcomes, and receipts.
 
+// Repeated active-turn prefixes keep public DTO ownership explicit at the compatibility boundary.
+#![allow(unknown_lints, path_segment_repetition)]
+
 /// Versioned active-turn recovery contract.
 pub const ACTIVE_TURN_RECOVERY_SCHEMA: &str = "animus.active-turn-recovery.v1";
 /// BLAKE3 domain for policy identities.
@@ -12,6 +15,8 @@ pub const ACTIVE_TURN_TRANSACTION_HASH_DOMAIN: &str = "animus.active-turn-transa
 pub const ACTIVE_TURN_CHECKPOINT_HASH_DOMAIN: &str = "animus.active-turn-checkpoint.v1";
 /// BLAKE3 domain for steering identities.
 pub const ACTIVE_TURN_STEERING_HASH_DOMAIN: &str = "animus.active-turn-steering.v1";
+/// BLAKE3 domain for durable agent-control identities.
+pub const ACTIVE_TURN_CONTROL_HASH_DOMAIN: &str = "animus.active-turn-control.v1";
 /// BLAKE3 domain for recovery-plan identities.
 pub const ACTIVE_TURN_PLAN_HASH_DOMAIN: &str = "animus.active-turn-plan.v1";
 /// BLAKE3 domain for metadata-only receipts.
@@ -244,6 +249,10 @@ pub enum ActiveTurnJournalEntryKind {
     SyntheticToolResult,
     /// Durable steering work.
     Steering,
+    /// Exact control state parks the active turn.
+    ControlParked,
+    /// Exact control state makes the active turn runnable.
+    ControlRunning,
     /// Terminal turn fact.
     Terminal,
     /// Unsupported record used for fail-closed tests.
@@ -261,10 +270,25 @@ impl ActiveTurnJournalEntryKind {
             Self::ToolResult => "tool_result",
             Self::SyntheticToolResult => "synthetic_tool_result",
             Self::Steering => "steering",
+            Self::ControlParked => "control_parked",
+            Self::ControlRunning => "control_running",
             Self::Terminal => "terminal",
             Self::Unsupported => "unsupported",
         }
     }
+}
+
+/// Input for one durable agent-control checkpoint entry.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ActiveTurnControlEntryDraft<'a> {
+    /// Exact active-turn identity.
+    pub turn_hash: &'a str,
+    /// Monotonic journal sequence.
+    pub sequence: u32,
+    /// Prepared serialized size.
+    pub prepared_bytes: u32,
+    /// Exact validated control state.
+    pub control: &'a crate::AgentControlState,
 }
 
 /// One fully prepared journal entry.
@@ -514,6 +538,8 @@ pub enum ActiveTurnRecoveryAction {
     ObserveTerminal,
     /// Clean retained active state after the terminal commit.
     CleanupRequired,
+    /// Keep the durable active turn parked without provider or tool dispatch.
+    Parked,
     /// Stop because supplied facts do not admit continuation.
     Blocked,
 }
@@ -527,6 +553,7 @@ impl ActiveTurnRecoveryAction {
             Self::PlanInterruptedToolRepair => "plan_interrupted_tool_repair",
             Self::ObserveTerminal => "observe_terminal",
             Self::CleanupRequired => "cleanup_required",
+            Self::Parked => "parked",
             Self::Blocked => "blocked",
         }
     }

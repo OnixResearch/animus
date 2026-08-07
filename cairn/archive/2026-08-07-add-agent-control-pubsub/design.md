@@ -44,6 +44,14 @@ Publishers mutate state before notification. Resume, cancellation, terminal clos
 
 **Rationale:** The state predicate prevents lost wakeups and tolerates spurious wakeups.
 
+### Decision: bind parked control to active-turn recovery
+
+**Choice:** The pure active-turn core prepares checkpoint entries from exact control state. Parked entries block provider recovery until a later running entry exists.
+
+The entry identity binds the active turn, run, control revision, and phase. The consumer host owns checkpoint storage and transaction evidence.
+
+**Rationale:** A process restart must not convert supplied parked state into running state. Exact resume evidence makes the transition explicit.
+
 ### Decision: make subscriptions bounded and non-blocking
 
 **Choice:** The host keeps a bounded revisioned event journal. Subscribers read with a cursor and can block on the same condition variable.

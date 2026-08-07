@@ -51,6 +51,7 @@ mod capmap;
 mod caps;
 mod checkpoint;
 /// Pure canonical conversation projection and cache reconciliation.
+#[path = "conversationprojection.rs"]
 pub mod conversation_projection;
 #[path = "codingsession/mod.rs"]
 mod sessionhost;
