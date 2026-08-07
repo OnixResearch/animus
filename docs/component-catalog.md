@@ -99,6 +99,7 @@ The catalog names Lego-style Animus components, the smallest public import surfa
 | `std.runtime-shell` | `shell-adapter` | `animus-std` | `std` | `shell-owned` | `std-shell` | `cargo test -p animus-std --locked<br>scripts/cairn/check-request-lifecycle --root .` | `animus_std::{RuntimeConfig, run_with_model}` |
 | `tui.session-branch-explorer` | `shell-adapter` | `animus-tui` | `session-branch-explorer` | `shell-owned` | `tui` | `cargo test -p animus-tui branch_explorer --locked<br>scripts/cairn/check-session-branch-explorer --root .` | `animus_tui::branch_explorer` |
 | `tui.host-shell` | `shell-adapter` | `animus-tui` | `tui` | `shell-owned` | `tui` | `cargo check -p animus --features tui --locked<br>scripts/cairn/check-runtime-facade-inventory --root .` | `animus_tui` |
+| `root.bounded-execution-evaluation` | `shell-adapter` | `animus` | `default` | `shell-owned` | `policy` | `scripts/cairn/check-bounded-execution-evaluation --root .<br>scripts/cairn/check-evidence-safety --root .` | `scripts/cairn/check-bounded-execution-evaluation` |
 | `root.compat-facade` | `crate-feature` | `animus` | `default` | `shell-owned` | `compatibility` | `cargo check -p animus --locked<br>scripts/cairn/check-runtime-facade-inventory --root .` | `animus` |
 
 ## Validation

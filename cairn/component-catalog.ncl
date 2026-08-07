@@ -164,6 +164,7 @@ let component_values = [
   with_deps ["runtime.loop-kernel", "adapters.model-port", "adapters.tool-port", "std.host-authority-catalog"] (component "std.runtime-shell" "animus-std" class_shell "std" authority_shell "std-shell" ["cargo test -p animus-std --locked", "scripts/cairn/check-request-lifecycle --root ."] "animus_std::{RuntimeConfig, run_with_model}"),
   with_deps ["runtime.session-branch-explorer", "std.session-branch-explorer-host"] (component "tui.session-branch-explorer" "animus-tui" class_shell "session-branch-explorer" authority_shell "tui" ["cargo test -p animus-tui branch_explorer --locked", "scripts/cairn/check-session-branch-explorer --root ."] "animus_tui::branch_explorer"),
   with_deps ["runtime.loop-kernel", "runtime.coding-session-core"] (component "tui.host-shell" "animus-tui" class_shell "tui" authority_shell "tui" ["cargo check -p animus --features tui --locked", "scripts/cairn/check-runtime-facade-inventory --root ."] "animus_tui"),
+  component "root.bounded-execution-evaluation" "animus" class_shell "default" authority_shell "policy" ["scripts/cairn/check-bounded-execution-evaluation --root .", "scripts/cairn/check-evidence-safety --root ."] "scripts/cairn/check-bounded-execution-evaluation",
   with_deps ["core.intent-state", "adapters.dto-boundary", "runtime.loop-kernel", "std.runtime-shell"] (component "root.compat-facade" "animus" class_crate_feature "default" authority_shell "compatibility" ["cargo check -p animus --locked", "scripts/cairn/check-runtime-facade-inventory --root ."] "animus"),
 ]
 in

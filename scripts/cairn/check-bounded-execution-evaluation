@@ -1,0 +1,76 @@
+#!/usr/bin/env sh
+# r[verify agent_harness_runtime.bounded_execution_evaluation.conformance]
+# r[verify agent_harness_runtime.bounded_execution_evaluation.decision]
+# r[verify agent_harness_runtime.bounded_execution_evaluation.authority]
+# r[verify agent_harness_runtime.bounded_execution_evaluation.non_claims]
+set -eu
+
+readonly FAILURE=1
+readonly PROFILE_SOURCE='config/bounded-execution-evaluation/profile.ncl'
+readonly PROFILE_GENERATED='config/bounded-execution-evaluation/generated/profile.lines'
+readonly FIXTURES='config/bounded-execution-evaluation/fixtures.lines'
+readonly LATTICE_FIXTURE='config/bounded-execution-evaluation/lattice-consumer-fixture.lines'
+readonly LATTICE_REVISION='revision|5c9902f777412296c13e2347e45b3bede335b828'
+readonly CHECKER_SOURCE='scripts/cairn/check-bounded-execution-evaluation.rs'
+readonly EXPECTED_STATUS='status=blocked'
+
+root='.'
+if [ "${1:-}" = '--root' ]; then
+  root=${2:-.}
+fi
+cd "${root}"
+
+for command_name in nickel rustc b3sum cmp grep; do
+  if ! command -v "${command_name}" >/dev/null 2>&1; then
+    printf 'error: %s is required for bounded-execution evaluation\n' "${command_name}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/animus-bounded-execution.XXXXXX")
+trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
+
+nickel export --format raw --field projection_lines "${PROFILE_SOURCE}" > "${tmp_dir}/profile.lines"
+cmp "${PROFILE_GENERATED}" "${tmp_dir}/profile.lines"
+
+checker="${tmp_dir}/check-bounded-execution-evaluation"
+rustc --edition=2024 -D warnings "${CHECKER_SOURCE}" -o "${checker}"
+"${checker}" --self-test
+
+profile_blake3=$(b3sum "${PROFILE_GENERATED}" | cut -d ' ' -f 1)
+"${checker}" \
+  --profile "${PROFILE_GENERATED}" \
+  --fixtures "${FIXTURES}" \
+  --profile-blake3 "${profile_blake3}" > "${tmp_dir}/decision.fields"
+
+grep -Fx "${EXPECTED_STATUS}" "${tmp_dir}/decision.fields" >/dev/null
+grep -Fx "${LATTICE_REVISION}" "${LATTICE_FIXTURE}" >/dev/null
+grep -Fx 'requires_new_change_for_extract|true' "${LATTICE_FIXTURE}" >/dev/null
+for non_claim in \
+  sandbox_equivalence hermeticity network_denial filesystem_isolation \
+  executor_correctness proof_soundness build_correctness future_determinism \
+  release_eligibility
+do
+  grep -F "${non_claim}" "${tmp_dir}/decision.fields" >/dev/null
+done
+
+if grep -E 'std::process::Command|Command::new|TcpStream|SystemTime::now|Instant::now' "${CHECKER_SOURCE}" >/dev/null; then
+  printf '%s\n' 'error: evaluation checker gained execution, network, or clock authority' >&2
+  exit "${FAILURE}"
+fi
+
+decision_blake3=$(b3sum "${tmp_dir}/decision.fields" | cut -d ' ' -f 1)
+mkdir -p target/cairn/focused-rails
+receipt='target/cairn/focused-rails/bounded-execution-evaluation.md'
+{
+  printf '%s\n' 'schema: animus.focused-rail-receipt.v1'
+  printf '%s\n' 'rail: bounded-execution-evaluation'
+  printf '%s\n' 'status: pass'
+  cat "${tmp_dir}/decision.fields"
+  printf 'decision_blake3=%s\n' "${decision_blake3}"
+} > "${receipt}"
+
+printf '%s\n' 'focused rail bounded-execution-evaluation: pass'
+printf 'profile_blake3=%s\n' "${profile_blake3}"
+printf 'decision_blake3=%s\n' "${decision_blake3}"
+printf 'receipt: %s\n' "${receipt}"

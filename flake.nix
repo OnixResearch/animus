@@ -260,6 +260,7 @@
                 || baseName == "check-interrupted-tool-repair"
                 || baseName == "check-provider-retry"
                 || baseName == "check-sandlock-host"
+                || baseName == "check-bounded-execution-evaluation"
                 || baseName == "check-agent-guardrail"
                 || baseName == "check-session-tree-export"
                 || baseName == "check-provenance-ledger"
@@ -272,6 +273,7 @@
                 || baseName == "generate-current-head-release-evidence-index"
                 || baseName == "lean-toolchain"
                 || pkgs.lib.hasSuffix ".json" baseName
+                || pkgs.lib.hasSuffix ".lines" baseName
                 || pkgs.lib.hasSuffix ".lean" baseName
                 || pkgs.lib.hasSuffix ".ncl" baseName
                 || pkgs.lib.hasSuffix ".rs" baseName
@@ -597,6 +599,13 @@
             pkgs.nickel
           ] ''
             sh scripts/cairn/check-session-tree-export --root .
+          '';
+
+          bounded-execution-evaluation = cargoCheck "animus-bounded-execution-evaluation" [
+            pkgs.b3sum
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-bounded-execution-evaluation --root .
           '';
 
           sandlock-host = cargoCheck "animus-sandlock-host" [
