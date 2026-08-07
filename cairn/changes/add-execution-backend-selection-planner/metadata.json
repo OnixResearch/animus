@@ -1,0 +1,12 @@
+{
+  "depends_on": [
+    "pilot-application-host-binding",
+    "seal-runtime-authority-units",
+    "evaluate-bounded-execution-contract"
+  ],
+  "workflow_profile": {
+    "id": "spec-driven",
+    "source": "change_create",
+    "version": 1
+  }
+}
