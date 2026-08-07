@@ -127,6 +127,8 @@ pub mod provider_retry {
 mod quality_records;
 #[path = "sessionexport/mod.rs"]
 mod redactedview;
+/// Pure VCS-neutral rejected-attempt admission, projection, and receipts.
+pub mod rejected_attempt;
 mod researchspec;
 #[path = "researchspecpromotiondag.rs"]
 pub mod researchspec_promotion_dag;

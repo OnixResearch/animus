@@ -1,6 +1,6 @@
 # Rejected Attempt Context Delta
 
-## Requirements
+## ADDED Requirements
 
 ### Requirement: Rejected attempt context binds external review evidence
 

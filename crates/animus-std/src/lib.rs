@@ -72,6 +72,8 @@ mod providers;
 #[cfg(feature = "session-tree-export")]
 #[path = "sessiontreeexport.rs"]
 mod redactedwriter;
+#[cfg(feature = "rejected-attempt-context")]
+mod rejectedattempt;
 #[cfg(feature = "runtime-authority-seal")]
 #[path = "runtimeauthorityseal.rs"]
 mod runtime_authority_seal;
@@ -185,6 +187,12 @@ pub use iroh::{
 };
 #[cfg(feature = "iroh-syndicate-host")]
 pub use irohsyndicate::{IrohSyndicatePacketSession, IrohSyndicatePacketTransport};
+#[cfg(feature = "rejected-attempt-context")]
+pub use rejectedattempt::{
+    JujutsuAttemptObservationFixture, RejectedAttemptHostError, RejectedAttemptHostIssue,
+    RejectedAttemptHostRequest, RejectedAttemptHostServices, RejectionContextService,
+    ReviewEvidenceService, VcsAttemptObservationService, prepare_rejected_attempt_context,
+};
 #[cfg(feature = "syndicate-host")]
 pub use syndicate::{
     DEFAULT_SYNDICATE_MAX_PACKET_BYTES, SyndicateHandleState, SyndicatePacketTransport,

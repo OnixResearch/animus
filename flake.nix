@@ -228,6 +228,7 @@
                 || baseName == "check-lean4-loop-fabric"
                 || baseName == "check-session-authority-profile"
                 || baseName == "check-runtime-authority-seal"
+                || baseName == "check-rejected-attempt-context"
                 || baseName == "check-rlm-kernel"
                 || baseName == "check-adapter-conformance-index"
                 || baseName == "check-adapter-family-crates"
@@ -668,6 +669,15 @@
             pkgs.rustfmt
           ] ''
             sh scripts/cairn/check-runtime-authority-seal --root .
+          '';
+
+          rejected-attempt-context = cargoCheck "animus-rejected-attempt-context" [
+            pkgs.b3sum
+            pkgs.clippy
+            pkgs.nickel
+            pkgs.rustfmt
+          ] ''
+            sh scripts/cairn/check-rejected-attempt-context --root .
           '';
 
           exec-policy = cargoCheck "animus-exec-policy" [ pkgs.nickel ] ''

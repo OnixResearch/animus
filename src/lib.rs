@@ -56,6 +56,17 @@ pub use animus_std::{
     parse_model_runtime_profiles_json,
 };
 
+/// Re-export of pure rejected-attempt contracts and injected host services.
+#[cfg(feature = "rejected-attempt-context")]
+pub mod rejected_attempt_context {
+    pub use animus_runtime::rejected_attempt::*;
+    pub use animus_std::{
+        JujutsuAttemptObservationFixture, RejectedAttemptHostError, RejectedAttemptHostIssue,
+        RejectedAttemptHostRequest, RejectedAttemptHostServices, RejectionContextService,
+        ReviewEvidenceService, VcsAttemptObservationService, prepare_rejected_attempt_context,
+    };
+}
+
 /// Re-export of canonical conversation projection policy and cache fixtures.
 #[cfg(feature = "conversation-view-projection")]
 pub use animus_std::{

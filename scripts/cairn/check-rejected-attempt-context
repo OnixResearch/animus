@@ -1,0 +1,117 @@
+#!/usr/bin/env sh
+# r[impl agent_harness_runtime.rejected_attempt.verification]
+# r[verify agent_harness_runtime.rejected_attempt.verification]
+set -eu
+
+readonly FAILURE=1
+readonly RAIL_NAME='rejected-attempt-context'
+readonly RECEIPT_SCHEMA='animus.focused-rail-receipt.v1'
+readonly POLICY_SOURCE='config/rejected-attempt-policy.ncl'
+readonly POLICY_FIXTURES='config/rejected-attempt-policy/fixtures'
+readonly RUNTIME_SOURCE='crates/animus-runtime/src/rejected_attempt'
+readonly STD_SOURCE='crates/animus-std/src/rejectedattempt.rs'
+readonly CONTRACT_DOC='docs/rejected-attempt-context.md'
+readonly README_SOURCE='README.md'
+readonly RIVETER_REVISION='9615b634df5498682cf3f9f3295df6eb6585d5cb'
+
+root='.'
+if [ "${1:-}" = '--root' ]; then
+  root=${2:-.}
+fi
+cd "${root}"
+
+for command_name in cargo nickel b3sum grep; do
+  if ! command -v "${command_name}" >/dev/null 2>&1; then
+    printf 'error: %s is required for rejected-attempt checks\n' "${command_name}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+for marker in \
+  'plan_rejected_attempt_context' \
+  'project_rejected_attempt_receipt' \
+  'validate_rejected_attempt_receipt' \
+  'RawDiffDisposition' \
+  'ReviewHandoffFacts'
+do
+  if ! grep -R -F "${marker}" "${RUNTIME_SOURCE}" --include='*.rs' >/dev/null; then
+    printf 'error: rejected-attempt core marker is missing: %s\n' "${marker}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+for marker in \
+  'ReviewEvidenceService' \
+  'VcsAttemptObservationService' \
+  'RejectionContextService' \
+  'JujutsuAttemptObservationFixture'
+do
+  if ! grep -F "${marker}" "${STD_SOURCE}" >/dev/null; then
+    printf 'error: rejected-attempt host marker is missing: %s\n' "${marker}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+if ! grep -F "${RIVETER_REVISION}" "${README_SOURCE}" >/dev/null; then
+  printf '%s\n' 'error: the reviewed Riveter revision is not pinned in README.md' >&2
+  exit "${FAILURE}"
+fi
+if ! grep -F 'does not authorize a retry' "${CONTRACT_DOC}" >/dev/null; then
+  printf '%s\n' 'error: the rejected-attempt authority boundary is undocumented' >&2
+  exit "${FAILURE}"
+fi
+
+if grep -R -E 'std::fs|std::process|Command::new|std::env|TcpStream|UdpSocket|SystemTime::now|Instant::now|thread::sleep|tokio::|reqwest|hyper::' \
+  "${RUNTIME_SOURCE}" --include='*.rs' >/dev/null 2>&1
+then
+  printf '%s\n' 'error: rejected-attempt pure core gained ambient host authority' >&2
+  exit "${FAILURE}"
+fi
+
+nickel export --format json --field rejected_attempt_policy "${POLICY_SOURCE}" >/dev/null
+nickel export --format json --field fixture "${POLICY_FIXTURES}/valid-minimal.ncl" >/dev/null
+fixture_error=$(mktemp)
+trap 'rm -f "${fixture_error}"' EXIT HUP INT TERM
+for fixture in "${POLICY_FIXTURES}"/negative-*.ncl; do
+  expected_issue=$(nickel export --format raw --field expected_issue "${fixture}")
+  if nickel export --format json --field fixture "${fixture}" >/dev/null 2>"${fixture_error}"; then
+    printf 'error: negative rejected-attempt fixture unexpectedly passed: %s\n' "${fixture}" >&2
+    exit "${FAILURE}"
+  fi
+  if ! grep -F "${expected_issue}" "${fixture_error}" >/dev/null; then
+    printf 'error: rejected-attempt fixture missed issue %s: %s\n' "${expected_issue}" "${fixture}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+cargo fmt --all -- --check
+cargo test -p animus-runtime --locked rejected_attempt
+cargo test -p animus-std --features rejected-attempt-context --locked rejectedattempt
+cargo test -p animus-runtime --locked fresh_context_tasks
+cargo test -p animus-steel --locked ralph_script
+cargo clippy -p animus-runtime --all-targets --locked -- -D warnings
+cargo clippy -p animus-std --all-targets --features rejected-attempt-context --locked -- -D warnings
+cargo check -p animus --features rejected-attempt-context --locked
+
+source_hash=$(
+  b3sum \
+    "${POLICY_SOURCE}" \
+    "${POLICY_FIXTURES}"/*.ncl \
+    "${RUNTIME_SOURCE}"/*.rs \
+    "${STD_SOURCE}" \
+    "${CONTRACT_DOC}" \
+    "${README_SOURCE}" | b3sum | cut -d ' ' -f 1
+)
+mkdir -p target/cairn/focused-rails
+receipt_path=target/cairn/focused-rails/${RAIL_NAME}.md
+cat > "${receipt_path}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+source_blake3: ${source_hash}
+claims: exact-review-binding,nominal-attempt-identities,current-vcs-facts,redaction-first-summary,raw-diff-default-denial,metadata-only-receipt,injected-host-services
+non_claims: review-correctness,lifecycle-authority,retry-authority,run-creation,vcs-mutation,later-attempt-correction
+EOF
+
+printf '%s\n' 'focused rail rejected-attempt-context: pass'
+printf 'receipt: %s\n' "${receipt_path}"

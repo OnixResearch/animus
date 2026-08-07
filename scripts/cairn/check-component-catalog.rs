@@ -89,6 +89,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "conversation-view-projection",
     "session-branch-explorer",
     "provider-retry",
+    "rejected-attempt-context",
     "branchfs-host",
     "coding-session-host",
     "codebase-graph-host",
