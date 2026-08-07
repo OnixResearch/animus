@@ -9,6 +9,9 @@ use serde::Deserialize;
 use serde_json::value::RawValue;
 
 use crate::core::domain_hash;
+use crate::identities::AcpCorrelationId;
+#[cfg(test)]
+use crate::identities::AcpSessionId;
 use crate::model::{
     ACP_MAX_SAFE_LABEL_BYTES, ACP_PROTOCOL_VERSION, ACP_WORKSPACE_HASH_DOMAIN,
     AcpClientPermissionDecision, AcpClientPermissionRequest, AcpDecodedRequest, AcpFailureClass,
@@ -71,6 +74,7 @@ pub fn decode_acp_frame(frame: &[u8]) -> Result<AcpDecodedRequest, AcpProtocolEr
 
 /// # Errors
 /// Returns a typed error when the message correlation or JSON payload cannot be encoded safely.
+// r[impl agent_harness_runtime.acp_nominal_identities.compatibility]
 pub fn encode_acp_message(message: &AcpHostMessage) -> Result<Vec<u8>, AcpProtocolError> {
     let value = match message {
         AcpHostMessage::Response {
@@ -156,13 +160,13 @@ pub(crate) fn permission_request_message(
         ),
     ];
     let tool_update = acp::ToolCallUpdate::new(
-        request.tool_correlation_identity.clone(),
+        request.tool_correlation_identity.as_str().to_string(),
         acp::ToolCallUpdateFields::new()
             .title(request.tool_name.clone())
             .status(acp::ToolCallStatus::Pending),
     );
     let payload = serde_json::to_value(acp::RequestPermissionRequest::new(
-        request.session_id.clone(),
+        request.session_id.as_str().to_string(),
         tool_update,
         options,
     ))
@@ -357,7 +361,8 @@ fn host_response(
 
 fn host_update(update: &AcpUpdate) -> Result<AcpHostMessage, AcpProtocolError> {
     if let Some(session_update) = stable_session_update(update)? {
-        let notification = acp::SessionNotification::new(update.session_id.clone(), session_update);
+        let notification =
+            acp::SessionNotification::new(update.session_id.as_str().to_string(), session_update);
         let payload = serde_json::to_value(notification)
             .map_err(|_error| codec_error(AcpFailureClass::WriteFailure, FIELD_REQUEST))?;
         return Ok(AcpHostMessage::Notification {
@@ -368,10 +373,10 @@ fn host_update(update: &AcpUpdate) -> Result<AcpHostMessage, AcpProtocolError> {
     let payload = serde_json::json!({
         "sequence": update.sequence,
         "kind": update.kind.as_str(),
-        "sessionId": update.session_id,
+        "sessionId": update.session_id.as_str(),
         "status": update.status,
         "safeText": update.safe_text,
-        "correlationIdentity": update.correlation_identity,
+        "correlationIdentity": update.correlation_identity.as_ref().map(AcpCorrelationId::as_str),
     });
     Ok(AcpHostMessage::Notification {
         method: String::from(METHOD_ANIMUS_UPDATE),
@@ -423,7 +428,8 @@ fn stable_session_update(
 fn required_update_correlation(update: &AcpUpdate) -> Result<String, AcpProtocolError> {
     update
         .correlation_identity
-        .clone()
+        .as_ref()
+        .map(|identity| identity.as_str().to_string())
         .ok_or_else(|| codec_error(AcpFailureClass::ProjectionRejected, FIELD_CORRELATION))
 }
 
@@ -601,18 +607,22 @@ mod tests {
         let started = host_update(&AcpUpdate {
             sequence: 1,
             kind: AcpUpdateKind::ToolStarted,
-            session_id: String::from("session.fixture"),
+            session_id: AcpSessionId::from_admitted(String::from("session.fixture")),
             safe_text: Some(String::from("fixture_tool")),
-            correlation_identity: Some(String::from("tool.fixture")),
+            correlation_identity: Some(AcpCorrelationId::from_admitted(String::from(
+                "tool.fixture",
+            ))),
             status: String::from("pending"),
         })
         .expect("started update");
         let completed = host_update(&AcpUpdate {
             sequence: 1,
             kind: AcpUpdateKind::ToolCompleted,
-            session_id: String::from("session.fixture"),
+            session_id: AcpSessionId::from_admitted(String::from("session.fixture")),
             safe_text: None,
-            correlation_identity: Some(String::from("tool.fixture")),
+            correlation_identity: Some(AcpCorrelationId::from_admitted(String::from(
+                "tool.fixture",
+            ))),
             status: String::from("completed_output_omitted"),
         })
         .expect("completed update");

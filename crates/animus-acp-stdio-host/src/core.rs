@@ -2,6 +2,11 @@
 
 #![allow(missing_docs)]
 
+use crate::admission::{AcpAdmittedPromptPart, AcpAdmittedRequest, admit_request};
+use crate::identities::{
+    AcpConnectionIdentity, AcpCorrelationId, AcpEntryId, AcpRunId, AcpSessionId, SessionReference,
+    WorkspaceIdentity,
+};
 use crate::model::{
     ACP_CONNECTION_HASH_DOMAIN, ACP_CORRELATION_HASH_DOMAIN, ACP_MAX_CORRELATIONS,
     ACP_MAX_PROMPT_BYTES, ACP_MAX_SAFE_LABEL_BYTES, ACP_PROTOCOL_COHORT, ACP_PROTOCOL_VERSION,
@@ -39,7 +44,10 @@ pub fn new_acp_connection_state(
 ) -> Result<AcpConnectionState, AcpProtocolError> {
     validate_safe_label(connection_label, FIELD_CONNECTION)?;
     validate_profile(&profile)?;
-    let connection_identity = domain_hash(ACP_CONNECTION_HASH_DOMAIN, &[connection_label]);
+    let connection_identity = AcpConnectionIdentity::from_domain_hash(domain_hash(
+        ACP_CONNECTION_HASH_DOMAIN,
+        &[connection_label],
+    ));
     let state = AcpConnectionState {
         connection_identity,
         profile,
@@ -62,6 +70,7 @@ pub fn new_acp_connection_state(
 /// Returns a typed protocol error when the request is malformed, out of order, or widening.
 // r[impl agent_harness_runtime.acp_stdio_host.protocol_core]
 // r[impl agent_harness_runtime.acp_stdio_host.session_bridge]
+// r[impl agent_harness_runtime.acp_nominal_identities.state.binding]
 pub fn reduce_acp_request(
     state: &AcpConnectionState,
     request: &AcpDecodedRequest,
@@ -69,41 +78,56 @@ pub fn reduce_acp_request(
     if state.phase == AcpConnectionPhase::Terminal {
         return Err(error(AcpFailureClass::OutOfOrderOutcome, FIELD_PHASE));
     }
-    match request {
-        AcpDecodedRequest::Initialize {
-            correlation_id,
+    let admitted = admit_request(request)?;
+    match &admitted {
+        AcpAdmittedRequest::Initialize {
+            correlation,
             protocol_version,
             required_features,
-        } => reduce_initialize(state, correlation_id, protocol_version, required_features),
-        AcpDecodedRequest::NewSession {
-            correlation_id,
-            workspace_identity,
+        } => reduce_initialize(
+            state,
+            correlation.as_str(),
+            protocol_version,
+            required_features,
+        ),
+        AcpAdmittedRequest::NewSession {
+            correlation,
+            workspace,
             mcp_server_count,
-        } => reduce_new_session(state, correlation_id, workspace_identity, *mcp_server_count),
-        AcpDecodedRequest::LoadSession {
-            correlation_id,
+        } => reduce_new_session(
+            state,
+            correlation.as_str(),
+            workspace.as_str(),
+            *mcp_server_count,
+        ),
+        AcpAdmittedRequest::LoadSession {
+            correlation,
             session_reference,
-            workspace_identity,
+            workspace,
             mcp_server_count,
         } => reduce_load_session(
             state,
             LoadSessionRequest {
-                correlation_id,
-                session_reference,
-                workspace_identity,
+                correlation_id: correlation.as_str(),
+                session_reference: session_reference.as_str(),
+                workspace_identity: workspace.as_str(),
                 mcp_server_count: *mcp_server_count,
             },
         ),
-        AcpDecodedRequest::Prompt {
-            correlation_id,
-            session_id,
+        AcpAdmittedRequest::Prompt {
+            correlation,
+            session,
             parts,
-        } => reduce_prompt(state, correlation_id, session_id, parts),
-        AcpDecodedRequest::Cancel { session_id } => reduce_cancel(state, session_id),
-        AcpDecodedRequest::Unsupported {
-            correlation_id,
+        } => reduce_prompt(state, correlation.as_str(), session.as_str(), parts),
+        AcpAdmittedRequest::Cancel { session } => reduce_cancel(state, session.as_str()),
+        AcpAdmittedRequest::Unsupported {
+            correlation,
             method,
-        } => reduce_unsupported(state, correlation_id.as_deref(), method),
+        } => reduce_unsupported(
+            state,
+            correlation.as_ref().map(AcpCorrelationId::as_str),
+            method,
+        ),
     }
 }
 
@@ -127,7 +151,11 @@ pub fn reduce_acp_outcome(
         AcpHostOutcome::Failed {
             correlation_id,
             failure,
-        } => complete_failure(state, correlation_id.as_deref(), *failure),
+        } => complete_failure(
+            state,
+            correlation_id.as_ref().map(AcpCorrelationId::as_str),
+            *failure,
+        ),
     }
 }
 
@@ -178,8 +206,9 @@ fn reduce_new_session(
     let mut next = state.clone();
     begin_correlation(&mut next, correlation_id, AcpOperationKind::NewSession)?;
     let command = AcpFacadeCommand::CreateSession {
-        correlation_id: String::from(correlation_id),
-        workspace_identity: String::from(workspace_identity),
+        correlation_id: parse_correlation(correlation_id)?,
+        workspace_identity: WorkspaceIdentity::parse(workspace_identity)
+            .map_err(|_| error(AcpFailureClass::MalformedFrame, FIELD_SESSION))?,
     };
     Ok(transition(next, Some(command), Vec::new()))
 }
@@ -203,9 +232,11 @@ fn reduce_load_session(
         AcpOperationKind::LoadSession,
     )?;
     let command = AcpFacadeCommand::LoadSession {
-        correlation_id: String::from(request.correlation_id),
-        session_reference: String::from(request.session_reference),
-        workspace_identity: String::from(request.workspace_identity),
+        correlation_id: parse_correlation(request.correlation_id)?,
+        session_reference: SessionReference::parse(request.session_reference)
+            .map_err(|_| error(AcpFailureClass::MalformedFrame, FIELD_SESSION))?,
+        workspace_identity: WorkspaceIdentity::parse(request.workspace_identity)
+            .map_err(|_| error(AcpFailureClass::MalformedFrame, FIELD_SESSION))?,
     };
     Ok(transition(next, Some(command), Vec::new()))
 }
@@ -214,33 +245,53 @@ fn reduce_prompt(
     state: &AcpConnectionState,
     correlation_id: &str,
     session_id: &str,
-    parts: &[crate::model::AcpPromptPart],
+    parts: &[AcpAdmittedPromptPart],
 ) -> Result<AcpProtocolTransition, AcpProtocolError> {
     let session = require_bound_session(state, session_id)?;
     if session.active_run_id.is_some() {
         return Err(error(AcpFailureClass::StaleRun, FIELD_SESSION));
     }
-    validate_prompt(parts)?;
+    let projected_parts = project_prompt_parts(parts);
+    validate_prompt(projected_parts.as_slice())?;
     let mut next = state.clone();
     begin_correlation(&mut next, correlation_id, AcpOperationKind::Prompt)?;
     let correlation_hash = domain_hash(ACP_CORRELATION_HASH_DOMAIN, &[correlation_id]);
     let suffix = correlation_hash
         .get(..GENERATED_ID_HEX_CHARS)
         .ok_or_else(|| error(AcpFailureClass::InvalidPrompt, FIELD_CORRELATION))?;
-    let run_id = format!("{GENERATED_RUN_PREFIX}{suffix}");
-    let entry_id = format!("{GENERATED_ENTRY_PREFIX}{suffix}");
+    let run_id = AcpRunId::parse(format!("{GENERATED_RUN_PREFIX}{suffix}"))
+        .map_err(|_| error(AcpFailureClass::InvalidPrompt, FIELD_SESSION))?;
+    let entry_id = AcpEntryId::parse(format!("{GENERATED_ENTRY_PREFIX}{suffix}"))
+        .map_err(|_| error(AcpFailureClass::InvalidPrompt, FIELD_SESSION))?;
     let Some(next_session) = next.session.as_mut() else {
         return Err(error(AcpFailureClass::SessionNotBound, FIELD_SESSION));
     };
     next_session.active_run_id = Some(run_id.clone());
     let command = AcpFacadeCommand::Prompt {
-        correlation_id: String::from(correlation_id),
-        session_id: String::from(session_id),
+        correlation_id: parse_correlation(correlation_id)?,
+        session_id: AcpSessionId::parse(session_id)
+            .map_err(|_| error(AcpFailureClass::MalformedFrame, FIELD_SESSION))?,
         run_id,
         entry_id,
-        parts: parts.to_vec(),
+        parts: projected_parts,
     };
     Ok(transition(next, Some(command), Vec::new()))
+}
+
+fn project_prompt_parts(parts: &[AcpAdmittedPromptPart]) -> Vec<crate::model::AcpPromptPart> {
+    parts
+        .iter()
+        .map(|part| match part {
+            AcpAdmittedPromptPart::Text(text) => crate::model::AcpPromptPart::Text(text.clone()),
+            AcpAdmittedPromptPart::ResourceLink {
+                safe_name,
+                resource_identity,
+            } => crate::model::AcpPromptPart::ResourceLink {
+                safe_name: safe_name.clone(),
+                resource_identity: resource_identity.as_str().to_string(),
+            },
+        })
+        .collect()
 }
 
 fn reduce_cancel(
@@ -252,7 +303,8 @@ fn reduce_cancel(
         return Err(error(AcpFailureClass::CancellationAmbiguous, FIELD_SESSION));
     };
     let command = AcpFacadeCommand::Cancel {
-        session_id: String::from(session_id),
+        session_id: AcpSessionId::parse(session_id)
+            .map_err(|_| error(AcpFailureClass::MalformedFrame, FIELD_SESSION))?,
         run_id: run_id.clone(),
     };
     Ok(transition(state.clone(), Some(command), Vec::new()))
@@ -299,7 +351,7 @@ fn complete_session_binding(
     next.phase = AcpConnectionPhase::SessionBound;
     next.session = Some(observation.session.clone());
     let response = AcpProtocolResponse::SessionBound {
-        session_id: observation.session.acp_session_id.clone(),
+        session_id: observation.session.acp_session_id.as_str().to_string(),
         loaded,
     };
     let actions = bounded_update_actions(
@@ -537,7 +589,7 @@ fn require_bound_session<'a>(
     let Some(session) = state.session.as_ref() else {
         return Err(error(AcpFailureClass::SessionNotBound, FIELD_SESSION));
     };
-    if session.acp_session_id != session_id {
+    if session.acp_session_id.as_str() != session_id {
         return Err(error(AcpFailureClass::SessionMismatch, FIELD_SESSION));
     }
     Ok(session)
@@ -553,7 +605,7 @@ fn begin_correlation(
         return Err(error(AcpFailureClass::Backpressure, FIELD_BOUND));
     }
     state.pending.push(AcpCorrelation {
-        identity: String::from(correlation_id),
+        identity: parse_correlation(correlation_id)?,
         operation,
     });
     Ok(())
@@ -567,7 +619,7 @@ fn validate_new_correlation(
     if state
         .pending
         .iter()
-        .any(|pending| pending.identity == correlation_id)
+        .any(|pending| pending.identity.as_str() == correlation_id)
     {
         return Err(error(
             AcpFailureClass::DuplicateCorrelation,
@@ -577,7 +629,7 @@ fn validate_new_correlation(
     if state
         .completed
         .iter()
-        .any(|completed| completed == correlation_id)
+        .any(|completed| completed.as_str() == correlation_id)
     {
         return Err(error(AcpFailureClass::StaleCorrelation, FIELD_CORRELATION));
     }
@@ -592,7 +644,7 @@ fn require_pending(
     let Some(pending) = state
         .pending
         .iter()
-        .find(|pending| pending.identity == correlation_id)
+        .find(|pending| pending.identity.as_str() == correlation_id)
     else {
         return Err(error(
             AcpFailureClass::UnknownCorrelation,
@@ -612,7 +664,7 @@ fn require_any_pending(
     if state
         .pending
         .iter()
-        .any(|pending| pending.identity == correlation_id)
+        .any(|pending| pending.identity.as_str() == correlation_id)
     {
         Ok(())
     } else {
@@ -630,7 +682,7 @@ fn remove_pending(
     let Some(index) = state
         .pending
         .iter()
-        .position(|pending| pending.identity == correlation_id)
+        .position(|pending| pending.identity.as_str() == correlation_id)
     else {
         return Err(error(
             AcpFailureClass::UnknownCorrelation,
@@ -648,7 +700,7 @@ fn complete_correlation(
     if state.completed.len() >= ACP_MAX_CORRELATIONS {
         return Err(error(AcpFailureClass::Backpressure, FIELD_BOUND));
     }
-    state.completed.push(String::from(correlation_id));
+    state.completed.push(parse_correlation(correlation_id)?);
     Ok(())
 }
 
@@ -657,7 +709,8 @@ fn required_outcome_correlation(
 ) -> Result<&str, AcpProtocolError> {
     observation
         .correlation_id
-        .as_deref()
+        .as_ref()
+        .map(AcpCorrelationId::as_str)
         .ok_or_else(|| error(AcpFailureClass::UnknownCorrelation, FIELD_OUTCOME))
 }
 
@@ -667,6 +720,11 @@ fn require_no_mcp_servers(count: u32) -> Result<(), AcpProtocolError> {
     } else {
         Err(error(AcpFailureClass::UnsupportedFeature, FIELD_PROFILE))
     }
+}
+
+fn parse_correlation(value: &str) -> Result<AcpCorrelationId, AcpProtocolError> {
+    AcpCorrelationId::parse(value)
+        .map_err(|_| error(AcpFailureClass::MalformedFrame, FIELD_CORRELATION))
 }
 
 fn validate_safe_label(value: &str, field: &'static str) -> Result<(), AcpProtocolError> {
@@ -727,6 +785,9 @@ const fn error(failure: AcpFailureClass, field: &'static str) -> AcpProtocolErro
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::identities::{
+        AcpCorrelationId, AcpSessionId, AnimusSessionId, AuthorityProfileIdentity, SessionIdentity,
+    };
     use crate::model::{AcpFacadeObservation, AcpPromptPart, AcpStopClass};
 
     const CONNECTION: &str = "connection.fixture";
@@ -734,7 +795,6 @@ mod tests {
     const NEW_CORRELATION: &str = "rpc.2";
     const PROMPT_CORRELATION: &str = "rpc.3";
     const SESSION_ID: &str = "session.acp";
-    const ANIMUS_SESSION_ID: &str = "session.animus";
     const HASH: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     const COMPLETED_TRACE_CORRELATION_COUNT: usize = 3;
 
@@ -759,6 +819,8 @@ mod tests {
     }
 
     #[test]
+    // r[verify agent_harness_runtime.acp_nominal_identities.state.binding]
+    // r[verify agent_harness_runtime.acp_nominal_identities.failure_matrix]
     fn duplicate_and_out_of_order_correlations_fail_closed() {
         let initialized = initialized_state().expect("initialized state");
         let request = AcpDecodedRequest::NewSession {
@@ -771,7 +833,7 @@ mod tests {
         assert_eq!(duplicate.failure, AcpFailureClass::DuplicateCorrelation);
 
         let wrong = AcpHostOutcome::PromptCompleted(AcpFacadeObservation {
-            correlation_id: Some(String::from(NEW_CORRELATION)),
+            correlation_id: Some(correlation(NEW_CORRELATION)),
             session: session_binding(),
             updates: Vec::new(),
             stop: Some(AcpStopClass::EndTurn),
@@ -846,7 +908,7 @@ mod tests {
         let bound = reduce_acp_outcome(
             &pending_session.state,
             &AcpHostOutcome::SessionCreated(AcpFacadeObservation {
-                correlation_id: Some(String::from(NEW_CORRELATION)),
+                correlation_id: Some(correlation(NEW_CORRELATION)),
                 session: session_binding(),
                 updates: Vec::new(),
                 stop: None,
@@ -863,7 +925,7 @@ mod tests {
         let completed = reduce_acp_outcome(
             &prompt.state,
             &AcpHostOutcome::PromptCompleted(AcpFacadeObservation {
-                correlation_id: Some(String::from(PROMPT_CORRELATION)),
+                correlation_id: Some(correlation(PROMPT_CORRELATION)),
                 session: session_binding(),
                 updates: Vec::new(),
                 stop: Some(AcpStopClass::EndTurn),
@@ -885,12 +947,17 @@ mod tests {
         Ok(transition.state)
     }
 
+    fn correlation(value: &str) -> AcpCorrelationId {
+        AcpCorrelationId::parse(value).expect("correlation identity")
+    }
+
     fn session_binding() -> AcpSessionBinding {
         AcpSessionBinding {
-            acp_session_id: String::from(SESSION_ID),
-            animus_session_id: String::from(ANIMUS_SESSION_ID),
-            session_identity: String::from(HASH),
-            authority_profile_identity: String::from(HASH),
+            acp_session_id: AcpSessionId::parse(SESSION_ID).expect("ACP session"),
+            animus_session_id: AnimusSessionId::parse(HASH).expect("Animus session"),
+            session_identity: SessionIdentity::parse(HASH).expect("session identity"),
+            authority_profile_identity: AuthorityProfileIdentity::parse(HASH)
+                .expect("authority identity"),
             active_run_id: None,
         }
     }

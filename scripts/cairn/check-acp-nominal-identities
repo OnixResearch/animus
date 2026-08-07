@@ -1,0 +1,104 @@
+#!/usr/bin/env sh
+# r[impl agent_harness_runtime.acp_nominal_identities.final_checks]
+# r[verify agent_harness_runtime.acp_nominal_identities.final_checks]
+set -eu
+
+readonly FAILURE=1
+readonly RAIL_NAME='acp-nominal-identities'
+readonly POLICY_SOURCE='config/acp-nominal-identities.ncl'
+readonly IDENTITY_SOURCE='crates/animus-acp-stdio-host/src/identities.rs'
+readonly ADMISSION_SOURCE='crates/animus-acp-stdio-host/src/admission.rs'
+readonly MODEL_SOURCE='crates/animus-acp-stdio-host/src/model.rs'
+readonly DOC_SOURCE='docs/acp-nominal-identities.md'
+readonly RECEIPT_SCHEMA='animus.focused-rail-receipt.v1'
+
+root='.'
+if [ "${1:-}" = '--root' ]; then
+  root=${2:-.}
+fi
+cd "${root}"
+
+for command_name in cargo nickel b3sum grep; do
+  if ! command -v "${command_name}" >/dev/null 2>&1; then
+    printf 'error: %s is required for ACP nominal checks\n' "${command_name}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+for role in \
+  AcpCorrelationId AcpSessionId AnimusSessionId SessionIdentity \
+  AuthorityProfileIdentity AcpRunId AcpEntryId AcpConnectionIdentity \
+  WorkspaceIdentity ResourceIdentity SessionReference ReceiptIdentity
+do
+  if ! grep -F "${role}" "${IDENTITY_SOURCE}" >/dev/null; then
+    printf 'error: ACP nominal role is missing: %s\n' "${role}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+for marker in 'AcpAdmittedRequest' 'admit_request' 'AcpAdmittedPromptPart'; do
+  if ! grep -F "${marker}" "${ADMISSION_SOURCE}" >/dev/null; then
+    printf 'error: typed ACP admission marker is missing: %s\n' "${marker}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+# r[verify agent_harness_runtime.acp_nominal_identities.octet.guard]
+for raw_field in \
+  'pub active_run_id: Option<String>' \
+  'pub completed: Vec<String>'
+do
+  if grep -F "${raw_field}" "${MODEL_SOURCE}" >/dev/null; then
+    printf 'error: ACP state reintroduced a raw identity field: %s\n' "${raw_field}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+for typed_field in \
+  'pub connection_identity: AcpConnectionIdentity' \
+  'pub acp_session_id: AcpSessionId' \
+  'pub animus_session_id: AnimusSessionId' \
+  'pub active_run_id: Option<AcpRunId>' \
+  'pub completed: Vec<AcpCorrelationId>'
+do
+  if ! grep -F "${typed_field}" "${MODEL_SOURCE}" >/dev/null; then
+    printf 'error: ACP state nominal field is missing: %s\n' "${typed_field}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+if ! grep -F 'do not grant client authorization' "${DOC_SOURCE}" >/dev/null; then
+  printf '%s\n' 'error: ACP nominal authority non-claim is missing' >&2
+  exit "${FAILURE}"
+fi
+
+nickel export --format json --field acp_nominal_identities "${POLICY_SOURCE}" >/dev/null
+cargo fmt --all -- --check
+cargo test -p animus-acp-stdio-host --locked
+cargo test -p animus-acp-stdio-host --features nominal-compile-fixtures --doc --locked
+cargo clippy -p animus-acp-stdio-host --all-targets --features nominal-compile-fixtures --locked -- -D warnings
+sh scripts/cairn/check-acp-stdio-host --root .
+
+source_hash=$(
+  b3sum \
+    "${POLICY_SOURCE}" \
+    "${IDENTITY_SOURCE}" \
+    "${ADMISSION_SOURCE}" \
+    "${MODEL_SOURCE}" \
+    crates/animus-acp-stdio-host/src/core.rs \
+    crates/animus-acp-stdio-host/src/facade.rs \
+    crates/animus-acp-stdio-host/src/receipt.rs \
+    "${DOC_SOURCE}" | b3sum | cut -d ' ' -f 1
+)
+mkdir -p target/cairn/focused-rails
+receipt_path=target/cairn/focused-rails/${RAIL_NAME}.md
+cat > "${receipt_path}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+source_blake3: ${source_hash}
+claims: private-nominal-roles,raw-to-typed-admission,typed-session-state,typed-facade-commands,compile-fail-role-separation,wire-and-receipt-compatibility
+non_claims: client-authorization,sandbox-enforcement,provider-correctness,replay-equivalence,arbitrary-client-compatibility,release-eligibility
+EOF
+printf '%s\n' 'focused rail acp-nominal-identities: pass'
+printf 'receipt: %s\n' "${receipt_path}"

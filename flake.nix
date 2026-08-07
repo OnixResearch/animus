@@ -225,6 +225,7 @@
                 || baseName == "check-host-control-extraction"
                 || baseName == "check-branchfs-host"
                 || baseName == "check-acp-stdio-host"
+                || baseName == "check-acp-nominal-identities"
                 || baseName == "check-lean4-loop-fabric"
                 || baseName == "check-session-authority-profile"
                 || baseName == "check-runtime-authority-seal"
@@ -643,6 +644,15 @@
             pkgs.clippy
           ] ''
             sh scripts/cairn/check-acp-stdio-host --root .
+          '';
+
+          acp-nominal-identities = cargoCheck "animus-acp-nominal-identities" [
+            pkgs.b3sum
+            pkgs.clippy
+            pkgs.nickel
+            pkgs.rustfmt
+          ] ''
+            sh scripts/cairn/check-acp-nominal-identities --root .
           '';
 
           lean4-loop-fabric = cargoCheck "animus-lean4-loop-fabric" [

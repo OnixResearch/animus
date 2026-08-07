@@ -3,6 +3,9 @@
 #![allow(missing_docs)]
 
 use crate::core::domain_hash;
+use crate::identities::{
+    AcpCorrelationId, AuthorityProfileIdentity, ReceiptIdentity, SessionIdentity,
+};
 use crate::model::{
     ACP_HASH_HEX_BYTES, ACP_NON_CLAIMS, ACP_PROTOCOL_COHORT, ACP_PROTOCOL_LICENSE,
     ACP_PROTOCOL_VERSION, ACP_RECEIPT_HASH_DOMAIN, ACP_RECEIPT_SCHEMA, ACP_REDACTION_MARKER,
@@ -24,9 +27,19 @@ pub fn project_acp_receipt(
 ) -> Result<AcpReceipt, AcpProtocolError> {
     reject_sensitive(sensitive)?;
     validate_hash(draft.connection_identity.as_str())?;
-    validate_optional_hash(draft.session_identity.as_deref())?;
-    validate_optional_hash(draft.correlation_identity.as_deref())?;
-    validate_optional_hash(draft.authority_profile_identity.as_deref())?;
+    validate_optional_hash(draft.session_identity.as_ref().map(SessionIdentity::as_str))?;
+    validate_optional_hash(
+        draft
+            .correlation_identity
+            .as_ref()
+            .map(AcpCorrelationId::as_str),
+    )?;
+    validate_optional_hash(
+        draft
+            .authority_profile_identity
+            .as_ref()
+            .map(AuthorityProfileIdentity::as_str),
+    )?;
     if draft.status == AcpTransportStatus::CleanEof && draft.failure.is_some() {
         return Err(error(AcpFailureClass::SensitiveEvidence, FIELD_RECEIPT));
     }
@@ -37,7 +50,10 @@ pub fn project_acp_receipt(
         .collect::<Vec<_>>();
     let fields = receipt_hash_fields(draft, feature_labels.as_slice());
     let field_refs = fields.iter().map(String::as_str).collect::<Vec<_>>();
-    let receipt_identity = domain_hash(ACP_RECEIPT_HASH_DOMAIN, field_refs.as_slice());
+    let receipt_identity = ReceiptIdentity::from_domain_hash(domain_hash(
+        ACP_RECEIPT_HASH_DOMAIN,
+        field_refs.as_slice(),
+    ));
     Ok(AcpReceipt {
         schema: ACP_RECEIPT_SCHEMA,
         cohort: ACP_PROTOCOL_COHORT,
@@ -47,10 +63,19 @@ pub fn project_acp_receipt(
         operation: String::from(draft.operation.as_str()),
         status: String::from(transport_status_label(draft.status)),
         failure: draft.failure.map(|failure| String::from(failure.as_str())),
-        connection_identity: draft.connection_identity.clone(),
-        session_identity: draft.session_identity.clone(),
-        correlation_identity: draft.correlation_identity.clone(),
-        authority_profile_identity: draft.authority_profile_identity.clone(),
+        connection_identity: draft.connection_identity.as_str().to_string(),
+        session_identity: draft
+            .session_identity
+            .as_ref()
+            .map(|identity| identity.as_str().to_string()),
+        correlation_identity: draft
+            .correlation_identity
+            .as_ref()
+            .map(|identity| identity.as_str().to_string()),
+        authority_profile_identity: draft
+            .authority_profile_identity
+            .as_ref()
+            .map(|identity| identity.as_str().to_string()),
         frame_count: draft.frame_count,
         update_count: draft.update_count,
         update_bytes: draft.update_bytes,
@@ -62,7 +87,7 @@ pub fn project_acp_receipt(
             .iter()
             .map(|claim| String::from(*claim))
             .collect(),
-        receipt_identity,
+        receipt_identity: receipt_identity.as_str().to_string(),
     })
 }
 
@@ -78,13 +103,21 @@ fn receipt_hash_fields(draft: &AcpReceiptDraft, features: &[String]) -> Vec<Stri
         || String::from("none"),
         |failure| String::from(failure.as_str()),
     ));
-    fields.push(draft.connection_identity.clone());
-    fields.push(optional_identity_label(draft.session_identity.as_deref()));
+    fields.push(draft.connection_identity.as_str().to_string());
     fields.push(optional_identity_label(
-        draft.correlation_identity.as_deref(),
+        draft.session_identity.as_ref().map(SessionIdentity::as_str),
     ));
     fields.push(optional_identity_label(
-        draft.authority_profile_identity.as_deref(),
+        draft
+            .correlation_identity
+            .as_ref()
+            .map(AcpCorrelationId::as_str),
+    ));
+    fields.push(optional_identity_label(
+        draft
+            .authority_profile_identity
+            .as_ref()
+            .map(AuthorityProfileIdentity::as_str),
     ));
     fields.push(draft.frame_count.to_string());
     fields.push(draft.update_count.to_string());
@@ -157,6 +190,9 @@ const fn error(failure: AcpFailureClass, field: &'static str) -> AcpProtocolErro
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::identities::{
+        AcpConnectionIdentity, AcpCorrelationId, AuthorityProfileIdentity, SessionIdentity,
+    };
     use crate::model::{AcpOperationKind, AcpTransportProfile};
 
     const HASH: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -215,10 +251,12 @@ mod tests {
 
     fn receipt_draft() -> AcpReceiptDraft {
         AcpReceiptDraft {
-            connection_identity: String::from(HASH),
-            session_identity: Some(String::from(HASH)),
-            correlation_identity: Some(String::from(HASH)),
-            authority_profile_identity: Some(String::from(HASH)),
+            connection_identity: AcpConnectionIdentity::parse(HASH).expect("connection"),
+            session_identity: Some(SessionIdentity::parse(HASH).expect("session")),
+            correlation_identity: Some(AcpCorrelationId::parse(HASH).expect("correlation")),
+            authority_profile_identity: Some(
+                AuthorityProfileIdentity::parse(HASH).expect("authority"),
+            ),
             operation: AcpOperationKind::Prompt,
             status: AcpTransportStatus::CleanEof,
             failure: None,

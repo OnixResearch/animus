@@ -2,6 +2,7 @@
 
 #![allow(missing_docs)]
 
+use crate::identities::{AcpCorrelationId, AcpSessionId};
 use crate::model::{
     AcpFailureClass, AcpProtocolError, AcpTransportProfile, AcpUpdate, AcpUpdateKind,
 };
@@ -195,9 +196,11 @@ fn update(sequence: u32, session_id: &str, fields: UpdateFields<'_>) -> AcpUpdat
     AcpUpdate {
         sequence,
         kind: fields.kind,
-        session_id: String::from(session_id),
+        session_id: AcpSessionId::from_admitted(String::from(session_id)),
         safe_text: fields.safe_text,
-        correlation_identity: fields.correlation_identity.map(String::from),
+        correlation_identity: fields
+            .correlation_identity
+            .map(|identity| AcpCorrelationId::from_admitted(String::from(identity))),
         status: String::from(fields.status),
     }
 }
@@ -209,7 +212,11 @@ fn validate_update(update: &AcpUpdate) -> Result<(), AcpProtocolError> {
     ) && update.correlation_identity.is_none();
     if update.sequence == 0
         || tool_correlation_missing
-        || update.session_id.is_empty()
+        || AcpSessionId::parse(update.session_id.as_str()).is_err()
+        || update
+            .correlation_identity
+            .as_ref()
+            .is_some_and(|identity| AcpCorrelationId::parse(identity.as_str()).is_err())
         || update.status.is_empty()
         || update.status.contains('\0')
         || update

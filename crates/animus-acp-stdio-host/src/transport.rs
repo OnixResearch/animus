@@ -7,6 +7,8 @@ use std::io::BufRead;
 use crate::codec::{
     decode_acp_frame, decode_permission_response, encode_acp_message, permission_request_message,
 };
+#[cfg(test)]
+use crate::identities::{AcpCorrelationId, AcpSessionId};
 use crate::model::{
     AcpCleanupStatus, AcpClientPermissionDecision, AcpClientPermissionRequest, AcpDecodedRequest,
     AcpFailureClass, AcpHostMessage, AcpTransportProfile, AcpTransportStatus,
@@ -544,9 +546,11 @@ mod tests {
             let decision = peer
                 .request_permission(&AcpClientPermissionRequest {
                     request_id: String::from("permission.fixture"),
-                    session_id: String::from("session.fixture"),
+                    session_id: AcpSessionId::from_admitted(String::from("session.fixture")),
                     tool_name: String::from("fixture_tool"),
-                    tool_correlation_identity: String::from("tool.fixture"),
+                    tool_correlation_identity: AcpCorrelationId::from_admitted(String::from(
+                        "tool.fixture",
+                    )),
                 })
                 .map_err(|error| error.failure())?;
             if decision != AcpClientPermissionDecision::AllowOnce {

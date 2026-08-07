@@ -2,6 +2,8 @@
 
 #![allow(missing_docs)]
 
+#[cfg(test)]
+use crate::identities::{AcpCorrelationId, AcpSessionId};
 use crate::model::{
     AcpClientPermissionDecision, AcpFailureClass, AcpPermissionAdmission, AcpPermissionInput,
     AcpPermissionOutcome, AcpPermissionPlan, AcpPermissionStatus,
@@ -165,9 +167,9 @@ mod tests {
     fn admitted_input() -> AcpPermissionInput {
         AcpPermissionInput {
             request_id: String::from("permission.fixture"),
-            session_id: String::from("session.fixture"),
+            session_id: AcpSessionId::from_admitted(String::from("session.fixture")),
             tool_name: String::from("read"),
-            tool_correlation_id: String::from("tool.fixture"),
+            tool_correlation_id: AcpCorrelationId::from_admitted(String::from("tool.fixture")),
             policy: AcpPermissionAdmission::Admitted,
             permission_mode: AcpPermissionAdmission::Admitted,
             authorization: AcpPermissionAdmission::Admitted,

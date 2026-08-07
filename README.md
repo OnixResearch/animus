@@ -33,6 +33,8 @@ See [docs/safety-contract.md](docs/safety-contract.md) for the durable repo-owne
 
 See [docs/acp-stdio-host.md](docs/acp-stdio-host.md) for the non-default bounded local-stdio ACP host, exact reviewed protocol cohort, one-facade ownership, additive permissions, safe events/receipts, dependency isolation, and non-claims.
 
+See [docs/acp-nominal-identities.md](docs/acp-nominal-identities.md) for private ACP role wrappers, raw-to-typed admission, compiler-enforced role separation, and compatibility evidence.
+
 See [docs/lean4-loop-fabric.md](docs/lean4-loop-fabric.md) for the non-default compiled Lean 4 `LoopFabric`, checked kernel theorems, bounded child protocol, Rust candidate revalidation, exact artifact/profile identities, dependency isolation, and non-claims.
 
 See [docs/agent-guardrail.md](docs/agent-guardrail.md) for the non-default Linux Bubblewrap privacy guardrail, central Nickel profile, authorization-bound deterministic plan, sealed memfd transport, exact live behavior evidence, and bounded non-claims.

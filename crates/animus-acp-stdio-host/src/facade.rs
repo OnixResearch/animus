@@ -17,6 +17,10 @@ use animus_std::coding_session_host::{
 use crate::codec::host_messages_for_actions;
 use crate::core::{domain_hash, reduce_acp_outcome, reduce_acp_request};
 use crate::events::project_runtime_events;
+use crate::identities::{
+    AcpCorrelationId, AcpRunId, AcpSessionId, AnimusSessionId, AuthorityProfileIdentity,
+    SessionIdentity,
+};
 use crate::model::{
     ACP_SESSION_HASH_DOMAIN, AcpClientPermissionRequest, AcpConnectionState, AcpDecodedRequest,
     AcpFacadeCommand, AcpFacadeObservation, AcpFailureClass, AcpHostMessage, AcpHostOutcome,
@@ -221,8 +225,8 @@ where
 }
 
 struct PromptExecution {
-    correlation_id: String,
-    session_id: String,
+    correlation_id: AcpCorrelationId,
+    session_id: AcpSessionId,
     prompt: AcpFacadePrompt,
     parts: Vec<AcpPromptPart>,
 }
@@ -274,7 +278,14 @@ where
             &AcpReceiptDraft {
                 connection_identity: self.state.connection_identity.clone(),
                 session_identity,
-                correlation_identity: context.correlation_identity,
+                correlation_identity: context
+                    .correlation_identity
+                    .map(AcpCorrelationId::parse)
+                    .transpose()
+                    .map_err(|_| AcpProtocolError {
+                        failure: AcpFailureClass::MalformedFrame,
+                        field: FIELD_SESSION,
+                    })?,
                 authority_profile_identity,
                 operation: context.operation,
                 status: transport.status,
@@ -320,8 +331,8 @@ where
                     correlation_id,
                     session_id,
                     prompt: AcpFacadePrompt {
-                        run_id,
-                        entry_id,
+                        run_id: run_id.as_str().to_string(),
+                        entry_id: entry_id.as_str().to_string(),
                         body: String::new(),
                     },
                     parts,
@@ -336,12 +347,15 @@ where
 
     fn create_session(
         &mut self,
-        correlation_id: String,
+        correlation_id: AcpCorrelationId,
         workspace_identity: &str,
     ) -> AcpHostOutcome {
         match self.services.factory.create(workspace_identity) {
             Ok(session) => {
-                let binding = binding_for(&session);
+                let binding = match binding_for(&session) {
+                    Ok(binding) => binding,
+                    Err(failure) => return failed(Some(correlation_id), failure),
+                };
                 self.session = Some(session);
                 AcpHostOutcome::SessionCreated(AcpFacadeObservation {
                     correlation_id: Some(correlation_id),
@@ -357,7 +371,7 @@ where
     // r[impl agent_harness_runtime.acp_stdio_host.resume]
     fn load_session(
         &mut self,
-        correlation_id: String,
+        correlation_id: AcpCorrelationId,
         session_reference: &str,
         workspace_identity: &str,
     ) -> AcpHostOutcome {
@@ -371,16 +385,19 @@ where
         };
         let event_start = session.event_count();
         if let Err(error) = session.resume() {
-            return failed(Some(correlation_id), error.failure());
+            return failed(Some(correlation_id.clone()), error.failure());
         }
-        let binding = binding_for(&session);
+        let binding = match binding_for(&session) {
+            Ok(binding) => binding,
+            Err(failure) => return failed(Some(correlation_id.clone()), failure),
+        };
         let updates = match project_runtime_events(
             binding.acp_session_id.as_str(),
             session.events_from(event_start),
             self.state.profile.transport,
         ) {
             Ok(updates) => updates,
-            Err(error) => return failed(Some(correlation_id), error.failure),
+            Err(error) => return failed(Some(correlation_id.clone()), error.failure),
         };
         self.session = Some(session);
         AcpHostOutcome::SessionLoaded(AcpFacadeObservation {
@@ -404,19 +421,25 @@ where
             parts,
         } = execution;
         let Some(bound_session) = self.session.as_ref() else {
-            return failed(Some(correlation_id), AcpFailureClass::SessionNotBound);
+            return failed(
+                Some(correlation_id.clone()),
+                AcpFailureClass::SessionNotBound,
+            );
         };
         if let Err(failure) =
             validate_current_facade_binding(&self.state, session_id.as_str(), bound_session)
         {
-            return failed(Some(correlation_id), failure);
+            return failed(Some(correlation_id.clone()), failure);
         }
         prompt.body = match self.services.prompt_resolver.resolve(parts.as_slice()) {
             Ok(body) => body,
-            Err(error) => return failed(Some(correlation_id), error.failure()),
+            Err(error) => return failed(Some(correlation_id.clone()), error.failure()),
         };
         let Some(session) = self.session.as_mut() else {
-            return failed(Some(correlation_id), AcpFailureClass::SessionNotBound);
+            return failed(
+                Some(correlation_id.clone()),
+                AcpFailureClass::SessionNotBound,
+            );
         };
         let event_start = session.event_count();
         let mut gate = AcpPermissionEffectGate {
@@ -425,16 +448,19 @@ where
             peer,
         };
         if let Err(error) = session.prompt(prompt, &mut gate) {
-            return failed(Some(correlation_id), error.failure());
+            return failed(Some(correlation_id.clone()), error.failure());
         }
-        let binding = binding_for(session);
+        let binding = match binding_for(session) {
+            Ok(binding) => binding,
+            Err(failure) => return failed(Some(correlation_id.clone()), failure),
+        };
         let updates = match project_runtime_events(
             session_id.as_str(),
             session.events_from(event_start),
             self.state.profile.transport,
         ) {
             Ok(updates) => updates,
-            Err(error) => return failed(Some(correlation_id), error.failure),
+            Err(error) => return failed(Some(correlation_id.clone()), error.failure),
         };
         let stop = stop_from_terminal(session.terminal());
         AcpHostOutcome::PromptCompleted(AcpFacadeObservation {
@@ -461,7 +487,10 @@ where
         if let Err(error) = session.cancel(run_id) {
             return failed(None, error.failure());
         }
-        let binding = binding_for(session);
+        let binding = match binding_for(session) {
+            Ok(binding) => binding,
+            Err(failure) => return failed(None, failure),
+        };
         let updates = match project_runtime_events(
             session_id,
             session.events_from(event_start),
@@ -553,10 +582,10 @@ impl<Admission: AcpToolAdmissionService> CodingSessionEffectGate
                         request_id: plan.request_id.clone(),
                         session_id: plan.session_id.clone(),
                         tool_name: plan.tool_name.clone(),
-                        tool_correlation_identity: domain_hash(
+                        tool_correlation_identity: AcpCorrelationId::from_admitted(domain_hash(
                             crate::model::ACP_CORRELATION_HASH_DOMAIN,
                             &[plan.tool_correlation_id.as_str()],
-                        ),
+                        )),
                     })
                     .map_err(|error| map_transport_error(&error))?,
             ),
@@ -577,9 +606,9 @@ fn validate_permission_input(
     request: &CodingSessionToolRequest,
     input: &AcpPermissionInput,
 ) -> Result<(), AcpFacadeError> {
-    if input.session_id != session_id
+    if input.session_id.as_str() != session_id
         || input.tool_name != request.request().name()
-        || input.tool_correlation_id != request.request().correlation_id()
+        || input.tool_correlation_id.as_str() != request.request().correlation_id()
         || input.request_id.is_empty()
     {
         return Err(AcpFacadeError::new(
@@ -599,24 +628,43 @@ fn validate_current_facade_binding<Session: AcpCodingSessionFacade>(
         .session
         .as_ref()
         .ok_or(AcpFailureClass::SessionNotBound)?;
-    if bound.acp_session_id != session_id || session.session_id() != session_id {
+    if bound.acp_session_id.as_str() != session_id || session.session_id() != session_id {
         return Err(AcpFailureClass::SessionMismatch);
     }
-    if bound.authority_profile_identity != session.authority_profile_identity() {
+    if bound.authority_profile_identity.as_str() != session.authority_profile_identity() {
         return Err(AcpFailureClass::AuthorityProfileMismatch);
     }
     Ok(())
 }
 
-fn binding_for<Session: AcpCodingSessionFacade>(session: &Session) -> AcpSessionBinding {
-    let session_identity = domain_hash(ACP_SESSION_HASH_DOMAIN, &[session.session_id()]);
-    AcpSessionBinding {
-        acp_session_id: String::from(session.session_id()),
-        animus_session_id: String::from(session.session_id()),
+fn binding_for<Session: AcpCodingSessionFacade>(
+    session: &Session,
+) -> Result<AcpSessionBinding, AcpFailureClass> {
+    let acp_session_id =
+        AcpSessionId::parse(session.session_id()).map_err(|_| AcpFailureClass::SessionMismatch)?;
+    let animus_session_id = AnimusSessionId::from_domain_hash(domain_hash(
+        ACP_SESSION_HASH_DOMAIN,
+        &[session.session_id()],
+    ));
+    let session_identity = SessionIdentity::from_domain_hash(domain_hash(
+        ACP_SESSION_HASH_DOMAIN,
+        &[session.session_id()],
+    ));
+    let authority_profile_identity =
+        AuthorityProfileIdentity::parse(session.authority_profile_identity())
+            .map_err(|_| AcpFailureClass::AuthorityProfileMismatch)?;
+    let active_run_id = session
+        .active_run_id()
+        .map(AcpRunId::parse)
+        .transpose()
+        .map_err(|_| AcpFailureClass::StaleRun)?;
+    Ok(AcpSessionBinding {
+        acp_session_id,
+        animus_session_id,
         session_identity,
-        authority_profile_identity: String::from(session.authority_profile_identity()),
-        active_run_id: session.active_run_id().map(String::from),
-    }
+        authority_profile_identity,
+        active_run_id,
+    })
 }
 
 const fn stop_from_terminal(terminal: Option<CodingSessionTerminalKind>) -> AcpStopClass {
@@ -627,7 +675,7 @@ const fn stop_from_terminal(terminal: Option<CodingSessionTerminalKind>) -> AcpS
     }
 }
 
-fn failed(correlation_id: Option<String>, failure: AcpFailureClass) -> AcpHostOutcome {
+fn failed(correlation_id: Option<AcpCorrelationId>, failure: AcpFailureClass) -> AcpHostOutcome {
     AcpHostOutcome::Failed {
         correlation_id,
         failure,
@@ -781,9 +829,11 @@ mod tests {
         ) -> Result<AcpPermissionInput, AcpFacadeError> {
             Ok(AcpPermissionInput {
                 request_id: String::from("permission.fixture"),
-                session_id: String::from(session_id),
+                session_id: AcpSessionId::from_admitted(String::from(session_id)),
                 tool_name: String::from(request.request().name()),
-                tool_correlation_id: String::from(request.request().correlation_id()),
+                tool_correlation_id: AcpCorrelationId::from_admitted(String::from(
+                    request.request().correlation_id(),
+                )),
                 policy: AcpPermissionAdmission::Admitted,
                 permission_mode: AcpPermissionAdmission::Admitted,
                 authorization: AcpPermissionAdmission::Admitted,

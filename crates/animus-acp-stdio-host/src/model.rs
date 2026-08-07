@@ -2,6 +2,11 @@
 
 #![allow(missing_docs)]
 
+use crate::identities::{
+    AcpConnectionIdentity, AcpCorrelationId, AcpEntryId, AcpRunId, AcpSessionId, AnimusSessionId,
+    AuthorityProfileIdentity, SessionIdentity, SessionReference, WorkspaceIdentity,
+};
+
 pub const ACP_PROTOCOL_COHORT: &str = "agent-client-protocol/0.10.4";
 pub const ACP_PROTOCOL_LICENSE: &str = "Apache-2.0";
 pub const ACP_PROTOCOL_VERSION: &str = "1";
@@ -122,27 +127,28 @@ pub enum AcpConnectionPhase {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AcpCorrelation {
-    pub identity: String,
+    pub identity: AcpCorrelationId,
     pub operation: AcpOperationKind,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AcpSessionBinding {
-    pub acp_session_id: String,
-    pub animus_session_id: String,
-    pub session_identity: String,
-    pub authority_profile_identity: String,
-    pub active_run_id: Option<String>,
+    pub acp_session_id: AcpSessionId,
+    pub animus_session_id: AnimusSessionId,
+    pub session_identity: SessionIdentity,
+    pub authority_profile_identity: AuthorityProfileIdentity,
+    pub active_run_id: Option<AcpRunId>,
 }
 
+// r[impl agent_harness_runtime.acp_nominal_identities.state]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AcpConnectionState {
-    pub connection_identity: String,
+    pub connection_identity: AcpConnectionIdentity,
     pub profile: AcpConnectionProfile,
     pub phase: AcpConnectionPhase,
     pub session: Option<AcpSessionBinding>,
     pub pending: Vec<AcpCorrelation>,
-    pub completed: Vec<String>,
+    pub completed: Vec<AcpCorrelationId>,
     pub frame_count: u32,
     pub update_count: u32,
     pub update_bytes: u64,
@@ -245,33 +251,34 @@ impl AcpDecodedRequest {
     }
 }
 
+// r[impl agent_harness_runtime.acp_nominal_identities.facade]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum AcpFacadeCommand {
     CreateSession {
-        correlation_id: String,
-        workspace_identity: String,
+        correlation_id: AcpCorrelationId,
+        workspace_identity: WorkspaceIdentity,
     },
     LoadSession {
-        correlation_id: String,
-        session_reference: String,
-        workspace_identity: String,
+        correlation_id: AcpCorrelationId,
+        session_reference: SessionReference,
+        workspace_identity: WorkspaceIdentity,
     },
     Prompt {
-        correlation_id: String,
-        session_id: String,
-        run_id: String,
-        entry_id: String,
+        correlation_id: AcpCorrelationId,
+        session_id: AcpSessionId,
+        run_id: AcpRunId,
+        entry_id: AcpEntryId,
         parts: Vec<AcpPromptPart>,
     },
     Cancel {
-        session_id: String,
-        run_id: String,
+        session_id: AcpSessionId,
+        run_id: AcpRunId,
     },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AcpFacadeObservation {
-    pub correlation_id: Option<String>,
+    pub correlation_id: Option<AcpCorrelationId>,
     pub session: AcpSessionBinding,
     pub updates: Vec<AcpUpdate>,
     pub stop: Option<AcpStopClass>,
@@ -284,7 +291,7 @@ pub enum AcpHostOutcome {
     PromptCompleted(AcpFacadeObservation),
     CancellationObserved(AcpFacadeObservation),
     Failed {
-        correlation_id: Option<String>,
+        correlation_id: Option<AcpCorrelationId>,
         failure: AcpFailureClass,
     },
 }
@@ -488,9 +495,9 @@ impl AcpUpdateKind {
 pub struct AcpUpdate {
     pub sequence: u32,
     pub kind: AcpUpdateKind,
-    pub session_id: String,
+    pub session_id: AcpSessionId,
     pub safe_text: Option<String>,
-    pub correlation_identity: Option<String>,
+    pub correlation_identity: Option<AcpCorrelationId>,
     pub status: String,
 }
 
@@ -500,7 +507,11 @@ impl AcpUpdate {
         self.session_id
             .len()
             .saturating_add(self.safe_text.as_ref().map_or(0, String::len))
-            .saturating_add(self.correlation_identity.as_ref().map_or(0, String::len))
+            .saturating_add(
+                self.correlation_identity
+                    .as_ref()
+                    .map_or(0, |identity| identity.as_str().len()),
+            )
             .saturating_add(self.status.len())
             .saturating_add(self.kind.as_str().len())
     }
@@ -516,9 +527,9 @@ pub enum AcpPermissionAdmission {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AcpPermissionInput {
     pub request_id: String,
-    pub session_id: String,
+    pub session_id: AcpSessionId,
     pub tool_name: String,
-    pub tool_correlation_id: String,
+    pub tool_correlation_id: AcpCorrelationId,
     pub policy: AcpPermissionAdmission,
     pub permission_mode: AcpPermissionAdmission,
     pub authorization: AcpPermissionAdmission,
@@ -539,9 +550,9 @@ pub enum AcpPermissionStatus {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AcpPermissionPlan {
     pub request_id: String,
-    pub session_id: String,
+    pub session_id: AcpSessionId,
     pub tool_name: String,
-    pub tool_correlation_id: String,
+    pub tool_correlation_id: AcpCorrelationId,
     pub status: AcpPermissionStatus,
     pub failure: Option<AcpFailureClass>,
 }
@@ -558,9 +569,9 @@ pub enum AcpClientPermissionDecision {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AcpClientPermissionRequest {
     pub request_id: String,
-    pub session_id: String,
+    pub session_id: AcpSessionId,
     pub tool_name: String,
-    pub tool_correlation_identity: String,
+    pub tool_correlation_identity: AcpCorrelationId,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -586,10 +597,10 @@ pub enum AcpCleanupStatus {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AcpReceiptDraft {
-    pub connection_identity: String,
-    pub session_identity: Option<String>,
-    pub correlation_identity: Option<String>,
-    pub authority_profile_identity: Option<String>,
+    pub connection_identity: AcpConnectionIdentity,
+    pub session_identity: Option<SessionIdentity>,
+    pub correlation_identity: Option<AcpCorrelationId>,
+    pub authority_profile_identity: Option<AuthorityProfileIdentity>,
     pub operation: AcpOperationKind,
     pub status: AcpTransportStatus,
     pub failure: Option<AcpFailureClass>,
