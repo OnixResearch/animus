@@ -33,6 +33,11 @@
 #[cfg(feature = "autonomous-gates")]
 pub mod autonomous_gates;
 
+/// Pure persistent goal lifecycle, budget, continuation, ownership, and receipt contracts.
+#[cfg(feature = "persistent-goals")]
+#[path = "persistentgoals.rs"]
+pub mod persistent_goals;
+
 /// Pure active-turn durability, transaction, recovery, and receipt contracts.
 pub mod active_turn_recovery;
 mod admission;

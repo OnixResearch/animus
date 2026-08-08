@@ -31,6 +31,7 @@ autonomous_gates_policy_source_file=${repo_root}/config/autonomous-gates-policy.
 continual_harness_policy_source_file=${repo_root}/config/continual-harness-policy.ncl
 daemon_workers_policy_source_file=${repo_root}/config/daemon-workers-policy.ncl
 messaging_receipts_policy_source_file=${repo_root}/config/messaging-receipts-policy.ncl
+persistent_goals_policy_source_file=${repo_root}/config/persistent-goals-policy.ncl
 
 if ! command -v nickel >/dev/null 2>&1; then
   printf '%s\n' 'error: nickel is required to export repo config. Run inside `nix develop`.' >&2
@@ -69,3 +70,4 @@ nickel export --format json --field autonomous_gates_policy "${autonomous_gates_
 nickel export --format json --field continual_harness_policy "${continual_harness_policy_source_file}" > "${target_root}/config/generated/continual-harness-policy.json"
 nickel export --format json --field daemon_workers_policy "${daemon_workers_policy_source_file}" > "${target_root}/config/generated/daemon-workers-policy.json"
 nickel export --format json --field messaging_receipts_policy "${messaging_receipts_policy_source_file}" > "${target_root}/config/generated/messaging-receipts-policy.json"
+nickel export --format json --field persistent_goals_policy "${persistent_goals_policy_source_file}" > "${target_root}/config/generated/persistent-goals-policy.json"

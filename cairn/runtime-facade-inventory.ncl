@@ -74,6 +74,8 @@ let daemon_feature = "daemon-workers" in
 let daemon_family = "daemon-workers" in
 let messaging_feature = "messaging-receipts" in
 let messaging_family = "messaging-receipts" in
+let persistent_goals_feature = "persistent-goals" in
+let persistent_goals_family = "goal-state" in
 let agent_guardrail_feature = "agent-guardrail" in
 let agent_guardrail_family = "policy" in
 let syndicate_record = fun export_path_value owning_crate_value source_value class_value side_effect_value review_note_value => {
@@ -239,6 +241,21 @@ let messaging_record = fun export_path_value owning_crate_value source_value rev
   depends_on = [],
   composes_with = ["animus-adapters::HostTopologySnapshot"],
   capability_family = messaging_family,
+}
+in
+let persistent_goals_record = fun export_path_value owning_crate_value source_value review_note_value => {
+  export_path = export_path_value,
+  owning_crate = owning_crate_value,
+  source = source_value,
+  class = reusable,
+  side_effect = none,
+  stability = optional_stability,
+  review_note = review_note_value,
+  feature_gate = persistent_goals_feature,
+  required_authority = none,
+  depends_on = [],
+  composes_with = ["animus-runtime::ContinuationPolicy"],
+  capability_family = persistent_goals_family,
 }
 in
 let agent_control_record = fun export_path_value owning_crate_value source_value review_note_value => {
@@ -2226,6 +2243,7 @@ let entry_values = [
   daemon_record "animus::daemon_workers" "animus" root "optional compatibility re-export of daemon worker contracts",
   messaging_record "animus-adapters::messaging" "animus-adapters" adapters "host-derived family roster, pure delivery modes, pre-routing limits, and delivered/queued metadata-only receipts",
   messaging_record "animus::messaging_receipts" "animus" root "optional compatibility re-export of messaging receipt contracts",
+  persistent_goals_record "animus-runtime::persistent_goals" "animus-runtime" runtime "pure goal state, budgets, explicit lifecycle ownership, and metadata-only receipts",
   entry "animus-runtime::tool_executor_kit" "animus-runtime" runtime injection injected stable "pure executor admission and receipt core with an explicit host-injected service shell",
   rlm_kernel_record "animus-runtime::rlm_kernel" "animus-runtime" runtime injection injected "revalidated injected execution seam for typed model-facing Steel requests" injected,
   entry "animus-runtime::tool_executor_packs" "animus-runtime" runtime reusable none stable "tool executor pack descriptor module",

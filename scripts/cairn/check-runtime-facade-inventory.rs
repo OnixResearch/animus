@@ -125,6 +125,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "continual-harness",
     "daemon-workers",
     "messaging-receipts",
+    "persistent-goals",
 ];
 
 const ALLOWED_AUTHORITIES: &[&str] = &[
@@ -165,6 +166,7 @@ const ALLOWED_FAMILIES: &[&str] = &[
     "refinement",
     "daemon-workers",
     "messaging-receipts",
+    "goal-state",
 ];
 
 const AMBIENT_AUTHORITY_MARKERS: &[&str] = &[
