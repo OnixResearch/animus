@@ -48,6 +48,11 @@ pub mod schedule_reliability;
 #[path = "sessioneventreplay.rs"]
 pub mod session_event_replay;
 
+/// Pure weakest-admitted execution backend selection.
+#[cfg(feature = "execution-backend-planner")]
+#[path = "executionbackend.rs"]
+pub mod execution_backend_planner;
+
 /// Pure active-turn durability, transaction, recovery, and receipt contracts.
 pub mod active_turn_recovery;
 mod admission;

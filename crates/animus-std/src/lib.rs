@@ -57,6 +57,9 @@ mod iroh;
 #[cfg(feature = "session-branch-explorer")]
 mod sessionbranchexplorer;
 // r[impl agent_harness_runtime.syndicate_iroh_bridge.feature]
+#[cfg(feature = "execution-backend-planner")]
+#[path = "executionbackend.rs"]
+mod execution_backend_planner;
 #[cfg(feature = "iroh-syndicate-host")]
 mod irohsyndicate;
 #[cfg(feature = "mesh-provider")]
@@ -223,6 +226,11 @@ pub use providerretry::{
 #[cfg(feature = "runtime-authority-seal")]
 pub mod runtime_authority_seal_host {
     pub use super::runtime_authority_seal::*;
+}
+/// Non-default current-enforcement recheck host seam.
+#[cfg(feature = "execution-backend-planner")]
+pub mod execution_backend_planner_host {
+    pub use super::execution_backend_planner::*;
 }
 pub use providers::{
     ApiKind, CredentialHandle, CredentialRequirement, CredentialSource, EndpointIdentity,

@@ -128,6 +128,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "persistent-goals",
     "schedule-reliability",
     "session-event-replay",
+    "execution-backend-planner",
 ];
 
 const ALLOWED_AUTHORITIES: &[&str] = &[
@@ -171,6 +172,7 @@ const ALLOWED_FAMILIES: &[&str] = &[
     "goal-state",
     "schedule",
     "session-event-replay",
+    "execution-backend",
 ];
 
 const AMBIENT_AUTHORITY_MARKERS: &[&str] = &[

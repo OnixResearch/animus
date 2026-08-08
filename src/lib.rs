@@ -263,6 +263,13 @@ pub use animus_runtime::schedule_reliability;
 #[cfg(feature = "session-event-replay")]
 pub use animus_runtime::session_event_replay;
 
+/// Re-export of the non-default execution backend planner.
+#[cfg(feature = "execution-backend-planner")]
+pub use animus_runtime::execution_backend_planner;
+/// Re-export of the current-enforcement host seam.
+#[cfg(feature = "execution-backend-planner")]
+pub use animus_std::execution_backend_planner_host;
+
 /// Re-export of the no-std model-facing RLM kernel contract family.
 #[cfg(feature = "rlm-kernel")]
 pub use animus_adapter_rlm_kernel as rlm_kernel_contracts;

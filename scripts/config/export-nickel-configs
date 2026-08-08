@@ -34,6 +34,7 @@ messaging_receipts_policy_source_file=${repo_root}/config/messaging-receipts-pol
 persistent_goals_policy_source_file=${repo_root}/config/persistent-goals-policy.ncl
 schedule_reliability_policy_source_file=${repo_root}/config/schedule-reliability-policy.ncl
 session_event_replay_policy_source_file=${repo_root}/config/session-event-replay-policy.ncl
+execution_backend_selection_policy_source_file=${repo_root}/config/execution-backend-selection-policy.ncl
 
 if ! command -v nickel >/dev/null 2>&1; then
   printf '%s\n' 'error: nickel is required to export repo config. Run inside `nix develop`.' >&2
@@ -75,3 +76,4 @@ nickel export --format json --field messaging_receipts_policy "${messaging_recei
 nickel export --format json --field persistent_goals_policy "${persistent_goals_policy_source_file}" > "${target_root}/config/generated/persistent-goals-policy.json"
 nickel export --format json --field schedule_reliability_policy "${schedule_reliability_policy_source_file}" > "${target_root}/config/generated/schedule-reliability-policy.json"
 nickel export --format json --field session_event_replay_policy "${session_event_replay_policy_source_file}" > "${target_root}/config/generated/session-event-replay-policy.json"
+nickel export --format json --field execution_backend_selection_policy "${execution_backend_selection_policy_source_file}" > "${target_root}/config/generated/execution-backend-selection-policy.json"

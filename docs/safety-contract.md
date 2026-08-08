@@ -95,6 +95,14 @@ Deterministic scanner findings and optional classifier/adversary-review outcomes
 
 `animus_runtime::active_turn_recovery` plans durable acceptance, atomic checkpoint replacement, steering delivery, and fail-closed recovery from supplied facts. It cannot read storage, call providers, run tools, inspect clocks, or clean state. The std fixture host does not prove store correctness or power-loss durability. See [active-turn recovery](active-turn-recovery.md).
 
+## Execution backend selection boundary
+
+The optional `animus_runtime::execution_backend_planner` family is a pure planning boundary. It selects the first fully compatible candidate in explicit Nickel policy order. It does not assign hidden numeric authority ranks or infer requirements from commands and agent labels.
+
+An unavailable selected backend requires an explicit new plan. The planner does not silently use a broader candidate. The thin std seam calls one injected current-enforcement service and checks exact backend, adapter, application-host binding, runtime-authority, effect-permission, resource, and enforcement identities before effects.
+
+The host retains backend discovery, effect admission, filesystem, process, network, sandbox, execution, cancellation, cleanup, and result authority. A plan does not prove current availability, sandbox enforcement, completion, correctness, production readiness, or release eligibility. See [execution backend selection](execution-backend-selection.md).
+
 ## Coding-session host boundary
 
 `animus_runtime::coding_session_host` owns pure deterministic run, queue, active-leaf, durable-cursor, pending-effect, recovery, cancellation, event, and receipt reductions. It accepts only already-expanded and admitted input. It cannot discover resources or sessions, interpret commands, call providers or tools, read credentials or clocks, open storage, access a terminal, or perform persistence. The non-default `animus_std::coding_session_host` shell calls only explicit injected services and may emit a dependent provider or tool request only after the prerequisite metadata-only authority binding and message commit succeed and current enforcement is independently observed. Exact profile equality detects continuity but cannot authorize, probe, or enforce anything. Pending queue bodies remain non-transcript state until selected and committed. Resume validates the explicit store and admitted repair before continuation. Cancellation does not prove rollback. Receipts reject raw prompts, provider payloads, tool output, credentials, paths, and raw errors. See [coding-session host facade](coding-session-host.md) and [session runtime authority profiles](session-runtime-authority-profile.md).

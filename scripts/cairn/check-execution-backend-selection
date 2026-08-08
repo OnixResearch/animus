@@ -1,0 +1,26 @@
+#!/usr/bin/env sh
+set -eu
+readonly FAILURE=1
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+command -v rustc >/dev/null 2>&1 || { printf '%s\n' 'error: rustc is required' >&2; exit "${FAILURE}"; }
+command -v nickel >/dev/null 2>&1 || { printf '%s\n' 'error: nickel is required' >&2; exit "${FAILURE}"; }
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/animus-execution-backend-selection.XXXXXX")
+trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
+rustc --edition=2021 "${script_dir}/check-execution-backend-selection.rs" -o "${tmp_dir}/check"
+rustc --edition=2021 --test "${script_dir}/check-execution-backend-selection.rs" -o "${tmp_dir}/check-tests"
+"${tmp_dir}/check-tests"
+"${tmp_dir}/check" "$@"
+root='.'
+if [ "${1:-}" = '--root' ]; then root=${2:-.}; fi
+cd "${root}"
+exported=$(mktemp)
+trap 'rm -f "${exported}"; rm -rf "${tmp_dir}"' EXIT HUP INT TERM
+nickel export --format json --field execution_backend_selection_policy config/execution-backend-selection-policy.ncl > "${exported}"
+diff -u config/generated/execution-backend-selection-policy.json "${exported}"
+cargo test -p animus-runtime --features execution-backend-planner execution_backend_planner --locked
+cargo test -p animus-std --features execution-backend-planner execution_backend_planner --locked
+cargo clippy -p animus-runtime -p animus-std --features execution-backend-planner --all-targets -- -D warnings
+cargo check -p animus-runtime --no-default-features --features execution-backend-planner --locked
+cargo check -p animus-runtime --features execution-backend-planner --target wasm32-unknown-unknown --locked
+cargo check -p animus --features execution-backend-planner --locked
+printf '%s\n' 'focused rail execution-backend-selection: pass'

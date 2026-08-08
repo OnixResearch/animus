@@ -130,6 +130,7 @@
               diff -u ${./config/generated/persistent-goals-policy.json} "$tmp_dir/config/generated/persistent-goals-policy.json"
               diff -u ${./config/generated/schedule-reliability-policy.json} "$tmp_dir/config/generated/schedule-reliability-policy.json"
               diff -u ${./config/generated/session-event-replay-policy.json} "$tmp_dir/config/generated/session-event-replay-policy.json"
+              diff -u ${./config/generated/execution-backend-selection-policy.json} "$tmp_dir/config/generated/execution-backend-selection-policy.json"
 
               nickel typecheck ${./config/nickel-export-requests.ncl}
               NICKEL_EXPORT_BIN=${nickel-export.packages.${system}.default}/bin/nickel-export \
@@ -266,6 +267,8 @@
                 || baseName == "check-schedule-reliability.rs"
                 || baseName == "check-session-event-replay"
                 || baseName == "check-session-event-replay.rs"
+                || baseName == "check-execution-backend-selection"
+                || baseName == "check-execution-backend-selection.rs"
                 || baseName == "check-model-runtime-profiles"
                 || baseName == "check-agent-role-profiles"
                 || baseName == "check-aeneas-proof-campaign"
@@ -580,6 +583,14 @@
             pkgs.clippy
           ] ''
             sh scripts/cairn/check-session-event-replay --root .
+          '';
+
+          execution-backend-selection = cargoCheck "animus-execution-backend-selection" [
+            pkgs.nickel
+            pkgs.diffutils
+            pkgs.clippy
+          ] ''
+            sh scripts/cairn/check-execution-backend-selection --root .
           '';
 
           model-runtime-profiles = cargoCheck "animus-model-runtime-profiles" [

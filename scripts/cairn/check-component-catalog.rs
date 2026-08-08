@@ -118,6 +118,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "persistent-goals",
     "schedule-reliability",
     "session-event-replay",
+    "execution-backend-planner",
 ];
 
 const ALLOWED_AUTHORITIES: &[&str] = &[
