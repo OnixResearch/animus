@@ -133,6 +133,7 @@
               diff -u ${./config/generated/execution-backend-selection-policy.json} "$tmp_dir/config/generated/execution-backend-selection-policy.json"
               diff -u ${./config/generated/provider-video-payload-policy.json} "$tmp_dir/config/generated/provider-video-payload-policy.json"
               diff -u ${./config/generated/terminal-image-policy.json} "$tmp_dir/config/generated/terminal-image-policy.json"
+              diff -u ${./config/generated/terminal-video-policy.json} "$tmp_dir/config/generated/terminal-video-policy.json"
 
               nickel typecheck ${./config/nickel-export-requests.ncl}
               NICKEL_EXPORT_BIN=${nickel-export.packages.${system}.default}/bin/nickel-export \
@@ -275,6 +276,8 @@
                 || baseName == "check-provider-video-payloads.rs"
                 || baseName == "check-terminal-image-protocols"
                 || baseName == "check-terminal-image-protocols.rs"
+                || baseName == "check-terminal-video-playback"
+                || baseName == "check-terminal-video-playback.rs"
                 || baseName == "check-model-runtime-profiles"
                 || baseName == "check-agent-role-profiles"
                 || baseName == "check-aeneas-proof-campaign"
@@ -613,6 +616,14 @@
             pkgs.clippy
           ] ''
             sh scripts/cairn/check-terminal-image-protocols --root .
+          '';
+
+          terminal-video-playback = cargoCheck "animus-terminal-video-playback" [
+            pkgs.nickel
+            pkgs.diffutils
+            pkgs.clippy
+          ] ''
+            sh scripts/cairn/check-terminal-video-playback --root .
           '';
 
           model-runtime-profiles = cargoCheck "animus-model-runtime-profiles" [

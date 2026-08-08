@@ -25,6 +25,8 @@ mod frontend;
 #[cfg(feature = "terminal-image")]
 mod pixel;
 mod runner;
+#[cfg(feature = "terminal-video")]
+mod video;
 mod view;
 
 #[cfg(test)]
@@ -55,6 +57,20 @@ pub use rats;
 pub use runner::{
     GuardedToolRun, HostedToolOutcome, ToolHostCommandSource, ToolHostEventSink, run_guarded_tool,
     run_hosted_tool, run_simple_tool,
+};
+#[cfg(feature = "terminal-video")]
+pub use video::{
+    TerminalVideoAction, TerminalVideoBackendCall, TerminalVideoBackendMode,
+    TerminalVideoBackendOperation, TerminalVideoBackendService, TerminalVideoCapabilities,
+    TerminalVideoCapabilityState, TerminalVideoCommand, TerminalVideoDescriptor,
+    TerminalVideoError, TerminalVideoFrameExecution, TerminalVideoFrameExecutionInput,
+    TerminalVideoFrameFetch, TerminalVideoFrameMetadata, TerminalVideoFramePacket,
+    TerminalVideoFrameSource, TerminalVideoFrameSourceRequest, TerminalVideoId,
+    TerminalVideoPolicy, TerminalVideoPolicyDecision, TerminalVideoReceipt,
+    TerminalVideoReduceInput, TerminalVideoReduction, TerminalVideoSourceClass, TerminalVideoState,
+    TerminalVideoStatus, execute_terminal_video_backend_actions, execute_terminal_video_frame,
+    fetch_terminal_video_frame, project_terminal_video_receipt, reduce_terminal_video,
+    select_terminal_video_backend, validate_terminal_video_evidence,
 };
 pub use view::{
     AgentDashboardState, AgentStatus, AppShellConfig, AppShellState, CompletionCandidate,

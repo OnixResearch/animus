@@ -18,9 +18,9 @@ Terminal video is a sequence of image operations under timing and resource polic
 
 ### Decision: use protocol capabilities instead of a universal playback claim
 
-**Choice:** Kitty animation operations are used only when their conformance rows pass. Other terminals use policy-bounded image replacement or a text or thumbnail fallback. The result records the exact backend mode and unsupported operations.
+**Choice:** Kitty animation operations are used only when their conformance rows pass. The pinned Rats cohort transfers one bounded static frame but does not encode animation controls. The host must inject exact animation-control, placement, and deletion operations. Other terminals use policy-bounded image replacement or a text or thumbnail fallback. The result records the exact backend mode and unsupported operations.
 
-**Rationale:** iTerm2, Sixel, multiplexers, and Kitty implementations have different update and cleanup behavior.
+**Rationale:** iTerm2, Sixel, multiplexers, and Kitty implementations have different update and cleanup behavior. Static frame transfer does not imply animation support.
 
 ### Decision: apply backpressure before frame retention
 

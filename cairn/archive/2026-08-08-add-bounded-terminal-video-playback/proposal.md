@@ -1,6 +1,6 @@
 ## Why
 
-A terminal image adapter can display static frames, but video playback adds decoding, frame scheduling, backpressure, cancellation, resource cleanup, and terminal animation state. Putting those effects into the image adapter or model payload contract would combine unrelated authority. Animus needs a separate optional TUI playback boundary that consumes host-supplied bounded frames and uses admitted terminal image operations without owning codecs, files, URLs, processes, clocks, audio, or persistence.
+A terminal image adapter can display static frames, but video playback adds decoding, frame scheduling, backpressure, cancellation, resource cleanup, and terminal animation state. Putting those effects into the image adapter or model payload contract would combine unrelated authority. Animus needs a separate optional TUI playback boundary that consumes host-supplied bounded frames and uses admitted terminal image operations without owning codecs, files, URLs, processes, clocks, audio, or persistence. The implementation baseline binds archived terminal-image evidence and Rats revision `3b498c3d7c248c335d3e7faf12f133a18c87d632`; that cohort transfers bounded static frames and rejects animated inputs, so Kitty animation controls remain exact host-injected operations.
 
 ## What Changes
 

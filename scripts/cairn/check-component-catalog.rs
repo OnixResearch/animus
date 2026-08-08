@@ -120,6 +120,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "session-event-replay",
     "execution-backend-planner",
     "terminal-image",
+    "terminal-video",
 ];
 
 const ALLOWED_AUTHORITIES: &[&str] = &[

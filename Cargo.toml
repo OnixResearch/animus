@@ -133,6 +133,7 @@ rlm-kernel = [
 steel = ["dep:animus-steel"]
 tui = ["std", "dep:animus-tui"]
 terminal-image = ["tui", "animus-tui/terminal-image"]
+terminal-video = ["terminal-image", "animus-tui/terminal-video"]
 
 [dependencies]
 animus-acp-stdio-host = { path = "crates/animus-acp-stdio-host", version = "0.1.0", optional = true }

@@ -1,0 +1,20 @@
+{
+  schema = "animus.terminal-video-negative-fixtures.v1",
+  cases = [
+    { name = "ambient-path", source = "/private/video.mp4", expected = "unsafe_identity" },
+    { name = "ambient-url", source = "https://media.invalid/video", expected = "unsupported_authority" },
+    { name = "decoder-command", decoder = "ffmpeg", expected = "unsupported_authority" },
+    { name = "stale-tick", previous_tick = 20, current_tick = 19, expected = "stale_tick" },
+    { name = "duplicate-frame", expected_index = 1, actual_index = 0, expected = "frame_order_mismatch" },
+    { name = "queue-overflow", queued_frames = 3, allow_drop = false, expected = "queue_bound_exceeded" },
+    { name = "frame-oversize", byte_count = 8388609, expected = "frame_bound_exceeded" },
+    { name = "unsupported-animation", static_image = true, animation = false, expected = "static_replacement" },
+    { name = "source-timeout", deadline = "expired", expected = "frame_source_timeout" },
+    { name = "partial-write", writer = "partial", expected = "terminal_image_failed" },
+    { name = "terminal-loss", terminal = "lost", expected = "cleanup_pending" },
+    { name = "cleanup-failure", cleanup = "failed", expected = "cleanup_incomplete" },
+    { name = "receipt-frame-leak", metadata = "frame_bytes=raw", expected = "evidence_leak" },
+    { name = "receipt-timing-leak", metadata = "timing_trace=raw", expected = "evidence_leak" },
+    { name = "smoothness-overclaim", metadata = "smooth_playback=true", expected = "evidence_leak" },
+  ],
+}

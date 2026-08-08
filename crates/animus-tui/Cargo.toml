@@ -14,6 +14,7 @@ workspace = true
 default = []
 rats-widgets = ["dep:rats", "dep:rat-keymap"]
 terminal-image = ["dep:blake3", "dep:rat-image"]
+terminal-video = ["terminal-image"]
 
 [dependencies]
 animus-adapters = { path = "../animus-adapters", version = "0.1.0" }
