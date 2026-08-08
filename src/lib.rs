@@ -232,6 +232,10 @@ pub use animus_adapter_continual as continual_harness;
 #[cfg(feature = "daemon-workers")]
 pub use animus_adapter_daemon as daemon_workers;
 
+/// Re-export of the optional family-scoped messaging contracts.
+#[cfg(feature = "messaging-receipts")]
+pub use animus_adapters::messaging as messaging_receipts;
+
 /// Re-export of the optional broad Preserves compatibility facade.
 ///
 /// Adapter-only consumers should depend on `animus-preserves-adapter` directly;

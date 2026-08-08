@@ -1,0 +1,36 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
+if ! command -v rustc >/dev/null 2>&1; then
+  printf '%s\n' 'error: rustc is required. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+if ! command -v nickel >/dev/null 2>&1; then
+  printf '%s\n' 'error: nickel is required. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+
+checker_dir=$(mktemp -d "${TMPDIR:-/tmp}/animus-messaging-receipts.XXXXXX")
+trap 'rm -rf "${checker_dir}"' EXIT HUP INT TERM
+checker=${checker_dir}/check-messaging-receipts
+rustc --edition=2021 "${script_dir}/check-messaging-receipts.rs" -o "${checker}"
+"${checker}" "$@"
+
+root='.'
+if [ "${1:-}" = '--root' ]; then
+  root=${2:-.}
+fi
+cd "${root}"
+
+policy_export=$(mktemp)
+trap 'rm -f "${policy_export}"; rm -rf "${checker_dir}"' EXIT HUP INT TERM
+nickel export --format json --field messaging_receipts_policy config/messaging-receipts-policy.ncl > "${policy_export}"
+diff -u config/generated/messaging-receipts-policy.json "${policy_export}"
+
+cargo test -p animus-adapters messaging --locked
+cargo test -p animus-adapters agent_comms --locked
+cargo check -p animus-adapters --target wasm32-unknown-unknown --locked
+printf '%s\n' 'focused rail messaging-receipts: pass'

@@ -72,6 +72,8 @@ let continual_feature = "continual-harness" in
 let continual_family = "refinement" in
 let daemon_feature = "daemon-workers" in
 let daemon_family = "daemon-workers" in
+let messaging_feature = "messaging-receipts" in
+let messaging_family = "messaging-receipts" in
 let agent_guardrail_feature = "agent-guardrail" in
 let agent_guardrail_family = "policy" in
 let syndicate_record = fun export_path_value owning_crate_value source_value class_value side_effect_value review_note_value => {
@@ -222,6 +224,21 @@ let daemon_record = fun export_path_value owning_crate_value source_value review
   depends_on = [],
   composes_with = ["animus-adapters::HostTopologySnapshot"],
   capability_family = daemon_family,
+}
+in
+let messaging_record = fun export_path_value owning_crate_value source_value review_note_value => {
+  export_path = export_path_value,
+  owning_crate = owning_crate_value,
+  source = source_value,
+  class = reusable,
+  side_effect = none,
+  stability = optional_stability,
+  review_note = review_note_value,
+  feature_gate = messaging_feature,
+  required_authority = none,
+  depends_on = [],
+  composes_with = ["animus-adapters::HostTopologySnapshot"],
+  capability_family = messaging_family,
 }
 in
 let agent_control_record = fun export_path_value owning_crate_value source_value review_note_value => {
@@ -2207,6 +2224,8 @@ let entry_values = [
   continual_record "animus::continual_harness" "animus" root "optional compatibility re-export of continual-harness contracts",
   daemon_record "animus-adapters::daemon_workers" "animus-adapters" adapters "no-std client, supervisor, worker, attachment, recovery, containment, and metadata-only receipt contracts",
   daemon_record "animus::daemon_workers" "animus" root "optional compatibility re-export of daemon worker contracts",
+  messaging_record "animus-adapters::messaging" "animus-adapters" adapters "host-derived family roster, pure delivery modes, pre-routing limits, and delivered/queued metadata-only receipts",
+  messaging_record "animus::messaging_receipts" "animus" root "optional compatibility re-export of messaging receipt contracts",
   entry "animus-runtime::tool_executor_kit" "animus-runtime" runtime injection injected stable "pure executor admission and receipt core with an explicit host-injected service shell",
   rlm_kernel_record "animus-runtime::rlm_kernel" "animus-runtime" runtime injection injected "revalidated injected execution seam for typed model-facing Steel requests" injected,
   entry "animus-runtime::tool_executor_packs" "animus-runtime" runtime reusable none stable "tool executor pack descriptor module",

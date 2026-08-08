@@ -27,6 +27,8 @@ The optional `animus-runtime/autonomous-gates` feature receives only typed gate 
 
 ## Continual-harness refinement boundary
 
+The optional `animus-adapters::messaging` family is a no-std pure messaging boundary. It accepts only host-derived family rosters, typed message drafts, supplied target state, counters, policy, and delivery attestations. Sender claims in content, unknown or cross-family targets, denied modes, size/rate/pending violations, ambient transport requests, and unattested delivery fail closed. It emits only routing decisions, limit decisions, and metadata-only `delivered` or `queued` receipts. Transport, interrupt classification, queue storage, network, process, credentials, read/acted state, ordering, exactly-once delivery, comprehension, and persistence remain host-owned and unclaimed.
+
 The optional `animus-adapter-continual` crate is a no-std pure admission boundary. It accepts only typed proposals, current session-local supplemental state, and typed ledger evidence. It admits supplemental prompts, memories, skill descriptions, and subagent specifications under Nickel-authored size, count, conflict, evidence, and retention bounds. Base-prompt, repo-owned skill, accepted-spec, policy-file, evidence-free, and promotion-request proposals fail closed.
 
 Every admitted update plans a BLAKE3 snapshot before the next state. Hosts own snapshot storage and apply the plan. Rollback accepts only retained, unmodified snapshots. Promotion requires a separate explicit host action and produces only a plan. Receipts contain metadata and required non-claims. They reject lesson bodies, prompt text, memory contents, skill bodies, trajectory spans, and improvement or authority claims.

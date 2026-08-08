@@ -47,6 +47,8 @@ See [docs/codebase-graph-host.md](docs/codebase-graph-host.md) for the non-defau
 
 See [docs/goose-message-queue-interrupts.md](docs/goose-message-queue-interrupts.md) for the pure queued-message reducer, interrupt classifier, fail-closed controls, and safe receipt boundary, and [docs/goose-remote-server-admission.md](docs/goose-remote-server-admission.md) for Goose-style remote backend descriptors, host-supplied handshake summaries, fail-closed admission, and safe receipts.
 
+See [docs/messaging-receipts.md](docs/messaging-receipts.md) for host-derived family rosters, `auto`/`steer`/`follow_up` routing, pre-routing limits, and `delivered`/`queued` messaging receipts.
+
 See [docs/portfolio-search.md](docs/portfolio-search.md) for the pure bounded portfolio state machine, mechanism registry, delayed cross-pollination, gap-strength gates, adversarial audit, honest terminal outcomes, and safe receipt boundary.
 
 See [docs/interrupted-tool-call-repair.md](docs/interrupted-tool-call-repair.md) for exact active-branch tool binding, evidence-bound synthetic failures, append-only repair planning, durable provider gating, idempotence, and metadata-only receipts.
@@ -165,6 +167,7 @@ scripts/cairn/check-nickel-policy-contracts --root .
 scripts/cairn/check-autonomous-gates --root .
 scripts/cairn/check-continual-harness --root .
 scripts/cairn/check-daemon-workers --root .
+scripts/cairn/check-messaging-receipts --root .
 scripts/cairn/check-model-runtime-profiles --root .
 scripts/cairn/check-agent-role-profiles --root .
 scripts/cairn/check-provider-retry --root .
@@ -209,6 +212,7 @@ nix build .#checks.x86_64-linux.neutral-ledger --no-link -L
 nix build .#checks.x86_64-linux.safe-receipts-artifacts --no-link -L
 nix build .#checks.x86_64-linux.continual-harness --no-link -L
 nix build .#checks.x86_64-linux.daemon-workers --no-link -L
+nix build .#checks.x86_64-linux.messaging-receipts --no-link -L
 nix build .#checks.x86_64-linux.current-head-release-evidence-index --no-link -L
 nix flake check
 ```

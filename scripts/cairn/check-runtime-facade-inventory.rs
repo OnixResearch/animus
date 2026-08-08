@@ -124,6 +124,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "autonomous-gates",
     "continual-harness",
     "daemon-workers",
+    "messaging-receipts",
 ];
 
 const ALLOWED_AUTHORITIES: &[&str] = &[
@@ -163,6 +164,7 @@ const ALLOWED_FAMILIES: &[&str] = &[
     "autonomous-gates",
     "refinement",
     "daemon-workers",
+    "messaging-receipts",
 ];
 
 const AMBIENT_AUTHORITY_MARKERS: &[&str] = &[

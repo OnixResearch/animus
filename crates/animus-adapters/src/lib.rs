@@ -80,6 +80,8 @@ pub mod rlm_kernel {
 }
 #[cfg(test)]
 mod familycrates;
+/// Pure family-scoped messaging modes, routing, limits, and receipts.
+pub mod messaging;
 /// OpenClaw-inspired security audit and plugin guardrail DTOs.
 #[path = "openclaw/guardrails.rs"]
 pub mod openclaw_guardrails;
