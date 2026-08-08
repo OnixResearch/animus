@@ -16,6 +16,8 @@ let required_non_claims = [
   "not provider correctness",
   "not tool safety",
   "not runtime success",
+  "not runtime correctness",
+  "not resource enforcement",
   "not release eligibility",
 ] in
 let identity_domains = [

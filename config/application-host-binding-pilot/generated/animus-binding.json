@@ -81,6 +81,8 @@
     "not provider correctness",
     "not tool safety",
     "not runtime success",
+    "not runtime correctness",
+    "not resource enforcement",
     "not release eligibility"
   ],
   "output_schema_identity": {
