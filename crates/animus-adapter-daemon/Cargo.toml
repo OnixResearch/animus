@@ -1,0 +1,14 @@
+[package]
+name = "animus-adapter-daemon"
+description = "no_std daemon client, supervisor, and worker lifecycle contracts."
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+blake3 = { version = "1.8.5", default-features = false }

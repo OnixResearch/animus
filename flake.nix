@@ -125,6 +125,7 @@
               diff -u ${./config/generated/harbor-evaluation-profile.json} "$tmp_dir/config/generated/harbor-evaluation-profile.json"
               diff -u ${./config/generated/host-control-source.json} "$tmp_dir/config/generated/host-control-source.json"
               diff -u ${./config/generated/continual-harness-policy.json} "$tmp_dir/config/generated/continual-harness-policy.json"
+              diff -u ${./config/generated/daemon-workers-policy.json} "$tmp_dir/config/generated/daemon-workers-policy.json"
 
               nickel typecheck ${./config/nickel-export-requests.ncl}
               NICKEL_EXPORT_BIN=${nickel-export.packages.${system}.default}/bin/nickel-export \
@@ -251,6 +252,8 @@
                 || baseName == "check-neutral-ledger"
                 || baseName == "check-nickel-policy-contracts"
                 || baseName == "check-continual-harness"
+                || baseName == "check-daemon-workers"
+                || baseName == "check-daemon-workers.rs"
                 || baseName == "check-model-runtime-profiles"
                 || baseName == "check-agent-role-profiles"
                 || baseName == "check-aeneas-proof-campaign"
@@ -529,6 +532,13 @@
             pkgs.diffutils
           ] ''
             sh scripts/cairn/check-continual-harness --root .
+          '';
+
+          daemon-workers = cargoCheck "animus-daemon-workers" [
+            pkgs.nickel
+            pkgs.diffutils
+          ] ''
+            sh scripts/cairn/check-daemon-workers --root .
           '';
 
           model-runtime-profiles = cargoCheck "animus-model-runtime-profiles" [

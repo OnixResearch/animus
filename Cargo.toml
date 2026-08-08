@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "crates/animus-adapter-continual",
+  "crates/animus-adapter-daemon",
   "crates/animus-adapter-observability",
   "crates/animus-adapter-rlm-kernel",
   "crates/animus-adapter-safe",
@@ -113,6 +114,7 @@ cairn-reference = ["dep:cairn_core"]
 trellis-reference = ["dep:trellis"]
 weave-adapter = ["dep:animus-adapter-weave"]
 continual-harness = ["dep:animus-adapter-continual"]
+daemon-workers = ["dep:animus-adapter-daemon"]
 preserves = ["dep:animus-preserves"]
 router = ["dep:animus-router"]
 runtime = ["std", "dep:animus-runtime"]
@@ -129,6 +131,7 @@ tui = ["std", "dep:animus-tui"]
 [dependencies]
 animus-acp-stdio-host = { path = "crates/animus-acp-stdio-host", version = "0.1.0", optional = true }
 animus-adapter-continual = { path = "crates/animus-adapter-continual", version = "0.1.0", optional = true }
+animus-adapter-daemon = { path = "crates/animus-adapter-daemon", version = "0.1.0", optional = true }
 animus-adapter-rlm-kernel = { path = "crates/animus-adapter-rlm-kernel", version = "0.1.0", optional = true }
 animus-adapter-weave = { path = "crates/animus-adapter-weave", version = "0.1.0", optional = true }
 animus-adapters = { path = "crates/animus-adapters", version = "0.1.0" }

@@ -113,6 +113,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "weave-adapter",
     "autonomous-gates",
     "continual-harness",
+    "daemon-workers",
 ];
 
 const ALLOWED_AUTHORITIES: &[&str] = &[
@@ -164,6 +165,7 @@ const ALLOWED_FAMILIES: &[&str] = &[
     "workspace",
     "autonomous-gates",
     "refinement",
+    "daemon",
 ];
 
 const UNSAFE_FIELD_MARKERS: &[&str] = &[

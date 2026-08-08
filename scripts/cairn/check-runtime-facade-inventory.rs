@@ -123,6 +123,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "worker-team",
     "autonomous-gates",
     "continual-harness",
+    "daemon-workers",
 ];
 
 const ALLOWED_AUTHORITIES: &[&str] = &[
@@ -161,6 +162,7 @@ const ALLOWED_FAMILIES: &[&str] = &[
     "preserves",
     "autonomous-gates",
     "refinement",
+    "daemon-workers",
 ];
 
 const AMBIENT_AUTHORITY_MARKERS: &[&str] = &[
@@ -170,7 +172,6 @@ const AMBIENT_AUTHORITY_MARKERS: &[&str] = &[
     "provider config",
     "network",
     "process",
-    "daemon",
     "plugin",
     "tui state",
     "clock",

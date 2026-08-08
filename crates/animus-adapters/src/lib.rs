@@ -70,6 +70,10 @@ pub mod observability {
 pub mod continual {
     pub use animus_adapter_continual::*;
 }
+/// Compatibility facade for pure daemon client, supervisor, and worker contracts.
+pub mod daemon_workers {
+    pub use animus_adapter_daemon::*;
+}
 /// Compatibility facade for pure model-facing RLM kernel contracts.
 pub mod rlm_kernel {
     pub use animus_adapter_rlm_kernel::*;

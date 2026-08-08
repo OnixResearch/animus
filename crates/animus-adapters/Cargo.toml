@@ -12,6 +12,7 @@ workspace = true
 
 [dependencies]
 animus-adapter-continual = { path = "../animus-adapter-continual", version = "0.1.0" }
+animus-adapter-daemon = { path = "../animus-adapter-daemon", version = "0.1.0" }
 animus-adapter-observability = { path = "../animus-adapter-observability", version = "0.1.0" }
 animus-adapter-rlm-kernel = { path = "../animus-adapter-rlm-kernel", version = "0.1.0" }
 animus-adapter-safe = { path = "../animus-adapter-safe", version = "0.1.0" }
