@@ -37,6 +37,9 @@ mod admission;
 pub mod aeneas_proof_campaign;
 #[path = "agentroles/mod.rs"]
 pub mod agent_roles;
+/// Authority-free application-host binding projection for one fake-backed pilot.
+#[path = "applicationbinding/mod.rs"]
+pub mod application_host_binding;
 #[allow(excessive_file_length)]
 #[path = "authoritativecompletion/mod.rs"]
 pub mod authoritative_completion;

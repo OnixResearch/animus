@@ -2965,6 +2965,7 @@ let entry_values = [
   entry "animus-runtime::VcsSnapshotRecordDraft" "animus-runtime" runtime reusable none stable "auto-classified public export for composition inventory",
   entry "animus-runtime::session_authority_profile" "animus-runtime" runtime reusable none stable "pure canonical session authority profiles durable bindings drift comparison transition planning realized-enforcement observations and metadata-only receipts",
   entry "animus-runtime::runtime_authority_seal" "animus-runtime" runtime reusable none stable "pure per-dispatch authority-unit admission canonical BLAKE3 identity monotonic transitions exact current rechecks and metadata-only receipts",
+  entry "animus-runtime::application_host_binding" "animus-runtime" runtime reusable none optional_stability "non-default authority-free Kamacite-shaped projection exact host selection pre-effect binding and existing-seal composition",
   entry "animus-runtime::rejected_attempt" "animus-runtime" runtime reusable none stable "pure VCS-neutral rejected-attempt review admission current identity checks bounded summary planning and metadata-only receipts",
   entry "animus-std::JujutsuAttemptObservationFixture" "animus-std" std_shell reusable none optional_stability "bounded Jujutsu mapping over already-observed facts",
   entry "animus-std::RejectedAttemptHostError" "animus-std" std_shell reusable none optional_stability "bounded rejected-attempt host error",

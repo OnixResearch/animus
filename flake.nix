@@ -261,6 +261,7 @@
                 || baseName == "check-provider-retry"
                 || baseName == "check-sandlock-host"
                 || baseName == "check-bounded-execution-evaluation"
+                || baseName == "check-application-host-binding"
                 || baseName == "check-agent-guardrail"
                 || baseName == "check-session-tree-export"
                 || baseName == "check-provenance-ledger"
@@ -606,6 +607,15 @@
             pkgs.nickel
           ] ''
             sh scripts/cairn/check-bounded-execution-evaluation --root .
+          '';
+
+          application-host-binding = cargoCheck "animus-application-host-binding" [
+            pkgs.b3sum
+            pkgs.clippy
+            pkgs.diffutils
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-application-host-binding --root .
           '';
 
           sandlock-host = cargoCheck "animus-sandlock-host" [

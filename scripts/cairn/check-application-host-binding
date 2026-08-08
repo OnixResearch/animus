@@ -1,0 +1,120 @@
+#!/usr/bin/env sh
+set -eu
+
+ROOT="."
+if [ "${1:-}" = "--root" ]; then
+  ROOT="${2:-}"
+fi
+if [ ! -d "${ROOT}" ]; then
+  printf '%s\n' "application-host binding root is missing: ${ROOT}" >&2
+  exit 1
+fi
+
+PROFILE="${ROOT}/config/application-host-binding-pilot/profile.ncl"
+GENERATED="${ROOT}/config/application-host-binding-pilot/generated"
+FIXTURES="${ROOT}/config/application-host-binding-pilot/fixtures"
+RUNTIME_MODULE="${ROOT}/crates/animus-runtime/src/applicationbinding"
+RECEIPT_DIR="${ROOT}/target/cairn/focused-rails"
+RECEIPT="${RECEIPT_DIR}/application-host-binding.md"
+EXPECTED_NEGATIVE_FIXTURES=6
+EXPECTED_RUNTIME_TESTS=4
+KAMACITE_REVISION="b21732a7458b660367f7281c717a5acc3f8c8190"
+KAMACITE_SCHEMA_BLAKE3="34fdebab3c8a274729f364af8da58691dba38809c67d2643c1f0d0354cb0c80b"
+KAMACITE_RECEIPT_SCHEMA_BLAKE3="3b48bf894cf40990a6d857542e9c3b26df2f6b50510999698323a7cb5cbca39e"
+KAMACITE_VALIDATION_RECEIPT_BLAKE3="75ac779da7b5fde841188ba326e81c253ba5b78dbf0cc632bc90f8b58a9fb303"
+KAMACITE_CORE_BLAKE3="4912fa0d0b81c5ac526d6fd762f4fe83d6d7dbba21cb661f3724bb499af5a1db"
+APPLICATION_BLAKE3="5fd77e6bf7e3a618faf48a8a16c398126797a5245011f0d06dd40f45513b9cb1"
+ENTRYPOINT_BLAKE3="bb661c376f2a83ceedd730d404de471dfcc5abd6f75f9f4a42a95b8afd9a0d42"
+RESOURCE_PROFILE_BLAKE3="876e8e3aedf280155e40378e5ba1add80ca30a7a0931f9a9c972b898694619f2"
+
+for required in "${PROFILE}" "${GENERATED}/animus-binding.json" "${GENERATED}/kamacite-cohort.json" "${GENERATED}/source-map.json"; do
+  if [ ! -f "${required}" ]; then
+    printf '%s\n' "APPLICATION_BINDING_MISSING_FILE:${required}" >&2
+    exit 1
+  fi
+done
+
+TMP="$(mktemp -d)"
+trap 'rm -rf "${TMP}"' EXIT INT TERM
+nickel export --format json --field binding "${PROFILE}" > "${TMP}/animus-binding.json"
+nickel export --format json --field kamacite_cohort "${PROFILE}" > "${TMP}/kamacite-cohort.json"
+nickel export --format json --field source_map "${PROFILE}" > "${TMP}/source-map.json"
+diff -u "${GENERATED}/animus-binding.json" "${TMP}/animus-binding.json"
+diff -u "${GENERATED}/kamacite-cohort.json" "${TMP}/kamacite-cohort.json"
+diff -u "${GENERATED}/source-map.json" "${TMP}/source-map.json"
+
+nickel export --format json "${FIXTURES}/valid.ncl" > /dev/null
+negative_count=0
+for fixture in "${FIXTURES}"/negative-*.ncl; do
+  if nickel export --format json "${fixture}" > /dev/null 2>&1; then
+    printf '%s\n' "APPLICATION_BINDING_NEGATIVE_ACCEPTED:${fixture}" >&2
+    exit 1
+  fi
+  negative_count=$((negative_count + 1))
+done
+if [ "${negative_count}" -ne "${EXPECTED_NEGATIVE_FIXTURES}" ]; then
+  printf '%s\n' "APPLICATION_BINDING_FIXTURE_COUNT:${negative_count}" >&2
+  exit 1
+fi
+
+check_file_hash() {
+  expected="$1"
+  path="$2"
+  actual="$(b3sum "${path}" | awk '{print $1}')"
+  if [ "${actual}" != "${expected}" ]; then
+    printf '%s\n' "APPLICATION_BINDING_STALE_SOURCE:${path}" >&2
+    exit 1
+  fi
+}
+
+check_file_hash "${APPLICATION_BLAKE3}" "${ROOT}/crates/animus-runtime/src/dogfoodshell.rs"
+check_file_hash "${ENTRYPOINT_BLAKE3}" "${ROOT}/crates/animus-std/src/bin/animus-dogfood-smoke.rs"
+check_file_hash "${RESOURCE_PROFILE_BLAKE3}" "${ROOT}/policy/process-jobs/generated/process-job-profile-policy.json"
+
+for cohort_value in "${KAMACITE_REVISION}" "${KAMACITE_SCHEMA_BLAKE3}" "${KAMACITE_RECEIPT_SCHEMA_BLAKE3}" "${KAMACITE_VALIDATION_RECEIPT_BLAKE3}" "${KAMACITE_CORE_BLAKE3}"; do
+  grep -Fq "${cohort_value}" "${PROFILE}"
+  grep -Fq "${cohort_value}" "${RUNTIME_MODULE}/data.rs"
+done
+
+for required_text in '"effect_summary_closed": true' '"alternative_host_profile_identities": []' '"semantic_claims": []' '"domain": "evaluator"' '"domain": "effect-operation"'; do
+  grep -Fq "${required_text}" "${GENERATED}/animus-binding.json"
+done
+for forbidden_text in 'binding authorizes' '/home/' 'RAW_PROMPT:' 'PROVIDER_PAYLOAD:' 'credential'; do
+  if grep -Fq "${forbidden_text}" "${GENERATED}/animus-binding.json"; then
+    printf '%s\n' "APPLICATION_BINDING_UNSAFE_OUTPUT:${forbidden_text}" >&2
+    exit 1
+  fi
+done
+
+if grep -ERn 'std::(fs|env|net|process)|std::time|Command::new|File::|TcpStream|UdpSocket' "${RUNTIME_MODULE}" --include='*.rs' > "${TMP}/authority.txt"; then
+  printf '%s\n' "APPLICATION_BINDING_AMBIENT_AUTHORITY" >&2
+  cat "${TMP}/authority.txt" >&2
+  exit 1
+fi
+
+TEST_LOG="${TMP}/tests.log"
+cargo test -p animus-runtime --locked application_host_binding 2>&1 | tee "${TEST_LOG}"
+grep -Fq "${EXPECTED_RUNTIME_TESTS} passed" "${TEST_LOG}"
+cargo clippy -p animus-runtime --lib --no-deps --locked -- -D warnings
+cargo check -p animus-runtime --no-default-features --target wasm32-unknown-unknown --locked
+
+mkdir -p "${RECEIPT_DIR}"
+BINDING_BLAKE3="$(b3sum "${GENERATED}/animus-binding.json" | awk '{print $1}')"
+PROFILE_BLAKE3="$(b3sum "${PROFILE}" | awk '{print $1}')"
+{
+  printf '%s\n' '# Application-host binding pilot focused receipt'
+  printf '%s\n' ''
+  printf '%s\n' '- verdict: pass'
+  printf '%s\n' '- scope: one non-default deterministic fake-backed entrypoint'
+  printf '%s\n' "- Kamacite producer revision: \`${KAMACITE_REVISION}\`"
+  printf '%s\n' "- profile BLAKE3: \`${PROFILE_BLAKE3}\`"
+  printf '%s\n' "- binding fixture BLAKE3: \`${BINDING_BLAKE3}\`"
+  printf '%s\n' "- positive runtime tests: ${EXPECTED_RUNTIME_TESTS}"
+  printf '%s\n' "- negative Nickel fixtures: ${EXPECTED_NEGATIVE_FIXTURES}"
+  printf '%s\n' '- authority: none; existing session binding, runtime seal, and current checks remain required'
+  printf '%s\n' '- non-claims: effect completeness, application correctness, authorization, host behavior, sandboxing, provider correctness, tool safety, runtime success, and release eligibility'
+} > "${RECEIPT}"
+
+printf '%s\n' 'focused rail application-host-binding: pass'
+printf '%s\n' "binding_blake3=${BINDING_BLAKE3}"
+printf '%s\n' "receipt: ${RECEIPT}"
