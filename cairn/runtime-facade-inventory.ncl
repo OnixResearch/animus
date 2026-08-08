@@ -78,6 +78,8 @@ let persistent_goals_feature = "persistent-goals" in
 let persistent_goals_family = "goal-state" in
 let schedule_reliability_feature = "schedule-reliability" in
 let schedule_reliability_family = "schedule" in
+let session_event_replay_feature = "session-event-replay" in
+let session_event_replay_family = "session-event-replay" in
 let agent_guardrail_feature = "agent-guardrail" in
 let agent_guardrail_family = "policy" in
 let syndicate_record = fun export_path_value owning_crate_value source_value class_value side_effect_value review_note_value => {
@@ -273,6 +275,21 @@ let schedule_reliability_record = fun export_path_value owning_crate_value sourc
   depends_on = [],
   composes_with = ["animus-adapters::ScheduledWorkflow"],
   capability_family = schedule_reliability_family,
+}
+in
+let session_event_replay_record = fun export_path_value owning_crate_value source_value review_note_value => {
+  export_path = export_path_value,
+  owning_crate = owning_crate_value,
+  source = source_value,
+  class = reusable,
+  side_effect = none,
+  stability = optional_stability,
+  review_note = review_note_value,
+  feature_gate = session_event_replay_feature,
+  required_authority = none,
+  depends_on = ["animus-runtime::durable_session_store"],
+  composes_with = ["animus-runtime::conversation_projection"],
+  capability_family = session_event_replay_family,
 }
 in
 let agent_control_record = fun export_path_value owning_crate_value source_value review_note_value => {
@@ -2263,6 +2280,8 @@ let entry_values = [
   persistent_goals_record "animus-runtime::persistent_goals" "animus-runtime" runtime "pure goal state, budgets, explicit lifecycle ownership, and metadata-only receipts",
   schedule_reliability_record "animus-runtime::schedule_reliability" "animus-runtime" runtime "pure schedule ownership, claim-before-delivery, bounded coalescing, recovery, and metadata-only receipts",
   schedule_reliability_record "animus::schedule_reliability" "animus" root "optional compatibility re-export of schedule reliability contracts",
+  session_event_replay_record "animus-runtime::session_event_replay" "animus-runtime" runtime "pure bounded reconnect replay over admitted ledger facts with one client order",
+  session_event_replay_record "animus::session_event_replay" "animus" root "optional compatibility re-export of session event replay contracts",
   entry "animus-runtime::tool_executor_kit" "animus-runtime" runtime injection injected stable "pure executor admission and receipt core with an explicit host-injected service shell",
   rlm_kernel_record "animus-runtime::rlm_kernel" "animus-runtime" runtime injection injected "revalidated injected execution seam for typed model-facing Steel requests" injected,
   entry "animus-runtime::tool_executor_packs" "animus-runtime" runtime reusable none stable "tool executor pack descriptor module",

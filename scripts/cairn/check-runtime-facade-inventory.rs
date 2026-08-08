@@ -127,6 +127,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "messaging-receipts",
     "persistent-goals",
     "schedule-reliability",
+    "session-event-replay",
 ];
 
 const ALLOWED_AUTHORITIES: &[&str] = &[
@@ -169,6 +170,7 @@ const ALLOWED_FAMILIES: &[&str] = &[
     "messaging-receipts",
     "goal-state",
     "schedule",
+    "session-event-replay",
 ];
 
 const AMBIENT_AUTHORITY_MARKERS: &[&str] = &[

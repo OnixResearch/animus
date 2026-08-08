@@ -33,6 +33,14 @@ The host must persist an exact claim before delivery. Recovery does not deliver 
 
 This family does not establish exactly-once execution, real-time delivery, timer accuracy, prompt outcome correctness, production readiness, or release eligibility. See [schedule reliability](schedule-reliability.md).
 
+## Session event replay boundary
+
+The optional `animus-runtime::session_event_replay` family is a pure reconnect-planning boundary. It consumes caller-loaded facts from the existing admitted ledger and runtime order. It does not create a second event store.
+
+A cursor binds session, stream, generation, branch, sequence, policy, and redaction identities. Gaps, duplicates, drift, rebuilds, truncation, no-op, and terminal states are explicit outcomes. Live-only deltas are never replayed as completed semantic content.
+
+The host retains storage, authentication, transport, reconnection, retries, timers, and delivery. This family does not prove transcript truth, transport delivery, durable storage, conversation continuity, production readiness, or release eligibility. See [session event replay](session-event-replay.md).
+
 ## Continual-harness refinement boundary
 
 The optional `animus-runtime::persistent_goals` family is a pure goal-state boundary. It accepts only metadata-only objective identities, explicit user or host actions, typed budgets, and host-injected accounting. It rejects model or inferred creation, model lifecycle control, invalid transitions, second active goals, budget-as-success claims, objective text in receipts, and ambient clock or persistence requests. It emits bounded state and receipts only. It does not prove objective achievement, work quality, automatic inference, production readiness, or release eligibility.

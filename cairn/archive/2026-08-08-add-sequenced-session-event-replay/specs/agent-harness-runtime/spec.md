@@ -1,6 +1,6 @@
 # Sequenced Session Event Replay Delta
 
-## Requirements
+## ADDED Requirements
 
 ### Requirement: Session event replay has one authoritative boundary
 

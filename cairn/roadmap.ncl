@@ -85,6 +85,10 @@ let change_entries = [
     "agent_harness_runtime.goose_scheduled_recipes.data_only",
     "agent_harness_runtime.messaging_receipts.modes",
   ] ["add-bounded-terminal-video-playback"],
+  change "add-sequenced-session-event-replay" core_role "session-ledger" [
+    "agent_harness_runtime.conversation_view_projection.boundary",
+    "agent_harness_runtime.conversation_view_projection.identity",
+  ] ["add-tui-conversation-render-model", "adapt-pi-headless-rpc-protocol"],
   change "add-canonical-model-message-contracts" core_role "injected-services" [
     "agent_harness_runtime.model_dispatch.plan",
     "agent_harness_runtime.multimodal_image_payloads.typed_parts",

@@ -1,0 +1,25 @@
+#!/usr/bin/env sh
+set -eu
+readonly FAILURE=1
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+command -v rustc >/dev/null 2>&1 || { printf '%s\n' 'error: rustc is required' >&2; exit "${FAILURE}"; }
+command -v nickel >/dev/null 2>&1 || { printf '%s\n' 'error: nickel is required' >&2; exit "${FAILURE}"; }
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/animus-session-event-replay.XXXXXX")
+trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
+rustc --edition=2021 "${script_dir}/check-session-event-replay.rs" -o "${tmp_dir}/check"
+rustc --edition=2021 --test "${script_dir}/check-session-event-replay.rs" -o "${tmp_dir}/check-tests"
+"${tmp_dir}/check-tests"
+"${tmp_dir}/check" "$@"
+root='.'
+if [ "${1:-}" = '--root' ]; then root=${2:-.}; fi
+cd "${root}"
+exported=$(mktemp)
+trap 'rm -f "${exported}"; rm -rf "${tmp_dir}"' EXIT HUP INT TERM
+nickel export --format json --field session_event_replay_policy config/session-event-replay-policy.ncl > "${exported}"
+diff -u config/generated/session-event-replay-policy.json "${exported}"
+cargo test -p animus-runtime --features session-event-replay session_event_replay --locked
+cargo clippy -p animus-runtime --features session-event-replay --all-targets -- -D warnings
+cargo check -p animus-runtime --no-default-features --features session-event-replay --locked
+cargo check -p animus-runtime --features session-event-replay --target wasm32-unknown-unknown --locked
+cargo check -p animus --features session-event-replay --locked
+printf '%s\n' 'focused rail session-event-replay: pass'

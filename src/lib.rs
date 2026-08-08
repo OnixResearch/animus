@@ -259,6 +259,10 @@ pub use animus_runtime::autonomous_gates;
 #[cfg(feature = "schedule-reliability")]
 pub use animus_runtime::schedule_reliability;
 
+/// Re-export of the non-default session event replay contract family.
+#[cfg(feature = "session-event-replay")]
+pub use animus_runtime::session_event_replay;
+
 /// Re-export of the no-std model-facing RLM kernel contract family.
 #[cfg(feature = "rlm-kernel")]
 pub use animus_adapter_rlm_kernel as rlm_kernel_contracts;

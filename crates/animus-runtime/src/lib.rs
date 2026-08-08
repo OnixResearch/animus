@@ -43,6 +43,11 @@ pub mod persistent_goals;
 #[path = "schedulereliability/mod.rs"]
 pub mod schedule_reliability;
 
+/// Pure bounded reconnect replay over admitted session facts.
+#[cfg(feature = "session-event-replay")]
+#[path = "sessioneventreplay.rs"]
+pub mod session_event_replay;
+
 /// Pure active-turn durability, transaction, recovery, and receipt contracts.
 pub mod active_turn_recovery;
 mod admission;
