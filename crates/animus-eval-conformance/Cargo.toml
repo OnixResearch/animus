@@ -1,0 +1,21 @@
+[package]
+name = "animus-eval-conformance"
+description = "Deterministic production-path conformance harness for native Animus evaluation."
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+animus-adapter-eval = { path = "../animus-adapter-eval", version = "0.1.0" }
+animus-adapters = { path = "../animus-adapters", version = "0.1.0", features = ["evaluation"] }
+animus-eval-core = { path = "../animus-eval-core", version = "0.1.0" }
+animus-runtime = { path = "../animus-runtime", version = "0.1.0", default-features = false, features = ["dataset-export", "harbor-eval"] }
+animus-std-eval = { path = "../animus-std-eval", version = "0.1.0" }
+blake3 = "1.8.5"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.150"

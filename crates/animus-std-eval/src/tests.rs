@@ -3,12 +3,11 @@ use super::*;
 use animus_adapter_eval::{
     AgentExecutionPort, AgentExecutionRequest, ArtifactCollectPort, ArtifactCollectRequest,
     ArtifactRestorePort, ArtifactRestoreRequest, CoalescingEvidence, EndpointClass,
-    ModelCallCapturePort,
-    ModelCallCaptureRequest, ModelCallProjectionDraft, ModelDialect, ModelErrorClass,
-    ModelFinishClass, ModelUsage, ObservationClass, ResultAppendPort, ResultAppendRequest,
-    ResultReopenPort, ResultReopenRequest, ResultReplacePort, ResultReplaceRequest,
-    ServiceAvailability, ServiceCapability, ServiceDescriptor, ServiceKind, ServiceObservation,
-    ServiceRequest, ServiceResourceBounds, TaskSourcePort, TaskSourceRequest,
+    ModelCallCapturePort, ModelCallCaptureRequest, ModelCallProjectionDraft, ModelDialect,
+    ModelErrorClass, ModelFinishClass, ModelUsage, ObservationClass, ResultAppendPort,
+    ResultAppendRequest, ResultReopenPort, ResultReopenRequest, ResultReplacePort,
+    ResultReplaceRequest, ServiceAvailability, ServiceCapability, ServiceDescriptor, ServiceKind,
+    ServiceObservation, ServiceRequest, ServiceResourceBounds, TaskSourcePort, TaskSourceRequest,
     TerminalStreamEvidence, TurnCommitEvidence, VerifierExecutionPort, VerifierExecutionRequest,
     binding_identity,
 };

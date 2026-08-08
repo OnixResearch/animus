@@ -71,6 +71,8 @@ The non-default [native evaluation adapter family](evaluation-adapter-family.md)
 
 The non-default [native evaluation host](native-evaluation-host.md) is a standard-library shell. It accepts only checked policy, exact plans, explicit service catalogs, separate gateway capabilities, logical storage targets, and allowlisted artifacts. Preflight rejects missing services, unsafe binds, shared capabilities, links, hidden tests, stale evidence, and excessive bounds before service effects. The shell does not prove confinement, durability, exactly-once effects, verifier soundness, benchmark validity, completion, production readiness, or release eligibility.
 
+The non-default [evaluation composition conformance](evaluation-composition-conformance.md) suite calls public production APIs with finite scripted fakes. It pairs every mechanism family with expected-negative coverage. It rejects private fixture data and unsupported claims. Fixture success does not prove live behavior, confinement, durability, verifier soundness, benchmark validity, completion, production readiness, or release eligibility.
+
 ## Security review boundary
 
 `animus-adapters` owns the reusable Goose-inspired security review DTOs and pure helpers. Review inputs keep only task labels, bounded context summaries, safe tool labels, active policy labels, and BLAKE3 evidence hashes; raw prompts, credentials, provider payloads, private paths, and unbounded tool arguments stay outside stored review state and receipts.

@@ -1,0 +1,77 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+readonly ROOT_FLAG=--root
+readonly DEFAULT_ROOT=.
+readonly CHECKER_SOURCE=scripts/cairn/check-evaluation-composition-conformance.rs
+readonly CHECKER_TARGET=target/cairn/check-evaluation-composition-conformance
+readonly RECEIPT=target/cairn/focused-rails/evaluation-composition-conformance.md
+readonly FORBIDDEN_DEPENDENCIES='(^|[-_])(tokio|reqwest|hyper|python|verifiers|docker|kubernetes|boto|cloud)([-_]|$)'
+readonly SOURCE_COHORT_MATERIAL='animus.native-evaluation-host.source.v1:PrimeIntellect-ai/verifiers:1a997814e85a2e4f409add960aa852737388dbd8:verifiers/v1/cli/eval/runner.py,verifiers/v1/cli/eval/resume.py,verifiers/v1/episode.py,verifiers/v1/interception/base.py,verifiers/v1/interception/pool.py,verifiers/v1/interception/server.py,verifiers/v1/rollout.py,verifiers/v1/runtimes/limiters.py,verifiers/v1/state.py,verifiers/v1/utils/artifacts.py'
+readonly SOURCE_COHORT_HASH='c6336b188596db9b18cb2f0a721c9f5bc551e619342e89807e20ec45f3bb676f'
+
+root=${DEFAULT_ROOT}
+if [ "${1:-}" = "${ROOT_FLAG}" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  root=$2
+fi
+cd "${root}"
+
+if ! command -v b3sum >/dev/null 2>&1; then
+  printf '%s\n' 'error: b3sum is required for the source-cohort identity check' >&2
+  exit "${FAILURE}"
+fi
+computed_source_hash=$(printf '%s' "${SOURCE_COHORT_MATERIAL}" | b3sum | awk '{print $1}')
+if [ "${computed_source_hash}" != "${SOURCE_COHORT_HASH}" ]; then
+  printf '%s\n' 'error: evaluation conformance source-cohort identity drifted' >&2
+  exit "${FAILURE}"
+fi
+
+mkdir -p "$(dirname "${CHECKER_TARGET}")" "$(dirname "${RECEIPT}")"
+rustc --edition=2021 --test "${CHECKER_SOURCE}" -o "${CHECKER_TARGET}-tests"
+"${CHECKER_TARGET}-tests"
+rustc --edition=2021 "${CHECKER_SOURCE}" -o "${CHECKER_TARGET}"
+"${CHECKER_TARGET}" .
+
+if [ "${ANIMUS_EVAL_CONFORMANCE_SKIP_NICKEL:-0}" != "1" ]; then
+  scripts/config/check-nickel-configs
+fi
+nickel export --format json fixtures/evaluation-composition-conformance/positive.ncl >/dev/null
+nickel export --format json fixtures/evaluation-composition-conformance/negative.ncl >/dev/null
+cargo test -p animus-eval-conformance --locked
+cargo clippy -p animus-eval-conformance --all-targets -- -D warnings
+
+if cargo tree -p animus-eval-conformance --edges normal | grep -Eiq "${FORBIDDEN_DEPENDENCIES}"; then
+  printf '%s\n' 'error: live or upstream runtime dependency leaked into evaluation conformance' >&2
+  exit "${FAILURE}"
+fi
+if cargo tree -p animus --edges normal | grep -Fq 'animus-eval-conformance'; then
+  printf '%s\n' 'error: evaluation conformance leaked into the default root facade' >&2
+  exit "${FAILURE}"
+fi
+
+bash scripts/cairn/check-component-catalog
+bash scripts/cairn/check-runtime-facade-inventory
+bash scripts/cairn/check-evidence-safety --root .
+
+if [ "${ANIMUS_EVAL_CONFORMANCE_SKIP_CONNECTED:-0}" != "1" ]; then
+  scripts/cairn/check-native-evaluation-core --root .
+  scripts/cairn/check-evaluation-adapter-family --root .
+  scripts/cairn/check-std-evaluation-host --root .
+  scripts/cairn/check-harbor-evaluation --root .
+  scripts/cairn/check-composition-conformance --root .
+fi
+
+cargo run -q -p animus-eval-conformance --example summary --locked > "${RECEIPT}"
+cat >> "${RECEIPT}" <<'EOF'
+non_claims:
+- no live host, provider, tool, process, socket, container, cloud, network, credential, scheduler, persistence, benchmark, Verifiers, or Python runtime was exercised
+- no sandbox, durability, exactly-once, verifier-soundness, model-quality, benchmark, training, completion, production, or release claim is established
+EOF
+
+printf '%s\n' 'focused rail evaluation-composition-conformance: pass'
+printf 'receipt: %s\n' "${RECEIPT}"

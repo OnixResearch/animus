@@ -108,6 +108,7 @@ dependencies = [
  "animus-adapter-weave",
  "animus-adapters",
  "animus-core",
+ "animus-eval-conformance",
  "animus-eval-core",
  "animus-preserves",
  "animus-router",
@@ -208,6 +209,20 @@ dependencies = [
 [[package]]
 name = "animus-core"
 version = "0.1.0"
+
+[[package]]
+name = "animus-eval-conformance"
+version = "0.1.0"
+dependencies = [
+ "animus-adapter-eval",
+ "animus-adapters",
+ "animus-eval-core",
+ "animus-runtime",
+ "animus-std-eval",
+ "blake3",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "animus-eval-core"

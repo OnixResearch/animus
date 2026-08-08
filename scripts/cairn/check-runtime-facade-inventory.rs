@@ -132,6 +132,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "native-evaluation",
     "evaluation-adapters",
     "evaluation-host",
+    "evaluation-conformance",
     "native-evaluation-profile",
 ];
 

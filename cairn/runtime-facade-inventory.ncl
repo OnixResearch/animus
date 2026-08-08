@@ -86,6 +86,7 @@ let execution_backend_family = "execution-backend" in
 let native_evaluation_feature = "native-evaluation" in
 let evaluation_adapters_feature = "evaluation-adapters" in
 let evaluation_host_feature = "evaluation-host" in
+let evaluation_conformance_feature = "evaluation-conformance" in
 let native_evaluation_profile_feature = "native-evaluation-profile" in
 let native_evaluation_family = "evaluation" in
 let agent_guardrail_feature = "agent-guardrail" in
@@ -297,6 +298,21 @@ let evaluation_host_record = fun export_path_value owning_crate_value source_val
   required_authority = shell_owned,
   depends_on = ["animus::native_evaluation", "animus::evaluation_adapters"],
   composes_with = ["animus-runtime::active_turn_recovery", "animus-runtime::durable_session_store"],
+  capability_family = native_evaluation_family,
+}
+in
+let evaluation_conformance_record = fun export_path_value owning_crate_value source_value review_note_value => {
+  export_path = export_path_value,
+  owning_crate = owning_crate_value,
+  source = source_value,
+  class = injection,
+  side_effect = injected,
+  stability = optional_stability,
+  review_note = review_note_value,
+  feature_gate = evaluation_conformance_feature,
+  required_authority = injected,
+  depends_on = ["animus::native_evaluation", "animus::evaluation_adapters", "animus::evaluation_host"],
+  composes_with = ["animus-runtime::harbor_eval", "animus-runtime::DatasetExportPolicy"],
   capability_family = native_evaluation_family,
 }
 in
@@ -2394,6 +2410,7 @@ let entry_values = [
   evaluation_adapters_record "animus-adapters::evaluation" "animus-adapters" adapters "non-default compatibility re-export of native evaluation adapter contracts",
   evaluation_adapters_record "animus::evaluation_adapters" "animus" root "non-default root re-export of native evaluation adapter contracts",
   evaluation_host_record "animus::evaluation_host" "animus" root "non-default explicit standard-library native evaluation host; callers supply all service authority",
+  evaluation_conformance_record "animus::evaluation_conformance" "animus" root "non-default deterministic conformance suite over public evaluation production paths",
   native_evaluation_profile_record "animus-std::NativeEvaluationProfileError" "animus-std" std_shell "bounded generated policy parse failure class",
   native_evaluation_profile_record "animus-std::parse_native_evaluation_policy_json" "animus-std" std_shell "strict caller-loaded generated policy parser",
   native_evaluation_profile_record "animus::NativeEvaluationProfileError" "animus" root "root re-export of the bounded generated policy parse failure class",

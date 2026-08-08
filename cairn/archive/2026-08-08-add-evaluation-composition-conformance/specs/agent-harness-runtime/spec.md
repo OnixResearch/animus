@@ -118,7 +118,7 @@ r[agent_harness_runtime.native_evaluation_conformance.evidence.overclaim]
 
 ### Requirement: Evaluation composition conformance is a focused deterministic rail
 
-r[agent_harness_runtime.native_evaluation_conformance.verification] Native evaluation conformance MUST provide a focused script and Nix check that run profile freshness, public-entrypoint guards, every positive and negative family, dependency isolation, component and facade coverage, safe evidence validation, Cairn validation, and lifecycle gates without live providers, tools, processes, sockets, containers, clouds, credentials, networks, schedulers, persistence backends, benchmarks, Verifiers, or Python runtimes.
+r[agent_harness_runtime.native_evaluation_conformance.verification] Native evaluation conformance MUST provide a focused script and Nix check that run profile freshness, public-entrypoint guards, every positive and negative family, dependency isolation, component and facade coverage, and safe evidence validation without live providers, tools, processes, sockets, containers, clouds, credentials, networks, schedulers, persistence backends, benchmarks, Verifiers, or Python runtimes. Complete closeout MUST also run Cairn validation and lifecycle gates.
 
 #### Scenario: Conformance change is ready to archive
 

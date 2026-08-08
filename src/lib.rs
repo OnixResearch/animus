@@ -110,6 +110,10 @@ pub use animus_adapter_eval as evaluation_adapters;
 #[cfg(feature = "evaluation-host")]
 pub use animus_std_eval as evaluation_host;
 
+/// Non-default deterministic native evaluation conformance suite.
+#[cfg(feature = "evaluation-conformance")]
+pub use animus_eval_conformance as evaluation_conformance;
+
 /// Strict host-side parser for checked generated native evaluation policy.
 #[cfg(feature = "native-evaluation-profile")]
 pub use animus_std::{NativeEvaluationProfileError, parse_native_evaluation_policy_json};

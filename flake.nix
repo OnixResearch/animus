@@ -285,6 +285,7 @@
                 || baseName == "check-evaluation-adapter-family.rs"
                 || baseName == "check-std-evaluation-host"
                 || baseName == "check-std-evaluation-host.rs"
+                || baseName == "check-evaluation-composition-conformance"
                 || baseName == "check-evidence-safety"
                 || baseName == "check-model-runtime-profiles"
                 || baseName == "check-agent-role-profiles"
@@ -530,6 +531,14 @@
             ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
             export ANIMUS_STD_EVAL_SKIP_NICKEL=1
             sh scripts/cairn/check-std-evaluation-host --root .
+          '';
+
+          evaluation-composition-conformance = cargoCheck "animus-evaluation-composition-conformance" [ pkgs.b3sum pkgs.clippy pkgs.nickel ] ''
+            ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
+            export ANIMUS_EVAL_CONFORMANCE_SKIP_NICKEL=1
+            export ANIMUS_EVAL_CONFORMANCE_SKIP_CONNECTED=1
+            sh scripts/cairn/check-evaluation-composition-conformance --root .
+            cargo check -p animus --no-default-features --features evaluation-conformance --locked
           '';
 
           host-control-extraction = cargoCheck "animus-host-control-extraction" [ ] ''
