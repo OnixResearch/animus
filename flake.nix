@@ -283,6 +283,9 @@
                 || baseName == "check-native-evaluation-core.rs"
                 || baseName == "check-evaluation-adapter-family"
                 || baseName == "check-evaluation-adapter-family.rs"
+                || baseName == "check-std-evaluation-host"
+                || baseName == "check-std-evaluation-host.rs"
+                || baseName == "check-evidence-safety"
                 || baseName == "check-model-runtime-profiles"
                 || baseName == "check-agent-role-profiles"
                 || baseName == "check-aeneas-proof-campaign"
@@ -521,6 +524,12 @@
 
           evaluation-adapter-family = cargoCheck "animus-evaluation-adapter-family" [ pkgs.b3sum pkgs.clippy pkgs.nickel ] ''
             sh scripts/cairn/check-evaluation-adapter-family --root .
+          '';
+
+          std-evaluation-host = cargoCheck "animus-std-evaluation-host" [ pkgs.b3sum pkgs.clippy pkgs.nickel ] ''
+            ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
+            export ANIMUS_STD_EVAL_SKIP_NICKEL=1
+            sh scripts/cairn/check-std-evaluation-host --root .
           '';
 
           host-control-extraction = cargoCheck "animus-host-control-extraction" [ ] ''

@@ -1,0 +1,17 @@
+[package]
+name = "animus-std-eval"
+description = "Explicit standard-library host orchestration for native Animus evaluation."
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+animus-adapter-eval = { path = "../animus-adapter-eval", version = "0.1.0" }
+animus-eval-core = { path = "../animus-eval-core", version = "0.1.0" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"

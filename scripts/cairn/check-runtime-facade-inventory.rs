@@ -131,6 +131,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "execution-backend-planner",
     "native-evaluation",
     "evaluation-adapters",
+    "evaluation-host",
     "native-evaluation-profile",
 ];
 

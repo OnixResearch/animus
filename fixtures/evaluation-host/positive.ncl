@@ -1,0 +1,31 @@
+# Safe synthetic standard evaluation host scenarios.
+{
+  scenarios = [
+    "all-built-in-recipes",
+    "separate-episode-and-agent-permits",
+    "durable-accepted-turn-before-model",
+    "terminal-after-turn-commit",
+    "exact-non-streaming-retry",
+    "isolated-verifier-artifact-handoff",
+    "append-atomic-replace-reopen-resume",
+    "cancellation-and-cleanup",
+    "public-entrypoint-fake-services",
+    "metadata-only-host-receipt",
+  ],
+  services = [
+    "task",
+    "agent",
+    "model",
+    "tool",
+    "verifier",
+    "artifact-collect",
+    "artifact-restore",
+    "timer",
+    "cancellation",
+    "cleanup",
+    "result-append",
+    "result-replace",
+    "result-reopen",
+  ],
+  live_services = false,
+}

@@ -19,6 +19,7 @@ members = [
   "crates/animus-std",
   "crates/animus-std-agent-guardrail",
   "crates/animus-std-control",
+  "crates/animus-std-eval",
   "crates/animus-std-lean-loop",
   "crates/animus-std-observability",
   "crates/animus-steel",
@@ -106,6 +107,7 @@ agent-guardrail = ["dep:animus-std-agent-guardrail"]
 lean-loop = ["runtime", "dep:animus-std-lean-loop"]
 native-evaluation = ["dep:animus-eval-core"]
 evaluation-adapters = ["native-evaluation", "dep:animus-adapter-eval", "animus-adapters/evaluation"]
+evaluation-host = ["std", "evaluation-adapters", "dep:animus-std-eval"]
 native-evaluation-profile = ["std", "native-evaluation", "animus-std/native-evaluation-profile"]
 harbor-eval = ["std", "evaluation-adapters", "animus-runtime/harbor-eval", "animus-std/harbor-eval"]
 mesh-provider = ["std", "animus-std/mesh-provider"]
@@ -157,6 +159,7 @@ animus-runtime = { path = "crates/animus-runtime", version = "0.1.0", optional =
 animus-std = { path = "crates/animus-std", version = "0.1.0", optional = true }
 animus-std-agent-guardrail = { path = "crates/animus-std-agent-guardrail", version = "0.1.0", optional = true }
 animus-std-control = { path = "crates/animus-std-control", version = "0.1.0", optional = true }
+animus-std-eval = { path = "crates/animus-std-eval", version = "0.1.0", optional = true }
 animus-std-lean-loop = { path = "crates/animus-std-lean-loop", version = "0.1.0", optional = true }
 animus-steel = { path = "crates/animus-steel", version = "0.1.0", optional = true }
 animus-tui = { path = "crates/animus-tui", version = "0.1.0", optional = true }

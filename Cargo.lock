@@ -115,6 +115,7 @@ dependencies = [
  "animus-std",
  "animus-std-agent-guardrail",
  "animus-std-control",
+ "animus-std-eval",
  "animus-std-lean-loop",
  "animus-steel",
  "animus-tui",
@@ -303,6 +304,16 @@ version = "0.1.0"
 dependencies = [
  "animus-adapters",
  "animus-runtime",
+]
+
+[[package]]
+name = "animus-std-eval"
+version = "0.1.0"
+dependencies = [
+ "animus-adapter-eval",
+ "animus-eval-core",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

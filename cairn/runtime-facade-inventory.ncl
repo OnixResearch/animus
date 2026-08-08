@@ -85,6 +85,7 @@ let execution_backend_feature = "execution-backend-planner" in
 let execution_backend_family = "execution-backend" in
 let native_evaluation_feature = "native-evaluation" in
 let evaluation_adapters_feature = "evaluation-adapters" in
+let evaluation_host_feature = "evaluation-host" in
 let native_evaluation_profile_feature = "native-evaluation-profile" in
 let native_evaluation_family = "evaluation" in
 let agent_guardrail_feature = "agent-guardrail" in
@@ -281,6 +282,21 @@ let evaluation_adapters_record = fun export_path_value owning_crate_value source
   required_authority = none,
   depends_on = ["animus::native_evaluation"],
   composes_with = ["animus-adapters::harbor", "animus-runtime::harbor_eval", "animus-runtime::agent_roles"],
+  capability_family = native_evaluation_family,
+}
+in
+let evaluation_host_record = fun export_path_value owning_crate_value source_value review_note_value => {
+  export_path = export_path_value,
+  owning_crate = owning_crate_value,
+  source = source_value,
+  class = shell,
+  side_effect = shell_owned,
+  stability = optional_stability,
+  review_note = review_note_value,
+  feature_gate = evaluation_host_feature,
+  required_authority = shell_owned,
+  depends_on = ["animus::native_evaluation", "animus::evaluation_adapters"],
+  composes_with = ["animus-runtime::active_turn_recovery", "animus-runtime::durable_session_store"],
   capability_family = native_evaluation_family,
 }
 in
@@ -2377,6 +2393,7 @@ let entry_values = [
   native_evaluation_record "animus::native_evaluation" "animus" root "optional root re-export of the authority-free evaluation core",
   evaluation_adapters_record "animus-adapters::evaluation" "animus-adapters" adapters "non-default compatibility re-export of native evaluation adapter contracts",
   evaluation_adapters_record "animus::evaluation_adapters" "animus" root "non-default root re-export of native evaluation adapter contracts",
+  evaluation_host_record "animus::evaluation_host" "animus" root "non-default explicit standard-library native evaluation host; callers supply all service authority",
   native_evaluation_profile_record "animus-std::NativeEvaluationProfileError" "animus-std" std_shell "bounded generated policy parse failure class",
   native_evaluation_profile_record "animus-std::parse_native_evaluation_policy_json" "animus-std" std_shell "strict caller-loaded generated policy parser",
   native_evaluation_profile_record "animus::NativeEvaluationProfileError" "animus" root "root re-export of the bounded generated policy parse failure class",

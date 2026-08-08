@@ -39,6 +39,7 @@ provider_video_payload_policy_source_file=${repo_root}/config/provider-video-pay
 terminal_image_policy_source_file=${repo_root}/config/terminal-image-policy.ncl
 terminal_video_policy_source_file=${repo_root}/config/terminal-video-policy.ncl
 native_evaluation_policy_source_file=${repo_root}/config/native-evaluation-policy.ncl
+evaluation_host_policy_source_file=${repo_root}/config/evaluation-host-policy.ncl
 
 if ! command -v nickel >/dev/null 2>&1; then
   printf '%s\n' 'error: nickel is required to export repo config. Run inside `nix develop`.' >&2
@@ -85,3 +86,4 @@ nickel export --format json --field provider_video_payload_policy "${provider_vi
 nickel export --format json --field terminal_image_policy "${terminal_image_policy_source_file}" > "${target_root}/config/generated/terminal-image-policy.json"
 nickel export --format json --field terminal_video_policy "${terminal_video_policy_source_file}" > "${target_root}/config/generated/terminal-video-policy.json"
 nickel export --format json --field native_evaluation_policy "${native_evaluation_policy_source_file}" > "${target_root}/config/generated/native-evaluation-policy.json"
+nickel export --format json --field evaluation_host_policy "${evaluation_host_policy_source_file}" > "${target_root}/config/generated/evaluation-host-policy.json"

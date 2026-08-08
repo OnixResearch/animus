@@ -69,6 +69,8 @@ The non-default [native evaluation core](native-evaluation-core.md) is `#![no_st
 
 The non-default [native evaluation adapter family](evaluation-adapter-family.md) is also `#![no_std]` plus `alloc`. It splits each effect into a separate injected port. Catalog admission enforces one capability ceiling per port. Full binding identities prevent cross-plan, cross-task, cross-attempt, cross-policy, cross-artifact, and cross-implementation reuse. Terminal stream evidence cannot pass before exact commit evidence. Equal content cannot authorize retry coalescing. The family performs no transport, execution, discovery, cancellation, clock, artifact, or storage effect.
 
+The non-default [native evaluation host](native-evaluation-host.md) is a standard-library shell. It accepts only checked policy, exact plans, explicit service catalogs, separate gateway capabilities, logical storage targets, and allowlisted artifacts. Preflight rejects missing services, unsafe binds, shared capabilities, links, hidden tests, stale evidence, and excessive bounds before service effects. The shell does not prove confinement, durability, exactly-once effects, verifier soundness, benchmark validity, completion, production readiness, or release eligibility.
+
 ## Security review boundary
 
 `animus-adapters` owns the reusable Goose-inspired security review DTOs and pure helpers. Review inputs keep only task labels, bounded context summaries, safe tool labels, active policy labels, and BLAKE3 evidence hashes; raw prompts, credentials, provider payloads, private paths, and unbounded tool arguments stay outside stored review state and receipts.
