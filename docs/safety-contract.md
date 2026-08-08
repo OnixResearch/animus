@@ -79,6 +79,10 @@ Deterministic scanner findings and optional classifier/adversary-review outcomes
 
 `animus-adapters` owns typed video descriptors, ordered mixed-media assembly, exact video capability decisions, provider-projection loss checks, safe handle DTOs, and metadata-only receipts. Video is separate from image capability. Required video fails closed when its model class, media limits, injected service, or exact provider projection is absent. Reusable code does not resolve paths or URLs, inspect containers, decode frames, transcode media, upload files, refresh credentials, or call providers. Receipt checks reject bytes, base64, data and remote URLs, private paths, credentials, upload material, provider bodies, frame bodies, audio bodies, and unbounded metadata.
 
+## Terminal image boundary
+
+The non-default `animus-tui/terminal-image` feature owns pure operation-level planning and a thin injected shell. The planner receives safe metadata, exact protocol rows, geometry, lifecycle state, and named limits. It has no byte, environment, file, terminal, process, network, clock, credential, or persistence authority. The shell rechecks resolved bytes against the admitted BLAKE3 identity and calls the pinned upstream `rat-image` preparation and writer seam. Query, placement, replacement, deletion, and cleanup remain host-injected operations. Missing rows fail or use visible bounded text under policy. Partial writes and failed cleanup cannot produce success. Receipts reject raw or encoded bytes, escape payloads, paths, environment values, terminal responses, provider payloads, and credentials. See [terminal image protocols](terminal-image-protocols.md).
+
 ## Redacted session export boundary
 
 `animus-runtime::session_tree_export` may project and render only already-loaded validated safe metadata. It must not open journals, infer provider formats, accept raw transcript/tool/reasoning/provider/credential/environment/path/error bodies, or perform destination I/O. `animus-std` owns explicit capability-scoped writes; success requires private mode, bounded bytes, exact artifact identity, commit, and synchronization evidence. Export receipts remain metadata-only and do not prove session correctness, omitted-content completeness, storage durability, release eligibility, or training-dataset suitability. See [redacted session-tree export](redacted-session-tree-export.md).
@@ -150,6 +154,7 @@ cargo test -p animus-core
 cargo test -p animus-adapters
 cargo test -p animus-adapters multimodal
 scripts/cairn/check-provider-video-payloads --root .
+scripts/cairn/check-terminal-image-protocols --root .
 cargo test -p animus-preserves
 cargo test -p animus-steel
 cargo test -p animus-runtime

@@ -119,6 +119,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "schedule-reliability",
     "session-event-replay",
     "execution-backend-planner",
+    "terminal-image",
 ];
 
 const ALLOWED_AUTHORITIES: &[&str] = &[

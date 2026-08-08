@@ -22,6 +22,8 @@
 pub mod branch_explorer;
 mod bridge;
 mod frontend;
+#[cfg(feature = "terminal-image")]
+mod pixel;
 mod runner;
 mod view;
 
@@ -33,6 +35,17 @@ pub use bridge::{
     ToolHostEvent, ToolHostFailure, ToolHostFailureClass, ToolProgress, ToolRunId,
 };
 pub use frontend::CodingSessionRenderModel;
+#[cfg(feature = "terminal-image")]
+pub use pixel::{
+    RATS_IMAGE_COHORT_REVISION, TerminalImageByteResolver, TerminalImageCapabilities,
+    TerminalImageCapabilityState, TerminalImageDigest, TerminalImageError, TerminalImageExecution,
+    TerminalImageFormat, TerminalImageGeometry, TerminalImageHandle, TerminalImageIntent,
+    TerminalImageLifecycleService, TerminalImageMetadata, TerminalImageOperation,
+    TerminalImageOperationStatus, TerminalImagePlan, TerminalImagePlanInput, TerminalImagePolicy,
+    TerminalImageProtocol, TerminalImageReceipt, execute_terminal_image_plan,
+    parse_kitty_capability_response, plan_terminal_image, project_terminal_image_receipt,
+    validate_terminal_image_evidence,
+};
 /// Re-export of the Subwayrat terminal keymap package used by the optional TUI host.
 #[cfg(feature = "rats-widgets")]
 pub use rat_keymap;

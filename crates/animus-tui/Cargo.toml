@@ -13,10 +13,13 @@ workspace = true
 [features]
 default = []
 rats-widgets = ["dep:rats", "dep:rat-keymap"]
+terminal-image = ["dep:blake3", "dep:rat-image"]
 
 [dependencies]
 animus-adapters = { path = "../animus-adapters", version = "0.1.0" }
 animus-runtime = { path = "../animus-runtime", version = "0.1.0" }
 animus-std = { path = "../animus-std", version = "0.1.0" }
-rat-keymap = { package = "rat-keymap", git = "ssh://git@github.com/brittonr/rats.git", rev = "e9cb7865fe400de6220aea8bfc08ddf4f75da3d3", optional = true }
-rats = { package = "rat-widgets", git = "ssh://git@github.com/brittonr/rats.git", rev = "e9cb7865fe400de6220aea8bfc08ddf4f75da3d3", default-features = false, optional = true }
+blake3 = { version = "1.8.2", optional = true }
+rat-image = { package = "rat-image", git = "ssh://git@github.com/brittonr/rats.git", rev = "3b498c3d7c248c335d3e7faf12f133a18c87d632", optional = true }
+rat-keymap = { package = "rat-keymap", git = "ssh://git@github.com/brittonr/rats.git", rev = "3b498c3d7c248c335d3e7faf12f133a18c87d632", optional = true }
+rats = { package = "rat-widgets", git = "ssh://git@github.com/brittonr/rats.git", rev = "3b498c3d7c248c335d3e7faf12f133a18c87d632", default-features = false, optional = true }

@@ -539,16 +539,16 @@
     "rats": {
       "flake": false,
       "locked": {
-        "lastModified": 1782446120,
-        "narHash": "sha256-Ct58ZfWnIe7KJ6q/a+gUMVCa4ylTuSv7ZnjI1IYHzgY=",
+        "lastModified": 1786207262,
+        "narHash": "sha256-3nCOLagBdC3JtzKLUZj5oGrn17u8pnu5o1Da1yCZ7sw=",
         "ref": "refs/heads/main",
-        "rev": "e9cb7865fe400de6220aea8bfc08ddf4f75da3d3",
-        "revCount": 92,
+        "rev": "3b498c3d7c248c335d3e7faf12f133a18c87d632",
+        "revCount": 224,
         "type": "git",
         "url": "ssh://git@github.com/brittonr/rats.git"
       },
       "original": {
-        "rev": "e9cb7865fe400de6220aea8bfc08ddf4f75da3d3",
+        "rev": "3b498c3d7c248c335d3e7faf12f133a18c87d632",
         "type": "git",
         "url": "ssh://git@github.com/brittonr/rats.git"
       }

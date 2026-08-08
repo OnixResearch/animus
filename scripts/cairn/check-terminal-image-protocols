@@ -1,0 +1,34 @@
+#!/usr/bin/env sh
+set -eu
+readonly FAILURE=1
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+command -v rustc >/dev/null 2>&1 || { printf '%s\n' 'error: rustc is required' >&2; exit "${FAILURE}"; }
+command -v nickel >/dev/null 2>&1 || { printf '%s\n' 'error: nickel is required' >&2; exit "${FAILURE}"; }
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/animus-terminal-image.XXXXXX")
+trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
+rustc --edition=2021 "${script_dir}/check-terminal-image-protocols.rs" -o "${tmp_dir}/check"
+rustc --edition=2021 --test "${script_dir}/check-terminal-image-protocols.rs" -o "${tmp_dir}/check-tests"
+"${tmp_dir}/check-tests"
+"${tmp_dir}/check" "$@"
+root='.'
+if [ "${1:-}" = '--root' ]; then root=${2:-.}; fi
+cd "${root}"
+exported="${tmp_dir}/terminal-image-policy.json"
+nickel export --format json --field terminal_image_policy config/terminal-image-policy.ncl > "${exported}"
+diff -u config/generated/terminal-image-policy.json "${exported}"
+nickel typecheck fixtures/terminal-image/positive.ncl
+nickel typecheck fixtures/terminal-image/negative.ncl
+cargo test -p animus-tui --features terminal-image --locked
+cargo clippy -p animus-tui --all-targets --features terminal-image --locked -- -D warnings
+cargo check -p animus-tui --no-default-features --locked
+cargo check -p animus --features terminal-image --locked
+cargo check -p animus --no-default-features --locked
+cargo check -p animus --no-default-features --target wasm32-unknown-unknown --locked
+cargo tree -p animus-tui --no-default-features --locked > "${tmp_dir}/default-tree.txt"
+if grep -q 'rat-image' "${tmp_dir}/default-tree.txt"; then
+  printf '%s\n' 'error: rat-image leaked into default animus-tui dependency tree' >&2
+  exit "${FAILURE}"
+fi
+cargo tree -p animus-tui --features terminal-image --locked > "${tmp_dir}/terminal-image-tree.txt"
+grep -q 'rat-image' "${tmp_dir}/terminal-image-tree.txt"
+printf '%s\n' 'focused rail terminal-image-protocols: pass'

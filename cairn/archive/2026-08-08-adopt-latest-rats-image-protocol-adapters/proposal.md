@@ -1,6 +1,6 @@
 ## Why
 
-Animus pins Rats revision `e9cb7865fe400de6220aea8bfc08ddf4f75da3d3`, which predates the upstream `rat-image` crate. The current TUI stores bounded image metadata and renders a text description, but it cannot transmit, place, or remove images through terminal graphics protocols. The latest observed upstream default-branch revision is `0244e5d36feb65a472d3b76765c546c8c318c250`, and it contains `rat-image` support for Kitty, iTerm2, and Sixel. Direct adoption is not sufficient because Animus also needs explicit capability observations, named bounds, typed failures, deterministic planning, safe cleanup, and metadata-only evidence.
+Animus pins Rats revision `e9cb7865fe400de6220aea8bfc08ddf4f75da3d3`, which predates the upstream `rat-image` crate. The current TUI stores bounded image metadata and renders a text description, but it cannot transmit, place, or remove images through terminal graphics protocols. The implementation baseline observed upstream default-branch revision `3b498c3d7c248c335d3e7faf12f133a18c87d632`, which contains a bounded `rat-image` preparation and injected-writer seam for Kitty, iTerm2, and Sixel. Direct adoption is not sufficient because Animus also needs explicit capability observations, named bounds, typed failures, deterministic planning, safe cleanup, and metadata-only evidence.
 
 ## What Changes
 

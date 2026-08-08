@@ -14,7 +14,7 @@
       flake = false;
     };
     rats = {
-      url = "git+ssh://git@github.com/brittonr/rats.git?rev=e9cb7865fe400de6220aea8bfc08ddf4f75da3d3";
+      url = "git+ssh://git@github.com/brittonr/rats.git?rev=3b498c3d7c248c335d3e7faf12f133a18c87d632";
       flake = false;
     };
     basalt = {
@@ -132,6 +132,7 @@
               diff -u ${./config/generated/session-event-replay-policy.json} "$tmp_dir/config/generated/session-event-replay-policy.json"
               diff -u ${./config/generated/execution-backend-selection-policy.json} "$tmp_dir/config/generated/execution-backend-selection-policy.json"
               diff -u ${./config/generated/provider-video-payload-policy.json} "$tmp_dir/config/generated/provider-video-payload-policy.json"
+              diff -u ${./config/generated/terminal-image-policy.json} "$tmp_dir/config/generated/terminal-image-policy.json"
 
               nickel typecheck ${./config/nickel-export-requests.ncl}
               NICKEL_EXPORT_BIN=${nickel-export.packages.${system}.default}/bin/nickel-export \
@@ -272,6 +273,8 @@
                 || baseName == "check-execution-backend-selection.rs"
                 || baseName == "check-provider-video-payloads"
                 || baseName == "check-provider-video-payloads.rs"
+                || baseName == "check-terminal-image-protocols"
+                || baseName == "check-terminal-image-protocols.rs"
                 || baseName == "check-model-runtime-profiles"
                 || baseName == "check-agent-role-profiles"
                 || baseName == "check-aeneas-proof-campaign"
@@ -602,6 +605,14 @@
             pkgs.clippy
           ] ''
             sh scripts/cairn/check-provider-video-payloads --root .
+          '';
+
+          terminal-image-protocols = cargoCheck "animus-terminal-image-protocols" [
+            pkgs.nickel
+            pkgs.diffutils
+            pkgs.clippy
+          ] ''
+            sh scripts/cairn/check-terminal-image-protocols --root .
           '';
 
           model-runtime-profiles = cargoCheck "animus-model-runtime-profiles" [

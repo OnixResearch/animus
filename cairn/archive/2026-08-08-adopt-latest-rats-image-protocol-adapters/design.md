@@ -8,7 +8,7 @@ A bounded architecture review considered three mechanisms: copy protocol code in
 
 ### Decision: resolve latest upstream, then pin an immutable cohort
 
-**Choice:** At implementation baseline time, fetch the canonical Rats remote default branch, record the observed head, review changes from the current pin, and pin the selected commit in every Cargo and Nix reference. The planning observation is `0244e5d36feb65a472d3b76765c546c8c318c250`. If upstream advances before implementation, the selected newer head replaces this observation after review.
+**Choice:** At implementation baseline time, fetch the canonical Rats remote default branch, record the observed head, review changes from the current pin, and pin the selected commit in every Cargo and Nix reference. The implementation observation is `3b498c3d7c248c335d3e7faf12f133a18c87d632`; it replaced the earlier planning observation after review.
 
 **Rationale:** “Latest” is a selection policy, not a reproducible dependency identity. The receipt needs the exact selected commit and matching generated lock state.
 
