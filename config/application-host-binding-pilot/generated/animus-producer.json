@@ -82,6 +82,8 @@
       "not provider correctness",
       "not tool safety",
       "not runtime success",
+      "not runtime correctness",
+      "not resource enforcement",
       "not release eligibility"
     ],
     "output_schema_identity": {
@@ -109,9 +111,9 @@
     "producer fixture does not prove runtime success or release eligibility"
   ],
   "producer": "animus",
-  "producer_revision": "58cab252797865df5ccb3c7364f0ad994d4c8ea7",
+  "producer_revision": "c09991fa299f1f74b04d066bf31382e34108fa82",
   "schema": "animus.application-host-binding-producer.v1",
-  "source_identity": "69fb71f312cc479e34aa91f00f01d16a12caf5253bff0cf003076f94d0a52339",
+  "source_identity": "1290a95e48b531cc15386490844178a6ed49f25d6c1355e9a29dfea972bfcc62",
   "source_identity_algorithm": "blake3-of-ordered-b3sum-lines-v1",
   "source_manifest": [
     {
@@ -127,11 +129,11 @@
       "path": "crates/animus-runtime/src/applicationbinding/mod.rs"
     },
     {
-      "blake3": "4c1ff8299c9edfb590dd85e0a40a302e94cc7aa32e665d16ed5f409bffb5c800",
+      "blake3": "339baed1d5854d3840c3b26415a02a1cca33e46833a1fb4a3115d9629611172e",
       "path": "config/application-host-binding-pilot/profile.ncl"
     },
     {
-      "blake3": "4c39a2af47aac16e2dcc5eaf4a99c340602d0e8b8db128b15d010dbdbe00c083",
+      "blake3": "52ca72193a1f2e9668e0ceae3c85c16b34817dcab3d0b90532115e78d52d8e35",
       "path": "config/application-host-binding-pilot/generated/animus-binding.json"
     }
   ]
