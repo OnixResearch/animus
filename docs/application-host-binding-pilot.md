@@ -37,6 +37,8 @@ Animus freezes fixtures before it adds a direct Kamacite crate dependency. Schem
 
 The projection contains identities and closed effect classes. It does not copy prompts, policy bodies, tool payloads, credentials, endpoints, environment values, or host paths.
 
+The Kamacite producer envelope is `config/application-host-binding-pilot/generated/animus-producer.json`. It binds implementation revision `58cab252797865df5ccb3c7364f0ad994d4c8ea7`, source-manifest identity `69fb71f312cc479e34aa91f00f01d16a12caf5253bff0cf003076f94d0a52339`, and envelope BLAKE3 `f2e16b86830265f9e64538230e6d20e3614039f72875a191fd715b45dc23981f`.
+
 ## Effect and host rules
 
 The pilot declares two symbolic operations:

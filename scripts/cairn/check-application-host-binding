@@ -26,8 +26,11 @@ KAMACITE_CORE_BLAKE3="4912fa0d0b81c5ac526d6fd762f4fe83d6d7dbba21cb661f3724bb499a
 APPLICATION_BLAKE3="5fd77e6bf7e3a618faf48a8a16c398126797a5245011f0d06dd40f45513b9cb1"
 ENTRYPOINT_BLAKE3="bb661c376f2a83ceedd730d404de471dfcc5abd6f75f9f4a42a95b8afd9a0d42"
 RESOURCE_PROFILE_BLAKE3="876e8e3aedf280155e40378e5ba1add80ca30a7a0931f9a9c972b898694619f2"
+ANIMUS_PRODUCER_REVISION="58cab252797865df5ccb3c7364f0ad994d4c8ea7"
+ANIMUS_SOURCE_IDENTITY="69fb71f312cc479e34aa91f00f01d16a12caf5253bff0cf003076f94d0a52339"
+PRODUCER_PROFILE="${ROOT}/config/application-host-binding-pilot/producer.ncl"
 
-for required in "${PROFILE}" "${GENERATED}/animus-binding.json" "${GENERATED}/kamacite-cohort.json" "${GENERATED}/source-map.json"; do
+for required in "${PROFILE}" "${PRODUCER_PROFILE}" "${GENERATED}/animus-binding.json" "${GENERATED}/kamacite-cohort.json" "${GENERATED}/source-map.json" "${GENERATED}/animus-producer.json"; do
   if [ ! -f "${required}" ]; then
     printf '%s\n' "APPLICATION_BINDING_MISSING_FILE:${required}" >&2
     exit 1
@@ -39,9 +42,11 @@ trap 'rm -rf "${TMP}"' EXIT INT TERM
 nickel export --format json --field binding "${PROFILE}" > "${TMP}/animus-binding.json"
 nickel export --format json --field kamacite_cohort "${PROFILE}" > "${TMP}/kamacite-cohort.json"
 nickel export --format json --field source_map "${PROFILE}" > "${TMP}/source-map.json"
+nickel export --format json --field producer "${PRODUCER_PROFILE}" > "${TMP}/animus-producer.json"
 diff -u "${GENERATED}/animus-binding.json" "${TMP}/animus-binding.json"
 diff -u "${GENERATED}/kamacite-cohort.json" "${TMP}/kamacite-cohort.json"
 diff -u "${GENERATED}/source-map.json" "${TMP}/source-map.json"
+diff -u "${GENERATED}/animus-producer.json" "${TMP}/animus-producer.json"
 
 nickel export --format json "${FIXTURES}/valid.ncl" > /dev/null
 negative_count=0
@@ -70,6 +75,23 @@ check_file_hash() {
 check_file_hash "${APPLICATION_BLAKE3}" "${ROOT}/crates/animus-runtime/src/dogfoodshell.rs"
 check_file_hash "${ENTRYPOINT_BLAKE3}" "${ROOT}/crates/animus-std/src/bin/animus-dogfood-smoke.rs"
 check_file_hash "${RESOURCE_PROFILE_BLAKE3}" "${ROOT}/policy/process-jobs/generated/process-job-profile-policy.json"
+
+ACTUAL_SOURCE_IDENTITY="$(
+  cd "${ROOT}"
+  {
+    b3sum crates/animus-runtime/src/applicationbinding/core.rs
+    b3sum crates/animus-runtime/src/applicationbinding/data.rs
+    b3sum crates/animus-runtime/src/applicationbinding/mod.rs
+    b3sum config/application-host-binding-pilot/profile.ncl
+    b3sum config/application-host-binding-pilot/generated/animus-binding.json
+  } | b3sum | awk '{print $1}'
+)"
+if [ "${ACTUAL_SOURCE_IDENTITY}" != "${ANIMUS_SOURCE_IDENTITY}" ]; then
+  printf '%s\n' "APPLICATION_BINDING_STALE_PRODUCER_SOURCE:${ACTUAL_SOURCE_IDENTITY}" >&2
+  exit 1
+fi
+grep -Fq "${ANIMUS_PRODUCER_REVISION}" "${GENERATED}/animus-producer.json"
+grep -Fq "${ANIMUS_SOURCE_IDENTITY}" "${GENERATED}/animus-producer.json"
 
 for cohort_value in "${KAMACITE_REVISION}" "${KAMACITE_SCHEMA_BLAKE3}" "${KAMACITE_RECEIPT_SCHEMA_BLAKE3}" "${KAMACITE_VALIDATION_RECEIPT_BLAKE3}" "${KAMACITE_CORE_BLAKE3}"; do
   grep -Fq "${cohort_value}" "${PROFILE}"
