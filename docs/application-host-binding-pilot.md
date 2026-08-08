@@ -39,6 +39,8 @@ The projection contains identities and closed effect classes. It does not copy p
 
 The Kamacite producer envelope is `config/application-host-binding-pilot/generated/animus-producer.json`. It binds implementation revision `c09991fa299f1f74b04d066bf31382e34108fa82`, source-manifest identity `1290a95e48b531cc15386490844178a6ed49f25d6c1355e9a29dfea972bfcc62`, and envelope BLAKE3 `f8fbfda873094923004b99ac1150eb4e402b49deaa866b0647bd84e758e8a0ef`.
 
+Animus freezes Kamacite's accepted response in `config/application-host-binding-pilot/generated/kamacite-conformance.json`. The response has BLAKE3 `d5a082fb3ee92bc0fdbccdd0a08bbc9e072b3eea95615df8a17be70fbf9c540c`. It binds accepted receipt identity `1bac624751d47bd89ecba53923eda72f9cf20cdcc31dc01186882abf8da1cbb2`.
+
 ## Effect and host rules
 
 The pilot declares two symbolic operations:
