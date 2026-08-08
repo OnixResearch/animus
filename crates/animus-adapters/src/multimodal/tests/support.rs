@@ -91,6 +91,14 @@ pub(super) fn vision_capabilities() -> super::super::ModelInputCapabilities {
         supports_text: true,
         supports_images: true,
         image_adapter_available: true,
+        video: super::super::VideoInputCapabilitiesDraft {
+            supported: false,
+            service_available: false,
+            projection_available: false,
+            media_types: &[],
+            byte_limit: 0,
+            duration_limit_ms: 0,
+        },
     })
     .expect("capabilities should validate")
 }
@@ -101,6 +109,14 @@ pub(super) fn text_only_capabilities() -> super::super::ModelInputCapabilities {
         supports_text: true,
         supports_images: false,
         image_adapter_available: false,
+        video: super::super::VideoInputCapabilitiesDraft {
+            supported: false,
+            service_available: false,
+            projection_available: false,
+            media_types: &[],
+            byte_limit: 0,
+            duration_limit_ms: 0,
+        },
     })
     .expect("capabilities should validate")
 }
@@ -110,6 +126,7 @@ pub(super) fn native_policy() -> super::super::ProviderSerializationPolicy {
         super::super::ProviderSerializationPolicyDraft {
             provider_label: PROVIDER_LABEL,
             mode: super::super::ProviderSerializationMode::NativeFixture,
+            video_projection: None,
         },
     )
     .expect("policy should validate")

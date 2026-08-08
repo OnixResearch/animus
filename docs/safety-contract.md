@@ -75,6 +75,10 @@ Deterministic scanner findings and optional classifier/adversary-review outcomes
 
 `animus-adapters` owns provider-neutral image content descriptors, prompt-order preservation outcomes, model capability gates, host-injected image payload service traits, provider-native fixture DTOs, and safe image receipts. It must not load files, decode images, sniff MIME types, resize/transcode media, persist raw pixels, serialize live provider payloads, or call providers. Hosts and provider adapters own those side effects behind injected services, and reusable validation rejects raw bytes, base64/data URLs, absolute private paths, credentials, raw provider payloads, and unbounded metadata.
 
+## Provider video boundary
+
+`animus-adapters` owns typed video descriptors, ordered mixed-media assembly, exact video capability decisions, provider-projection loss checks, safe handle DTOs, and metadata-only receipts. Video is separate from image capability. Required video fails closed when its model class, media limits, injected service, or exact provider projection is absent. Reusable code does not resolve paths or URLs, inspect containers, decode frames, transcode media, upload files, refresh credentials, or call providers. Receipt checks reject bytes, base64, data and remote URLs, private paths, credentials, upload material, provider bodies, frame bodies, audio bodies, and unbounded metadata.
+
 ## Redacted session export boundary
 
 `animus-runtime::session_tree_export` may project and render only already-loaded validated safe metadata. It must not open journals, infer provider formats, accept raw transcript/tool/reasoning/provider/credential/environment/path/error bodies, or perform destination I/O. `animus-std` owns explicit capability-scoped writes; success requires private mode, bounded bytes, exact artifact identity, commit, and synchronization evidence. Export receipts remain metadata-only and do not prove session correctness, omitted-content completeness, storage durability, release eligibility, or training-dataset suitability. See [redacted session-tree export](redacted-session-tree-export.md).
@@ -145,6 +149,7 @@ Use these commands as the standard verification rails:
 cargo test -p animus-core
 cargo test -p animus-adapters
 cargo test -p animus-adapters multimodal
+scripts/cairn/check-provider-video-payloads --root .
 cargo test -p animus-preserves
 cargo test -p animus-steel
 cargo test -p animus-runtime

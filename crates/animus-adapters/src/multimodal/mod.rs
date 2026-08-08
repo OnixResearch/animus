@@ -1,37 +1,49 @@
 //! Provider-neutral multimodal model input descriptors.
 
 mod body;
-mod capability;
 mod check;
 mod compose;
 mod descriptor;
 mod evidence;
 mod fault;
+mod inputgate;
 mod kinds;
+mod motion;
 #[cfg(test)]
 mod tests;
 mod transport;
 mod wire;
 
 pub use body::{ContentPart, ContentPartDraft, TextPart};
-pub use capability::{
-    DispatchPlan, ModelInputCapabilities, ModelInputCapabilitiesDraft, prepare_dispatch,
-};
 pub use compose::{
     ImageOutcome, ImageOutcomeStatus, PromptAssembly, PromptAssemblyPolicy, assemble_prompt_parts,
 };
 pub use descriptor::{ImageMetadata, ImageMetadataDraft, ImagePart, ImagePartDraft};
 pub use evidence::{ImageReceipt, ImageReceiptDraft};
 pub use fault::{Error, UnsafeContentReason};
+pub use inputgate::{
+    DispatchPlan, ModelInputCapabilities, ModelInputCapabilitiesDraft, VideoCapabilityOutcome,
+    VideoCapabilityPolicy, VideoInputCapabilities, VideoInputCapabilitiesDraft, prepare_dispatch,
+    prepare_dispatch_with_video_policy,
+};
 pub use kinds::{ImageDetailPreference, ImageMediaType, ImageSourceTrust, InputModality};
+pub use motion::{
+    DEFAULT_AGGREGATE_MEDIA_BYTE_BUDGET, DEFAULT_PROMPT_VIDEO_BYTE_BUDGET,
+    DEFAULT_PROMPT_VIDEO_COUNT, MAX_VIDEO_BYTE_COUNT, MAX_VIDEO_DURATION_MS, VideoDetailPreference,
+    VideoLossClass, VideoMediaType, VideoMetadata, VideoMetadataDraft, VideoOutcome,
+    VideoOutcomeStatus, VideoPart, VideoPartDraft, VideoPayloadError, VideoPayloadHandle,
+    VideoPayloadHandleDraft, VideoPayloadHandleKind, VideoPayloadService, VideoReceipt,
+    VideoReceiptDraft, VideoSourceTrust,
+};
 pub use transport::{
     ImagePayloadError, ImagePayloadHandle, ImagePayloadHandleDraft, ImagePayloadHandleKind,
     ImagePayloadService,
 };
 pub use wire::{
-    ProviderNativePart, ProviderNativeRequest, ProviderSerializationMode,
-    ProviderSerializationPolicy, ProviderSerializationPolicyDraft,
-    serialize_provider_native_fixture,
+    ProviderNativePart, ProviderNativeRequest, ProviderProjectionSupport,
+    ProviderSerializationMode, ProviderSerializationPolicy, ProviderSerializationPolicyDraft,
+    ProviderVideoProjection, serialize_provider_native_fixture,
+    serialize_provider_native_video_fixture,
 };
 
 pub(super) const SAFE_LABEL_FIELD: crate::validation::FieldName =

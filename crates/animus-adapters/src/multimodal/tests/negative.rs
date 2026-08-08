@@ -93,6 +93,14 @@ fn dispatch_rejects_unsupported_model_and_unavailable_adapter() {
                 supports_text: true,
                 supports_images: true,
                 image_adapter_available: false,
+                video: super::super::VideoInputCapabilitiesDraft {
+                    supported: false,
+                    service_available: false,
+                    projection_available: false,
+                    media_types: &[],
+                    byte_limit: 0,
+                    duration_limit_ms: 0,
+                },
             },
         )
         .expect("capabilities should validate"),
@@ -114,6 +122,7 @@ fn provider_native_fixture_rejects_lossy_missing_invalid_and_live_call_paths() {
         super::super::ProviderSerializationPolicyDraft {
             provider_label: PROVIDER_LABEL,
             mode: super::super::ProviderSerializationMode::GenericJson,
+            video_projection: None,
         },
     )
     .expect("policy should validate");

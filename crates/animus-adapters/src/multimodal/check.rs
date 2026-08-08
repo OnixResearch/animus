@@ -112,11 +112,17 @@ fn unsafe_content_reason(value: &str) -> Option<super::UnsafeContentReason> {
     if is_data_url_like(lower.as_str()) {
         return Some(super::UnsafeContentReason::DataUrl);
     }
+    if lower.starts_with("http://") || lower.starts_with("https://") {
+        return Some(super::UnsafeContentReason::RemoteUrl);
+    }
     if lower.contains("base64") {
         return Some(super::UnsafeContentReason::Base64Payload);
     }
     if is_raw_bytes_like(lower.as_str()) {
         return Some(super::UnsafeContentReason::RawBytes);
+    }
+    if lower.contains("frame_body") || lower.contains("audio_body") {
+        return Some(super::UnsafeContentReason::MediaBody);
     }
     if is_absolute_or_private_path(PathProbe {
         value,
