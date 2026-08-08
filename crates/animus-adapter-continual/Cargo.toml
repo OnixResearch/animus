@@ -1,0 +1,14 @@
+[package]
+name = "animus-adapter-continual"
+description = "no_std continual-harness refinement contracts with bounded admission and rollback."
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+blake3 = { version = "1.8.5", default-features = false }

@@ -122,6 +122,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "syndicate-host",
     "worker-team",
     "autonomous-gates",
+    "continual-harness",
 ];
 
 const ALLOWED_AUTHORITIES: &[&str] = &[
@@ -159,6 +160,7 @@ const ALLOWED_FAMILIES: &[&str] = &[
     "orchestration",
     "preserves",
     "autonomous-gates",
+    "refinement",
 ];
 
 const AMBIENT_AUTHORITY_MARKERS: &[&str] = &[

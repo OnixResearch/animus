@@ -68,6 +68,8 @@ let rlm_kernel_feature = "rlm-kernel" in
 let rlm_kernel_family = "steel" in
 let autonomous_feature = "autonomous-gates" in
 let autonomous_family = "autonomous-gates" in
+let continual_feature = "continual-harness" in
+let continual_family = "refinement" in
 let agent_guardrail_feature = "agent-guardrail" in
 let agent_guardrail_family = "policy" in
 let syndicate_record = fun export_path_value owning_crate_value source_value class_value side_effect_value review_note_value => {
@@ -188,6 +190,21 @@ let autonomous_record = fun export_path_value owning_crate_value source_value re
   depends_on = [],
   composes_with = ["animus-runtime::ContinuationPolicy"],
   capability_family = autonomous_family,
+}
+in
+let continual_record = fun export_path_value owning_crate_value source_value review_note_value => {
+  export_path = export_path_value,
+  owning_crate = owning_crate_value,
+  source = source_value,
+  class = reusable,
+  side_effect = none,
+  stability = optional_stability,
+  review_note = review_note_value,
+  feature_gate = continual_feature,
+  required_authority = none,
+  depends_on = [],
+  composes_with = ["animus-runtime::ModelRuntimeProfileSet"],
+  capability_family = continual_family,
 }
 in
 let agent_control_record = fun export_path_value owning_crate_value source_value review_note_value => {
@@ -2169,6 +2186,8 @@ let entry_values = [
   entry "animus-runtime::session_persistence" "animus-runtime" runtime injection injected stable "host-injected ledger/session seam with pure replay and receipt planning",
   autonomous_record "animus-runtime::autonomous_gates" "animus-runtime" runtime "bounded host-injected quality gates, admitted-file fingerprints, continuation limits, and metadata-only receipts",
   autonomous_record "animus::autonomous_gates" "animus" root "optional compatibility re-export of autonomous gate contracts",
+  continual_record "animus-adapters::continual" "animus-adapters" adapters "no-std refinement proposal, admission, snapshot, rollback, promotion-plan, and metadata-only receipt contracts; hosts retain storage and composition authority",
+  continual_record "animus::continual_harness" "animus" root "optional compatibility re-export of continual-harness contracts",
   entry "animus-runtime::tool_executor_kit" "animus-runtime" runtime injection injected stable "pure executor admission and receipt core with an explicit host-injected service shell",
   rlm_kernel_record "animus-runtime::rlm_kernel" "animus-runtime" runtime injection injected "revalidated injected execution seam for typed model-facing Steel requests" injected,
   entry "animus-runtime::tool_executor_packs" "animus-runtime" runtime reusable none stable "tool executor pack descriptor module",

@@ -101,6 +101,7 @@ name = "animus"
 version = "0.1.0"
 dependencies = [
  "animus-acp-stdio-host",
+ "animus-adapter-continual",
  "animus-adapter-rlm-kernel",
  "animus-adapter-weave",
  "animus-adapters",
@@ -135,6 +136,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "animus-adapter-continual"
+version = "0.1.0"
+dependencies = [
+ "blake3",
+]
+
+[[package]]
 name = "animus-adapter-observability"
 version = "0.1.0"
 dependencies = [
@@ -165,6 +173,7 @@ dependencies = [
 name = "animus-adapters"
 version = "0.1.0"
 dependencies = [
+ "animus-adapter-continual",
  "animus-adapter-observability",
  "animus-adapter-rlm-kernel",
  "animus-adapter-safe",

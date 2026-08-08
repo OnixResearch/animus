@@ -14,6 +14,7 @@
 - `crates/animus-std-observability` is the first direct authority-scoped std block. It supplies deterministic no-op and in-memory observability sinks without pulling unrelated context, provider, ingest, transport, credential, persistence, or terminal behavior.
 - `crates/animus-std-control` is the focused blocking agent-control host. It supplies explicit pause, resume, cancellation, condition-variable waiting, and bounded event subscriptions without transport, persistence, or global-registry authority.
 - `crates/animus-adapter-weave` is the optional non-default universal-weave branching adapter. It wraps the pinned DAG weave behind Animus-owned DTOs, named bounds, and metadata-only BLAKE3 receipts; see [docs/universal-weave-adapter.md](docs/universal-weave-adapter.md).
+- `crates/animus-adapter-continual` is the optional no-std continual-harness refinement boundary. It admits evidence-bound session-local supplemental updates, snapshot-before-update plans, exact rollback, explicit promotion plans, and metadata-only receipts; see [docs/continual-harness.md](docs/continual-harness.md).
 - `crates/animus-tui` is the optional terminal UI host shell. It keeps Rats/Subwayrat/Ratatui-facing dependencies outside reusable core, adapter, Steel, and std runtime contracts; see [docs/ratatui-tool-host-surface.md](docs/ratatui-tool-host-surface.md) for the host bridge and pure render reducer boundary.
 - The root `animus` package is a thin compatibility layer that re-exports the workspace crates.
 
@@ -161,6 +162,7 @@ cargo tigerstyle check
 check-nickel-configs
 scripts/cairn/check-nickel-policy-contracts --root .
 scripts/cairn/check-autonomous-gates --root .
+scripts/cairn/check-continual-harness --root .
 scripts/cairn/check-model-runtime-profiles --root .
 scripts/cairn/check-agent-role-profiles --root .
 scripts/cairn/check-provider-retry --root .
@@ -203,6 +205,7 @@ nix build .#checks.x86_64-linux.packaged-headless-dogfood-smoke --no-link -L
 nix build .#checks.x86_64-linux.clash-ucan-authority --no-link -L
 nix build .#checks.x86_64-linux.neutral-ledger --no-link -L
 nix build .#checks.x86_64-linux.safe-receipts-artifacts --no-link -L
+nix build .#checks.x86_64-linux.continual-harness --no-link -L
 nix build .#checks.x86_64-linux.current-head-release-evidence-index --no-link -L
 nix flake check
 ```

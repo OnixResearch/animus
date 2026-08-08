@@ -25,6 +25,12 @@ Animus is structured around a functional-core / imperative-shell (FCIS) split. T
 
 The optional `animus-runtime/autonomous-gates` feature receives only typed gate results, host-supplied counters, and fingerprints over an explicit admitted file set. It does not execute commands, read files, inspect clocks, or persist state. Failed-gate output is bounded before prompt use. `gates_passed` and `limit_reached` remain scoped outcomes and never prove task success, objective completion, production readiness, or release eligibility.
 
+## Continual-harness refinement boundary
+
+The optional `animus-adapter-continual` crate is a no-std pure admission boundary. It accepts only typed proposals, current session-local supplemental state, and typed ledger evidence. It admits supplemental prompts, memories, skill descriptions, and subagent specifications under Nickel-authored size, count, conflict, evidence, and retention bounds. Base-prompt, repo-owned skill, accepted-spec, policy-file, evidence-free, and promotion-request proposals fail closed.
+
+Every admitted update plans a BLAKE3 snapshot before the next state. Hosts own snapshot storage and apply the plan. Rollback accepts only retained, unmodified snapshots. Promotion requires a separate explicit host action and produces only a plan. Receipts contain metadata and required non-claims. They reject lesson bodies, prompt text, memory contents, skill bodies, trajectory spans, and improvement or authority claims.
+
 ## no_std core boundary
 
 `animus-core`, `animus-adapters`, and `animus-adapter-rlm-kernel` are `#![no_std]` and may use `alloc` for owned data. The root `animus` crate must also build as a no-std facade when default features are disabled, re-exporting only the deterministic reusable surface. Do not use `std`, process environment, filesystem, networking, clocks, randomness, interpreters such as Steel, serialization backends such as Preserves, or global mutable state in the no-std-supported surface.

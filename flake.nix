@@ -124,6 +124,7 @@
               diff -u ${./config/generated/spacewasm-embedded-compat.json} "$tmp_dir/config/generated/spacewasm-embedded-compat.json"
               diff -u ${./config/generated/harbor-evaluation-profile.json} "$tmp_dir/config/generated/harbor-evaluation-profile.json"
               diff -u ${./config/generated/host-control-source.json} "$tmp_dir/config/generated/host-control-source.json"
+              diff -u ${./config/generated/continual-harness-policy.json} "$tmp_dir/config/generated/continual-harness-policy.json"
 
               nickel typecheck ${./config/nickel-export-requests.ncl}
               NICKEL_EXPORT_BIN=${nickel-export.packages.${system}.default}/bin/nickel-export \
@@ -249,6 +250,7 @@
                 || baseName == "check-trellis-verified-core"
                 || baseName == "check-neutral-ledger"
                 || baseName == "check-nickel-policy-contracts"
+                || baseName == "check-continual-harness"
                 || baseName == "check-model-runtime-profiles"
                 || baseName == "check-agent-role-profiles"
                 || baseName == "check-aeneas-proof-campaign"
@@ -519,6 +521,14 @@
             pkgs.b3sum
           ] ''
             sh scripts/cairn/check-nickel-policy-contracts --root .
+          '';
+
+          continual-harness = cargoCheck "animus-continual-harness" [
+            pkgs.nickel
+            pkgs.b3sum
+            pkgs.diffutils
+          ] ''
+            sh scripts/cairn/check-continual-harness --root .
           '';
 
           model-runtime-profiles = cargoCheck "animus-model-runtime-profiles" [

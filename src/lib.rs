@@ -224,6 +224,10 @@ pub use trellis;
 #[cfg(feature = "weave-adapter")]
 pub use animus_adapter_weave as weave_adapter;
 
+/// Re-export of the optional continual-harness refinement contract family.
+#[cfg(feature = "continual-harness")]
+pub use animus_adapter_continual as continual_harness;
+
 /// Re-export of the optional broad Preserves compatibility facade.
 ///
 /// Adapter-only consumers should depend on `animus-preserves-adapter` directly;
