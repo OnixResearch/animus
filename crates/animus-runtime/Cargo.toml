@@ -27,6 +27,7 @@ all-families = [
   "worker-team",
 ]
 compat = ["all-families", "steel"]
+autonomous-gates = []
 batch = []
 compaction = []
 dataset-export = []

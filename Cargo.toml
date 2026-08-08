@@ -84,6 +84,7 @@ workspace = true
 default = ["std"]
 active-turn-recovery = ["std", "runtime", "animus-std/active-turn-recovery"]
 agent-control = ["runtime", "dep:animus-std-control"]
+autonomous-gates = ["runtime", "animus-runtime/autonomous-gates"]
 agent-role-profiles = ["std", "animus-std/agent-role-profiles"]
 acp-stdio-host = ["std", "coding-session-host", "dep:animus-acp-stdio-host"]
 branchfs-host = ["std", "animus-std/branchfs-host"]

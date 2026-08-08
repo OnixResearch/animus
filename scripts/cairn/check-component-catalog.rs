@@ -111,6 +111,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "scaffold",
     "worker-team",
     "weave-adapter",
+    "autonomous-gates",
 ];
 
 const ALLOWED_AUTHORITIES: &[&str] = &[
@@ -160,6 +161,7 @@ const ALLOWED_FAMILIES: &[&str] = &[
     "weave",
     "worker-team",
     "workspace",
+    "autonomous-gates",
 ];
 
 const UNSAFE_FIELD_MARKERS: &[&str] = &[

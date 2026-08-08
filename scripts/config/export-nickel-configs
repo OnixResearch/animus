@@ -27,6 +27,7 @@ mesh_provider_profile_source_file=${repo_root}/config/mesh-provider-profile.ncl
 spacewasm_profile_source_file=${repo_root}/config/spacewasm-embedded-compat.ncl
 harbor_profile_source_file=${repo_root}/config/harbor-evaluation-profile.ncl
 host_control_source_file=${repo_root}/config/host-control-source.ncl
+autonomous_gates_policy_source_file=${repo_root}/config/autonomous-gates-policy.ncl
 
 if ! command -v nickel >/dev/null 2>&1; then
   printf '%s\n' 'error: nickel is required to export repo config. Run inside `nix develop`.' >&2
@@ -61,3 +62,4 @@ nickel export --format json --field mesh_provider_profile "${mesh_provider_profi
 nickel export --format json --field spacewasm_embedded_compat "${spacewasm_profile_source_file}" > "${target_root}/config/generated/spacewasm-embedded-compat.json"
 nickel export --format json --field harbor_evaluation_profile "${harbor_profile_source_file}" > "${target_root}/config/generated/harbor-evaluation-profile.json"
 nickel export --format json --field host_control_source "${host_control_source_file}" > "${target_root}/config/generated/host-control-source.json"
+nickel export --format json --field autonomous_gates_policy "${autonomous_gates_policy_source_file}" > "${target_root}/config/generated/autonomous-gates-policy.json"

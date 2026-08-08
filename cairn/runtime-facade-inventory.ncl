@@ -66,6 +66,8 @@ let lean_loop_feature = "lean-loop" in
 let lean_loop_family = "loop" in
 let rlm_kernel_feature = "rlm-kernel" in
 let rlm_kernel_family = "steel" in
+let autonomous_feature = "autonomous-gates" in
+let autonomous_family = "autonomous-gates" in
 let agent_guardrail_feature = "agent-guardrail" in
 let agent_guardrail_family = "policy" in
 let syndicate_record = fun export_path_value owning_crate_value source_value class_value side_effect_value review_note_value => {
@@ -171,6 +173,21 @@ let agent_guardrail_record = fun export_path_value owning_crate_value source_val
   depends_on = ["animus-adapters::evaluate_sandbox_dispatch"],
   composes_with = [],
   capability_family = agent_guardrail_family,
+}
+in
+let autonomous_record = fun export_path_value owning_crate_value source_value review_note_value => {
+  export_path = export_path_value,
+  owning_crate = owning_crate_value,
+  source = source_value,
+  class = reusable,
+  side_effect = none,
+  stability = optional_stability,
+  review_note = review_note_value,
+  feature_gate = autonomous_feature,
+  required_authority = none,
+  depends_on = [],
+  composes_with = ["animus-runtime::ContinuationPolicy"],
+  capability_family = autonomous_family,
 }
 in
 let agent_control_record = fun export_path_value owning_crate_value source_value review_note_value => {
@@ -2150,6 +2167,8 @@ let entry_values = [
   entry "animus-runtime::session_tree_export" "animus-runtime" runtime reusable none stable "pure validated-metadata topology projection deterministic redacted rendering exact write evidence validation and metadata-only receipts",
   entry "animus-runtime::durable_session_store" "animus-runtime" runtime reusable none stable "pure generated-policy validation bounded private framing exact lineage commit recovery and metadata-only receipts",
   entry "animus-runtime::session_persistence" "animus-runtime" runtime injection injected stable "host-injected ledger/session seam with pure replay and receipt planning",
+  autonomous_record "animus-runtime::autonomous_gates" "animus-runtime" runtime "bounded host-injected quality gates, admitted-file fingerprints, continuation limits, and metadata-only receipts",
+  autonomous_record "animus::autonomous_gates" "animus" root "optional compatibility re-export of autonomous gate contracts",
   entry "animus-runtime::tool_executor_kit" "animus-runtime" runtime injection injected stable "pure executor admission and receipt core with an explicit host-injected service shell",
   rlm_kernel_record "animus-runtime::rlm_kernel" "animus-runtime" runtime injection injected "revalidated injected execution seam for typed model-facing Steel requests" injected,
   entry "animus-runtime::tool_executor_packs" "animus-runtime" runtime reusable none stable "tool executor pack descriptor module",

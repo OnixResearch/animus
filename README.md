@@ -160,6 +160,7 @@ scripts/cairn/check-universal-weave-adapter --root .
 cargo tigerstyle check
 check-nickel-configs
 scripts/cairn/check-nickel-policy-contracts --root .
+scripts/cairn/check-autonomous-gates --root .
 scripts/cairn/check-model-runtime-profiles --root .
 scripts/cairn/check-agent-role-profiles --root .
 scripts/cairn/check-provider-retry --root .

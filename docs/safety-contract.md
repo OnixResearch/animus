@@ -21,6 +21,10 @@ Animus is structured around a functional-core / imperative-shell (FCIS) split. T
 - `docs/component-catalog.md` and `cairn/component-catalog.ncl` map component ids to owners, feature gates, authority posture, dependency links, capability families, and focused checks.
 - Shell-owned runtime inputs must not leak into exported core state types. Component implementations must be reached through adapter contracts rather than direct cross-crate coupling. Serialized boundary payloads and Steel loop decisions must revalidate through adapter DTO constructors after decoding/evaluation. Multimodal image inputs use `animus-adapters` DTOs for safe labels, media type, byte count, BLAKE3 identity, source trust, provider capability gates, injected image-service handles, provider-native fixtures, and safe image receipts; raw image bytes, base64/data URLs, private paths, credentials, provider payloads, and image loading/transcoding authority remain host/provider-owned.
 
+## Autonomous-gate boundary
+
+The optional `animus-runtime/autonomous-gates` feature receives only typed gate results, host-supplied counters, and fingerprints over an explicit admitted file set. It does not execute commands, read files, inspect clocks, or persist state. Failed-gate output is bounded before prompt use. `gates_passed` and `limit_reached` remain scoped outcomes and never prove task success, objective completion, production readiness, or release eligibility.
+
 ## no_std core boundary
 
 `animus-core`, `animus-adapters`, and `animus-adapter-rlm-kernel` are `#![no_std]` and may use `alloc` for owned data. The root `animus` crate must also build as a no-std facade when default features are disabled, re-exporting only the deterministic reusable surface. Do not use `std`, process environment, filesystem, networking, clocks, randomness, interpreters such as Steel, serialization backends such as Preserves, or global mutable state in the no-std-supported surface.

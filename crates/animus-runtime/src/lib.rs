@@ -29,6 +29,10 @@
 )]
 #![forbid(unsafe_code)]
 
+/// Pure autonomous continuation, quality-gate, fingerprint, and receipt contracts.
+#[cfg(feature = "autonomous-gates")]
+pub mod autonomous_gates;
+
 /// Pure active-turn durability, transaction, recovery, and receipt contracts.
 pub mod active_turn_recovery;
 mod admission;

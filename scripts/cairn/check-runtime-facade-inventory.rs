@@ -121,6 +121,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "status",
     "syndicate-host",
     "worker-team",
+    "autonomous-gates",
 ];
 
 const ALLOWED_AUTHORITIES: &[&str] = &[
@@ -153,9 +154,11 @@ const ALLOWED_FAMILIES: &[&str] = &[
     "status",
     "tool",
     "worker-team",
+    "autonomous-gates",
     "steel",
     "orchestration",
     "preserves",
+    "autonomous-gates",
 ];
 
 const AMBIENT_AUTHORITY_MARKERS: &[&str] = &[
