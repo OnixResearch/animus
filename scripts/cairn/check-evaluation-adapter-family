@@ -1,0 +1,83 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+readonly ROOT_FLAG=--root
+readonly DEFAULT_ROOT=.
+readonly CHECKER_SOURCE=scripts/cairn/check-evaluation-adapter-family.rs
+readonly CHECKER_TARGET=target/cairn/check-evaluation-adapter-family
+readonly RECEIPT=target/cairn/focused-rails/evaluation-adapter-family.md
+readonly PROHIBITED_DEPENDENCIES='(^|[-_])(tokio|reqwest|hyper|serde|python|harbor|docker|kubernetes|pydantic)([-_]|$)'
+readonly SOURCE_COHORT_MATERIAL='animus.native-evaluation-adapters.source.v1:PrimeIntellect-ai/verifiers:1a997814e85a2e4f409add960aa852737388dbd8:verifiers/v1/dialects/base.py,verifiers/v1/dialects/chat.py,verifiers/v1/dialects/responses.py,verifiers/v1/dialects/anthropic.py,verifiers/v1/interception/base.py,verifiers/v1/interception/pool.py,verifiers/v1/interception/server.py,verifiers/v1/state.py'
+readonly SOURCE_COHORT_HASH='facd1eab5ae08491dbab9ae51a85aac73b90415e61030b551d1f7f3f3ffc5918'
+
+root=${DEFAULT_ROOT}
+if [ "${1:-}" = "${ROOT_FLAG}" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  root=$2
+fi
+cd "${root}"
+
+if ! command -v b3sum >/dev/null 2>&1; then
+  printf '%s\n' 'error: b3sum is required for the source-cohort identity check' >&2
+  exit "${FAILURE}"
+fi
+computed_source_hash=$(printf '%s' "${SOURCE_COHORT_MATERIAL}" | b3sum | awk '{print $1}')
+if [ "${computed_source_hash}" != "${SOURCE_COHORT_HASH}" ]; then
+  printf '%s\n' 'error: evaluation adapter source-cohort identity drifted' >&2
+  exit "${FAILURE}"
+fi
+
+mkdir -p "$(dirname "${CHECKER_TARGET}")" "$(dirname "${RECEIPT}")"
+rustc --edition=2021 --test "${CHECKER_SOURCE}" -o "${CHECKER_TARGET}-tests"
+"${CHECKER_TARGET}-tests"
+rustc --edition=2021 "${CHECKER_SOURCE}" -o "${CHECKER_TARGET}"
+"${CHECKER_TARGET}" .
+nickel export --format json fixtures/evaluation-adapter/positive.ncl >/dev/null
+nickel export --format json fixtures/evaluation-adapter/negative.ncl >/dev/null
+
+cargo test -p animus-adapter-eval --locked
+cargo clippy -p animus-adapter-eval --all-targets -- -D warnings
+cargo test -p animus-adapters --features evaluation harbor --locked
+cargo clippy -p animus-adapters --features evaluation --all-targets -- -D warnings
+cargo test -p animus-runtime --features harbor-eval harbor_eval --locked
+cargo test -p animus-std --features harbor-eval harbor --locked
+cargo check -p animus-adapter-eval --target wasm32-unknown-unknown --locked
+cargo check -p animus-adapters --no-default-features --features evaluation --target wasm32-unknown-unknown --locked
+cargo check -p animus --no-default-features --features evaluation-adapters --target wasm32-unknown-unknown --locked
+sh scripts/cairn/check-component-catalog --root .
+sh scripts/cairn/check-runtime-facade-inventory --root .
+sh scripts/cairn/check-composition-conformance --root .
+
+if cargo tree -p animus-adapter-eval --edges normal | grep -Eiq "${PROHIBITED_DEPENDENCIES}"; then
+  printf '%s\n' 'error: host authority dependency leaked into animus-adapter-eval' >&2
+  exit "${FAILURE}"
+fi
+if cargo tree -p animus --edges normal | grep -Fq 'animus-adapter-eval'; then
+  printf '%s\n' 'error: evaluation adapters leaked into the default root facade' >&2
+  exit "${FAILURE}"
+fi
+if cargo tree -p animus-adapters --edges normal | grep -Fq 'animus-adapter-eval'; then
+  printf '%s\n' 'error: evaluation adapters leaked into the default adapter facade' >&2
+  exit "${FAILURE}"
+fi
+
+cat >"${RECEIPT}" <<'EOF'
+# Native evaluation adapter family focused rail
+
+- verdict: PASS
+- family: focused no-std plus alloc
+- ports: nine separate least-authority services
+- binding: exact full-material request and observation identities
+- gateway: bounded dialect metadata, commit ordering, and retry coalescing
+- compatibility: Harbor environment and verifier conversion only
+- receipts: metadata only with explicit leak and overclaim rejection
+- isolation: default, no-default, Wasm, and dependency checks passed
+- non-claims: no host effect, exactly-once, verifier soundness, artifact authenticity, complete capture, benchmark, completion, production, or release claim
+EOF
+
+printf '%s\n' 'focused rail evaluation-adapter-family: pass'
+printf 'receipt: %s\n' "${RECEIPT}"

@@ -74,6 +74,11 @@ pub mod continual {
 pub mod daemon_workers {
     pub use animus_adapter_daemon::*;
 }
+/// Non-default compatibility facade for native evaluation adapter contracts.
+#[cfg(feature = "evaluation")]
+pub mod evaluation {
+    pub use animus_adapter_eval::*;
+}
 /// Compatibility facade for pure model-facing RLM kernel contracts.
 pub mod rlm_kernel {
     pub use animus_adapter_rlm_kernel::*;

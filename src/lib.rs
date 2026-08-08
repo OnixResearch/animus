@@ -102,6 +102,10 @@ pub mod codebase_graph {
 #[cfg(feature = "native-evaluation")]
 pub use animus_eval_core as native_evaluation;
 
+/// Non-default authority-free native evaluation adapter contracts.
+#[cfg(feature = "evaluation-adapters")]
+pub use animus_adapter_eval as evaluation_adapters;
+
 /// Strict host-side parser for checked generated native evaluation policy.
 #[cfg(feature = "native-evaluation-profile")]
 pub use animus_std::{NativeEvaluationProfileError, parse_native_evaluation_policy_json};

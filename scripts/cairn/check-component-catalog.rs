@@ -120,6 +120,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "session-event-replay",
     "execution-backend-planner",
     "native-evaluation",
+    "evaluation-adapters",
     "terminal-image",
     "terminal-video",
 ];

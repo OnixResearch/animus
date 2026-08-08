@@ -281,6 +281,8 @@
                 || baseName == "check-terminal-video-playback.rs"
                 || baseName == "check-native-evaluation-core"
                 || baseName == "check-native-evaluation-core.rs"
+                || baseName == "check-evaluation-adapter-family"
+                || baseName == "check-evaluation-adapter-family.rs"
                 || baseName == "check-model-runtime-profiles"
                 || baseName == "check-agent-role-profiles"
                 || baseName == "check-aeneas-proof-campaign"
@@ -515,6 +517,10 @@
             ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
             export ANIMUS_NATIVE_EVAL_SKIP_NICKEL=1
             sh scripts/cairn/check-native-evaluation-core --root .
+          '';
+
+          evaluation-adapter-family = cargoCheck "animus-evaluation-adapter-family" [ pkgs.b3sum pkgs.clippy pkgs.nickel ] ''
+            sh scripts/cairn/check-evaluation-adapter-family --root .
           '';
 
           host-control-extraction = cargoCheck "animus-host-control-extraction" [ ] ''

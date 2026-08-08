@@ -8,7 +8,7 @@ Animus provides native evaluation values through the non-default `animus-eval-co
 - The session ledger remains the trace and replay authority. Episodes contain exact session, branch, leaf, subject, role, and run references. They do not contain transcript bodies.
 - Batch retains execution order. Agent roles retain capability and separation policy. Dataset export retains training admission. Safe-receipt and Cairn policy retain claim admission.
 - `animus-runtime::harbor_eval` keeps Harbor and ATIF compatibility. Its generic matrix and reward reducers now call `animus-eval-core`.
-- Future adapter and host crates must implement task loading, model and tool calls, verifier execution, artifact transfer, clocks, cancellation observation, and result storage.
+- `animus-adapter-eval` now defines separate implementation-free ports for task loading, agent and verifier execution, artifact transfer, model-call capture, and result storage. Host crates must supply every effect, clock, deadline, and cancellation observation.
 
 ## Policy and identity
 

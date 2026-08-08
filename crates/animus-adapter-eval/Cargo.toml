@@ -1,0 +1,14 @@
+[package]
+name = "animus-adapter-eval"
+description = "no_std native evaluation service-port and gateway contracts for Animus."
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+animus-eval-core = { path = "../animus-eval-core", version = "0.1.0" }

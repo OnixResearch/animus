@@ -45,6 +45,7 @@ let optional_stability = "optional" in
 let root = "src/lib.rs" in
 let core = "crates/animus-core/src/lib.rs" in
 let adapters = "crates/animus-adapters/src/lib.rs" in
+let evaluation_adapters = "crates/animus-adapter-eval/src/lib.rs" in
 let preserves = "crates/animus-preserves/src/lib.rs" in
 let runtime = "crates/animus-runtime/src/lib.rs" in
 let std_shell = "crates/animus-std/src/lib.rs" in
@@ -83,6 +84,7 @@ let session_event_replay_family = "session-event-replay" in
 let execution_backend_feature = "execution-backend-planner" in
 let execution_backend_family = "execution-backend" in
 let native_evaluation_feature = "native-evaluation" in
+let evaluation_adapters_feature = "evaluation-adapters" in
 let native_evaluation_profile_feature = "native-evaluation-profile" in
 let native_evaluation_family = "evaluation" in
 let agent_guardrail_feature = "agent-guardrail" in
@@ -264,6 +266,21 @@ let native_evaluation_record = fun export_path_value owning_crate_value source_v
   required_authority = none,
   depends_on = [],
   composes_with = ["animus-runtime::harbor_eval"],
+  capability_family = native_evaluation_family,
+}
+in
+let evaluation_adapters_record = fun export_path_value owning_crate_value source_value review_note_value => {
+  export_path = export_path_value,
+  owning_crate = owning_crate_value,
+  source = source_value,
+  class = reusable,
+  side_effect = none,
+  stability = optional_stability,
+  review_note = review_note_value,
+  feature_gate = evaluation_adapters_feature,
+  required_authority = none,
+  depends_on = ["animus::native_evaluation"],
+  composes_with = ["animus-adapters::harbor", "animus-runtime::harbor_eval", "animus-runtime::agent_roles"],
   capability_family = native_evaluation_family,
 }
 in
@@ -2358,6 +2375,8 @@ let entry_values = [
   messaging_record "animus::messaging_receipts" "animus" root "optional compatibility re-export of messaging receipt contracts",
   native_evaluation_record "animus-runtime::native_evaluation" "animus-runtime" runtime "optional runtime re-export of the authority-free evaluation core",
   native_evaluation_record "animus::native_evaluation" "animus" root "optional root re-export of the authority-free evaluation core",
+  evaluation_adapters_record "animus-adapters::evaluation" "animus-adapters" adapters "non-default compatibility re-export of native evaluation adapter contracts",
+  evaluation_adapters_record "animus::evaluation_adapters" "animus" root "non-default root re-export of native evaluation adapter contracts",
   native_evaluation_profile_record "animus-std::NativeEvaluationProfileError" "animus-std" std_shell "bounded generated policy parse failure class",
   native_evaluation_profile_record "animus-std::parse_native_evaluation_policy_json" "animus-std" std_shell "strict caller-loaded generated policy parser",
   native_evaluation_profile_record "animus::NativeEvaluationProfileError" "animus" root "root re-export of the bounded generated policy parse failure class",

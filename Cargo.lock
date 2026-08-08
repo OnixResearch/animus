@@ -103,6 +103,7 @@ dependencies = [
  "animus-acp-stdio-host",
  "animus-adapter-continual",
  "animus-adapter-daemon",
+ "animus-adapter-eval",
  "animus-adapter-rlm-kernel",
  "animus-adapter-weave",
  "animus-adapters",
@@ -152,6 +153,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "animus-adapter-eval"
+version = "0.1.0"
+dependencies = [
+ "animus-eval-core",
+]
+
+[[package]]
 name = "animus-adapter-observability"
 version = "0.1.0"
 dependencies = [
@@ -184,6 +192,7 @@ version = "0.1.0"
 dependencies = [
  "animus-adapter-continual",
  "animus-adapter-daemon",
+ "animus-adapter-eval",
  "animus-adapter-observability",
  "animus-adapter-rlm-kernel",
  "animus-adapter-safe",

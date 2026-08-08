@@ -67,6 +67,8 @@ The non-default Harbor-compatible evaluation lane accepts only checked local pro
 
 The non-default [native evaluation core](native-evaluation-core.md) is `#![no_std]` plus `alloc`. It plans over caller-supplied immutable identities and keeps episodes as canonical ledger references. It cannot load tasks, store traces, call models, tools, or verifiers, move artifacts, use clocks, observe cancellation, schedule runs, or persist results. Shared judges remain advisory. Only full exact terminal resume evidence can suppress work. Native receipts reject raw evaluation content and completion, benchmark, training, production, or release claims.
 
+The non-default [native evaluation adapter family](evaluation-adapter-family.md) is also `#![no_std]` plus `alloc`. It splits each effect into a separate injected port. Catalog admission enforces one capability ceiling per port. Full binding identities prevent cross-plan, cross-task, cross-attempt, cross-policy, cross-artifact, and cross-implementation reuse. Terminal stream evidence cannot pass before exact commit evidence. Equal content cannot authorize retry coalescing. The family performs no transport, execution, discovery, cancellation, clock, artifact, or storage effect.
+
 ## Security review boundary
 
 `animus-adapters` owns the reusable Goose-inspired security review DTOs and pure helpers. Review inputs keep only task labels, bounded context summaries, safe tool labels, active policy labels, and BLAKE3 evidence hashes; raw prompts, credentials, provider payloads, private paths, and unbounded tool arguments stay outside stored review state and receipts.

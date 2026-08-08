@@ -10,9 +10,14 @@ version.workspace = true
 [lints]
 workspace = true
 
+[features]
+default = []
+evaluation = ["dep:animus-adapter-eval"]
+
 [dependencies]
 animus-adapter-continual = { path = "../animus-adapter-continual", version = "0.1.0" }
 animus-adapter-daemon = { path = "../animus-adapter-daemon", version = "0.1.0" }
+animus-adapter-eval = { path = "../animus-adapter-eval", version = "0.1.0", optional = true }
 animus-adapter-observability = { path = "../animus-adapter-observability", version = "0.1.0" }
 animus-adapter-rlm-kernel = { path = "../animus-adapter-rlm-kernel", version = "0.1.0" }
 animus-adapter-safe = { path = "../animus-adapter-safe", version = "0.1.0" }

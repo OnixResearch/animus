@@ -4,7 +4,7 @@ Animus adapts a local fixture-backed evaluation slice from Harbor `v0.18.0` at c
 
 ## Ownership
 
-Typed Nickel owns the reviewed task, dataset, route, environment, verifier, budget, reward, network, and secret posture. Rust revalidates the generated projection. `animus_runtime::harbor_eval` keeps Harbor-specific ATIF projection and receipts. Its generic matrix and reward reducers delegate to `animus-eval-core`. `animus_adapters::harbor` owns implementation-free environment and verifier ports. `animus_std::harbor` calls explicitly injected services and requires a separate verifier identity and allowlisted artifact manifest.
+Typed Nickel owns the reviewed task, dataset, route, environment, verifier, budget, reward, network, and secret posture. Rust revalidates the generated projection. `animus_runtime::harbor_eval` keeps Harbor-specific ATIF projection and receipts. Its generic matrix and reward reducers delegate to `animus-eval-core`. `animus_adapters::harbor` owns implementation-free environment and verifier ports. Under `evaluation`, it converts exact Harbor calls into `animus-adapter-eval` agent or verifier requests and rejects identity loss. `animus_std::harbor` calls explicitly injected services and requires a separate verifier identity and allowlisted artifact manifest.
 
 Existing batch, evaluation-feedback, ResearchSpec, dataset-export, trust-boundary, sandbox, orchestration, model-profile, role, and completion owners remain authoritative; the Harbor composition does not replace them.
 
