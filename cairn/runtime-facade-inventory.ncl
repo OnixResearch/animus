@@ -76,6 +76,8 @@ let messaging_feature = "messaging-receipts" in
 let messaging_family = "messaging-receipts" in
 let persistent_goals_feature = "persistent-goals" in
 let persistent_goals_family = "goal-state" in
+let schedule_reliability_feature = "schedule-reliability" in
+let schedule_reliability_family = "schedule" in
 let agent_guardrail_feature = "agent-guardrail" in
 let agent_guardrail_family = "policy" in
 let syndicate_record = fun export_path_value owning_crate_value source_value class_value side_effect_value review_note_value => {
@@ -256,6 +258,21 @@ let persistent_goals_record = fun export_path_value owning_crate_value source_va
   depends_on = [],
   composes_with = ["animus-runtime::ContinuationPolicy"],
   capability_family = persistent_goals_family,
+}
+in
+let schedule_reliability_record = fun export_path_value owning_crate_value source_value review_note_value => {
+  export_path = export_path_value,
+  owning_crate = owning_crate_value,
+  source = source_value,
+  class = reusable,
+  side_effect = none,
+  stability = optional_stability,
+  review_note = review_note_value,
+  feature_gate = schedule_reliability_feature,
+  required_authority = none,
+  depends_on = [],
+  composes_with = ["animus-adapters::ScheduledWorkflow"],
+  capability_family = schedule_reliability_family,
 }
 in
 let agent_control_record = fun export_path_value owning_crate_value source_value review_note_value => {
@@ -2244,6 +2261,8 @@ let entry_values = [
   messaging_record "animus-adapters::messaging" "animus-adapters" adapters "host-derived family roster, pure delivery modes, pre-routing limits, and delivered/queued metadata-only receipts",
   messaging_record "animus::messaging_receipts" "animus" root "optional compatibility re-export of messaging receipt contracts",
   persistent_goals_record "animus-runtime::persistent_goals" "animus-runtime" runtime "pure goal state, budgets, explicit lifecycle ownership, and metadata-only receipts",
+  schedule_reliability_record "animus-runtime::schedule_reliability" "animus-runtime" runtime "pure schedule ownership, claim-before-delivery, bounded coalescing, recovery, and metadata-only receipts",
+  schedule_reliability_record "animus::schedule_reliability" "animus" root "optional compatibility re-export of schedule reliability contracts",
   entry "animus-runtime::tool_executor_kit" "animus-runtime" runtime injection injected stable "pure executor admission and receipt core with an explicit host-injected service shell",
   rlm_kernel_record "animus-runtime::rlm_kernel" "animus-runtime" runtime injection injected "revalidated injected execution seam for typed model-facing Steel requests" injected,
   entry "animus-runtime::tool_executor_packs" "animus-runtime" runtime reusable none stable "tool executor pack descriptor module",

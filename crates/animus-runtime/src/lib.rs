@@ -38,6 +38,11 @@ pub mod autonomous_gates;
 #[path = "persistentgoals.rs"]
 pub mod persistent_goals;
 
+/// Pure schedule ownership, claim, coalescing, recovery, and receipt contracts.
+#[cfg(feature = "schedule-reliability")]
+#[path = "schedulereliability/mod.rs"]
+pub mod schedule_reliability;
+
 /// Pure active-turn durability, transaction, recovery, and receipt contracts.
 pub mod active_turn_recovery;
 mod admission;

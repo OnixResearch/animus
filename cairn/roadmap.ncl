@@ -81,6 +81,10 @@ let change_entries = [
     "agent_harness_runtime.clankers_focused_rails.closeout",
     "agent_harness_runtime.validation",
   ] ["adapt-claude-code-headless-surfaces", "adapt-pi-headless-rpc-protocol", "add-ratatui-tool-host-surface", "adapt-claude-code-mcp-bridge", "add-concrete-std-runtime-adapters", "adapt-clankers-batch-trajectory-runner"],
+  change "adapt-prime-agent-schedule-reliability" core_role "runtime-loop" [
+    "agent_harness_runtime.goose_scheduled_recipes.data_only",
+    "agent_harness_runtime.messaging_receipts.modes",
+  ] ["add-bounded-terminal-video-playback"],
   change "add-canonical-model-message-contracts" core_role "injected-services" [
     "agent_harness_runtime.model_dispatch.plan",
     "agent_harness_runtime.multimodal_image_payloads.typed_parts",

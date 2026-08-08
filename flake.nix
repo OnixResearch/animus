@@ -128,6 +128,7 @@
               diff -u ${./config/generated/daemon-workers-policy.json} "$tmp_dir/config/generated/daemon-workers-policy.json"
               diff -u ${./config/generated/messaging-receipts-policy.json} "$tmp_dir/config/generated/messaging-receipts-policy.json"
               diff -u ${./config/generated/persistent-goals-policy.json} "$tmp_dir/config/generated/persistent-goals-policy.json"
+              diff -u ${./config/generated/schedule-reliability-policy.json} "$tmp_dir/config/generated/schedule-reliability-policy.json"
 
               nickel typecheck ${./config/nickel-export-requests.ncl}
               NICKEL_EXPORT_BIN=${nickel-export.packages.${system}.default}/bin/nickel-export \
@@ -260,6 +261,8 @@
                 || baseName == "check-messaging-receipts.rs"
                 || baseName == "check-persistent-goals"
                 || baseName == "check-persistent-goals.rs"
+                || baseName == "check-schedule-reliability"
+                || baseName == "check-schedule-reliability.rs"
                 || baseName == "check-model-runtime-profiles"
                 || baseName == "check-agent-role-profiles"
                 || baseName == "check-aeneas-proof-campaign"
@@ -559,6 +562,13 @@
             pkgs.diffutils
           ] ''
             sh scripts/cairn/check-persistent-goals --root .
+          '';
+
+          schedule-reliability = cargoCheck "animus-schedule-reliability" [
+            pkgs.nickel
+            pkgs.diffutils
+          ] ''
+            sh scripts/cairn/check-schedule-reliability --root .
           '';
 
           model-runtime-profiles = cargoCheck "animus-model-runtime-profiles" [

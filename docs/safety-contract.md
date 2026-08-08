@@ -25,6 +25,14 @@ Animus is structured around a functional-core / imperative-shell (FCIS) split. T
 
 The optional `animus-runtime/autonomous-gates` feature receives only typed gate results, host-supplied counters, and fingerprints over an explicit admitted file set. It does not execute commands, read files, inspect clocks, or persist state. Failed-gate output is bounded before prompt use. `gates_passed` and `limit_reached` remain scoped outcomes and never prove task success, objective completion, production readiness, or release eligibility.
 
+## Schedule reliability boundary
+
+The optional `animus-runtime::schedule_reliability` family is a pure session-schedule boundary. It accepts caller-loaded durable jobs and host-injected logical ticks. It returns mutation, claim, coalescing, recovery, delivery-admission, and metadata-only receipt decisions.
+
+The host must persist an exact claim before delivery. Recovery does not deliver a claimed tick again. Missed ticks produce one bounded policy decision, not one delivery per tick. Clocks, timers, storage, prompts, queues, and delivery remain host-owned.
+
+This family does not establish exactly-once execution, real-time delivery, timer accuracy, prompt outcome correctness, production readiness, or release eligibility. See [schedule reliability](schedule-reliability.md).
+
 ## Continual-harness refinement boundary
 
 The optional `animus-runtime::persistent_goals` family is a pure goal-state boundary. It accepts only metadata-only objective identities, explicit user or host actions, typed budgets, and host-injected accounting. It rejects model or inferred creation, model lifecycle control, invalid transitions, second active goals, budget-as-success claims, objective text in receipts, and ambient clock or persistence requests. It emits bounded state and receipts only. It does not prove objective achievement, work quality, automatic inference, production readiness, or release eligibility.

@@ -10,6 +10,7 @@
 - `crates/animus-steel` is the canonical Steel Scheme loop fabric. It lets embedders script the agent turn loop while Rust revalidates every selected model/tool/response action at adapter boundaries.
 - `crates/animus-adapter-rlm-kernel` is the no-std contract core for the optional model-facing persistent Steel environment. `animus-steel::SteelRlmToolAdapter` exposes it through the normal tool port, and `animus-runtime::rlm_kernel` keeps host effects injected.
 - `crates/animus-runtime` is the reusable agent-loop runtime. It drives typed Steel/fabric decisions through injected model and tool adapters, emits ordered runtime events/reports, and provides exact per-model prompt/skill/memory/tool composition, capability-bound semantic role composition and separation, a coherent metadata-only tool catalog, pure admission, injected executor, bounded output, and safe receipt kits while keeping provider, filesystem, process, network, UI, and persistence authority outside the runtime core.
+- The optional `schedule-reliability` runtime feature adds pure schedule ownership, claim-before-delivery, missed-tick coalescing, restart recovery, and metadata-only receipts. Hosts retain clocks, timers, durable storage, prompt queues, and delivery; see [docs/schedule-reliability.md](docs/schedule-reliability.md).
 - `crates/animus-std` is the standard-library host compatibility shell. It owns environment/config parsing, feature-gated generated model-profile and semantic-role loading, process-facing orchestration, a pure authority catalog, and facade re-exports for authority-scoped host blocks.
 - `crates/animus-std-observability` is the first direct authority-scoped std block. It supplies deterministic no-op and in-memory observability sinks without pulling unrelated context, provider, ingest, transport, credential, persistence, or terminal behavior.
 - `crates/animus-std-control` is the focused blocking agent-control host. It supplies explicit pause, resume, cancellation, condition-variable waiting, and bounded event subscriptions without transport, persistence, or global-registry authority.
@@ -169,6 +170,7 @@ scripts/cairn/check-continual-harness --root .
 scripts/cairn/check-daemon-workers --root .
 scripts/cairn/check-messaging-receipts --root .
 scripts/cairn/check-persistent-goals --root .
+scripts/cairn/check-schedule-reliability --root .
 scripts/cairn/check-model-runtime-profiles --root .
 scripts/cairn/check-agent-role-profiles --root .
 scripts/cairn/check-provider-retry --root .

@@ -116,6 +116,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "daemon-workers",
     "messaging-receipts",
     "persistent-goals",
+    "schedule-reliability",
 ];
 
 const ALLOWED_AUTHORITIES: &[&str] = &[
@@ -170,6 +171,7 @@ const ALLOWED_FAMILIES: &[&str] = &[
     "daemon",
     "messaging",
     "goal-state",
+    "schedule",
 ];
 
 const UNSAFE_FIELD_MARKERS: &[&str] = &[

@@ -29,6 +29,7 @@ all-families = [
 compat = ["all-families", "steel"]
 autonomous-gates = []
 persistent-goals = []
+schedule-reliability = []
 batch = []
 compaction = []
 dataset-export = []

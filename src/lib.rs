@@ -255,6 +255,10 @@ pub use animus_runtime;
 #[cfg(feature = "autonomous-gates")]
 pub use animus_runtime::autonomous_gates;
 
+/// Re-export of the non-default schedule reliability contract family.
+#[cfg(feature = "schedule-reliability")]
+pub use animus_runtime::schedule_reliability;
+
 /// Re-export of the no-std model-facing RLM kernel contract family.
 #[cfg(feature = "rlm-kernel")]
 pub use animus_adapter_rlm_kernel as rlm_kernel_contracts;
