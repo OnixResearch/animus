@@ -1,0 +1,14 @@
+[package]
+name = "animus-eval-core"
+description = "Pure no-std evaluation planning, reduction, resume, and evidence contracts for Animus."
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+blake3 = { version = "1.8.5", default-features = false }

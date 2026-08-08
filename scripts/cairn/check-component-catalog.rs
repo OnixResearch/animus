@@ -119,6 +119,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "schedule-reliability",
     "session-event-replay",
     "execution-backend-planner",
+    "native-evaluation",
     "terminal-image",
     "terminal-video",
 ];
@@ -147,6 +148,7 @@ const ALLOWED_FAMILIES: &[&str] = &[
     "core",
     "dataset-export",
     "document-ingest",
+    "evaluation",
     "headless",
     "model",
     "model-evidence",

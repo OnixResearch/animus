@@ -32,6 +32,8 @@ persistent-goals = []
 schedule-reliability = []
 session-event-replay = []
 execution-backend-planner = []
+native-evaluation = ["dep:animus-eval-core"]
+harbor-eval = ["native-evaluation"]
 batch = []
 compaction = []
 dataset-export = []
@@ -51,6 +53,7 @@ steel = ["dep:animus-steel"]
 animus-adapter-rlm-kernel = { path = "../animus-adapter-rlm-kernel", version = "0.1.0", optional = true }
 animus-adapters = { path = "../animus-adapters", version = "0.1.0" }
 animus-core = { path = "../animus-core", version = "0.1.0" }
+animus-eval-core = { path = "../animus-eval-core", version = "0.1.0", optional = true }
 animus-steel = { path = "../animus-steel", version = "0.1.0", optional = true }
 blake3 = { version = "1.8.5", default-features = false }
 

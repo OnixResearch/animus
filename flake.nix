@@ -123,6 +123,7 @@
               diff -u ${./config/generated/mesh-provider-profile.json} "$tmp_dir/config/generated/mesh-provider-profile.json"
               diff -u ${./config/generated/spacewasm-embedded-compat.json} "$tmp_dir/config/generated/spacewasm-embedded-compat.json"
               diff -u ${./config/generated/harbor-evaluation-profile.json} "$tmp_dir/config/generated/harbor-evaluation-profile.json"
+              diff -u ${./config/generated/native-evaluation-policy.json} "$tmp_dir/config/generated/native-evaluation-policy.json"
               diff -u ${./config/generated/host-control-source.json} "$tmp_dir/config/generated/host-control-source.json"
               diff -u ${./config/generated/continual-harness-policy.json} "$tmp_dir/config/generated/continual-harness-policy.json"
               diff -u ${./config/generated/daemon-workers-policy.json} "$tmp_dir/config/generated/daemon-workers-policy.json"
@@ -278,6 +279,8 @@
                 || baseName == "check-terminal-image-protocols.rs"
                 || baseName == "check-terminal-video-playback"
                 || baseName == "check-terminal-video-playback.rs"
+                || baseName == "check-native-evaluation-core"
+                || baseName == "check-native-evaluation-core.rs"
                 || baseName == "check-model-runtime-profiles"
                 || baseName == "check-agent-role-profiles"
                 || baseName == "check-aeneas-proof-campaign"
@@ -506,6 +509,12 @@
             ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
             export ANIMUS_HARBOR_SKIP_NICKEL=1
             sh scripts/cairn/check-harbor-evaluation --root .
+          '';
+
+          native-evaluation-core = cargoCheck "animus-native-evaluation-core" [ pkgs.b3sum pkgs.clippy pkgs.nickel ] ''
+            ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
+            export ANIMUS_NATIVE_EVAL_SKIP_NICKEL=1
+            sh scripts/cairn/check-native-evaluation-core --root .
           '';
 
           host-control-extraction = cargoCheck "animus-host-control-extraction" [ ] ''

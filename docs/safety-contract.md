@@ -65,6 +65,8 @@ The separate `spacewasm-embedded-compat` profile is a non-default diagnostic ove
 
 The non-default Harbor-compatible evaluation lane accepts only checked local profiles, pure bounded planning, exact ATIF-v1.7 metadata projection, finite attributed rewards, separate verifier identities, allowlisted artifact manifests, and caller-injected services. It imports no Python, Pydantic, Harbor, container, cloud, filesystem, process, network, credential, clock, scheduler, or persistence authority into reusable crates. Scores and judge outputs remain advisory unless existing Cairn completion policy independently admits exact current evidence. See [Harbor evaluation harness](harbor-evaluation-harness.md).
 
+The non-default [native evaluation core](native-evaluation-core.md) is `#![no_std]` plus `alloc`. It plans over caller-supplied immutable identities and keeps episodes as canonical ledger references. It cannot load tasks, store traces, call models, tools, or verifiers, move artifacts, use clocks, observe cancellation, schedule runs, or persist results. Shared judges remain advisory. Only full exact terminal resume evidence can suppress work. Native receipts reject raw evaluation content and completion, benchmark, training, production, or release claims.
+
 ## Security review boundary
 
 `animus-adapters` owns the reusable Goose-inspired security review DTOs and pure helpers. Review inputs keep only task labels, bounded context summaries, safe tool labels, active policy labels, and BLAKE3 evidence hashes; raw prompts, credentials, provider payloads, private paths, and unbounded tool arguments stay outside stored review state and receipts.

@@ -9,6 +9,7 @@ members = [
   "crates/animus-acp-stdio-host",
   "crates/animus-adapters",
   "crates/animus-core",
+  "crates/animus-eval-core",
   "crates/animus-preserves",
   "crates/animus-preserves-adapter",
   "crates/animus-preserves-schema",
@@ -28,6 +29,7 @@ default-members = [
   "crates/animus-adapter-safe",
   "crates/animus-adapters",
   "crates/animus-core",
+  "crates/animus-eval-core",
   "crates/animus-preserves",
   "crates/animus-preserves-adapter",
   "crates/animus-preserves-schema",
@@ -101,7 +103,9 @@ codebase-graph-host = ["std", "animus-std/codebase-graph-host"]
 durable-session-store = ["std", "runtime", "animus-std/durable-session-store"]
 agent-guardrail = ["dep:animus-std-agent-guardrail"]
 lean-loop = ["runtime", "dep:animus-std-lean-loop"]
-harbor-eval = ["std", "runtime", "animus-std/harbor-eval"]
+native-evaluation = ["dep:animus-eval-core"]
+native-evaluation-profile = ["std", "native-evaluation", "animus-std/native-evaluation-profile"]
+harbor-eval = ["std", "native-evaluation", "animus-runtime/harbor-eval", "animus-std/harbor-eval"]
 mesh-provider = ["std", "animus-std/mesh-provider"]
 spacewasm-diagnostic = ["std", "animus-std/spacewasm-diagnostic"]
 std = ["dep:animus-std"]
@@ -143,6 +147,7 @@ animus-adapter-rlm-kernel = { path = "crates/animus-adapter-rlm-kernel", version
 animus-adapter-weave = { path = "crates/animus-adapter-weave", version = "0.1.0", optional = true }
 animus-adapters = { path = "crates/animus-adapters", version = "0.1.0" }
 animus-core = { path = "crates/animus-core", version = "0.1.0" }
+animus-eval-core = { path = "crates/animus-eval-core", version = "0.1.0", optional = true }
 animus-preserves = { path = "crates/animus-preserves", version = "0.1.0", optional = true }
 animus-router = { path = "crates/animus-router", version = "0.1.0", optional = true }
 animus-runtime = { path = "crates/animus-runtime", version = "0.1.0", optional = true }

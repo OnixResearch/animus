@@ -1,0 +1,20 @@
+{
+  schema = "animus.native-evaluation-negative-fixtures.v1",
+  cases = [
+    { name = "public-network-default", expected = "unsafe_default" },
+    { name = "secret-values", expected = "unsafe_default" },
+    { name = "zero-selection-bound", expected = "bound" },
+    { name = "infinite-global-shuffle", expected = "ordering" },
+    { name = "unstable-generator", expected = "generator" },
+    { name = "duplicate-task", expected = "membership" },
+    { name = "copied-trace-body", expected = "evidence_leak" },
+    { name = "shared-judge-completion", expected = "overclaim" },
+    { name = "trainable-simulated-user", expected = "user_authority" },
+    { name = "nan-reward", expected = "non_finite" },
+    { name = "out-of-domain-reward", expected = "out_of_domain" },
+    { name = "stale-resume", expected = "rerun" },
+    { name = "torn-resume", expected = "block" },
+    { name = "raw-prompt-receipt", expected = "evidence_leak" },
+    { name = "release-overclaim", expected = "overclaim" },
+  ],
+}

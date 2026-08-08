@@ -116,7 +116,12 @@ mod executionkit;
 mod exports;
 mod fabric;
 mod fresh_context_tasks;
+/// Focused authority-free native evaluation planning and reduction contracts.
+#[cfg(feature = "native-evaluation")]
+pub use animus_eval_core as native_evaluation;
+
 /// Pure optional Harbor-compatible evaluation planning and evidence projection.
+#[cfg(feature = "harbor-eval")]
 #[path = "harbor/eval.rs"]
 pub mod harbor_eval;
 mod headless;

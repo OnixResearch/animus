@@ -54,6 +54,8 @@ pub mod harbor;
 mod hostadapters;
 #[cfg(feature = "iroh-host")]
 mod iroh;
+#[cfg(feature = "native-evaluation-profile")]
+mod nativeevaluation;
 #[cfg(feature = "session-branch-explorer")]
 mod sessionbranchexplorer;
 // r[impl agent_harness_runtime.syndicate_iroh_bridge.feature]
@@ -123,6 +125,8 @@ pub use conversationprojection::{
     ConversationMemoryCache, ConversationProjectionConfigError,
     load_conversation_projection_policy, parse_conversation_projection_policy_json,
 };
+#[cfg(feature = "native-evaluation-profile")]
+pub use nativeevaluation::{NativeEvaluationProfileError, parse_native_evaluation_policy_json};
 #[cfg(feature = "session-branch-explorer")]
 pub use sessionbranchexplorer::{
     SessionBranchExplorerConfigError, SessionBranchFixtureFailure, SessionBranchMemoryHost,

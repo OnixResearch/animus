@@ -107,6 +107,7 @@ dependencies = [
  "animus-adapter-weave",
  "animus-adapters",
  "animus-core",
+ "animus-eval-core",
  "animus-preserves",
  "animus-router",
  "animus-runtime",
@@ -199,6 +200,13 @@ name = "animus-core"
 version = "0.1.0"
 
 [[package]]
+name = "animus-eval-core"
+version = "0.1.0"
+dependencies = [
+ "blake3",
+]
+
+[[package]]
 name = "animus-preserves"
 version = "0.1.0"
 dependencies = [
@@ -242,6 +250,7 @@ dependencies = [
  "animus-adapter-rlm-kernel",
  "animus-adapters",
  "animus-core",
+ "animus-eval-core",
  "animus-steel",
  "blake3",
  "serde",
@@ -254,6 +263,7 @@ version = "0.1.0"
 dependencies = [
  "animus-adapters",
  "animus-core",
+ "animus-eval-core",
  "animus-preserves",
  "animus-runtime",
  "animus-std-observability",

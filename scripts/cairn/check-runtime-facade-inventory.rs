@@ -129,6 +129,8 @@ const ALLOWED_FEATURES: &[&str] = &[
     "schedule-reliability",
     "session-event-replay",
     "execution-backend-planner",
+    "native-evaluation",
+    "native-evaluation-profile",
 ];
 
 const ALLOWED_AUTHORITIES: &[&str] = &[
@@ -173,6 +175,7 @@ const ALLOWED_FAMILIES: &[&str] = &[
     "schedule",
     "session-event-replay",
     "execution-backend",
+    "evaluation",
 ];
 
 const AMBIENT_AUTHORITY_MARKERS: &[&str] = &[

@@ -82,6 +82,9 @@ let session_event_replay_feature = "session-event-replay" in
 let session_event_replay_family = "session-event-replay" in
 let execution_backend_feature = "execution-backend-planner" in
 let execution_backend_family = "execution-backend" in
+let native_evaluation_feature = "native-evaluation" in
+let native_evaluation_profile_feature = "native-evaluation-profile" in
+let native_evaluation_family = "evaluation" in
 let agent_guardrail_feature = "agent-guardrail" in
 let agent_guardrail_family = "policy" in
 let syndicate_record = fun export_path_value owning_crate_value source_value class_value side_effect_value review_note_value => {
@@ -247,6 +250,36 @@ let messaging_record = fun export_path_value owning_crate_value source_value rev
   depends_on = [],
   composes_with = ["animus-adapters::HostTopologySnapshot"],
   capability_family = messaging_family,
+}
+in
+let native_evaluation_record = fun export_path_value owning_crate_value source_value review_note_value => {
+  export_path = export_path_value,
+  owning_crate = owning_crate_value,
+  source = source_value,
+  class = reusable,
+  side_effect = none,
+  stability = optional_stability,
+  review_note = review_note_value,
+  feature_gate = native_evaluation_feature,
+  required_authority = none,
+  depends_on = [],
+  composes_with = ["animus-runtime::harbor_eval"],
+  capability_family = native_evaluation_family,
+}
+in
+let native_evaluation_profile_record = fun export_path_value owning_crate_value source_value review_note_value => {
+  export_path = export_path_value,
+  owning_crate = owning_crate_value,
+  source = source_value,
+  class = shell,
+  side_effect = shell_owned,
+  stability = optional_stability,
+  review_note = review_note_value,
+  feature_gate = native_evaluation_profile_feature,
+  required_authority = shell_owned,
+  depends_on = [],
+  composes_with = ["animus-runtime::native_evaluation"],
+  capability_family = native_evaluation_family,
 }
 in
 let persistent_goals_record = fun export_path_value owning_crate_value source_value review_note_value => {
@@ -2323,6 +2356,12 @@ let entry_values = [
   daemon_record "animus::daemon_workers" "animus" root "optional compatibility re-export of daemon worker contracts",
   messaging_record "animus-adapters::messaging" "animus-adapters" adapters "host-derived family roster, pure delivery modes, pre-routing limits, and delivered/queued metadata-only receipts",
   messaging_record "animus::messaging_receipts" "animus" root "optional compatibility re-export of messaging receipt contracts",
+  native_evaluation_record "animus-runtime::native_evaluation" "animus-runtime" runtime "optional runtime re-export of the authority-free evaluation core",
+  native_evaluation_record "animus::native_evaluation" "animus" root "optional root re-export of the authority-free evaluation core",
+  native_evaluation_profile_record "animus-std::NativeEvaluationProfileError" "animus-std" std_shell "bounded generated policy parse failure class",
+  native_evaluation_profile_record "animus-std::parse_native_evaluation_policy_json" "animus-std" std_shell "strict caller-loaded generated policy parser",
+  native_evaluation_profile_record "animus::NativeEvaluationProfileError" "animus" root "root re-export of the bounded generated policy parse failure class",
+  native_evaluation_profile_record "animus::parse_native_evaluation_policy_json" "animus" root "root re-export of the strict generated policy parser",
   persistent_goals_record "animus-runtime::persistent_goals" "animus-runtime" runtime "pure goal state, budgets, explicit lifecycle ownership, and metadata-only receipts",
   schedule_reliability_record "animus-runtime::schedule_reliability" "animus-runtime" runtime "pure schedule ownership, claim-before-delivery, bounded coalescing, recovery, and metadata-only receipts",
   schedule_reliability_record "animus::schedule_reliability" "animus" root "optional compatibility re-export of schedule reliability contracts",

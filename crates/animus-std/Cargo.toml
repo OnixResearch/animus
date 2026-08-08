@@ -23,7 +23,8 @@ session-branch-explorer = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 codebase-graph-host = ["dep:serde", "dep:serde_json", "dep:tree-sitter", "dep:tree-sitter-rust"]
 dogfood-smoke = ["dep:animus-runtime"]
 durable-session-store = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
-harbor-eval = ["dep:animus-runtime", "dep:serde_json"]
+harbor-eval = ["dep:animus-runtime", "animus-runtime/harbor-eval", "dep:serde_json"]
+native-evaluation-profile = ["dep:animus-eval-core", "dep:serde", "dep:serde_json"]
 mesh-provider = ["dep:serde", "dep:serde_json"]
 model-runtime-profiles = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 provider-retry = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
@@ -65,6 +66,7 @@ required-features = ["durable-session-store"]
 [dependencies]
 animus-adapters = { path = "../animus-adapters", version = "0.1.0" }
 animus-core = { path = "../animus-core", version = "0.1.0" }
+animus-eval-core = { path = "../animus-eval-core", version = "0.1.0", optional = true }
 animus-preserves = { path = "../animus-preserves", version = "0.1.0", optional = true }
 animus-runtime = { path = "../animus-runtime", version = "0.1.0", default-features = false, optional = true }
 animus-std-observability = { path = "../animus-std-observability", version = "0.1.0", optional = true }

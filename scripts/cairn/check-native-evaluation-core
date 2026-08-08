@@ -1,0 +1,83 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+readonly ROOT_FLAG=--root
+readonly DEFAULT_ROOT=.
+readonly CHECKER_SOURCE=scripts/cairn/check-native-evaluation-core.rs
+readonly CHECKER_TARGET=target/cairn/check-native-evaluation-core
+readonly RECEIPT=target/cairn/focused-rails/native-evaluation-core.md
+readonly PROHIBITED_DEPENDENCIES='(^|[-_])(tokio|reqwest|hyper|python|harbor|docker|kubernetes|boto|cloud)([-_]|$)'
+readonly SOURCE_COHORT_MATERIAL='animus.native-evaluation-policy.source.v1:PrimeIntellect-ai/verifiers:1a997814e85a2e4f409add960aa852737388dbd8'
+readonly SOURCE_COHORT_HASH='069f20983a0d523d84028b76f85b3dd63a712f952e99cdef628824ef1ffe6bfe'
+
+root=${DEFAULT_ROOT}
+if [ "${1:-}" = "${ROOT_FLAG}" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  root=$2
+fi
+cd "${root}"
+
+if ! command -v b3sum >/dev/null 2>&1; then
+  printf '%s\n' 'error: b3sum is required for the source-cohort identity check' >&2
+  exit "${FAILURE}"
+fi
+computed_source_hash=$(printf '%s' "${SOURCE_COHORT_MATERIAL}" | b3sum | awk '{print $1}')
+if [ "${computed_source_hash}" != "${SOURCE_COHORT_HASH}" ]; then
+  printf '%s\n' 'error: native evaluation source-cohort identity drifted' >&2
+  exit "${FAILURE}"
+fi
+
+mkdir -p "$(dirname "${CHECKER_TARGET}")" "$(dirname "${RECEIPT}")"
+rustc --edition=2021 --test "${CHECKER_SOURCE}" -o "${CHECKER_TARGET}-tests"
+"${CHECKER_TARGET}-tests"
+rustc --edition=2021 "${CHECKER_SOURCE}" -o "${CHECKER_TARGET}"
+"${CHECKER_TARGET}" .
+
+if [ "${ANIMUS_NATIVE_EVAL_SKIP_NICKEL:-0}" != "1" ]; then
+  scripts/config/check-nickel-configs
+fi
+nickel export --format json fixtures/native-evaluation/positive.ncl >/dev/null
+nickel export --format json fixtures/native-evaluation/negative.ncl >/dev/null
+cargo test -p animus-eval-core --locked
+cargo clippy -p animus-eval-core --all-targets -- -D warnings
+cargo test -p animus-std --no-default-features --features native-evaluation-profile nativeevaluation --locked
+cargo test -p animus-runtime --no-default-features --features harbor-eval harbor_eval --locked
+cargo check -p animus-eval-core --target wasm32-unknown-unknown --locked
+cargo check -p animus --no-default-features --features native-evaluation --target wasm32-unknown-unknown --locked
+cargo check -p animus-runtime --no-default-features --features native-evaluation --target wasm32-unknown-unknown --locked
+
+if cargo tree -p animus-eval-core --edges normal | grep -Eiq "${PROHIBITED_DEPENDENCIES}"; then
+  printf '%s\n' 'error: host authority dependency leaked into animus-eval-core' >&2
+  exit "${FAILURE}"
+fi
+if cargo tree -p animus --edges normal | grep -Fq 'animus-eval-core'; then
+  printf '%s\n' 'error: native evaluation leaked into the default root facade' >&2
+  exit "${FAILURE}"
+fi
+if cargo tree -p animus-runtime --no-default-features --edges normal | grep -Fq 'animus-eval-core'; then
+  printf '%s\n' 'error: native evaluation leaked into the default-free runtime' >&2
+  exit "${FAILURE}"
+fi
+
+cat >"${RECEIPT}" <<'EOF'
+# Native evaluation core focused rail
+
+- verdict: PASS
+- policy: typed Nickel with strict Rust revalidation
+- core: no-std plus alloc
+- tasksets: exact and bounded lazy
+- recipes: single, best-of-N, user simulation, isolated judge, shared advisory judge
+- episodes: canonical ledger references only
+- rewards: finite and attributed
+- resume: full material identity
+- receipts: metadata only
+- compatibility: Harbor planning and rewards delegate to native core
+- non-claims: no host execution, verifier soundness, benchmark, training, completion, production, or release claim
+EOF
+
+printf '%s\n' 'focused rail native-evaluation-core: pass'
+printf 'receipt: %s\n' "${RECEIPT}"

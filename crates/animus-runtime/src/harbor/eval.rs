@@ -1,82 +1,17 @@
 //! Pure deterministic planning, ATIF projection, reward reduction, and receipts.
 
-/// Maximum admitted trials in one local job.
-pub const MAX_TRIALS: usize = 256;
-/// Maximum admitted concurrency.
-pub const MAX_CONCURRENCY: u32 = 16;
+pub use animus_eval_core::{
+    CompatNetworkPosture as NetworkPosture, CompatPlanError as PlanError, CompatRoute as Route,
+    CompatTask as Task, CompatTrialPlan as TrialPlan, MAX_COMPAT_CONCURRENCY as MAX_CONCURRENCY,
+    MAX_COMPAT_TRIALS as MAX_TRIALS, MAX_IDENTITY_BYTES,
+};
+
 /// Maximum ATIF steps.
 pub const MAX_ATIF_STEPS: usize = 4_096;
 /// Maximum tool calls or observations in one step.
 pub const MAX_STEP_ITEMS: usize = 128;
-/// Maximum safe identity length.
-pub const MAX_IDENTITY_BYTES: usize = 256;
 
-/// Explicit network posture.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum NetworkPosture {
-    /// No network access.
-    None,
-    /// Explicit bounded private network access.
-    Private,
-}
-
-/// Immutable task profile.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Task<'a> {
-    /// Task identity.
-    pub identity: &'a str,
-    /// Environment identity.
-    pub environment: &'a str,
-    /// Verifier identity.
-    pub verifier: &'a str,
-    /// Rubric identity.
-    pub rubric: &'a str,
-    /// Network posture.
-    pub network: NetworkPosture,
-    /// Separate verifier requirement.
-    pub separate_verifier: bool,
-}
-
-/// Agent/model route pair.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Route<'a> {
-    /// Agent identity.
-    pub agent: &'a str,
-    /// Model route identity.
-    pub model: &'a str,
-}
-
-/// Deterministic trial plan.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct TrialPlan {
-    /// Stable identity.
-    pub identity: String,
-    /// Task identity.
-    pub task: String,
-    /// Agent identity.
-    pub agent: String,
-    /// Model identity.
-    pub model: String,
-    /// Plan order.
-    pub order: usize,
-}
-
-/// Planner admission error.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum PlanError {
-    /// Empty, duplicate, or unsafe identity.
-    Identity,
-    /// Missing separate verifier isolation.
-    VerifierIsolation,
-    /// Empty or excessive matrix.
-    TrialLimit,
-    /// Invalid concurrency.
-    Concurrency,
-    /// Resume evidence did not bind a current trial.
-    StaleResume,
-}
-
-/// Build a stable task-major, route-minor trial matrix.
+/// Build a stable task-major, route-minor trial matrix through the native core.
 ///
 /// # Errors
 /// Returns a fail-closed planning error for malformed inputs, bounds, or stale resume entries.
@@ -86,64 +21,7 @@ pub fn plan_trials(
     concurrency: u32,
     completed: &[&str],
 ) -> Result<Vec<TrialPlan>, PlanError> {
-    if concurrency == 0 || concurrency > MAX_CONCURRENCY {
-        return Err(PlanError::Concurrency);
-    }
-    let trial_count = tasks.len().saturating_mul(routes.len());
-    if tasks.is_empty() || routes.is_empty() || trial_count > MAX_TRIALS {
-        return Err(PlanError::TrialLimit);
-    }
-    debug_assert!(concurrency > 0);
-    debug_assert!(concurrency <= MAX_CONCURRENCY);
-    debug_assert!(trial_count > 0);
-    debug_assert!(trial_count <= MAX_TRIALS);
-
-    let mut identities = std::collections::BTreeSet::new();
-    let mut plans = Vec::with_capacity(trial_count);
-    for task in tasks {
-        if !task.separate_verifier {
-            return Err(PlanError::VerifierIsolation);
-        }
-        for value in [task.identity, task.environment, task.verifier, task.rubric] {
-            if !safe(value) {
-                return Err(PlanError::Identity);
-            }
-        }
-        for route in routes {
-            if !safe(route.agent) || !safe(route.model) {
-                return Err(PlanError::Identity);
-            }
-            let identity = digest(
-                "animus.harbor.trial.v1",
-                &[
-                    task.identity,
-                    route.agent,
-                    route.model,
-                    task.environment,
-                    task.verifier,
-                    task.rubric,
-                ],
-            );
-            if !identities.insert(identity.clone()) {
-                return Err(PlanError::Identity);
-            }
-            plans.push(TrialPlan {
-                identity,
-                task: task.identity.into(),
-                agent: route.agent.into(),
-                model: route.model.into(),
-                order: plans.len(),
-            });
-        }
-    }
-    debug_assert_eq!(plans.len(), trial_count);
-    debug_assert_eq!(identities.len(), trial_count);
-    if completed.iter().any(|value| !identities.contains(*value)) {
-        return Err(PlanError::StaleResume);
-    }
-    plans.retain(|plan| !completed.contains(&plan.identity.as_str()));
-    debug_assert!(plans.len() <= trial_count);
-    Ok(plans)
+    animus_eval_core::plan_compat_trials(tasks, routes, concurrency, completed)
 }
 
 /// ATIF source role.
@@ -308,84 +186,16 @@ pub fn project_atif(value: &AtifTrajectory<'_>) -> Result<AtifProjection, AtifEr
     })
 }
 
-/// Attributed reward input.
-#[derive(Clone, Debug, PartialEq)]
-pub struct Reward<'a> {
-    /// Trial identity.
-    pub trial: &'a str,
-    /// Metric name.
-    pub metric: &'a str,
-    /// Finite value.
-    pub value: f64,
-    /// Verifier identity.
-    pub verifier: &'a str,
-    /// Whether this is advisory judgment.
-    pub advisory: bool,
-}
+pub use animus_eval_core::{
+    CompatReward as Reward, CompatRewardError as RewardError, CompatRewardSummary as RewardSummary,
+};
 
-/// Deterministic reward summary.
-#[derive(Clone, Debug, PartialEq)]
-pub struct RewardSummary {
-    /// Metric name.
-    pub metric: String,
-    /// Ordered finite mean.
-    pub mean: f64,
-    /// Value count.
-    pub count: u32,
-    /// Advisory value count.
-    pub advisory_count: u32,
-}
-
-/// Reward error.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum RewardError {
-    /// Missing or malformed identity.
-    Identity,
-    /// Duplicate trial/metric reward.
-    Duplicate,
-    /// Non-finite value.
-    NonFinite,
-}
-
-/// Reduce rewards in supplied plan order and metric order.
+/// Reduce rewards through the native core in supplied plan order and metric order.
 ///
 /// # Errors
 /// Returns identity, duplicate, or non-finite failures without dropping invalid values.
 pub fn reduce_rewards(rewards: &[Reward<'_>]) -> Result<Vec<RewardSummary>, RewardError> {
-    let mut seen = std::collections::BTreeSet::new();
-    let mut metrics: Vec<RewardSummary> = Vec::with_capacity(rewards.len());
-    debug_assert!(metrics.capacity() >= rewards.len());
-    for reward in rewards {
-        if !safe(reward.trial) || !safe(reward.metric) || !safe(reward.verifier) {
-            return Err(RewardError::Identity);
-        }
-        if !reward.value.is_finite() {
-            return Err(RewardError::NonFinite);
-        }
-        if !seen.insert((reward.trial, reward.metric)) {
-            return Err(RewardError::Duplicate);
-        }
-        debug_assert!(safe(reward.metric));
-        debug_assert!(reward.value.is_finite());
-        if let Some(summary) = metrics.iter_mut().find(|item| item.metric == reward.metric) {
-            let next_count = summary.count.saturating_add(1);
-            summary.mean =
-                (summary.mean * f64::from(summary.count) + reward.value) / f64::from(next_count);
-            summary.count = next_count;
-            summary.advisory_count = summary
-                .advisory_count
-                .saturating_add(u32::from(reward.advisory));
-        } else {
-            metrics.push(RewardSummary {
-                metric: reward.metric.into(),
-                mean: reward.value,
-                count: 1,
-                advisory_count: u32::from(reward.advisory),
-            });
-        }
-    }
-    debug_assert!(metrics.len() <= rewards.len());
-    Ok(metrics)
+    animus_eval_core::reduce_compat_rewards(rewards)
 }
 
 /// Metadata-only evaluation receipt.
@@ -443,20 +253,7 @@ pub fn receipt(
 }
 
 fn safe(value: &str) -> bool {
-    !value.is_empty()
-        && value.len() <= MAX_IDENTITY_BYTES
-        && value
-            .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || b"-_.:".contains(&byte))
-}
-fn digest(domain: &str, values: &[&str]) -> String {
-    let mut hasher = blake3::Hasher::new();
-    hasher.update(domain.as_bytes());
-    for value in values {
-        hasher.update(&[0]);
-        hasher.update(value.as_bytes());
-    }
-    format!("b3:{}", hasher.finalize().to_hex())
+    animus_eval_core::is_safe_identity(value)
 }
 
 #[cfg(test)]
