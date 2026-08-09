@@ -55,24 +55,46 @@ let outcome = host.execute(&dispatch_plan, &key, CancellationState::Active)?;
 
 The caller must construct `dispatch_plan` through `animus_std::plan_provider_dispatch`. The plan binds the selected provider, model, endpoint identity, request, credential source, deadline, cancellation label, and receipt policy.
 
+## Packaged live smoke
+
+Run the packaged smoke only from the clean revision that will own the evidence:
+
+```sh
+model_id='REVIEWED_MODEL_ID'
+cargo run -q -p animus-std-openai \
+  --features reqwest-client \
+  --bin animus-live-openai-smoke -- \
+  --model "${model_id}" \
+  --credential-stdin < /run/credentials/openai-api-key
+```
+
+The binary reads a bounded API key from standard input. It does not read credential or model environment variables.
+
+The binary prints provider, endpoint, status, counts, and BLAKE3 identities. It omits the prompt, API key, model output, and raw response.
+
+After a successful run, generate a current-head index:
+
+```sh
+scripts/cairn/generate-current-head-release-evidence-index \
+  --check live-providers=pass \
+  --claim live-providers \
+  --out target/cairn/release-evidence/live-openai.lines
+scripts/cairn/check-release-evidence-index \
+  --index target/cairn/release-evidence/live-openai.lines
+```
+
+The validator rejects a live-provider claim from a dirty head or a stale optional receipt.
+
 ## Validation
 
-Run the deterministic focused rail:
+Run the deterministic focused rails:
 
 ```sh
 scripts/cairn/check-live-openai-provider-host --root .
+scripts/cairn/check-packaged-live-openai-smoke --root .
 ```
 
-Compile and run the ignored live smoke only with explicit values:
-
-```sh
-ANIMUS_OPENAI_LIVE_API_KEY='...' \
-ANIMUS_OPENAI_LIVE_MODEL='...' \
-cargo test -p animus-std-openai \
-  --features reqwest-client \
-  --test live-openai \
-  -- --ignored --exact explicit_live_openai_smoke
-```
+The ignored integration test remains available for compatibility with explicit environment-based test execution.
 
 Do not store the API key in source, command history, receipts, or test output.
 
@@ -80,6 +102,6 @@ Do not store the API key in source, command history, receipts, or test output.
 
 Deterministic tests prove request admission, exact JSON projection, fake transport execution, bounded response parsing, cancellation, safe errors, and dependency isolation.
 
-The ignored test does not prove live behavior until a maintainer runs it with explicit credentials. Without that result, live availability remains a non-claim.
+The packaged binary does not prove live behavior until an operator runs it with explicit credentials. Without that result, live availability remains a non-claim.
 
 This host does not prove OpenAI reliability, model quality, billing correctness, remote cancellation, memory erasure, production readiness, streaming, tool use, image input, or structured output.

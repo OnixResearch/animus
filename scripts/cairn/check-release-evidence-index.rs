@@ -357,11 +357,12 @@ fn parse_missing_mode(
 fn validate_index(index: &EvidenceIndex) -> Vec<Issue> {
     let mut issues = Vec::new();
     let checks_by_mode = checks_by_mode(&index.checks);
-    let has_current_head_claim = makes_current_head_claim(&index.claims);
+    let requires_clean_head = requires_clean_head(&index.claims);
+    let requires_pure_modes = requires_current_head_pure_modes(&index.claims);
 
     match &index.head {
         Some(head) => {
-            if has_current_head_claim && head.dirty {
+            if requires_clean_head && head.dirty {
                 issues.push(issue(
                     ISSUE_DIRTY_HEAD,
                     &head.commit,
@@ -376,7 +377,7 @@ fn validate_index(index: &EvidenceIndex) -> Vec<Issue> {
         )),
     }
 
-    if has_current_head_claim {
+    if requires_pure_modes {
         validate_required_pure_modes(index, &checks_by_mode, &mut issues);
     }
     validate_optional_claims(index, &checks_by_mode, &mut issues);
@@ -432,19 +433,30 @@ fn validate_optional_claims(
     for surface in OPTIONAL_SURFACES {
         let has_claim = index.claims.contains(*surface);
         let has_non_claim = index.non_claims.contains(*surface);
-        let has_passing_check = checks_by_mode
-            .get(*surface)
-            .is_some_and(|check| check.class == CLASS_OPTIONAL && check.status == STATUS_PASS);
+        let passing_check = checks_by_mode.get(*surface).filter(|check| {
+            check.class == CLASS_OPTIONAL && check.status == STATUS_PASS
+        });
+        let requires_head_match = *surface == SURFACE_LIVE_PROVIDERS;
+        let has_current_passing_check = passing_check
+            .is_some_and(|check| !requires_head_match || check.head_match);
 
-        if has_claim && !has_passing_check {
-            issues.push(issue(
-                ISSUE_OVERCLAIM,
-                *surface,
-                "optional host-dependent surface is claimed without passing optional evidence",
-            ));
+        if has_claim && !has_current_passing_check {
+            if requires_head_match && passing_check.is_some() {
+                issues.push(issue(
+                    ISSUE_STALE_RECEIPT,
+                    *surface,
+                    "live-provider receipt does not match the recorded head",
+                ));
+            } else {
+                issues.push(issue(
+                    ISSUE_OVERCLAIM,
+                    *surface,
+                    "optional host-dependent surface is claimed without passing optional evidence",
+                ));
+            }
             continue;
         }
-        if !has_claim && !has_non_claim && !has_passing_check {
+        if !has_claim && !has_non_claim && !has_current_passing_check {
             issues.push(issue(
                 ISSUE_MISSING_NON_CLAIM,
                 *surface,
@@ -462,7 +474,13 @@ fn checks_by_mode(checks: &[CheckRecord]) -> BTreeMap<String, &CheckRecord> {
     by_mode
 }
 
-fn makes_current_head_claim(claims: &BTreeSet<String>) -> bool {
+fn requires_clean_head(claims: &BTreeSet<String>) -> bool {
+    claims.contains(CLAIM_CURRENT_HEAD_PURE_EVIDENCE)
+        || claims.contains(SURFACE_LIVE_PROVIDERS)
+        || claims.contains(SURFACE_PRODUCTION_READINESS)
+}
+
+fn requires_current_head_pure_modes(claims: &BTreeSet<String>) -> bool {
     claims.contains(CLAIM_CURRENT_HEAD_PURE_EVIDENCE)
         || claims.contains(SURFACE_PRODUCTION_READINESS)
 }

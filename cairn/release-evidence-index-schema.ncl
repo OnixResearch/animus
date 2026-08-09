@@ -46,7 +46,7 @@ let render_claim_line = fun surface => "claim|%{surface}" in
 let render_non_claim_line = fun surface => "non_claim|%{surface}" in
 let render_missing_mode_line = fun record => "missing_mode|%{record.mode}|%{record.reason}" in
 let pure_class = "pure" in
-let optional_class = "optional" in
+let optional_class_value = "optional" in
 let pass_status = "pass" in
 let missing_status = "missing" in
 let mode_packaged_headless_dogfood_smoke = "packaged-headless-dogfood-smoke" in
@@ -72,7 +72,7 @@ let sample_head = mk_head "git" "0123456789abcdef" "main" false in
   non_claim_line = render_non_claim_line,
   missing_mode_line = render_missing_mode_line,
   pure = pure_class,
-  optional_class = optional_class,
+  optional_class = optional_class_value,
   pass = pass_status,
   missing = missing_status,
   packaged_headless_dogfood_smoke = mode_packaged_headless_dogfood_smoke,

@@ -16,6 +16,7 @@ mod core;
 mod model;
 #[cfg(any(feature = "reqwest-client", test))]
 mod shell;
+mod smoke;
 
 pub use core::{build_openai_request_body, normalize_openai_response};
 #[cfg(any(feature = "reqwest-client", test))]
@@ -26,6 +27,9 @@ pub use model::{
 };
 #[cfg(feature = "reqwest-client")]
 pub use shell::ReqwestOpenAiHost;
+#[cfg(feature = "reqwest-client")]
+pub use smoke::run_packaged_live_openai_smoke;
+pub use smoke::{LiveOpenAiSmokeError, plan_live_openai_smoke, render_live_openai_smoke_evidence};
 
 #[cfg(test)]
 mod tests;

@@ -192,6 +192,7 @@ scripts/cairn/check-model-runtime-profiles --root .
 scripts/cairn/check-agent-role-profiles --root .
 scripts/cairn/check-provider-retry --root .
 scripts/cairn/check-live-openai-provider-host --root .
+scripts/cairn/check-packaged-live-openai-smoke --root .
 scripts/cairn/check-codebase-tool-host --root .
 scripts/cairn/check-active-turn-recovery --root .
 scripts/cairn/check-conversation-projection --root .
