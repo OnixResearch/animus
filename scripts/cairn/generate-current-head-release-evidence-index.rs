@@ -41,6 +41,7 @@ const MODE_CAIRN_GATES: &str = "cairn-gates";
 const MODE_PACKAGED_HEADLESS_DOGFOOD_SMOKE: &str = "packaged-headless-dogfood-smoke";
 
 const CLAIM_CURRENT_HEAD_PURE_EVIDENCE: &str = "current-head-pure-evidence";
+const CLAIM_PACKAGED_HEADLESS_DOGFOOD: &str = "packaged-headless-dogfood";
 const SURFACE_LIVE_PROVIDERS: &str = "live-providers";
 const SURFACE_TUI_DAEMON_DOGFOOD: &str = "tui-daemon-dogfood";
 const SURFACE_VM_CHECKS: &str = "vm-checks";
@@ -68,6 +69,7 @@ const OPTIONAL_SURFACES: &[&str] = &[
 ];
 const CLAIM_SURFACES: &[&str] = &[
     CLAIM_CURRENT_HEAD_PURE_EVIDENCE,
+    CLAIM_PACKAGED_HEADLESS_DOGFOOD,
     SURFACE_LIVE_PROVIDERS,
     SURFACE_TUI_DAEMON_DOGFOOD,
     SURFACE_VM_CHECKS,

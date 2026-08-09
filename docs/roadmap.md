@@ -51,6 +51,7 @@ This document explains the planned Cairn change order. The source of truth is `c
 | Receipt redaction | `adapt-clankers-safe-receipts-artifacts` | `adapt-clankers-provenance-ledger`, `adapt-clankers-observability-audit-receipts`, `adapt-clankers-remote-admission-receipts`, `adapt-git-ai-vcs-neutral-provenance`, `adapt-hermes-review-report-contracts`, `adapt-clankers-checkpoint-rollback-ux`, `adapt-clankers-tool-gateway-delivery`, `adapt-clankers-batch-trajectory-runner`, `adapt-ornith-trust-boundary-monitor`, `adapt-ornith-eval-feedback-loop`, `add-animus-hf-dataset-export` |
 | Audit observability | `adapt-clankers-observability-audit-receipts` | `adapt-pi-runtime-event-lifecycle`, `adapt-clankers-safe-receipts-artifacts` |
 | Receipt-authoritative completion | `receipt-authoritative-agent-completion` | `adapt-hermes-scoped-validation-planner`, `add-current-head-release-evidence-index` |
+| Dogfood current-head evidence binding | `bind-dogfood-readiness-current-head-evidence` | `add-current-head-release-evidence-index`, `add-packaged-headless-dogfood-smoke` |
 | Standalone host-control protocol | `extract-host-control-protocol` | `split-adapter-family-crates` |
 | Sandlock Linux host enforcement | `add-sandlock-linux-host-adapter` | `split-std-host-adapter-crates` |
 | BranchFS speculative host workspaces | `add-branchfs-speculative-host-adapter` | `split-std-host-adapter-crates` |
@@ -82,7 +83,7 @@ This document explains the planned Cairn change order. The source of truth is `c
 
 ## Dogfoodability readiness rule
 
-Successor Cairns that claim live providers, built-in tools, session persistence, TUI dogfood, daemon/attach, plugin/MCP runtime, release harness behavior, production readiness, or Clankers parity must cite the accepted dogfood readiness prerequisites, name the highest completed evidence rung from [dogfoodable-host-readiness-roadmap.md](dogfoodable-host-readiness-roadmap.md), and list omitted optional surfaces as non-claims. Implementation code alone is not sufficient evidence.
+Successor Cairns that claim live providers, built-in tools, session persistence, TUI dogfood, daemon/attach, plugin/MCP runtime, release harness behavior, production readiness, or Clankers parity must cite the accepted dogfood readiness prerequisites. They must name the highest completed evidence rung from [dogfoodable-host-readiness-roadmap.md](dogfoodable-host-readiness-roadmap.md). They must also list omitted optional surfaces as non-claims. The bounded `packaged-headless-dogfood` claim requires one clean, passing, head-matched packaged-smoke receipt. Implementation code alone is not sufficient evidence.
 
 ## Roadmap DAG explanation evidence
 

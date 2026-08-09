@@ -37,3 +37,6 @@ if [ -d "${repo_root}/${FIXTURE_DIR}" ]; then
     "${checker}" --root "${repo_root}" --fixture "${fixture}"
   done
 fi
+
+sh "${repo_root}/scripts/cairn/check-release-evidence-index" --root "${repo_root}"
+printf '%s\n' 'dogfood current-head evidence binding: ok'

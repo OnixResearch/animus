@@ -39,6 +39,7 @@ const STATUS_SKIPPED: &str = "skipped";
 const STATUS_MISSING: &str = "missing";
 
 const CLAIM_CURRENT_HEAD_PURE_EVIDENCE: &str = "current-head-pure-evidence";
+const CLAIM_PACKAGED_HEADLESS_DOGFOOD: &str = "packaged-headless-dogfood";
 const SURFACE_LIVE_PROVIDERS: &str = "live-providers";
 const SURFACE_TUI_DAEMON_DOGFOOD: &str = "tui-daemon-dogfood";
 const SURFACE_VM_CHECKS: &str = "vm-checks";
@@ -80,6 +81,7 @@ const KNOWN_CLASSES: &[&str] = &[CLASS_PURE, CLASS_OPTIONAL];
 const KNOWN_STATUSES: &[&str] = &[STATUS_PASS, STATUS_FAIL, STATUS_SKIPPED, STATUS_MISSING];
 const KNOWN_CLAIMS: &[&str] = &[
     CLAIM_CURRENT_HEAD_PURE_EVIDENCE,
+    CLAIM_PACKAGED_HEADLESS_DOGFOOD,
     SURFACE_LIVE_PROVIDERS,
     SURFACE_TUI_DAEMON_DOGFOOD,
     SURFACE_VM_CHECKS,
@@ -90,6 +92,7 @@ const KNOWN_CLAIMS: &[&str] = &[
 
 const ISSUE_MALFORMED_RECORD: &str = "RELEASE_EVIDENCE_MALFORMED_RECORD";
 const ISSUE_DUPLICATE_HEAD: &str = "RELEASE_EVIDENCE_DUPLICATE_HEAD";
+const ISSUE_DUPLICATE_CHECK: &str = "RELEASE_EVIDENCE_DUPLICATE_CHECK";
 const ISSUE_MISSING_HEAD: &str = "RELEASE_EVIDENCE_MISSING_HEAD";
 const ISSUE_INVALID_BOOL: &str = "RELEASE_EVIDENCE_INVALID_BOOL";
 const ISSUE_UNKNOWN_MODE: &str = "RELEASE_EVIDENCE_UNKNOWN_MODE";
@@ -102,6 +105,8 @@ const ISSUE_DIRTY_HEAD: &str = "RELEASE_EVIDENCE_DIRTY_HEAD";
 const ISSUE_STALE_RECEIPT: &str = "RELEASE_EVIDENCE_STALE_RECEIPT";
 const ISSUE_MISSING_MODE: &str = "RELEASE_EVIDENCE_MISSING_MODE";
 const ISSUE_OVERCLAIM: &str = "RELEASE_EVIDENCE_OVERCLAIM";
+const ISSUE_MISSING_DOGFOOD_RECEIPT: &str = "RELEASE_EVIDENCE_MISSING_DOGFOOD_RECEIPT";
+const ISSUE_CONFLICTING_CLAIM: &str = "RELEASE_EVIDENCE_CONFLICTING_CLAIM";
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct Config {
@@ -260,6 +265,15 @@ fn parse_check(fields: &[&str], line: &str, index: &mut EvidenceIndex, issues: &
     let class = fields[CHECK_CLASS_INDEX];
     let status = fields[CHECK_STATUS_INDEX];
 
+    if index.checks.iter().any(|check| check.mode == mode) {
+        issues.push(issue(
+            ISSUE_DUPLICATE_CHECK,
+            mode,
+            "index must contain at most one check record for each mode",
+        ));
+        return;
+    }
+
     if !is_known_mode(mode) {
         issues.push(issue(
             ISSUE_UNKNOWN_MODE,
@@ -380,6 +394,7 @@ fn validate_index(index: &EvidenceIndex) -> Vec<Issue> {
     if requires_pure_modes {
         validate_required_pure_modes(index, &checks_by_mode, &mut issues);
     }
+    validate_packaged_dogfood_claim(index, &checks_by_mode, &mut issues);
     validate_optional_claims(index, &checks_by_mode, &mut issues);
 
     issues
@@ -425,6 +440,53 @@ fn validate_required_pure_modes(
     }
 }
 
+fn validate_packaged_dogfood_claim(
+    index: &EvidenceIndex,
+    checks_by_mode: &BTreeMap<String, &CheckRecord>,
+    issues: &mut Vec<Issue>,
+) {
+    let has_claim = index.claims.contains(CLAIM_PACKAGED_HEADLESS_DOGFOOD);
+    let has_non_claim = index.non_claims.contains(CLAIM_PACKAGED_HEADLESS_DOGFOOD);
+
+    if has_claim && has_non_claim {
+        issues.push(issue(
+            ISSUE_CONFLICTING_CLAIM,
+            CLAIM_PACKAGED_HEADLESS_DOGFOOD,
+            "surface cannot be both a claim and a non-claim",
+        ));
+    }
+    if !has_claim {
+        return;
+    }
+
+    let declared_missing = index
+        .missing_modes
+        .contains_key(MODE_PACKAGED_HEADLESS_DOGFOOD_SMOKE);
+    match checks_by_mode.get(MODE_PACKAGED_HEADLESS_DOGFOOD_SMOKE) {
+        Some(check) => {
+            if declared_missing || check.status != STATUS_PASS {
+                issues.push(issue(
+                    ISSUE_MISSING_DOGFOOD_RECEIPT,
+                    CLAIM_PACKAGED_HEADLESS_DOGFOOD,
+                    "claim requires one passing, non-missing packaged-headless-dogfood-smoke receipt",
+                ));
+            }
+            if !check.head_match {
+                issues.push(issue(
+                    ISSUE_STALE_RECEIPT,
+                    MODE_PACKAGED_HEADLESS_DOGFOOD_SMOKE,
+                    "packaged dogfood receipt does not match the recorded head",
+                ));
+            }
+        }
+        None => issues.push(issue(
+            ISSUE_MISSING_DOGFOOD_RECEIPT,
+            CLAIM_PACKAGED_HEADLESS_DOGFOOD,
+            "claim requires an indexed packaged-headless-dogfood-smoke receipt",
+        )),
+    }
+}
+
 fn validate_optional_claims(
     index: &EvidenceIndex,
     checks_by_mode: &BTreeMap<String, &CheckRecord>,
@@ -433,12 +495,12 @@ fn validate_optional_claims(
     for surface in OPTIONAL_SURFACES {
         let has_claim = index.claims.contains(*surface);
         let has_non_claim = index.non_claims.contains(*surface);
-        let passing_check = checks_by_mode.get(*surface).filter(|check| {
-            check.class == CLASS_OPTIONAL && check.status == STATUS_PASS
-        });
+        let passing_check = checks_by_mode
+            .get(*surface)
+            .filter(|check| check.class == CLASS_OPTIONAL && check.status == STATUS_PASS);
         let requires_head_match = *surface == SURFACE_LIVE_PROVIDERS;
-        let has_current_passing_check = passing_check
-            .is_some_and(|check| !requires_head_match || check.head_match);
+        let has_current_passing_check =
+            passing_check.is_some_and(|check| !requires_head_match || check.head_match);
 
         if has_claim && !has_current_passing_check {
             if requires_head_match && passing_check.is_some() {
@@ -476,6 +538,7 @@ fn checks_by_mode(checks: &[CheckRecord]) -> BTreeMap<String, &CheckRecord> {
 
 fn requires_clean_head(claims: &BTreeSet<String>) -> bool {
     claims.contains(CLAIM_CURRENT_HEAD_PURE_EVIDENCE)
+        || claims.contains(CLAIM_PACKAGED_HEADLESS_DOGFOOD)
         || claims.contains(SURFACE_LIVE_PROVIDERS)
         || claims.contains(SURFACE_PRODUCTION_READINESS)
 }

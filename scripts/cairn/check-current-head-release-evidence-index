@@ -9,6 +9,7 @@ readonly CHECKER_SOURCE=scripts/cairn/check-release-evidence-index.rs
 readonly GENERATOR_SOURCE=scripts/cairn/generate-current-head-release-evidence-index.rs
 readonly TARGET_DIR=target/cairn/release-evidence
 readonly POSITIVE_INDEX=current-head-positive.lines
+readonly PACKAGED_DOGFOOD_INDEX=current-head-packaged-dogfood.lines
 readonly DIRTY_INDEX=current-head-dirty.lines
 readonly MISSING_INDEX=current-head-missing.lines
 readonly STALE_INDEX=current-head-stale.lines
@@ -17,6 +18,7 @@ readonly ISSUE_DIRTY=RELEASE_EVIDENCE_DIRTY_HEAD
 readonly ISSUE_MISSING=RELEASE_EVIDENCE_MISSING_MODE
 readonly ISSUE_STALE=RELEASE_EVIDENCE_STALE_RECEIPT
 readonly CLAIM_CURRENT_HEAD=--claim-current-head
+readonly CLAIM_PACKAGED_DOGFOOD=packaged-headless-dogfood
 readonly PACKAGED_CHECK=packaged-headless-dogfood-smoke=pass
 readonly FOCUSED_CHECK=focused-rails=pass
 readonly WORKSPACE_CHECK=workspace-tests=pass
@@ -95,6 +97,14 @@ run_generator \
   ${CLAIM_CURRENT_HEAD} \
   $(all_pass_args)
 "${checker}" --index "${tmp_dir}/${POSITIVE_INDEX}" >/dev/null
+
+run_generator \
+  --dirty false \
+  --out "${tmp_dir}/${PACKAGED_DOGFOOD_INDEX}" \
+  --claim "${CLAIM_PACKAGED_DOGFOOD}" \
+  --check "${PACKAGED_CHECK}"
+"${checker}" --index "${tmp_dir}/${PACKAGED_DOGFOOD_INDEX}" >/dev/null
+printf '%s\n' 'generated packaged dogfood claim ok'
 
 run_generator \
   --dirty true \

@@ -1300,6 +1300,8 @@
                 nativeBuildInputs = [
                   pkgs.rustc
                   pkgs.gcc
+                  pkgs.nickel
+                  pkgs.b3sum
                 ];
               }
               ''

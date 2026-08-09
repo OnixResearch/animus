@@ -438,7 +438,12 @@ let change_entries = [
     "agent_harness_runtime.clankers_evidence_index.non_claims",
     "agent_harness_runtime.clankers_evidence_index.closeout",
     "agent_harness_runtime.packaged_headless_dogfood_smoke.verification",
-  ] ["add-packaged-headless-dogfood-smoke"],
+  ] ["add-packaged-headless-dogfood-smoke", "bind-dogfood-readiness-current-head-evidence"],
+  change "bind-dogfood-readiness-current-head-evidence" core_role "export-surfaces" [
+    "agent_harness_runtime.dogfood_readiness.evidence_ladder",
+    "agent_harness_runtime.current_head_release_evidence_index.packaged_smoke",
+    "agent_harness_runtime.current_head_release_evidence_index.verification",
+  ] ["add-current-head-release-evidence-index", "add-packaged-headless-dogfood-smoke"],
   change "adapt-turnstone-intent-validation" core_role "policy-guidance" [
     "agent_harness_runtime.pi_tool_contracts.definition_metadata",
     "agent_harness_runtime.pi_tool_contracts.argument_validation",
@@ -734,7 +739,8 @@ let overlap_entries = [
   overlap "host-session-persistence-adapter" "add-host-session-persistence-adapter" ["adapt-goose-session-branching-controls", "adapt-hermes-vcs-snapshot-ledger", "add-fake-backed-headless-dogfood-shell"],
   overlap "fake-backed-headless-dogfood-shell" "add-fake-backed-headless-dogfood-shell" ["add-concrete-provider-dispatch-adapter", "add-host-tool-executor-capability-packs", "add-host-session-persistence-adapter", "add-packaged-headless-dogfood-smoke"],
   overlap "packaged-headless-dogfood-smoke" "add-packaged-headless-dogfood-smoke" ["add-fake-backed-headless-dogfood-shell", "add-concrete-provider-dispatch-adapter", "add-host-tool-executor-capability-packs", "add-host-session-persistence-adapter", "add-current-head-release-evidence-index"],
-  overlap "current-head-release-evidence-index" "add-current-head-release-evidence-index" ["add-packaged-headless-dogfood-smoke"],
+  overlap "current-head-release-evidence-index" "add-current-head-release-evidence-index" ["add-packaged-headless-dogfood-smoke", "bind-dogfood-readiness-current-head-evidence"],
+  overlap "dogfood-current-head-evidence-binding" "bind-dogfood-readiness-current-head-evidence" ["add-current-head-release-evidence-index", "add-packaged-headless-dogfood-smoke"],
   overlap "turnstone-intent-validation" "adapt-turnstone-intent-validation" ["adapt-turnstone-output-guard", "add-turnstone-headless-eval-scorer", "add-host-tool-executor-capability-packs"],
   overlap "turnstone-output-guard" "adapt-turnstone-output-guard" ["adapt-turnstone-intent-validation", "add-turnstone-headless-eval-scorer", "add-host-tool-executor-capability-packs"],
   overlap "turnstone-headless-eval-scorer" "add-turnstone-headless-eval-scorer" ["adapt-turnstone-intent-validation", "adapt-turnstone-output-guard", "add-fake-backed-headless-dogfood-shell"],
