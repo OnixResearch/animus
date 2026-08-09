@@ -16,6 +16,7 @@
 - The optional `execution-backend-planner` feature selects the weakest policy-admitted backend and requires a current host recheck before effects. It never silently falls back to a broader backend; see [docs/execution-backend-selection.md](docs/execution-backend-selection.md).
 - `crates/animus-std` is the standard-library host compatibility shell. It owns environment/config parsing, feature-gated generated model-profile and semantic-role loading, process-facing orchestration, a pure authority catalog, and facade re-exports for authority-scoped host blocks.
 - `crates/animus-std-observability` is the first direct authority-scoped std block. It supplies deterministic no-op and in-memory observability sinks without pulling unrelated context, provider, ingest, transport, credential, persistence, or terminal behavior.
+- `crates/animus-std-openai` is the non-default live OpenAI Responses host. Its pure core admits text-only requests and bounded responses. Its optional `reqwest-client` shell performs one explicit HTTPS attempt without discovery, retry, fallback, or raw transport evidence; see [docs/live-openai-provider-host.md](docs/live-openai-provider-host.md).
 - `crates/animus-std-control` is the focused blocking agent-control host. It supplies explicit pause, resume, cancellation, condition-variable waiting, and bounded event subscriptions without transport, persistence, or global-registry authority.
 - `crates/animus-eval-core` is the non-default no-std native evaluation core. It owns pure taskset, recipe, episode-reference, reward, resume, and metadata-only receipt decisions; see [docs/native-evaluation-core.md](docs/native-evaluation-core.md).
 - `crates/animus-adapter-atif` is the non-default no-std ATIF-v1.7 adapter family. It owns caller-byte JSON, complete selected-cohort DTO validation, graph/reference classification, import/export drafts, explicit loss reports, and metadata-only receipts; see [docs/harbor-atif-json-adapter.md](docs/harbor-atif-json-adapter.md). Run `scripts/cairn/check-harbor-atif-adapter --root .` for its focused rail.
@@ -190,6 +191,7 @@ scripts/cairn/check-execution-backend-selection --root .
 scripts/cairn/check-model-runtime-profiles --root .
 scripts/cairn/check-agent-role-profiles --root .
 scripts/cairn/check-provider-retry --root .
+scripts/cairn/check-live-openai-provider-host --root .
 scripts/cairn/check-active-turn-recovery --root .
 scripts/cairn/check-conversation-projection --root .
 scripts/cairn/check-session-branch-explorer --root .

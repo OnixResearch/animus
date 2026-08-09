@@ -4,12 +4,16 @@
 //! variables, opens files, starts processes, contacts networks, inspects
 //! credentials, persists state, or accesses terminal state.
 
-const HOST_ADAPTER_DESCRIPTOR_COUNT: usize = 13;
+const HOST_ADAPTER_DESCRIPTOR_COUNT: usize = 14;
 const NO_HOST_EFFECT: &[HostAuthority] = &[HostAuthority::NoHostEffect];
 const ENVIRONMENT_AUTHORITY: &[HostAuthority] = &[HostAuthority::EnvironmentRead];
 const FILESYSTEM_AUTHORITY: &[HostAuthority] = &[HostAuthority::FilesystemRead];
 const PROVIDER_AUTHORITY: &[HostAuthority] = &[
     HostAuthority::EnvironmentRead,
+    HostAuthority::CredentialAccess,
+];
+const LIVE_PROVIDER_AUTHORITY: &[HostAuthority] = &[
+    HostAuthority::NetworkTransport,
     HostAuthority::CredentialAccess,
 ];
 const INGEST_AUTHORITY: &[HostAuthority] = &[
@@ -76,6 +80,8 @@ pub enum HostAdapterFamily {
     LocalContext,
     /// Provider registry selection and credential-source diagnostics.
     ProviderRegistry,
+    /// Optional live `OpenAI` Responses HTTPS host.
+    LiveOpenAiProvider,
     /// No-op and deterministic in-memory observability sinks.
     Observability,
     /// Document extraction planning and shell validation.
@@ -106,6 +112,7 @@ impl HostAdapterFamily {
             Self::ConfigLoading => "config_loading",
             Self::LocalContext => "local_context",
             Self::ProviderRegistry => "provider_registry",
+            Self::LiveOpenAiProvider => "live_openai_provider",
             Self::Observability => "observability",
             Self::DocumentIngest => "document_ingest",
             Self::ModelEvidenceIngest => "model_evidence_ingest",
@@ -203,6 +210,15 @@ const HOST_ADAPTER_DESCRIPTORS: [HostAdapterDescriptor; HOST_ADAPTER_DESCRIPTOR_
         facade_path: "animus_std::ProviderRegistry",
         direct_dependency: "animus-std",
         focused_check: "cargo test -p animus-std providers --locked",
+    },
+    HostAdapterDescriptor {
+        family: HostAdapterFamily::LiveOpenAiProvider,
+        owner: "animus-std-openai",
+        feature_gate: "openai-provider-host",
+        required_authority: LIVE_PROVIDER_AUTHORITY,
+        facade_path: "animus::openai_provider_host",
+        direct_dependency: "animus-std-openai/reqwest-client",
+        focused_check: "scripts/cairn/check-live-openai-provider-host --root .",
     },
     HostAdapterDescriptor {
         family: HostAdapterFamily::Observability,

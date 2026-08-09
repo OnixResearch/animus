@@ -344,6 +344,7 @@
                 || baseName == "check-host-control-extraction"
                 || baseName == "check-branchfs-host"
                 || baseName == "check-acp-stdio-host"
+                || baseName == "check-live-openai-provider-host"
                 || baseName == "check-acp-nominal-identities"
                 || baseName == "check-lean4-loop-fabric"
                 || baseName == "check-session-authority-profile"
@@ -393,6 +394,7 @@
                 || baseName == "check-evaluation-adapter-family.rs"
                 || baseName == "check-std-evaluation-host"
                 || baseName == "check-std-evaluation-host.rs"
+                || baseName == "check-live-openai-provider-host.rs"
                 || baseName == "check-evaluation-composition-conformance"
                 || baseName == "check-harbor-atif-adapter"
                 || baseName == "check-harbor-atif-adapter.rs"
@@ -1116,6 +1118,12 @@
             pkgs.clippy
           ] ''
             sh scripts/cairn/check-acp-stdio-host --root .
+          '';
+
+          live-openai-provider-host = cargoCheck "animus-live-openai-provider-host" [
+            pkgs.clippy
+          ] ''
+            sh scripts/cairn/check-live-openai-provider-host --root .
           '';
 
           acp-nominal-identities = cargoCheck "animus-acp-nominal-identities" [

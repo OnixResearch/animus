@@ -1,6 +1,6 @@
 # Clankers Provider Contract Parity Evaluation
 
-Animus adopts Clankers-style provider projection parity as reusable conformance fixtures, not as live provider clients. Animus has canonical model request/response contracts, a pure model dispatch plan, shell-owned provider registry metadata, and a provider-family projection conformance harness; it still does not add provider clients, routers, OAuth, credential lookup, network transport, or live provider checks.
+Animus adopts Clankers-style provider projection parity as reusable conformance fixtures. The separate non-default `animus-std-openai` crate adds one narrow live host without moving network or credential authority into reusable contracts.
 
 ## Source patterns evaluated
 
@@ -62,4 +62,4 @@ If Animus adopts provider-qualified model IDs, known-but-unavailable providers m
 
 ## Non-claims
 
-This evaluation does not add live providers, network clients, OAuth, credential storage, router daemons, provider discovery, streaming parsers, or live checks. The provider-neutral dispatch plan is pure metadata and admission logic only. This note defines the future rails that must exist before concrete provider surfaces are treated as stable.
+This evaluation does not prove live-provider behavior, OAuth, credential storage, router daemons, provider discovery, or broad provider parity. The separate OpenAI host remains text-only and non-default. Its ignored live smoke is not evidence until an explicit run is indexed.

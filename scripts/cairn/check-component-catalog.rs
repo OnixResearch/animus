@@ -86,6 +86,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "basalt-authority-adapter",
     "spacewasm-diagnostic",
     "model-runtime-profiles",
+    "openai-provider-host",
     "agent-role-profiles",
     "active-turn-recovery",
     "conversation-view-projection",

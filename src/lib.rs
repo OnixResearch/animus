@@ -195,6 +195,10 @@ pub use animus_std::{
     parse_active_turn_recovery_policy_json,
 };
 
+/// Non-default live OpenAI Responses host with explicit network and credential authority.
+#[cfg(feature = "openai-provider-host")]
+pub use animus_std_openai as openai_provider_host;
+
 /// Re-export of host-owned provider retry policy and injected effect seams.
 #[cfg(feature = "provider-retry")]
 pub use animus_std::{

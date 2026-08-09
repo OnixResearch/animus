@@ -15,9 +15,17 @@ The catalog distinguishes these classes explicitly:
 - `persistence`; and
 - `terminal_access`.
 
-Current family records cover config loading, local context, provider registry and credential diagnostics, observability, document ingest, model-evidence ingest, optional Iroh and Syndicate transports, optional Sandlock enforcement, the non-default durable local session store, the non-default coding-session host, and packaged smoke/demo shells. An authority label describes a possible shell effect; it does not grant authority by itself.
+Current family records cover config loading, local context, provider registry, the live OpenAI host, observability, ingest, optional transports, enforcement, persistence, coding sessions, and smoke shells. An authority label describes a possible shell effect; it does not grant authority by itself.
 
 `plan_host_adapter` is pure over an explicit family, availability state, and fallback posture. Missing, disabled, or denied blocks return typed denied plans. Any request to discover an ambient environment, filesystem, provider, network, credential, or persistence fallback is denied even if another block is available.
+
+## Optional live OpenAI provider host
+
+`animus-std-openai` is a separate authority-scoped crate behind the root `openai-provider-host` feature. It requires network-transport and credential-access authority.
+
+The pure core validates one exact OpenAI Responses endpoint and a text-only request cohort. The optional `reqwest-client` shell performs one bounded HTTPS attempt.
+
+The host does not discover endpoints, models, providers, credentials, retries, or fallbacks. See [live OpenAI provider host](live-openai-provider-host.md).
 
 ## First extracted family: observability
 
@@ -87,6 +95,7 @@ Focused checks:
 cargo test -p animus-std-observability --locked
 cargo test -p animus-std-control --locked
 cargo check -p animus --features agent-control --locked
+scripts/cairn/check-live-openai-provider-host --root .
 cargo test -p animus-std hostadapters --locked
 cargo test -p animus-std observability --locked
 cargo check -p animus-std --no-default-features --locked

@@ -31,6 +31,7 @@ const FIELD_REASONING: &str = "reasoning";
 const FIELD_STREAM: &str = "stream";
 const FIELD_MAX_OUTPUT_TOKENS: &str = "max_output_tokens";
 const FIELD_TEMPERATURE_MILLIS: &str = "temperature_millis";
+const FIELD_STOP_SEQUENCE: &str = "stop_sequence";
 const FIELD_METADATA: &str = "metadata";
 const FIELD_FAMILY: &str = "family";
 const FIELD_SEPARATOR: &str = ":";
@@ -431,6 +432,7 @@ pub struct OpenAiResponsesDispatchRequest {
     stream: bool,
     max_output_tokens: Option<u32>,
     temperature_millis: Option<u16>,
+    stop_sequences: Vec<String>,
     metadata: Vec<OpenAiResponsesMetadata>,
 }
 
@@ -483,6 +485,12 @@ impl OpenAiResponsesDispatchRequest {
         self.temperature_millis
     }
 
+    /// Returns requested stop sequences.
+    #[must_use]
+    pub fn stop_sequences(&self) -> &[String] {
+        self.stop_sequences.as_slice()
+    }
+
     /// Returns projected provider-native safe metadata.
     #[must_use]
     pub fn metadata(&self) -> &[OpenAiResponsesMetadata] {
@@ -511,6 +519,8 @@ pub struct ProviderDispatchSharedFieldMatrix {
     pub output_budget: bool,
     /// Sampling controls are preserved.
     pub sampling_controls: bool,
+    /// Stop sequences are preserved.
+    pub stop_sequences: bool,
     /// Safe metadata is preserved.
     pub safe_metadata: bool,
 }
@@ -529,6 +539,7 @@ impl ProviderDispatchSharedFieldMatrix {
             stream_intent: true,
             output_budget: true,
             sampling_controls: true,
+            stop_sequences: true,
             safe_metadata: true,
         }
     }
@@ -545,6 +556,7 @@ impl ProviderDispatchSharedFieldMatrix {
             && self.stream_intent
             && self.output_budget
             && self.sampling_controls
+            && self.stop_sequences
             && self.safe_metadata
     }
 }
@@ -858,6 +870,7 @@ pub fn build_openai_responses_dispatch_request(
         stream: canonical_request.output().stream(),
         max_output_tokens: canonical_request.output().max_output_tokens(),
         temperature_millis: canonical_request.output().temperature_millis(),
+        stop_sequences: canonical_request.output().stop_sequences().to_vec(),
         metadata: canonical_request
             .provenance()
             .iter()
@@ -926,6 +939,12 @@ pub fn render_openai_responses_request_fixture(
             value: rendered.as_str(),
         }));
     }
+    for stop_sequence in request.stop_sequences() {
+        parts.push(literal(Literal {
+            field: FIELD_STOP_SEQUENCE,
+            value: stop_sequence,
+        }));
+    }
     for metadata in request.metadata() {
         parts.push(metadata_literal(metadata));
     }
@@ -953,6 +972,8 @@ pub fn provider_dispatch_shared_field_matrix(
             == canonical_request.output().max_output_tokens(),
         sampling_controls: provider_request.temperature_millis()
             == canonical_request.output().temperature_millis(),
+        stop_sequences: provider_request.stop_sequences()
+            == canonical_request.output().stop_sequences(),
         safe_metadata: metadata_match(canonical_request, provider_request),
     }
 }

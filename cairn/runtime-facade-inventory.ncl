@@ -63,6 +63,8 @@ let acp_feature = "acp-stdio-host" in
 let acp_family = "acp" in
 let agent_control_feature = "agent-control" in
 let agent_control_family = "agent-control" in
+let openai_provider_feature = "openai-provider-host" in
+let openai_provider_family = "model" in
 let lean_loop_feature = "lean-loop" in
 let lean_loop_family = "loop" in
 let rlm_kernel_feature = "rlm-kernel" in
@@ -474,6 +476,21 @@ let execution_backend_record = fun export_path_value owning_crate_value source_v
   capability_family = execution_backend_family,
 }
 in
+let openai_provider_record = fun export_path_value owning_crate_value source_value review_note_value => {
+  export_path = export_path_value,
+  owning_crate = owning_crate_value,
+  source = source_value,
+  class = shell,
+  side_effect = shell_owned,
+  stability = optional_stability,
+  review_note = review_note_value,
+  feature_gate = openai_provider_feature,
+  required_authority = shell_owned,
+  depends_on = ["animus-std::ProviderDispatchPlan"],
+  composes_with = ["animus-runtime::provider_retry"],
+  capability_family = openai_provider_family,
+}
+in
 let agent_control_record = fun export_path_value owning_crate_value source_value review_note_value => {
   export_path = export_path_value,
   owning_crate = owning_crate_value,
@@ -551,6 +568,7 @@ let entry_values = [
   agent_control_record "animus-std-control::AgentControlSubscriptionOutcome" "animus-std-control" std_control "event, lag, pending, or closed subscription outcome",
   agent_control_record "animus-std-control::AgentControlWaiter" "animus-std-control" std_control "predicate-based condition-variable waiter",
   agent_control_record "animus::agent_control" "animus" root "root feature facade for the focused blocking agent-control host",
+  openai_provider_record "animus::openai_provider_host" "animus" root "non-default root facade for the authority-scoped live OpenAI host",
   router_record "animus::animus_router" "animus" root router_feature optional_stability "optional model routing decision crate reexport",
   router_record "animus-adapters::router" "animus-adapters" adapters default_feature stable "transition module shim for model routing decisions",
   router_record "animus-router::AdapterContractError" "animus-router" router router_feature stable "model routing adapter field validation error",
