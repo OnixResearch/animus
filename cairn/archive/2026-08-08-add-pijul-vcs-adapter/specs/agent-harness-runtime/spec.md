@@ -11,7 +11,7 @@ r[agent_harness_runtime.pijul_adapter.boundary] Animus MUST adapt Pijul through 
 r[agent_harness_runtime.pijul_adapter.boundary.exact_cohort]
 - GIVEN a host selects the reviewed `pijul` CLI cohort with its exact release, revision, output-format identity, and license record
 - WHEN the optional adapter is composed
-- THEN Animus MAY admit bounded query operations such as `log`, `change`, `diff`, and channel listing against explicitly supplied repository paths
+- THEN Animus MAY admit reviewed query operations against explicit repository paths; the initial cohort admits hash-only `log`, `diff --json`, and bounded channel listing, while human-oriented `change` output is unsupported
 - AND default or reusable builds MUST NOT require the `pijul` executable or any Pijul crate.
 
 #### Scenario: Excluded effectful surface is requested
@@ -31,7 +31,7 @@ r[agent_harness_runtime.pijul_adapter.profile] Human-authored Pijul adapter poli
 r[agent_harness_runtime.pijul_adapter.profile.valid]
 - GIVEN the checked profile names the exact CLI cohort, an admitted operation class, finite named bounds, a channel allowlist, and explicit content/redaction policy
 - WHEN Rust revalidates the generated profile and a request
-- THEN it MUST produce a deterministic admission decision and BLAKE3 policy identity
+- THEN it MUST produce a deterministic admission decision and BLAKE3 identity of the exact checked policy bytes
 - AND no host CLI effect may occur before that decision.
 
 #### Scenario: Policy contains drift or unknown semantics
@@ -69,7 +69,7 @@ r[agent_harness_runtime.pijul_adapter.validation] Animus MUST revalidate CLI res
 #### Scenario: Valid CLI output is accepted
 
 r[agent_harness_runtime.pijul_adapter.validation.valid]
-- GIVEN a bounded result contains well-formed change hashes, admitted channels, known envelope fields, coherent state identifiers, and only policy-admitted status classes
+- GIVEN a bounded result contains well-formed change hashes, admitted channels, known envelope fields, coherent optional state identifiers, and only policy-admitted status classes
 - WHEN pure validation runs
 - THEN it MUST return typed validated observations, bounded change/conflict/file counts, and projection inputs
 - AND repeated validation of identical inputs and policy MUST return the same result.
@@ -91,8 +91,8 @@ r[agent_harness_runtime.pijul_adapter.projection] Validated Pijul observations M
 r[agent_harness_runtime.pijul_adapter.projection.valid]
 - GIVEN validated observations, an admitted repository identity, and policy that admits selected metadata
 - WHEN pure projection runs
-- THEN channel state identifiers MUST map to snapshot identities, change hashes MUST map to opaque checkpoint IDs, and channel names MUST map to workspace labels in deterministic order with explicit omission and redaction state
-- AND change timestamps and authorship MUST remain descriptive rather than becoming identity, freshness, causality, or authority evidence.
+- THEN available admitted state identifiers MAY contribute to snapshot identities, change hashes MUST map to opaque checkpoint IDs, and channel names MUST map to workspace labels in deterministic order with explicit omission and redaction state
+- AND the initial hash-only cohort MUST mark state, timestamps, and authorship as omitted rather than infer them or grant identity, freshness, causality, or authority evidence.
 
 #### Scenario: Mutation is requested without grant or confirmation
 

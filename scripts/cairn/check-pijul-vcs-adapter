@@ -1,0 +1,100 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+readonly ROOT_FLAG=--root
+readonly DEFAULT_ROOT=.
+readonly RECEIPT=target/cairn/focused-rails/pijul-vcs-adapter.md
+readonly RELEASE=1.0.0-beta.18
+readonly SOURCE_CHANGE=QRYOAJLYA5KO7JAYU6LMYHPU3NSZCTUMYEPCK3HNZIRIDZDWSMBAC
+readonly SOURCE_STATE=RISR562S7FZP3NNYDFVBQUMDEGB6YSSMSH2RGZDRYBIPGVQDSLXQC
+readonly CRATE_CHECKSUM=0500d14ab41adea4f0d71f03b9d1be895a0638e025204f5b6ab90e46c40684ff
+readonly COHORT_IDENTITY=ed1fcd07852103dd8ea0b2e824aac6cad51406c987e54240077888ce796aee2b
+readonly LICENSE=GPL-2.0-or-later
+
+root=${DEFAULT_ROOT}
+if [ "${1:-}" = "${ROOT_FLAG}" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  root=$2
+fi
+cd "${root}"
+
+for marker in "${RELEASE}" "${SOURCE_CHANGE}" "${SOURCE_STATE}" "${CRATE_CHECKSUM}" "${COHORT_IDENTITY}" "${LICENSE}"; do
+  if ! grep -Fq "${marker}" config/pijul-vcs-adapter.ncl crates/animus-adapters/src/pijul.rs docs/pijul-vcs-adapter.md; then
+    printf 'error: Pijul cohort marker is missing: %s\n' "${marker}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+if [ "${ANIMUS_PIJUL_SKIP_NICKEL:-0}" != "1" ]; then
+  scripts/config/check-nickel-configs
+fi
+nickel export --format json fixtures/pijul-vcs-adapter/positive.ncl >/dev/null
+nickel export --format json fixtures/pijul-vcs-adapter/negative.ncl >/dev/null
+
+cargo test -p animus-runtime --locked --no-default-features --features pijul-vcs-adapter,provenance pijul::tests
+cargo test -p animus-std --locked --no-default-features --features pijul-vcs-adapter pijul::tests
+cargo test -p animus-adapters --locked recover::tests
+cargo test -p animus-adapters --locked vcssnapshot
+cargo test -p animus-adapters --locked workspace
+cargo test -p animus-runtime --locked provenance
+cargo test -p animus-adapter-safe --locked
+cargo clippy -p animus-adapters -p animus-runtime -p animus-std --all-targets --no-default-features \
+  --features animus-runtime/pijul-vcs-adapter,animus-runtime/provenance,animus-std/pijul-vcs-adapter -- -D warnings
+cargo check -p animus-adapters --no-default-features --locked
+cargo check -p animus-adapters --target wasm32-unknown-unknown --no-default-features --locked
+cargo check -p animus --no-default-features --locked
+cargo check -p animus --no-default-features --features pijul-vcs-adapter --locked
+
+if cargo tree -p animus --edges normal --format '{lib}' | grep -Eiq '(^|[-_])(libpijul|pijul_core|sanakirja)([-_]|$)'; then
+  printf '%s\n' 'error: Pijul database crates leaked into the default facade' >&2
+  exit "${FAILURE}"
+fi
+if cargo tree -p animus --features pijul-vcs-adapter --edges normal --format '{lib}' | grep -Eiq '(^|[-_])(libpijul|pijul_core|sanakirja)([-_]|$)'; then
+  printf '%s\n' 'error: Pijul database crates leaked into the optional CLI adapter' >&2
+  exit "${FAILURE}"
+fi
+if grep -Eq 'std::process|Command::|libpijul::|sanakirja::' crates/animus-adapters/src/pijul.rs crates/animus-runtime/src/pijul/*.rs; then
+  printf '%s\n' 'error: ambient process or database authority leaked into reusable Pijul contracts' >&2
+  exit "${FAILURE}"
+fi
+
+if [ "${ANIMUS_PIJUL_SKIP_CONNECTED:-0}" != "1" ]; then
+  sh scripts/cairn/check-process-job-profiles --root .
+  sh scripts/cairn/check-component-catalog
+  sh scripts/cairn/check-runtime-facade-inventory
+  sh scripts/cairn/check-evidence-safety --root .
+fi
+
+mkdir -p "$(dirname "${RECEIPT}")"
+cat > "${RECEIPT}" <<EOF
+schema: animus.focused-rail.v1
+rail: pijul-vcs-adapter
+status: pass
+cohort:
+- release: ${RELEASE}
+- source_change: ${SOURCE_CHANGE}
+- source_state: ${SOURCE_STATE}
+- crates_io_checksum_sha256: ${CRATE_CHECKSUM}
+- cohort_identity_blake3: ${COHORT_IDENTITY}
+- license: ${LICENSE}
+coverage:
+- implementation-free no-std DTOs and injected service ports
+- exact non-default beta.18 CLI cohort
+- hash-only JSON log query without rich identity-file loading
+- bounded diff JSON and reviewed channel-line parsers
+- change, state, prefix, channel, status, and conflict validation
+- protected mutation and unsupported remote denial before executor dispatch
+- explicit argv, repository, executable, empty environment, stdin, deadline, and output bounds
+- checkpoint, snapshot-ledger, provenance, and workspace owner projections
+- metadata-only receipts and redaction checks
+- default, no-default, Wasm, catalog, facade, and dependency isolation
+non_claims:
+- no repository integrity, semantic correctness, content correctness, merge safety, authorship authenticity, signature verification, key custody, remote correctness, conflict-resolution quality, durability, production readiness, or release eligibility is established
+EOF
+
+printf '%s\n' 'focused rail pijul-vcs-adapter: pass'
+printf 'receipt: %s\n' "${RECEIPT}"

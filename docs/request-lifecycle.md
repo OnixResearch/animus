@@ -70,6 +70,7 @@ This document is the maintained ownership map for request processing. It is a re
 | Conversation projection core | `animus-runtime` | `conversation_projection::{project_conversation_snapshot, plan_conversation_top_up, plan_conversation_legacy_heal}` | Pure over redacted ledger facts and exact cache evidence. Storage, transport, clocks, UI, and mutation remain host-owned. |
 | Active-turn recovery core | `animus-runtime` | `active_turn_recovery::{plan_active_turn_acceptance, prepare_active_turn_checkpoint_replacement, plan_active_turn_recovery, project_active_turn_recovery_receipt}` | Pure over supplied policy, journal, transaction, authority, repair, terminal, and cleanup facts. It cannot execute host effects. |
 | Active-turn recovery host | `animus-std` | `ActiveTurnMemoryHost`, `load_active_turn_recovery_policy` behind `active-turn-recovery` | Explicit policy reads and deterministic fixture transactions only. Production durability remains consumer-owned. |
+| Pijul VCS query adapter | `animus-adapters`, `animus-runtime`, optional `animus-std` | `pijul::{PijulBackendService, validate_pijul_response, project_pijul_log, PijulCliService}` behind `pijul-vcs-adapter` | DTOs, validation, projection, and receipts are pure. The shell calls only an injected bounded executor. It denies mutations, remotes, rich identity-reading logs, discovery, and persistence. |
 | Provider retry core | `animus-runtime` | `provider_retry::{classify_provider_retry_failure, plan_provider_retry, evaluate_provider_retry_timer, project_provider_retry_receipt}` | Pure over host-loaded policy, exact invocation identities, safe failure classes, semantic stream state, and timer evidence. It cannot sleep, read clocks, route, contact providers, or mint authority. |
 | Provider retry effects | `animus-std` | `ProviderRetryTimerService`, `ProviderRetryDispatchService`, `execute_provider_retry_wait`, `dispatch_provider_retry_exact` behind `provider-retry` | Only explicitly injected timer and provider implementations are called, and dispatch requires a completed exact-correlated timer gate. |
 | Agent-control port | `animus-adapters` | `AgentControlCommand`, `AgentControlCheckpoint`, `AgentControlWait`, `AgentControlEvent` | Transport-neutral typed facts and an injected wait port only. |
@@ -149,6 +150,10 @@ The separate `animus_runtime::durable_session_store` core plans and validates re
 
 `animus-adapters` validates an exact agent-definition identity, audience DID, subject, task, actor, semantic role-plan, session, action, contract, ability, resource, policy, grant, freshness, and operation-profile binding without calling Basalt. The non-default `animus-std-basalt-authority` shell verifies the raw holder invocation with caller-owned services. It keeps live authority in scope, intersects every existing local gate, commits safe decision evidence, and only then calls the guarded effect. Missing, stale, unsupported, mismatched, replayed, denied, or unavailable facts stop dispatch. See [optional Basalt authority adapter](basalt-authority-adapter.md).
 
+### Optional Pijul VCS boundary
+
+`animus-adapters::pijul` owns implementation-free requests, loaded output, executor, and service ports. `animus-runtime::pijul` validates the exact cohort and projects safe observations into existing checkpoint, snapshot, provenance, and workspace owners. The non-default `animus-std::pijul` shell builds explicit argv and calls one injected bounded executor. Rich log output, mutation, remote, discovery, identity, key, network, and persistence behavior fail closed. See [Pijul VCS adapter](pijul-vcs-adapter.md).
+
 ## Validation commands
 
 Use the smallest command that covers the changed boundary:
@@ -169,6 +174,7 @@ cargo test -p animus-std
 scripts/cairn/check-durable-session-store --root .
 scripts/cairn/check-coding-session-host --root .
 scripts/cairn/check-basalt-authority-adapter --root .
+scripts/cairn/check-pijul-vcs-adapter --root .
 scripts/cairn/check-session-authority-profile --root .
 cargo test -p animus-std-observability
 cargo check -p animus-std --no-default-features

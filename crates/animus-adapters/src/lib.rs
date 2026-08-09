@@ -101,6 +101,8 @@ pub mod openclaw_session;
 /// Public orchestration adapter-family DTOs and service contracts.
 pub mod orchestration;
 mod outputguard;
+/// Implementation-free contracts for the optional Pijul CLI adapter.
+pub mod pijul;
 mod port;
 mod profile;
 mod prompt;

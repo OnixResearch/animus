@@ -89,6 +89,7 @@ let evaluation_host_feature = "evaluation-host" in
 let evaluation_conformance_feature = "evaluation-conformance" in
 let harbor_atif_feature = "harbor-atif" in
 let basalt_authority_feature = "basalt-authority-adapter" in
+let pijul_vcs_feature = "pijul-vcs-adapter" in
 let native_evaluation_profile_feature = "native-evaluation-profile" in
 let native_evaluation_family = "evaluation" in
 let agent_guardrail_feature = "agent-guardrail" in
@@ -331,6 +332,21 @@ let basalt_authority_record = fun export_path_value owning_crate_value source_va
   depends_on = ["animus-adapters::HostAuthorityService", "animus-runtime::agent_roles", "animus-runtime::runtime_authority_seal"],
   composes_with = ["animus-std::coding_session_host"],
   capability_family = "policy",
+}
+in
+let pijul_vcs_record = fun export_path_value owning_crate_value source_value class_value side_effect_value review_note_value => {
+  export_path = export_path_value,
+  owning_crate = owning_crate_value,
+  source = source_value,
+  class = class_value,
+  side_effect = side_effect_value,
+  stability = optional_stability,
+  review_note = review_note_value,
+  feature_gate = pijul_vcs_feature,
+  required_authority = side_effect_value,
+  depends_on = ["animus-adapters::pijul", "animus-runtime::pijul"],
+  composes_with = ["animus-adapters::CheckpointRecord", "animus-adapters::SnapshotRecord", "animus-runtime::ProvenanceFact"],
+  capability_family = "provenance",
 }
 in
 let evaluation_conformance_record = fun export_path_value owning_crate_value source_value review_note_value => {
@@ -2472,6 +2488,10 @@ let entry_values = [
   evaluation_adapters_record "animus::evaluation_adapters" "animus" root "non-default root re-export of native evaluation adapter contracts",
   evaluation_host_record "animus::evaluation_host" "animus" root "non-default explicit standard-library native evaluation host; callers supply all service authority",
   basalt_authority_record "animus::basalt_authority" "animus" root "non-default live Basalt raw-holder authority gate; callers supply all verification, local-gate, commit, and effect authority; AGPL-3.0-or-later review required",
+  pijul_vcs_record "animus-adapters::pijul" "animus-adapters" adapters injection injected "implementation-free Pijul request, bounded executor, loaded-output, and service ports",
+  pijul_vcs_record "animus-runtime::pijul" "animus-runtime" runtime reusable none "pure exact-cohort validation and existing-owner projection",
+  pijul_vcs_record "animus-std::pijul" "animus-std" std_shell shell shell_owned "non-default exact-cohort CLI shell over one injected bounded executor",
+  pijul_vcs_record "animus::pijul_vcs_adapter" "animus" root shell shell_owned "non-default root facade for Pijul contracts, pure validation, and injected shell",
   evaluation_conformance_record "animus::evaluation_conformance" "animus" root "non-default deterministic conformance suite over public evaluation production paths",
   native_evaluation_profile_record "animus-std::NativeEvaluationProfileError" "animus-std" std_shell "bounded generated policy parse failure class",
   native_evaluation_profile_record "animus-std::parse_native_evaluation_policy_json" "animus-std" std_shell "strict caller-loaded generated policy parser",

@@ -59,6 +59,24 @@
         let
           cargoOctet = octet.packages.${pkgs.stdenv.hostPlatform.system}.cargo-octet;
           system = pkgs.stdenv.hostPlatform.system;
+          pijulCli = pkgs.rustPlatform.buildRustPackage {
+            pname = "pijul";
+            version = "1.0.0-beta.18";
+            src = pkgs.fetchCrate {
+              pname = "pijul";
+              version = "1.0.0-beta.18";
+              hash = "sha256-vU41JiuxB6Bsi88st/tkt02054oN3HEN52pnLu5hMA4=";
+            };
+            cargoHash = "sha256-Ach8wLBhZ3pA5+m910Gt+oftEaO3Mu/ii+bxgnla0ak=";
+            doCheck = false;
+            nativeBuildInputs = [ pkgs.pkg-config ];
+            buildInputs = [
+              pkgs.dbus
+              pkgs.libsodium
+              pkgs.openssl
+              pkgs.xxhash
+            ];
+          };
           strictRuntimePath = pkgs.lib.makeBinPath [
             pkgs.coreutils
             pkgs.nix
@@ -135,12 +153,76 @@
               diff -u ${./config/generated/provider-video-payload-policy.json} "$tmp_dir/config/generated/provider-video-payload-policy.json"
               diff -u ${./config/generated/terminal-image-policy.json} "$tmp_dir/config/generated/terminal-image-policy.json"
               diff -u ${./config/generated/terminal-video-policy.json} "$tmp_dir/config/generated/terminal-video-policy.json"
+              diff -u ${./config/generated/pijul-vcs-adapter.json} "$tmp_dir/config/generated/pijul-vcs-adapter.json"
 
               nickel typecheck ${./config/nickel-export-requests.ncl}
               NICKEL_EXPORT_BIN=${nickel-export.packages.${system}.default}/bin/nickel-export \
                 ${pkgs.runtimeShell} ${./scripts/config/check-standalone-nickel-exports} ${./.} --check
               NICKEL_EXPORT_BIN=${nickel-export.packages.${system}.default}/bin/nickel-export \
                 ${pkgs.runtimeShell} ${./scripts/config/check-standalone-nickel-export-negatives}
+            '';
+          };
+
+          pijul-cli-adapter = pkgs.writeShellApplication {
+            name = "animus-pijul-cli";
+            runtimeInputs = [ ];
+            text = ''
+              usage_error_exit=64
+              repository_prefix_arg_count=3
+              log_arg_count=10
+              diff_arg_count=4
+              diff_with_channel_arg_count=6
+
+              deny_unsupported() {
+                printf '%s\n' "animus-pijul-cli: unsupported argument shape" >&2
+                exit "$usage_error_exit"
+              }
+
+              if [ "$#" -eq 1 ] && [ "$1" = "--version" ]; then
+                exec ${pkgs.coreutils}/bin/env -i \
+                  HOME=/homeless-shelter \
+                  XDG_CONFIG_HOME=/homeless-shelter \
+                  RUST_BACKTRACE=0 \
+                  ${pijulCli}/bin/pijul "$@"
+              fi
+
+              [ "$#" -ge "$repository_prefix_arg_count" ] || deny_unsupported
+              [ "$1" = "--repository" ] || deny_unsupported
+              [ -n "$2" ] || deny_unsupported
+
+              case "$3" in
+                log)
+                  [ "$#" -eq "$log_arg_count" ] || deny_unsupported
+                  [ "$4" = "--channel" ] || deny_unsupported
+                  [ "$6" = "--hash-only" ] || deny_unsupported
+                  [ "$7" = "--output-format" ] || deny_unsupported
+                  [ "$8" = "json" ] || deny_unsupported
+                  [ "$9" = "--limit" ] || deny_unsupported
+                  case "''${10}" in
+                    "" | *[!0-9]*) deny_unsupported ;;
+                  esac
+                  ;;
+                diff)
+                  if [ "$#" -eq "$diff_arg_count" ]; then
+                    [ "$4" = "--json" ] || deny_unsupported
+                  elif [ "$#" -eq "$diff_with_channel_arg_count" ]; then
+                    [ "$4" = "--json" ] || deny_unsupported
+                    [ "$5" = "--channel" ] || deny_unsupported
+                  else
+                    deny_unsupported
+                  fi
+                  ;;
+                channel)
+                  [ "$#" -eq "$repository_prefix_arg_count" ] || deny_unsupported
+                  ;;
+                *) deny_unsupported ;;
+              esac
+
+              exec ${pkgs.coreutils}/bin/env -i \
+                HOME=/homeless-shelter \
+                XDG_CONFIG_HOME=/homeless-shelter \
+                RUST_BACKTRACE=0 \
+                ${pijulCli}/bin/pijul "$@"
             '';
           };
 
@@ -289,6 +371,7 @@
                 || baseName == "check-harbor-atif-adapter"
                 || baseName == "check-harbor-atif-adapter.rs"
                 || baseName == "check-basalt-authority-adapter"
+                || baseName == "check-pijul-vcs-adapter"
                 || baseName == "check-evidence-safety"
                 || baseName == "check-model-runtime-profiles"
                 || baseName == "check-agent-role-profiles"
@@ -620,6 +703,20 @@
             export ANIMUS_BASALT_SKIP_NICKEL=1
             export ANIMUS_BASALT_SKIP_CONNECTED=1
             sh scripts/cairn/check-basalt-authority-adapter --root .
+          '';
+
+          pijul-vcs-adapter = cargoCheck "animus-pijul-vcs-adapter" [ pkgs.clippy pkgs.nickel ] ''
+            ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
+            test "$(${self.packages.${pkgs.stdenv.hostPlatform.system}.pijul-cli-adapter}/bin/animus-pijul-cli --version)" = "pijul 1.0.0-beta.18"
+            if ${self.packages.${pkgs.stdenv.hostPlatform.system}.pijul-cli-adapter}/bin/animus-pijul-cli --repository /tmp/repository pull >/dev/null 2>&1; then
+              exit 1
+            fi
+            if ${self.packages.${pkgs.stdenv.hostPlatform.system}.pijul-cli-adapter}/bin/animus-pijul-cli --repository /tmp/repository channel switch main >/dev/null 2>&1; then
+              exit 1
+            fi
+            export ANIMUS_PIJUL_SKIP_NICKEL=1
+            export ANIMUS_PIJUL_SKIP_CONNECTED=1
+            sh scripts/cairn/check-pijul-vcs-adapter --root .
           '';
 
           native-evaluation-core = cargoCheck "animus-native-evaluation-core" [ pkgs.b3sum pkgs.clippy pkgs.nickel ] ''

@@ -129,6 +129,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "schedule-reliability",
     "session-event-replay",
     "execution-backend-planner",
+    "pijul-vcs-adapter",
     "native-evaluation",
     "evaluation-adapters",
     "evaluation-host",

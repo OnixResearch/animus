@@ -1,6 +1,6 @@
 ## Context
 
-Pijul `1.0.0-beta` is a distributed version control system built on a theory of patches: changes commute or depend, application is associative, and conflicts are regular internal data resolved by one change. Repositories live in a `.pijul` directory over a Sanakirja database. Channels replace branches. Changes are identified by base32 BLAKE3 hashes and can be signed with locally managed identity keys. The CLI (`record`, `unrecord`, `apply`, `fork`, `channel`, `log`, `change`, `diff`, `reset`, `credit`) is the stable user surface; the underlying crates are GPL-2.0 family with at least one AGPL-3.0 component.
+Pijul `1.0.0-beta` is a distributed version control system built on a theory of patches. Repositories use a `.pijul` directory over a Sanakirja database. Channels replace branches. Changes use base32 BLAKE3 hashes and can be signed with local identity keys. The reviewed CLI crate is `GPL-2.0-or-later`.
 
 Animus already has overlapping but distinct owners: checkpoint/rollback DTOs own backend-neutral rollback targets, the snapshot ledger owns recovery snapshot plans, the provenance domain owns VCS-neutral attribution observations, isolated workspaces own task sandbox descriptors, process-job profiles describe host-dispatched work, and safe receipts bound evidence. The new adapter must implement those existing ports rather than establish a second ledger, provenance store, or workspace mechanism.
 
@@ -14,15 +14,15 @@ A bounded architecture search considered linking `libpijul` into a Rust adapter 
 
 **Rationale:** Pijul is beta software whose internal formats and APIs evolve independently of the CLI surface. Linking would couple a host crate to unstable internals and the Sanakirja on-disk format, and would still have to sit behind the same injected-service boundary to keep reusable crates authority-free. The CLI process boundary makes the exact reviewed behavior set explicit and defers, rather than forecloses, an in-process backend.
 
-### Decision: read-only by default, protected mutations behind policy and confirmation
+### Decision: admit three read-only queries and deny mutation dispatch
 
-**Choice:** Query operations (`log`, `change`, `diff`, channel listing, status) are the default admitted class. Mutating operations (`record`, `unrecord`, `apply`, `fork`, `channel switch`, `reset`, `move`, `remove`) are a protected class that requires an explicit policy grant, a validated plan, and host confirmation, mirroring the snapshot-ledger protected-action model. No automatic per-turn recording, auto-commit, or background snapshot policy is introduced.
+**Choice:** The initial shell admits hash-only `log` JSON, `diff --json`, and exact beta.18 channel-list lines. Human-oriented `change` output is unsupported. Mutations remain classified as protected, but this shell does not dispatch them even with confirmation. No automatic recording or background snapshot policy is introduced.
 
 **Rationale:** An agent that can silently rewrite repository history defeats the audit value of a VCS backend. The existing Animus protected-action and confirmation machinery already covers this shape; the adapter reuses it.
 
 ### Decision: exclude network, identity, and hosting surfaces
 
-**Choice:** `clone`, `pull`, `push`, `remote`, Nest integration, `identity new/prove`, key storage, and signing ceremonies are excluded. Signature handling is limited to reporting signature-status classes from CLI output; Animus does not verify signatures, manage keys, or grant authority based on authorship.
+**Choice:** `clone`, `pull`, `push`, `remote`, Nest integration, `identity new/prove`, key storage, and signing ceremonies are excluded. The contracts distinguish signature-status classes, but the initial hash-only shell reports `not-reported`. Animus does not verify signatures, manage keys, or grant authority based on authorship.
 
 **Rationale:** Network transport, credential custody, and identity authority are separate claim surfaces with their own trust models. Beta-stage identity semantics are not a stable interop contract.
 
@@ -40,13 +40,13 @@ A bounded architecture search considered linking `libpijul` into a Rust adapter 
 
 ### Decision: revalidate machine outputs in pure Rust
 
-**Choice:** The pure validator checks CLI protocol facts before any projection: base32 BLAKE3 change-hash syntax and length, unambiguous hash prefixes, channel-name character policy, state-identifier shape, output-envelope fields, conflict-status classes, exit-status mapping, record ordering, and configured collection/body bounds. Unknown fields, hash shapes, channels, statuses, or over-limit values fail closed.
+**Choice:** The pure validator checks CLI protocol facts before any projection: base32 BLAKE3 change-hash syntax and length, unambiguous hash prefixes, channel-name policy, optional state-identifier syntax, output-envelope fields, conflict-status classes, exit-status mapping, record ordering, and configured bounds. The shell accepts only hash-only log JSON. Rich log output is denied because beta.18 can read repository and user identity files.
 
 **Rationale:** A successful exit status and parseable JSON do not establish that the selected CLI, repository, or output contract was honored.
 
 ### Decision: project through existing VCS-neutral owners
 
-**Choice:** Validated observations map deterministically into existing Animus records: channel state identifiers feed snapshot identities, change hashes feed opaque checkpoint IDs, author/timestamp metadata feeds provenance observations as descriptive data only, and channel names feed workspace labels. Domain-separated BLAKE3 projection identities bind validated content, policy identity, and record position. Timestamps and authorship remain descriptive and never become freshness, causality, or authority evidence.
+**Choice:** Validated observations map deterministically into existing Animus records. Change hashes feed opaque checkpoint IDs, and channel names feed workspace labels. The initial hash-only shell omits state, author, timestamp, message, and path data. Domain-separated BLAKE3 identities bind validated metadata. A later safely loaded state or descriptive metadata surface requires a new reviewed output cohort.
 
 **Rationale:** Pijul's patch-set model is one backend behind VCS-neutral ports, not a replacement for Animus checkpoint, snapshot, provenance, or workspace semantics.
 

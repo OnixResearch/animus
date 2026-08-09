@@ -2,6 +2,7 @@ const BACKEND_JJ: &str = "jj";
 const BACKEND_GIT: &str = "git";
 const BACKEND_MEMORY: &str = "in_memory";
 const BACKEND_WORKSPACE_ISOLATION: &str = "workspace_isolation";
+const BACKEND_OTHER: &str = "other";
 const BACKEND_UNSUPPORTED: &str = "unsupported";
 const OPERATION_CREATE: &str = "create";
 const OPERATION_LIST: &str = "list";
@@ -36,6 +37,8 @@ pub enum CheckpointBackendKind {
     InMemory,
     /// Workspace-isolation backend.
     WorkspaceIsolation,
+    /// Other host-owned VCS or checkpoint backend.
+    Other,
     /// Unsupported backend placeholder.
     Unsupported,
 }
@@ -51,6 +54,7 @@ impl CheckpointBackendKind {
                 BACKEND_GIT => Some(Self::Git),
                 BACKEND_MEMORY => Some(Self::InMemory),
                 BACKEND_WORKSPACE_ISOLATION => Some(Self::WorkspaceIsolation),
+                BACKEND_OTHER => Some(Self::Other),
                 BACKEND_UNSUPPORTED => Some(Self::Unsupported),
                 _ => None,
             }
@@ -65,6 +69,7 @@ impl CheckpointBackendKind {
             Self::Git => BACKEND_GIT,
             Self::InMemory => BACKEND_MEMORY,
             Self::WorkspaceIsolation => BACKEND_WORKSPACE_ISOLATION,
+            Self::Other => BACKEND_OTHER,
             Self::Unsupported => BACKEND_UNSUPPORTED,
         }
     }

@@ -49,6 +49,14 @@ pub use animus_std::{
     parse_agent_role_profiles_json,
 };
 
+/// Non-default Pijul CLI contracts, pure validator, and injected host shell.
+#[cfg(feature = "pijul-vcs-adapter")]
+pub mod pijul_vcs_adapter {
+    pub use animus_adapters::pijul::*;
+    pub use animus_runtime::pijul::*;
+    pub use animus_std::pijul::*;
+}
+
 /// Re-export of the host-owned generated model-profile configuration loader.
 #[cfg(feature = "model-runtime-profiles")]
 pub use animus_std::{

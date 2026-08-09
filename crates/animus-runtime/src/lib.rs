@@ -143,6 +143,9 @@ pub mod nested_subagent_graphs;
 #[path = "kanban.rs"]
 mod orchestration;
 mod pi_compaction;
+/// Pure validation and existing-owner projection for the optional Pijul CLI adapter.
+#[cfg(feature = "pijul-vcs-adapter")]
+pub mod pijul;
 #[cfg(test)]
 mod policyprojectiontests;
 mod prelude;

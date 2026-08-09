@@ -9,7 +9,7 @@ Wiring Pijul into reusable Animus crates directly would require opening Sanakirj
 - Add a non-default Pijul backend adapter profile pinned to an exact reviewed `pijul` CLI cohort (release line `1.0.0-beta.*`, upstream source revision, change-hash format, output-format version, and recorded GPL-2.0-family license cohort). r[agent_harness_runtime.pijul_adapter.boundary]
 - Author typed Nickel policy for the exact cohort, read-only versus protected-mutation operation classes, named log/diff/record/path/channel bounds, channel allowlists, identity and signature handling, projection targets, and required non-claims. r[agent_harness_runtime.pijul_adapter.profile]
 - Define an implementation-free VCS backend service port in `animus-adapters` and a thin non-default std host adapter over an explicitly injected bounded executor; reusable crates do not discover `pijul`, scan for `.pijul`, open Sanakirja databases, link `libpijul`, read identity keys, or spawn processes. r[agent_harness_runtime.pijul_adapter.service]
-- Add pure Rust validation for machine outputs (`log`, `change`, `diff`, channel listing): base32 BLAKE3 change-hash syntax, channel names, state identifiers, record envelopes, conflict status, exit-status classes, and configured bounds. r[agent_harness_runtime.pijul_adapter.validation]
+- Add pure Rust validation for reviewed hash-only `log` JSON, `diff` JSON, and exact beta.18 channel lines. Validate change hashes, prefixes, channel names, optional state-identifier syntax, conflict status, exits, and bounds. Reject human-oriented `change` output. r[agent_harness_runtime.pijul_adapter.validation]
 - Project validated observations into existing Animus checkpoint DTOs, snapshot-ledger records, provenance observations, and isolated-workspace descriptors without replacing their owners. r[agent_harness_runtime.pijul_adapter.projection]
 - Emit metadata-only BLAKE3 receipts that bind cohort, policy, operation class, status, bounded counts, confirmation state, and required non-claims without diffs, file bodies, author details, key material, or private paths. r[agent_harness_runtime.pijul_adapter.evidence]
 - Add positive and negative fixtures, a fake-`pijul` parity lane, dependency-isolation guards, a focused verification rail, integration docs, component/facade metadata, and a bounded README reference. r[agent_harness_runtime.pijul_adapter.verification]
@@ -18,7 +18,7 @@ Wiring Pijul into reusable Animus crates directly would require opening Sanakirj
 
 - **Reusable crates**: `animus-adapters` gains implementation-free DTOs and a backend service port; `animus-runtime` gains pure validation and projection only.
 - **Host shell**: a dedicated non-default std adapter owns CLI protocol plumbing around a caller-injected bounded executor and an exact `pijul` executable identity.
-- **Configuration**: Nickel remains the source of truth; generated JSON is checked and revalidated by Rust.
+- **Configuration**: Nickel remains the source of truth. Generated JSON is checked, revalidated, and bound to a BLAKE3 policy identity by Rust.
 - **Existing owners**: checkpoint/rollback, snapshot ledger, provenance, workspace isolation, process-job profiles, and safe receipts remain authoritative; this adapter is one backend behind their existing ports.
 - **Testing**: focused adapter/runtime/host tests, exact-cohort CLI parity fixtures, positive and negative fixtures, Nickel drift checks, source-shape guards, Cairn validation/gates, and a Nix check for the opt-in helper.
 

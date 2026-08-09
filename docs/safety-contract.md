@@ -133,6 +133,10 @@ The host retains backend discovery, effect admission, filesystem, process, netwo
 
 The generic authority-provider contract is `no_std` plus `alloc` and exposes no Basalt or UCAN type. Display names are never principals. Stable agent-definition BLAKE3 identities bind explicitly to audience DIDs. The optional `AGPL-3.0-or-later` shell accepts only the closed reviewed document read/write mappings and caller-injected key, proof, revocation, caveat, replay, time, limit, and commit services. Basalt can deny but cannot widen any existing local gate. The shell retains live authority through commit-before-effect dispatch. Receipts are metadata-only and reject credentials, payloads, paths, diagnostics, and trust or completion overclaims. See [optional Basalt authority adapter](basalt-authority-adapter.md).
 
+## Optional Pijul VCS boundary
+
+The Pijul DTO and service contracts are `no_std` plus `alloc`. They do not link Pijul database crates or gain process, filesystem, environment, identity, key, network, remote, or persistence authority. Pure runtime validation admits only the exact beta.18 cohort. The optional std shell calls a caller-injected bounded executor with explicit argv and no environment inheritance. It uses hash-only log JSON because rich beta.18 logs can read identity files. Protected mutations and remote operations stop before executor dispatch. Receipts omit paths, diffs, messages, authors, process output, and unrestricted diagnostics. See [Pijul VCS adapter](pijul-vcs-adapter.md).
+
 ## Config ownership
 
 Parse configuration once at the shell boundary, validate it, and keep the typed result in owned structs such as `animus-std::RuntimeConfig` for host input loading or `animus-runtime::RuntimeConfig` for loop execution limits. Do not validate-and-drop raw settings and then re-read or re-parse them later.
@@ -173,6 +177,7 @@ cargo test -p animus-adapters
 cargo test -p animus-adapters multimodal
 scripts/cairn/check-provider-video-payloads --root .
 scripts/cairn/check-basalt-authority-adapter --root .
+scripts/cairn/check-pijul-vcs-adapter --root .
 scripts/cairn/check-terminal-image-protocols --root .
 scripts/cairn/check-terminal-video-playback --root .
 cargo test -p animus-preserves

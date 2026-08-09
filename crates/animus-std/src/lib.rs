@@ -71,6 +71,8 @@ mod modelevidence;
 mod modelprofiles;
 #[cfg(feature = "observability-host")]
 mod observability;
+#[cfg(feature = "pijul-vcs-adapter")]
+pub mod pijul;
 #[cfg(feature = "provider-retry")]
 mod providerretry;
 mod providers;
