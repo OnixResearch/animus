@@ -10,8 +10,10 @@ const ARG_ROOT: &str = "--root";
 const HOST_MANIFEST: &str = "crates/animus-std-openai/Cargo.toml";
 const HOST_LIB: &str = "crates/animus-std-openai/src/lib.rs";
 const SMOKE_CORE: &str = "crates/animus-std-openai/src/smoke.rs";
-const SMOKE_BINARY: &str =
+const OPENAI_SMOKE_BINARY: &str =
     "crates/animus-std-openai/src/bin/animus-live-openai-smoke.rs";
+const OPENROUTER_SMOKE_BINARY: &str =
+    "crates/animus-std-openai/src/bin/animus-live-openrouter-smoke.rs";
 const LIVE_TEST: &str = "crates/animus-std-openai/tests/live-openai.rs";
 const HOST_DOC: &str = "docs/live-openai-provider-host.md";
 const ROADMAP_DOC: &str = "docs/dogfoodable-host-readiness-roadmap.md";
@@ -22,10 +24,12 @@ const STALE_FIXTURE: &str =
     "cairn/release-evidence-index-fixtures/stale-live-provider.ncl";
 const DIRTY_FIXTURE: &str =
     "cairn/release-evidence-index-fixtures/dirty-live-provider.ncl";
-const MODEL_ID: &str = "gpt-5-mini";
+const OPENAI_MODEL_ID: &str = "gpt-5-mini";
+const OPENROUTER_MODEL_ID: &str = "openai/gpt-5.5";
 const INVALID_MODEL: &str = "invalid model with spaces";
 const CREDENTIAL_SENTINEL: &str = "packaged-live-secret-sentinel";
-const FAILURE_MARKER: &str = "LIVE_OPENAI_SMOKE status=failed";
+const OPENAI_FAILURE_MARKER: &str = "LIVE_OPENAI_SMOKE status=failed";
+const OPENROUTER_FAILURE_MARKER: &str = "LIVE_OPENROUTER_SMOKE status=failed";
 
 struct Check<'a> {
     program: &'a str,
@@ -47,8 +51,8 @@ fn run() -> Result<(), String> {
     validate_contract(&root)?;
     run_checks(&root)?;
     validate_packaged_denials(&root)?;
-    println!("focused rail packaged-live-openai-smoke: pass");
-    println!("live request: not run; explicit credential and model remain required");
+    println!("focused rail packaged-live-provider-smokes: pass");
+    println!("live requests: not run; explicit credentials and models remain required");
     Ok(())
 }
 
@@ -66,51 +70,61 @@ fn parse_root() -> Result<PathBuf, String> {
 fn validate_contract(root: &Path) -> Result<(), String> {
     // r[verify agent_harness_runtime.packaged_live_openai_smoke.verification]
     // r[verify agent_harness_runtime.packaged_live_openai_smoke.current_head_evidence.failure]
+    // r[verify agent_harness_runtime.packaged_live_openrouter_smoke.verification]
+    // r[verify agent_harness_runtime.packaged_live_openrouter_smoke.docs]
     let manifest = read(root, HOST_MANIFEST)?;
     let library = read(root, HOST_LIB)?;
     let core = read(root, SMOKE_CORE)?;
-    let binary = read(root, SMOKE_BINARY)?;
+    let openai_binary = read(root, OPENAI_SMOKE_BINARY)?;
+    let openrouter_binary = read(root, OPENROUTER_SMOKE_BINARY)?;
     let live_test = read(root, LIVE_TEST)?;
     let docs = format!("{}\n{}", read(root, HOST_DOC)?, read(root, ROADMAP_DOC)?);
     let release_checker = read(root, RELEASE_CHECKER)?;
 
     require(
         manifest.contains("name = \"animus-live-openai-smoke\"")
+            && manifest.contains("name = \"animus-live-openrouter-smoke\"")
             && manifest.contains("required-features = [\"reqwest-client\"]"),
-        "packaged live OpenAI binary is not gated by reqwest-client",
+        "packaged live provider binaries are not gated by reqwest-client",
     )?;
     for marker in [
         "plan_live_openai_smoke",
         "render_live_openai_smoke_evidence",
         "run_packaged_live_openai_smoke",
+        "plan_live_openrouter_smoke",
+        "render_live_openrouter_smoke_evidence",
+        "run_packaged_live_openrouter_smoke",
     ] {
         require(
             library.contains(marker) || core.contains(marker),
             format!("packaged live smoke marker is missing: {marker}").as_str(),
         )?;
     }
-    for marker in [
-        "--model",
-        "--credential-stdin",
-        "MAX_CREDENTIAL_STDIN_BYTES",
-        "credential_stdin_oversized",
-        "credential_stdin_multiline",
-    ] {
-        require(
-            binary.contains(marker),
-            format!("packaged input marker is missing: {marker}").as_str(),
-        )?;
-    }
-    for forbidden in [
-        "ANIMUS_OPENAI_LIVE_API_KEY",
-        "std::env::var",
-        "raw_response=present",
-        "model_output=present",
-    ] {
-        require(
-            !binary.contains(forbidden),
-            format!("packaged binary gained forbidden marker: {forbidden}").as_str(),
-        )?;
+    for binary in [&openai_binary, &openrouter_binary] {
+        for marker in [
+            "--model",
+            "--credential-stdin",
+            "MAX_CREDENTIAL_STDIN_BYTES",
+            "credential_stdin_oversized",
+            "credential_stdin_multiline",
+        ] {
+            require(
+                binary.contains(marker),
+                format!("packaged input marker is missing: {marker}").as_str(),
+            )?;
+        }
+        for forbidden in [
+            "ANIMUS_OPENAI_LIVE_API_KEY",
+            "OPENROUTER_API_KEY",
+            "std::env::var",
+            "raw_response=present",
+            "model_output=present",
+        ] {
+            require(
+                !binary.contains(forbidden),
+                format!("packaged binary gained forbidden marker: {forbidden}").as_str(),
+            )?;
+        }
     }
     require(
         core.contains("raw_response=omitted")
@@ -132,6 +146,8 @@ fn validate_contract(root: &Path) -> Result<(), String> {
     )?;
     require(
         docs.contains("animus-live-openai-smoke")
+            && docs.contains("animus-live-openrouter-smoke")
+            && docs.contains("https://openrouter.ai/api/v1/responses")
             && docs.contains("current head")
             && docs.contains("remains a non-claim"),
         "packaged live smoke docs or non-claims are incomplete",
@@ -140,6 +156,7 @@ fn validate_contract(root: &Path) -> Result<(), String> {
 
 fn run_checks(root: &Path) -> Result<(), String> {
     // r[verify agent_harness_runtime.packaged_live_openai_smoke.closeout]
+    // r[verify agent_harness_runtime.packaged_live_openrouter_smoke.closeout]
     let checks = [
         Check {
             program: "cargo",
@@ -183,20 +200,41 @@ fn run_checks(root: &Path) -> Result<(), String> {
 
 fn validate_packaged_denials(root: &Path) -> Result<(), String> {
     // r[verify agent_harness_runtime.packaged_live_openai_smoke.binary.failure]
-    let empty = capture_with_stdin(root, MODEL_ID, "")?;
-    require(!empty.status.success(), "empty credential unexpectedly passed")?;
-    validate_safe_failure(&empty)?;
+    // r[verify agent_harness_runtime.packaged_live_openrouter_smoke.binary.failure]
+    for (binary, model, failure_marker) in [
+        (
+            "animus-live-openai-smoke",
+            OPENAI_MODEL_ID,
+            OPENAI_FAILURE_MARKER,
+        ),
+        (
+            "animus-live-openrouter-smoke",
+            OPENROUTER_MODEL_ID,
+            OPENROUTER_FAILURE_MARKER,
+        ),
+    ] {
+        let empty = capture_with_stdin(root, binary, model, "")?;
+        require(!empty.status.success(), "empty credential unexpectedly passed")?;
+        validate_safe_failure(&empty, failure_marker)?;
 
-    let invalid = capture_with_stdin(
-        root,
-        INVALID_MODEL,
-        format!("{CREDENTIAL_SENTINEL}\n").as_str(),
-    )?;
-    require(!invalid.status.success(), "invalid model unexpectedly passed")?;
-    validate_safe_failure(&invalid)
+        let invalid = capture_with_stdin(
+            root,
+            binary,
+            INVALID_MODEL,
+            format!("{CREDENTIAL_SENTINEL}\n").as_str(),
+        )?;
+        require(!invalid.status.success(), "invalid model unexpectedly passed")?;
+        validate_safe_failure(&invalid, failure_marker)?;
+    }
+    Ok(())
 }
 
-fn capture_with_stdin(root: &Path, model: &str, input: &str) -> Result<Output, String> {
+fn capture_with_stdin(
+    root: &Path,
+    binary: &str,
+    model: &str,
+    input: &str,
+) -> Result<Output, String> {
     let mut child = Command::new("cargo")
         .args([
             "run",
@@ -206,7 +244,7 @@ fn capture_with_stdin(root: &Path, model: &str, input: &str) -> Result<Output, S
             "--features",
             "reqwest-client",
             "--bin",
-            "animus-live-openai-smoke",
+            binary,
             "--",
             "--model",
             model,
@@ -231,12 +269,12 @@ fn capture_with_stdin(root: &Path, model: &str, input: &str) -> Result<Output, S
         .map_err(|error| format!("cannot read packaged live smoke output: {error}"))
 }
 
-fn validate_safe_failure(output: &Output) -> Result<(), String> {
+fn validate_safe_failure(output: &Output, failure_marker: &str) -> Result<(), String> {
     let stdout = String::from_utf8(output.stdout.clone()).map_err(|error| error.to_string())?;
     let stderr = String::from_utf8(output.stderr.clone()).map_err(|error| error.to_string())?;
     require(stdout.is_empty(), "failed packaged smoke wrote standard output")?;
     require(
-        stderr.contains(FAILURE_MARKER),
+        stderr.contains(failure_marker),
         "failed packaged smoke omitted its stable failure marker",
     )?;
     require(

@@ -5,6 +5,7 @@ mod streaming;
 
 const PROVIDER_ID: &str = "openai";
 const MODEL_ID: &str = "gpt-5-mini";
+const OPENROUTER_MODEL_ID: &str = "openai/gpt-5.5";
 const ENDPOINT_IDENTITY: &str = "openai-responses";
 const OTHER_PROVIDER_ID: &str = "local";
 const OTHER_MODEL_ID: &str = "local-small";
@@ -125,6 +126,24 @@ fn rejects_unsupported_thinking_level_when_policy_requires() {
     assert!(matches!(
         error,
         RegistryError::UnsupportedThinkingLevel { requested: "high" }
+    ));
+}
+
+#[test]
+fn model_ids_admit_provider_qualified_names_without_widening_provider_ids() {
+    // r[verify agent_harness_runtime.packaged_live_openrouter_smoke.contract.plan]
+    assert_eq!(
+        ModelId::new(OPENROUTER_MODEL_ID)
+            .expect("provider-qualified model id should validate")
+            .as_str(),
+        OPENROUTER_MODEL_ID
+    );
+    assert!(matches!(
+        ProviderId::new(OPENROUTER_MODEL_ID),
+        Err(RegistryError::InvalidIdentifier {
+            field: PROVIDER_ID_FIELD,
+            reason: INVALID_ID_CHAR_REASON,
+        })
     ));
 }
 

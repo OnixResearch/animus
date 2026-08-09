@@ -346,6 +346,7 @@
                 || baseName == "check-acp-stdio-host"
                 || baseName == "check-live-openai-provider-host"
                 || baseName == "check-packaged-live-openai-smoke"
+                || baseName == "check-packaged-live-openrouter-smoke"
                 || baseName == "check-codebase-tool-host"
                 || baseName == "check-acp-nominal-identities"
                 || baseName == "check-lean4-loop-fabric"
@@ -1135,6 +1136,13 @@
             pkgs.nickel
           ] ''
             sh scripts/cairn/check-packaged-live-openai-smoke --root .
+          '';
+
+          packaged-live-openrouter-smoke = cargoCheck "animus-packaged-live-openrouter-smoke" [
+            pkgs.clippy
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-packaged-live-openrouter-smoke --root .
           '';
 
           codebase-tool-host = cargoCheck "animus-codebase-tool-host" [

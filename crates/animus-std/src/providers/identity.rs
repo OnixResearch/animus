@@ -9,6 +9,7 @@ const ID_DASH: char = '-';
 const ID_UNDERSCORE: char = '_';
 const ID_DOT: char = '.';
 const ID_COLON: char = ':';
+const MODEL_ID_SLASH: char = '/';
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum IdField {
@@ -90,7 +91,10 @@ pub(super) fn validate_id(field: IdField, raw: &str) -> Result<(), super::Regist
         });
     }
 
-    if !raw.chars().all(is_safe_id_char) {
+    if !raw
+        .chars()
+        .all(|character| is_safe_id_char(field, character))
+    {
         return Err(super::RegistryError::InvalidIdentifier {
             field: field_label,
             reason: super::INVALID_ID_CHAR_REASON,
@@ -100,7 +104,7 @@ pub(super) fn validate_id(field: IdField, raw: &str) -> Result<(), super::Regist
     Ok(())
 }
 
-fn is_safe_id_char(character: char) -> bool {
+fn is_safe_id_char(field: IdField, character: char) -> bool {
     matches!(
         character,
         ASCII_LOWERCASE_A..=ASCII_LOWERCASE_Z
@@ -110,5 +114,5 @@ fn is_safe_id_char(character: char) -> bool {
             | ID_UNDERSCORE
             | ID_DOT
             | ID_COLON
-    )
+    ) || (field == IdField::Model && character == MODEL_ID_SLASH)
 }

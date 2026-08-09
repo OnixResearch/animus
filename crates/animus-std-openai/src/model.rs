@@ -4,10 +4,14 @@ use std::time::Duration;
 #[cfg(any(feature = "reqwest-client", test))]
 use zeroize::Zeroizing;
 
-/// Exact endpoint identity admitted by the first live `OpenAI` host cohort.
+/// Exact endpoint identity admitted by the official `OpenAI` host cohort.
 pub const OFFICIAL_OPENAI_RESPONSES_ENDPOINT_IDENTITY: &str = "openai-responses";
-/// Exact HTTPS URL admitted by the first live `OpenAI` host cohort.
+/// Exact HTTPS URL admitted by the official `OpenAI` host cohort.
 pub const OFFICIAL_OPENAI_RESPONSES_URL: &str = "https://api.openai.com/v1/responses";
+/// Exact endpoint identity admitted by the `OpenRouter` Responses cohort.
+pub const OPENROUTER_RESPONSES_ENDPOINT_IDENTITY: &str = "openrouter-responses";
+/// Exact HTTPS URL admitted by the `OpenRouter` Responses cohort.
+pub const OPENROUTER_RESPONSES_URL: &str = "https://openrouter.ai/api/v1/responses";
 
 #[cfg(any(feature = "reqwest-client", test))]
 const MAX_API_KEY_CHARS: usize = 4_096;
@@ -23,8 +27,8 @@ const LONG_API_KEY_REASON: &str = "OpenAI API key exceeds the supported length";
 const UNSAFE_API_KEY_REASON: &str = "OpenAI API key contains whitespace or control characters";
 #[cfg(any(feature = "reqwest-client", test))]
 const EMPTY_CREDENTIAL_LABEL_REASON: &str = "credential source label must be non-empty";
-const ENDPOINT_IDENTITY_REASON: &str = "OpenAI endpoint identity is not admitted";
-const ENDPOINT_URL_REASON: &str = "OpenAI endpoint URL is not admitted";
+const ENDPOINT_IDENTITY_REASON: &str = "Responses endpoint identity is not admitted";
+const ENDPOINT_URL_REASON: &str = "Responses endpoint URL does not match its identity";
 const TIMEOUT_REASON: &str = "OpenAI timeout must be non-zero";
 const RESPONSE_LIMIT_REASON: &str = "OpenAI response limit is outside the supported range";
 
@@ -131,7 +135,7 @@ impl fmt::Display for HostError {
 
 impl std::error::Error for HostError {}
 
-/// Explicit configuration for the live `OpenAI` host.
+/// Explicit configuration for one admitted OpenAI-compatible Responses host.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct OpenAiHostConfig {
     endpoint_identity: String,
@@ -141,7 +145,7 @@ pub struct OpenAiHostConfig {
 }
 
 impl OpenAiHostConfig {
-    /// Admits one exact `OpenAI` endpoint and bounded transport configuration.
+    /// Admits one exact endpoint pair and bounded transport configuration.
     ///
     /// # Errors
     ///
@@ -261,12 +265,17 @@ fn validate_config(
     timeout: Duration,
     max_response_bytes: u64,
 ) -> Result<(), HostError> {
-    if endpoint_identity != OFFICIAL_OPENAI_RESPONSES_ENDPOINT_IDENTITY {
-        return Err(HostError::InvalidConfiguration {
-            reason: ENDPOINT_IDENTITY_REASON,
-        });
-    }
-    if endpoint_url != OFFICIAL_OPENAI_RESPONSES_URL {
+    // r[impl agent_harness_runtime.packaged_live_openrouter_smoke.endpoint]
+    let expected_url = match endpoint_identity {
+        OFFICIAL_OPENAI_RESPONSES_ENDPOINT_IDENTITY => OFFICIAL_OPENAI_RESPONSES_URL,
+        OPENROUTER_RESPONSES_ENDPOINT_IDENTITY => OPENROUTER_RESPONSES_URL,
+        _unsupported => {
+            return Err(HostError::InvalidConfiguration {
+                reason: ENDPOINT_IDENTITY_REASON,
+            });
+        }
+    };
+    if endpoint_url != expected_url {
         return Err(HostError::InvalidConfiguration {
             reason: ENDPOINT_URL_REASON,
         });

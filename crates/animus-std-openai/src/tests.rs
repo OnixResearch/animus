@@ -308,17 +308,42 @@ fn transport_status_bounds_and_malformed_responses_fail_safely() {
 }
 
 #[test]
-fn endpoint_credentials_and_debug_output_fail_closed() {
+fn endpoint_pairs_credentials_and_debug_output_fail_closed() {
     // r[verify agent_harness_runtime.live_openai_provider_host.boundary]
-    assert!(matches!(
-        OpenAiHostConfig::new(
-            "other-endpoint",
-            OFFICIAL_OPENAI_RESPONSES_URL,
-            Duration::from_secs(TIMEOUT_SECONDS),
-            MAX_RESPONSE_BYTES,
+    // r[verify agent_harness_runtime.packaged_live_openrouter_smoke.endpoint.pass]
+    // r[verify agent_harness_runtime.packaged_live_openrouter_smoke.endpoint.failure]
+    OpenAiHostConfig::new(
+        OPENROUTER_RESPONSES_ENDPOINT_IDENTITY,
+        OPENROUTER_RESPONSES_URL,
+        Duration::from_secs(TIMEOUT_SECONDS),
+        MAX_RESPONSE_BYTES,
+    )
+    .expect("exact OpenRouter endpoint pair must be admitted");
+    for (endpoint_identity, endpoint_url) in [
+        ("other-endpoint", OFFICIAL_OPENAI_RESPONSES_URL),
+        (
+            OFFICIAL_OPENAI_RESPONSES_ENDPOINT_IDENTITY,
+            OPENROUTER_RESPONSES_URL,
         ),
-        Err(HostError::InvalidConfiguration { .. })
-    ));
+        (
+            OPENROUTER_RESPONSES_ENDPOINT_IDENTITY,
+            OFFICIAL_OPENAI_RESPONSES_URL,
+        ),
+        (
+            OPENROUTER_RESPONSES_ENDPOINT_IDENTITY,
+            "https://example.invalid/v1/responses",
+        ),
+    ] {
+        assert!(matches!(
+            OpenAiHostConfig::new(
+                endpoint_identity,
+                endpoint_url,
+                Duration::from_secs(TIMEOUT_SECONDS),
+                MAX_RESPONSE_BYTES,
+            ),
+            Err(HostError::InvalidConfiguration { .. })
+        ));
+    }
     assert!(matches!(
         OpenAiApiKey::new(CREDENTIAL_LABEL, String::new()),
         Err(HostError::InvalidCredential { .. })

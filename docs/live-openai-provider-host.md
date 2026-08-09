@@ -1,15 +1,20 @@
-# Live OpenAI provider host
+# Live OpenAI-compatible provider host
 
-`animus-std-openai` is a non-default host for one OpenAI Responses HTTPS endpoint. It requires explicit network and credential authority.
+`animus-std-openai` is a non-default host for reviewed OpenAI-compatible Responses HTTPS endpoints. It requires explicit network and credential authority.
 
 The root feature is `openai-provider-host`. New embedders can depend on `animus-std-openai` directly and enable `reqwest-client`.
 
-## Supported cohort
+## Supported cohorts
 
-The first cohort supports:
+The host admits two exact endpoint pairs. OpenRouter documents its cohort in the [Responses API overview](https://openrouter.ai/docs/api/reference/responses/overview).
 
-- the exact `openai-responses` endpoint identity;
-- `https://api.openai.com/v1/responses`;
+- `openai-responses` with `https://api.openai.com/v1/responses`; and
+- `openrouter-responses` with `https://openrouter.ai/api/v1/responses`.
+
+Crossed pairs and arbitrary URLs fail before credential use or network contact.
+
+Both cohorts support:
+
 - text-only system, developer, user, and assistant messages;
 - non-streaming responses;
 - optional reasoning effort;
@@ -18,6 +23,8 @@ The first cohort supports:
 - completed text or refusal responses with bounded usage data.
 
 The host rejects images, tools, tool correlation, structured output, stop sequences, streaming, endpoint substitution, and unsupported response items before data loss can occur.
+
+Provider-qualified model identities, such as `openai/gpt-5.5`, are admitted only as model identifiers. The slash does not become valid in provider or credential identifiers.
 
 ## Authority and execution
 
@@ -55,9 +62,11 @@ let outcome = host.execute(&dispatch_plan, &key, CancellationState::Active)?;
 
 The caller must construct `dispatch_plan` through `animus_std::plan_provider_dispatch`. The plan binds the selected provider, model, endpoint identity, request, credential source, deadline, cancellation label, and receipt policy.
 
-## Packaged live smoke
+## Packaged live smokes
 
-Run the packaged smoke only from the clean revision that will own the evidence:
+Run a packaged smoke only from the clean revision that will own the evidence.
+
+For the official OpenAI endpoint:
 
 ```sh
 model_id='REVIEWED_MODEL_ID'
@@ -68,9 +77,20 @@ cargo run -q -p animus-std-openai \
   --credential-stdin < /run/credentials/openai-api-key
 ```
 
-The binary reads a bounded API key from standard input. It does not read credential or model environment variables.
+For the OpenRouter endpoint:
 
-The binary prints provider, endpoint, status, counts, and BLAKE3 identities. It omits the prompt, API key, model output, and raw response.
+```sh
+model_id='openai/gpt-5.5'
+cargo run -q -p animus-std-openai \
+  --features reqwest-client \
+  --bin animus-live-openrouter-smoke -- \
+  --model "${model_id}" \
+  --credential-stdin < /run/credentials/openrouter-api-key
+```
+
+Each binary reads a bounded API key from standard input. Neither binary reads credential or model environment variables.
+
+Each binary prints provider, endpoint, status, counts, and BLAKE3 identities. It omits the prompt, API key, model output, and raw response.
 
 After a successful run, generate a current-head index:
 
@@ -92,6 +112,7 @@ Run the deterministic focused rails:
 ```sh
 scripts/cairn/check-live-openai-provider-host --root .
 scripts/cairn/check-packaged-live-openai-smoke --root .
+scripts/cairn/check-packaged-live-openrouter-smoke --root .
 ```
 
 The ignored integration test remains available for compatibility with explicit environment-based test execution.
@@ -102,6 +123,6 @@ Do not store the API key in source, command history, receipts, or test output.
 
 Deterministic tests prove request admission, exact JSON projection, fake transport execution, bounded response parsing, cancellation, safe errors, and dependency isolation.
 
-The packaged binary does not prove live behavior until an operator runs it with explicit credentials. Without that result, live availability remains a non-claim.
+A packaged binary does not prove live behavior until an operator runs it with explicit credentials. Without that result, live availability remains a non-claim.
 
-This host does not prove OpenAI reliability, model quality, billing correctness, remote cancellation, memory erasure, production readiness, streaming, tool use, image input, or structured output.
+This host does not prove OpenAI or OpenRouter reliability, routing choice, model quality, billing correctness, remote cancellation, memory erasure, production readiness, streaming, tool use, image input, or structured output.

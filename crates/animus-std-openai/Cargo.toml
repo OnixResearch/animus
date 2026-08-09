@@ -1,6 +1,6 @@
 [package]
 name = "animus-std-openai"
-description = "Authority-scoped live OpenAI Responses host for Animus."
+description = "Authority-scoped live OpenAI-compatible Responses host for Animus."
 edition.workspace = true
 license.workspace = true
 readme.workspace = true
@@ -25,6 +25,11 @@ zeroize = "1.8"
 [[bin]]
 name = "animus-live-openai-smoke"
 path = "src/bin/animus-live-openai-smoke.rs"
+required-features = ["reqwest-client"]
+
+[[bin]]
+name = "animus-live-openrouter-smoke"
+path = "src/bin/animus-live-openrouter-smoke.rs"
 required-features = ["reqwest-client"]
 
 [[test]]
