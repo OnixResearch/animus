@@ -11,6 +11,7 @@ Animus exposes one coherent host-injected tool execution boundary in `animus_run
 - active and trusted tool metadata;
 - exact tool and schema identity;
 - exact current-schema argument names;
+- a domain-separated BLAKE3 binding over all current request values;
 - exact capability registry admission;
 - catalog and request approval posture;
 - read-only or declared-target mutation posture;
@@ -24,7 +25,7 @@ A denied plan never invokes a service and can produce a safe denial receipt.
 
 ## Imperative shell
 
-`ToolExecutorService` is host-implemented. `execute_admitted_tool` is intentionally thin: it rejects denied plans and binding mismatches, invokes exactly the admitted injected service, normalizes transient output through the existing bounded tool-output contract, and returns a validated receipt. Filesystem, process, network, provider, plugin, persistence, credential, and other concrete authority remains entirely with the host implementation.
+`ToolExecutorService` is host-implemented. `execute_admitted_tool` rejects denied plans, substituted request values, and binding mismatches before it invokes the selected service. It normalizes transient output once and returns a `ToolExecutionOutcome` with a bounded `ToolResponse` and validated receipt. Filesystem, process, network, provider, plugin, persistence, credential, and other concrete authority remains entirely with the host implementation.
 
 ## Receipt boundary
 
@@ -49,7 +50,7 @@ The optional [ACP stdio host](acp-stdio-host.md) never executes a tool directly.
 Focused checks:
 
 ```sh
-cargo test -p animus-runtime tool_executor_kit --locked
+cargo test -p animus-runtime executionkit --locked
 cargo test -p animus-runtime composition_conformance --locked
 scripts/cairn/check-tool-catalog --root .
 scripts/cairn/check-composition-conformance --root .
@@ -57,8 +58,8 @@ scripts/cairn/check-adapter-conformance-index --root .
 scripts/cairn/check-component-catalog --root .
 ```
 
-Positive fixtures cover read-only and declared-mutation fake execution. Negative fixtures cover missing or unavailable executors, denied capability, schema and argument mismatch, inactive or untrusted definitions, approval and output policy denial, mutation conflict, cancellation, timeout, fallback attempts, unsafe or oversized output, unsafe references, duplicate catalog identities, and receipt leaks.
+Positive fixtures cover read-only and declared-mutation fake execution. Negative fixtures cover substituted argument values, missing or unavailable executors, denied capability, schema and argument mismatch, inactive or untrusted definitions, approval and output policy denial, mutation conflict, cancellation, timeout, fallback attempts, unsafe or oversized output, unsafe references, duplicate catalog identities, and receipt leaks.
 
-A host may expose the optional [codebase graph](codebase-graph-host.md) as a read-only capability pack. The executor still owns final tool/schema/capability/output admission; graph access itself cannot authorize repository reads or edits and stale indexes must fail before tool completion evidence.
+The optional [read-only codebase tool host](read-only-codebase-tool-host.md) adapts the existing [codebase graph](codebase-graph-host.md) through this kit. The executor still owns final tool, schema, capability, output, and request-value admission. Graph access cannot authorize repository reads or edits, and stale indexes fail before completion evidence.
 
 This kit does not add default tools, shell execution, filesystem mutation, network tools, MCP transport, plugin loading, provider dispatch, global discovery, or production tool packs.

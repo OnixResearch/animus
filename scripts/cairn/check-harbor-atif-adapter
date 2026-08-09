@@ -36,7 +36,7 @@ cargo clippy -p animus-adapter-atif --all-targets --features json-codec -- -D wa
 cargo check -p animus-adapter-atif --no-default-features --locked
 cargo check -p animus-adapter-atif --target wasm32-unknown-unknown --no-default-features --locked
 cargo test -p animus-runtime --no-default-features --features harbor-eval harbor_eval --locked
-cargo test -p animus --no-default-features --features harbor-eval,harbor-atif-json --test harbor_atif_integration --locked
+cargo test -p animus --no-default-features --features harbor-eval,harbor-atif-json --test harbor-atif-integration --locked
 cargo check -p animus --no-default-features --features harbor-atif --locked
 cargo check -p animus --no-default-features --features harbor-atif-json --locked
 

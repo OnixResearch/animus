@@ -56,7 +56,7 @@ See [docs/agent-guardrail.md](docs/agent-guardrail.md) for the non-default Linux
 
 See [docs/nickel-export-cutover.md](docs/nickel-export-cutover.md) for the pinned standalone Nickel export shell, exact-byte dual-run manifests, fail-closed rollback, retained Animus policy authority, and non-claims.
 
-See [docs/codebase-graph-host.md](docs/codebase-graph-host.md) for the non-default Rust-first syntactic graph, bounded incremental reconciliation, stale recovery, capability-scoped parser host, metadata-only receipts, and non-claims.
+See [docs/codebase-graph-host.md](docs/codebase-graph-host.md) for the non-default Rust-first syntactic graph, bounded incremental reconciliation, stale recovery, capability-scoped parser host, metadata-only receipts, and non-claims. See [docs/read-only-codebase-tool-host.md](docs/read-only-codebase-tool-host.md) for the non-default exact-request-bound concrete query executor and packaged smoke.
 
 See [docs/goose-message-queue-interrupts.md](docs/goose-message-queue-interrupts.md) for the pure queued-message reducer, interrupt classifier, fail-closed controls, and safe receipt boundary, and [docs/goose-remote-server-admission.md](docs/goose-remote-server-admission.md) for Goose-style remote backend descriptors, host-supplied handshake summaries, fail-closed admission, and safe receipts.
 
@@ -192,6 +192,7 @@ scripts/cairn/check-model-runtime-profiles --root .
 scripts/cairn/check-agent-role-profiles --root .
 scripts/cairn/check-provider-retry --root .
 scripts/cairn/check-live-openai-provider-host --root .
+scripts/cairn/check-codebase-tool-host --root .
 scripts/cairn/check-active-turn-recovery --root .
 scripts/cairn/check-conversation-projection --root .
 scripts/cairn/check-session-branch-explorer --root .

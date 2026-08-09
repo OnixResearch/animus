@@ -26,6 +26,10 @@ mod authoritativecompletion;
 #[cfg(feature = "branchfs-host")]
 #[path = "branchfshost.rs"]
 pub mod branchfs_host;
+/// Non-default read-only codebase graph tool executor and packaged smoke.
+#[cfg(feature = "codebase-tool-host")]
+#[path = "codebasetool/mod.rs"]
+pub mod codebase_tool;
 #[cfg(feature = "codebase-graph-host")]
 mod codegraph;
 #[cfg(feature = "coding-session-host")]

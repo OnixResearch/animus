@@ -21,6 +21,7 @@ conversation-view-projection = ["dep:animus-runtime", "dep:serde", "dep:serde_js
 execution-backend-planner = ["dep:animus-runtime", "animus-runtime/execution-backend-planner"]
 session-branch-explorer = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 codebase-graph-host = ["dep:serde", "dep:serde_json", "dep:tree-sitter", "dep:tree-sitter-rust"]
+codebase-tool-host = ["codebase-graph-host", "dep:animus-runtime"]
 dogfood-smoke = ["dep:animus-runtime"]
 durable-session-store = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 harbor-eval = ["dep:animus-runtime", "animus-runtime/harbor-eval", "animus-adapters/evaluation", "dep:serde_json"]
@@ -49,6 +50,11 @@ required-features = ["dogfood-smoke"]
 name = "animus-coding-session-smoke"
 path = "src/bin/animus-coding-session-smoke.rs"
 required-features = ["coding-session-host"]
+
+[[bin]]
+name = "animus-codebase-tool-smoke"
+path = "src/bin/animus-codebase-tool-smoke.rs"
+required-features = ["codebase-tool-host"]
 
 [[bin]]
 name = "animus-sandlock-live-fixture"

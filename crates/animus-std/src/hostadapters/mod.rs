@@ -4,7 +4,7 @@
 //! variables, opens files, starts processes, contacts networks, inspects
 //! credentials, persists state, or accesses terminal state.
 
-const HOST_ADAPTER_DESCRIPTOR_COUNT: usize = 14;
+const HOST_ADAPTER_DESCRIPTOR_COUNT: usize = 15;
 const NO_HOST_EFFECT: &[HostAuthority] = &[HostAuthority::NoHostEffect];
 const ENVIRONMENT_AUTHORITY: &[HostAuthority] = &[HostAuthority::EnvironmentRead];
 const FILESYSTEM_AUTHORITY: &[HostAuthority] = &[HostAuthority::FilesystemRead];
@@ -82,6 +82,8 @@ pub enum HostAdapterFamily {
     ProviderRegistry,
     /// Optional live `OpenAI` Responses HTTPS host.
     LiveOpenAiProvider,
+    /// Optional capability-rooted read-only codebase query tool.
+    ReadOnlyCodebaseTool,
     /// No-op and deterministic in-memory observability sinks.
     Observability,
     /// Document extraction planning and shell validation.
@@ -113,6 +115,7 @@ impl HostAdapterFamily {
             Self::LocalContext => "local_context",
             Self::ProviderRegistry => "provider_registry",
             Self::LiveOpenAiProvider => "live_openai_provider",
+            Self::ReadOnlyCodebaseTool => "read_only_codebase_tool",
             Self::Observability => "observability",
             Self::DocumentIngest => "document_ingest",
             Self::ModelEvidenceIngest => "model_evidence_ingest",
@@ -219,6 +222,15 @@ const HOST_ADAPTER_DESCRIPTORS: [HostAdapterDescriptor; HOST_ADAPTER_DESCRIPTOR_
         facade_path: "animus::openai_provider_host",
         direct_dependency: "animus-std-openai/reqwest-client",
         focused_check: "scripts/cairn/check-live-openai-provider-host --root .",
+    },
+    HostAdapterDescriptor {
+        family: HostAdapterFamily::ReadOnlyCodebaseTool,
+        owner: "animus-std::codebase_tool",
+        feature_gate: "codebase-tool-host",
+        required_authority: FILESYSTEM_AUTHORITY,
+        facade_path: "animus::codebase_tool",
+        direct_dependency: "animus-std/codebase-tool-host",
+        focused_check: "scripts/cairn/check-codebase-tool-host --root .",
     },
     HostAdapterDescriptor {
         family: HostAdapterFamily::Observability,

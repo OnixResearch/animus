@@ -50,6 +50,8 @@ const ISSUE_UNSAFE_EVIDENCE_FIELD: &str = "RUNTIME_FACADE_UNSAFE_EVIDENCE_FIELD"
 
 const PUBLIC_EXPORT_SOURCES: &[(&str, &str)] = &[
     ("animus", "src/lib.rs"),
+    ("animus", "src/facades/host.rs"),
+    ("animus", "src/facades/optional.rs"),
     ("animus-core", "crates/animus-core/src/lib.rs"),
     ("animus-adapters", "crates/animus-adapters/src/lib.rs"),
     (

@@ -13,6 +13,8 @@ const TOOL_TIMEOUT_WITHIN_DEADLINE: &str = "within_deadline";
 const TOOL_TIMEOUT_TIMED_OUT: &str = "timed_out";
 const TOOL_FALLBACK_DENY: &str = "deny";
 const RECEIPT_HASH_DOMAIN: &str = "animus.tool-executor-kit.receipt.v1";
+const REQUEST_HASH_DOMAIN: &str = "animus.tool-executor-kit.request.v1";
+const REQUEST_FIELD_HASH_DOMAIN: &str = "animus.tool-executor-kit.request-field.v1";
 const OUTPUT_HASH_DOMAIN: &str = "animus.tool-executor-kit.output.v1";
 const HASH_SEPARATOR: &str = "|";
 const RECEIPT_REDACTION_MARKER: &str = "raw-output-omitted";
@@ -473,6 +475,7 @@ pub struct ToolExecutionPlan {
     capability_labels: Vec<String>,
     mutation_targets: Vec<String>,
     output_policy: Option<ToolExecutorOutputPolicy>,
+    request_identity: String,
     dispatch_issue: crate::ToolDispatchPlanIssue,
 }
 
@@ -576,6 +579,7 @@ pub fn plan_tool_execution(request: ToolExecutionPlanRequest<'_>) -> ToolExecuti
         capability_labels: request.request.required_capability_labels().to_vec(),
         mutation_targets: request.request.mutation_targets().to_vec(),
         output_policy: definition.map(ToolDefinition::output_policy),
+        request_identity: tool_request_identity(request.request),
         dispatch_issue: dispatch_plan.issue(),
     }
 }
@@ -776,6 +780,7 @@ pub trait ToolExecutorService {
     fn execute(
         &mut self,
         plan: &ToolExecutionPlan,
+        request: &animus_adapters::ToolRequest,
     ) -> Result<ToolExecutorOutput, ToolExecutorServiceFailure>;
 }
 
@@ -807,6 +812,27 @@ pub struct ToolExecutionReceipt {
     output_redaction_class: &'static str,
     redaction_marker: &'static str,
     receipt_hash: String,
+}
+
+/// Bounded model-visible output and metadata-only durable evidence.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ToolExecutionOutcome {
+    response: animus_adapters::ToolResponse,
+    receipt: ToolExecutionReceipt,
+}
+
+impl ToolExecutionOutcome {
+    /// Returns the bounded response for model-visible context.
+    #[must_use]
+    pub const fn response(&self) -> &animus_adapters::ToolResponse {
+        &self.response
+    }
+
+    /// Returns metadata-only durable execution evidence.
+    #[must_use]
+    pub const fn receipt(&self) -> &ToolExecutionReceipt {
+        &self.receipt
+    }
 }
 
 impl ToolExecutionReceipt {
@@ -882,6 +908,8 @@ pub enum ToolExecutorKitError {
         /// First fail-closed plan class.
         failure: ToolExecutionFailureClass,
     },
+    /// The supplied request values do not match the admitted plan.
+    RequestBindingMismatch,
     /// The injected service did not implement the admitted binding.
     BindingMismatch,
     /// The injected executor returned a typed failure.
@@ -915,20 +943,24 @@ pub enum ToolExecutorKitError {
 pub fn execute_admitted_tool<S: ToolExecutorService>(
     service: &mut S,
     plan: &ToolExecutionPlan,
-) -> Result<ToolExecutionReceipt, ToolExecutorKitError> {
+    request: &animus_adapters::ToolRequest,
+) -> Result<ToolExecutionOutcome, ToolExecutorKitError> {
     let Some(binding) = plan.executor_binding() else {
         return Err(plan_denied_error(plan));
     };
     if !plan.is_admitted() {
         return Err(plan_denied_error(plan));
     }
+    if tool_request_identity(request) != plan.request_identity {
+        return Err(ToolExecutorKitError::RequestBindingMismatch);
+    }
     if service.binding_label() != binding {
         return Err(ToolExecutorKitError::BindingMismatch);
     }
     let output = service
-        .execute(plan)
+        .execute(plan, request)
         .map_err(|failure| ToolExecutorKitError::ServiceFailed { failure })?;
-    completed_receipt(plan, &output)
+    completed_outcome(plan, &output)
 }
 
 /// Builds a safe receipt proving that a plan denied executor effects.
@@ -968,10 +1000,10 @@ pub fn denied_tool_receipt(
     Ok(receipt)
 }
 
-fn completed_receipt(
+fn completed_outcome(
     plan: &ToolExecutionPlan,
     output: &ToolExecutorOutput,
-) -> Result<ToolExecutionReceipt, ToolExecutorKitError> {
+) -> Result<ToolExecutionOutcome, ToolExecutorKitError> {
     let policy = plan
         .output_policy()
         .ok_or(ToolExecutorKitError::InvalidOutputPolicy)?;
@@ -1001,6 +1033,18 @@ fn completed_receipt(
     .map_err(|_error| ToolExecutorKitError::InvalidOutput)?;
     debug_assert!(bounded.byte_count() <= policy.max_output_bytes());
     debug_assert!(bounded.content_hash().is_some());
+    let receipt = completed_receipt(plan, &bounded, output.redaction_class)?;
+    let response = animus_adapters::ToolResponse::from_bounded(bounded, output.redaction_class);
+    Ok(ToolExecutionOutcome { response, receipt })
+}
+
+fn completed_receipt(
+    plan: &ToolExecutionPlan,
+    bounded: &animus_adapters::tool::BoundedOutput,
+    redaction_class: animus_adapters::tool::OutputRedactionClass,
+) -> Result<ToolExecutionReceipt, ToolExecutorKitError> {
+    debug_assert!(!plan.tool_name.is_empty());
+    debug_assert!(bounded.content_hash().is_some());
     let output_hash = bounded
         .content_hash()
         .map(String::from)
@@ -1019,7 +1063,7 @@ fn completed_receipt(
         output_line_count: bounded.line_count(),
         output_hash,
         safe_output_reference: bounded.full_output_reference().map(String::from),
-        output_redaction_class: output.redaction_class.as_str(),
+        output_redaction_class: redaction_class.as_str(),
         redaction_marker: RECEIPT_REDACTION_MARKER,
         receipt_hash: String::new(),
     };
@@ -1141,6 +1185,50 @@ fn is_blake3_hex(value: &str) -> bool {
     value.len() == BLAKE3_HEX_CHARS && value.as_bytes().iter().all(u8::is_ascii_hexdigit)
 }
 
+fn tool_request_identity(request: &animus_adapters::ToolRequest) -> String {
+    debug_assert!(!request.name().is_empty());
+    debug_assert!(!request.schema_identity().is_empty());
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(REQUEST_HASH_DOMAIN.as_bytes());
+    update_request_field(&mut hasher, ("tool_name", request.name()));
+    update_request_field(&mut hasher, ("schema_identity", request.schema_identity()));
+    update_request_field(&mut hasher, ("correlation_id", request.correlation_id()));
+    update_request_field(
+        &mut hasher,
+        (
+            "visible_char_budget",
+            request
+                .output_policy()
+                .visible_char_budget
+                .to_string()
+                .as_str(),
+        ),
+    );
+    update_request_field(
+        &mut hasher,
+        ("approval_posture", request.approval_posture().as_str()),
+    );
+    for argument in request.arguments() {
+        update_request_field(&mut hasher, ("argument_name", argument.name()));
+        update_request_field(&mut hasher, ("argument_value", argument.value()));
+    }
+    for capability in request.required_capability_labels() {
+        update_request_field(&mut hasher, ("capability", capability));
+    }
+    for target in request.mutation_targets() {
+        update_request_field(&mut hasher, ("mutation_target", target));
+    }
+    hasher.finalize().to_hex().to_string()
+}
+
+fn update_request_field(hasher: &mut blake3::Hasher, field: (&str, &str)) {
+    let (label, value) = field;
+    let label_hash = blake3_hash(REQUEST_FIELD_HASH_DOMAIN, label.as_bytes());
+    let value_hash = blake3_hash(REQUEST_FIELD_HASH_DOMAIN, value.as_bytes());
+    hasher.update(label_hash.as_bytes());
+    hasher.update(value_hash.as_bytes());
+}
+
 fn receipt_identity(receipt: &ToolExecutionReceipt) -> String {
     let failure = receipt
         .failure_class
@@ -1189,6 +1277,7 @@ mod tests {
     const ARGUMENT_NAME: &str = "query";
     const EXTRA_ARGUMENT_NAME: &str = "scope";
     const ARGUMENT_VALUE: &str = "contracts";
+    const OTHER_ARGUMENT_VALUE: &str = "substituted";
     const CORRELATION_ID: &str = "tool-call-lookup";
     const MUTATION_TARGET: &str = "resource:fixture";
     const OUTPUT_BODY: &str = "bounded fixture result";
@@ -1200,6 +1289,7 @@ mod tests {
     const OVER_BUDGET_VISIBLE_CHARS: u32 = MAX_VISIBLE_CHARS.saturating_add(1);
     const MAX_OUTPUT_BYTES: u64 = 128;
     const OVERSIZED_OUTPUT_BYTES: usize = 129;
+    const TRUNCATED_OUTPUT_CHARS: usize = 65;
     const EXPECTED_EXECUTION_COUNT: usize = 1;
     const NO_EXECUTION_COUNT: usize = 0;
 
@@ -1227,17 +1317,48 @@ mod tests {
             let plan = fixture.plan(&request, ToolExecutorAdmission::admitted());
             let mut executor = FakeExecutor::succeed(OUTPUT_BODY, Some(SAFE_REFERENCE));
 
-            let receipt = execute_admitted_tool(&mut executor, &plan).expect("admitted execution");
+            let outcome =
+                execute_admitted_tool(&mut executor, &plan, &request).expect("admitted execution");
+            let receipt = outcome.receipt();
 
             assert!(plan.is_admitted());
             assert_eq!(executor.calls, EXPECTED_EXECUTION_COUNT);
+            assert_eq!(outcome.response().model_visible_text(), OUTPUT_BODY);
             assert_eq!(receipt.status(), ToolExecutionReceiptStatus::Completed);
             assert_eq!(receipt.tool_name(), TOOL_NAME);
             assert_eq!(receipt.executor_binding(), EXECUTOR_BINDING);
             assert_eq!(receipt.output_byte_count(), OUTPUT_BODY.len() as u64);
             assert!(is_blake3_hex(receipt.output_hash()));
-            assert!(validate_tool_execution_receipt(&receipt).is_ok());
+            assert!(validate_tool_execution_receipt(receipt).is_ok());
         }
+    }
+
+    #[test]
+    fn admitted_output_returns_only_the_bounded_model_visible_prefix() {
+        // r[verify agent_harness_runtime.read_only_codebase_tool.outcome.bounded]
+        let fixture = Fixture::new(
+            animus_adapters::tool::DefinitionStatus::Active,
+            ToolMutationPosture::ReadOnly,
+            &[ARGUMENT_NAME],
+        );
+        let request = tool_request(&[ARGUMENT_NAME], &[]);
+        let plan = fixture.plan(&request, ToolExecutorAdmission::admitted());
+        let body: String = std::iter::repeat_n(OVERSIZED_FILL, TRUNCATED_OUTPUT_CHARS).collect();
+        let mut executor = FakeExecutor::succeed(body.as_str(), None);
+
+        let outcome =
+            execute_admitted_tool(&mut executor, &plan, &request).expect("bounded execution");
+
+        assert_eq!(
+            outcome.response().status(),
+            animus_adapters::tool::OutputStatus::Truncated
+        );
+        assert_eq!(
+            outcome.response().model_visible_text().chars().count(),
+            MAX_VISIBLE_CHARS as usize
+        );
+        assert_eq!(outcome.receipt().output_byte_count(), body.len() as u64);
+        assert!(!format!("{:?}", outcome.receipt()).contains(body.as_str()));
     }
 
     #[test]
@@ -1249,45 +1370,77 @@ mod tests {
             &[ARGUMENT_NAME],
         );
         let request = tool_request(&[ARGUMENT_NAME], &[]);
+
+        assert_service_and_capability_denials(&active, &request);
+        assert_schema_and_argument_denials(&active, &request);
+        assert_definition_status_denials(&request);
+
+        let mut executor = FakeExecutor::succeed(OUTPUT_BODY, None);
+        let denied = active.plan_without_executors(&request);
+        assert!(execute_admitted_tool(&mut executor, &denied, &request).is_err());
+        assert_eq!(executor.calls, NO_EXECUTION_COUNT);
+    }
+
+    fn assert_service_and_capability_denials(
+        active: &Fixture,
+        request: &animus_adapters::ToolRequest,
+    ) {
         assert_denied(
-            &active.plan_without_executors(&request),
+            &active.plan_without_executors(request),
             ToolExecutionFailureClass::MissingExecutor,
         );
         assert_denied(
-            &active.plan_with_readiness(&request, ToolExecutorReadiness::Unavailable),
+            &active.plan_with_readiness(request, ToolExecutorReadiness::Unavailable),
             ToolExecutionFailureClass::UnavailableExecutor,
         );
         let mut denied_capability = ToolExecutorAdmission::admitted();
         denied_capability.capability = ToolCapabilityAdmission::Denied;
         assert_denied(
-            &active.plan(&request, denied_capability),
+            &active.plan(request, denied_capability),
             ToolExecutionFailureClass::DeniedCapability,
         );
+    }
+
+    fn assert_schema_and_argument_denials(
+        active: &Fixture,
+        request: &animus_adapters::ToolRequest,
+    ) {
+        assert_eq!(request.name(), TOOL_NAME);
+        assert_eq!(request.schema_identity(), TOOL_SCHEMA);
         let malformed_fixture = Fixture::new(
             animus_adapters::tool::DefinitionStatus::Active,
             ToolMutationPosture::ReadOnly,
             &[ARGUMENT_NAME, EXTRA_ARGUMENT_NAME],
         );
         assert_denied(
-            &malformed_fixture.plan(&request, ToolExecutorAdmission::admitted()),
+            &malformed_fixture.plan(request, ToolExecutorAdmission::admitted()),
             ToolExecutionFailureClass::MalformedArguments,
         );
-        let wrong_schema_request =
-            tool_request_with_policy(OTHER_TOOL_SCHEMA, MAX_VISIBLE_CHARS, &[ARGUMENT_NAME], &[]);
+        let wrong_schema_request = tool_request_with_policy(&ToolRequestOptions {
+            schema_identity: OTHER_TOOL_SCHEMA,
+            visible_char_budget: MAX_VISIBLE_CHARS,
+            argument_names: &[ARGUMENT_NAME],
+            mutation_targets: &[],
+            argument_value: ARGUMENT_VALUE,
+        });
         assert_denied(
             &active.plan(&wrong_schema_request, ToolExecutorAdmission::admitted()),
             ToolExecutionFailureClass::SchemaMismatch,
         );
-        let over_budget_request = tool_request_with_policy(
-            TOOL_SCHEMA,
-            OVER_BUDGET_VISIBLE_CHARS,
-            &[ARGUMENT_NAME],
-            &[],
-        );
+        let over_budget_request = tool_request_with_policy(&ToolRequestOptions {
+            schema_identity: TOOL_SCHEMA,
+            visible_char_budget: OVER_BUDGET_VISIBLE_CHARS,
+            argument_names: &[ARGUMENT_NAME],
+            mutation_targets: &[],
+            argument_value: ARGUMENT_VALUE,
+        });
         assert_denied(
             &active.plan(&over_budget_request, ToolExecutorAdmission::admitted()),
             ToolExecutionFailureClass::OutputPolicyDenied,
         );
+    }
+
+    fn assert_definition_status_denials(request: &animus_adapters::ToolRequest) {
         for status in [
             animus_adapters::tool::DefinitionStatus::Inactive,
             animus_adapters::tool::DefinitionStatus::Untrusted,
@@ -1299,13 +1452,30 @@ mod tests {
                 ToolExecutionFailureClass::UntrustedDefinition
             };
             assert_denied(
-                &fixture.plan(&request, ToolExecutorAdmission::admitted()),
+                &fixture.plan(request, ToolExecutorAdmission::admitted()),
                 expected,
             );
         }
+    }
+
+    #[test]
+    fn request_value_substitution_fails_before_executor_effects() {
+        // r[verify agent_harness_runtime.read_only_codebase_tool.request_binding.substitution]
+        let fixture = Fixture::new(
+            animus_adapters::tool::DefinitionStatus::Active,
+            ToolMutationPosture::ReadOnly,
+            &[ARGUMENT_NAME],
+        );
+        let request = tool_request(&[ARGUMENT_NAME], &[]);
+        let plan = fixture.plan(&request, ToolExecutorAdmission::admitted());
+        let substituted =
+            tool_request_with_argument_value(&[ARGUMENT_NAME], &[], OTHER_ARGUMENT_VALUE);
         let mut executor = FakeExecutor::succeed(OUTPUT_BODY, None);
-        let denied = active.plan_without_executors(&request);
-        assert!(execute_admitted_tool(&mut executor, &denied).is_err());
+
+        assert_eq!(
+            execute_admitted_tool(&mut executor, &plan, &substituted),
+            Err(ToolExecutorKitError::RequestBindingMismatch)
+        );
         assert_eq!(executor.calls, NO_EXECUTION_COUNT);
     }
 
@@ -1372,19 +1542,19 @@ mod tests {
 
         let mut unsafe_body = FakeExecutor::succeed(UNSAFE_OUTPUT, None);
         assert_eq!(
-            execute_admitted_tool(&mut unsafe_body, &plan),
+            execute_admitted_tool(&mut unsafe_body, &plan, &request),
             Err(ToolExecutorKitError::UnsafeMetadata)
         );
         let too_large_body: String =
             std::iter::repeat_n(OVERSIZED_FILL, OVERSIZED_OUTPUT_BYTES).collect();
         let mut too_large_service = FakeExecutor::succeed(too_large_body.as_str(), None);
         assert!(matches!(
-            execute_admitted_tool(&mut too_large_service, &plan),
+            execute_admitted_tool(&mut too_large_service, &plan, &request),
             Err(ToolExecutorKitError::OutputTooLarge { .. })
         ));
         let mut unsafe_reference = FakeExecutor::succeed(OUTPUT_BODY, Some(PRIVATE_REFERENCE));
         assert_eq!(
-            execute_admitted_tool(&mut unsafe_reference, &plan),
+            execute_admitted_tool(&mut unsafe_reference, &plan, &request),
             Err(ToolExecutorKitError::InvalidOutput)
         );
 
@@ -1566,6 +1736,7 @@ mod tests {
         fn execute(
             &mut self,
             _plan: &ToolExecutionPlan,
+            _request: &animus_adapters::ToolRequest,
         ) -> Result<ToolExecutorOutput, ToolExecutorServiceFailure> {
             self.calls += EXPECTED_EXECUTION_COUNT;
             Ok(self.output.clone())
@@ -1576,46 +1747,59 @@ mod tests {
         argument_names: &[&str],
         mutation_targets: &[&str],
     ) -> animus_adapters::ToolRequest {
-        tool_request_with_policy(
-            TOOL_SCHEMA,
-            MAX_VISIBLE_CHARS,
-            argument_names,
-            mutation_targets,
-        )
+        tool_request_with_argument_value(argument_names, mutation_targets, ARGUMENT_VALUE)
     }
 
-    fn tool_request_with_policy(
-        schema_identity: &str,
-        visible_char_budget: u32,
+    fn tool_request_with_argument_value(
         argument_names: &[&str],
         mutation_targets: &[&str],
+        argument_value: &str,
     ) -> animus_adapters::ToolRequest {
-        let fields: Vec<animus_adapters::tool::ArgumentFieldDraft<'_>> = argument_names
+        tool_request_with_policy(&ToolRequestOptions {
+            schema_identity: TOOL_SCHEMA,
+            visible_char_budget: MAX_VISIBLE_CHARS,
+            argument_names,
+            mutation_targets,
+            argument_value,
+        })
+    }
+
+    struct ToolRequestOptions<'a> {
+        schema_identity: &'a str,
+        visible_char_budget: u32,
+        argument_names: &'a [&'a str],
+        mutation_targets: &'a [&'a str],
+        argument_value: &'a str,
+    }
+
+    fn tool_request_with_policy(options: &ToolRequestOptions<'_>) -> animus_adapters::ToolRequest {
+        let fields: Vec<animus_adapters::tool::ArgumentFieldDraft<'_>> = options
+            .argument_names
             .iter()
             .map(|name| animus_adapters::tool::ArgumentFieldDraft {
                 name: Some(*name),
-                value: Some(ARGUMENT_VALUE),
+                value: Some(options.argument_value),
             })
             .collect();
-        assert_eq!(fields.len(), argument_names.len());
+        assert_eq!(fields.len(), options.argument_names.len());
         let arguments = animus_adapters::tool::PreparedArguments::prepare(
             &animus_adapters::tool::ArgumentPreparationRequest {
-                current_schema_identity: schema_identity,
-                allowed_field_names: argument_names,
+                current_schema_identity: options.schema_identity,
+                allowed_field_names: options.argument_names,
                 compatibility_rules: &[],
                 fields: fields.as_slice(),
             },
         )
         .expect("valid arguments");
-        assert_eq!(arguments.fields().len(), argument_names.len());
+        assert_eq!(arguments.fields().len(), options.argument_names.len());
         animus_adapters::ToolRequest::from_draft(&animus_adapters::tool::RequestDraft {
             name: Some(TOOL_NAME),
             arguments: Some(&arguments),
             correlation_id: Some(CORRELATION_ID),
             output_policy: animus_adapters::tool::OutputPolicy {
-                visible_char_budget,
+                visible_char_budget: options.visible_char_budget,
             },
-            mutation_targets,
+            mutation_targets: options.mutation_targets,
             required_capability_labels: &[TOOL_CAPABILITY],
             approval_posture: animus_adapters::tool::ApprovalPosture::PreApproved.as_str(),
         })

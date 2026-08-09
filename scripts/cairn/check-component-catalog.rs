@@ -96,6 +96,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "branchfs-host",
     "coding-session-host",
     "codebase-graph-host",
+    "codebase-tool-host",
     "acp-stdio-host",
     "agent-control",
     "agent-guardrail",

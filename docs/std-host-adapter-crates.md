@@ -15,7 +15,7 @@ The catalog distinguishes these classes explicitly:
 - `persistence`; and
 - `terminal_access`.
 
-Current family records cover config loading, local context, provider registry, the live OpenAI host, observability, ingest, optional transports, enforcement, persistence, coding sessions, and smoke shells. An authority label describes a possible shell effect; it does not grant authority by itself.
+Current family records cover config loading, local context, provider registry, the live OpenAI host, the read-only codebase tool, observability, ingest, optional transports, enforcement, persistence, coding sessions, and smoke shells. An authority label describes a possible shell effect; it does not grant authority by itself.
 
 `plan_host_adapter` is pure over an explicit family, availability state, and fallback posture. Missing, disabled, or denied blocks return typed denied plans. Any request to discover an ambient environment, filesystem, provider, network, credential, or persistence fallback is denied even if another block is available.
 
@@ -26,6 +26,12 @@ Current family records cover config loading, local context, provider registry, t
 The pure core validates one exact OpenAI Responses endpoint and a text-only request cohort. The optional `reqwest-client` shell performs one bounded HTTPS attempt.
 
 The host does not discover endpoints, models, providers, credentials, retries, or fallbacks. See [live OpenAI provider host](live-openai-provider-host.md).
+
+## Optional read-only codebase tool host
+
+The `animus-std/codebase-tool-host` feature adapts one caller-constructed capability-root graph through the reusable executor kit. It binds exact request values, returns bounded model-visible facts, and retains metadata-only durable evidence.
+
+The host does not discover roots or files. It adds no mutation, process, network, provider, or plugin authority. See [read-only codebase tool host](read-only-codebase-tool-host.md).
 
 ## First extracted family: observability
 
@@ -96,6 +102,7 @@ cargo test -p animus-std-observability --locked
 cargo test -p animus-std-control --locked
 cargo check -p animus --features agent-control --locked
 scripts/cairn/check-live-openai-provider-host --root .
+scripts/cairn/check-codebase-tool-host --root .
 cargo test -p animus-std hostadapters --locked
 cargo test -p animus-std observability --locked
 cargo check -p animus-std --no-default-features --locked

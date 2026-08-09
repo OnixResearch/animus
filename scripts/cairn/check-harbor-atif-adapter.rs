@@ -36,7 +36,7 @@ fn validate_repository(root: &Path) -> Result<(), String> {
     let nickel = read(root, "config/harbor-atif-profile.ncl")?;
     let generated = read(root, "config/generated/harbor-atif-profile.json")?;
     let runtime = read(root, "crates/animus-runtime/src/harbor/eval.rs")?;
-    let integration = read(root, "tests/harbor_atif_integration.rs")?;
+    let integration = read(root, "tests/harbor-atif-integration.rs")?;
     let root_manifest = read(root, "Cargo.toml")?;
     let positive = read(root, "fixtures/harbor-atif/positive.ncl")?;
     let negative = read(root, "fixtures/harbor-atif/negative.ncl")?;

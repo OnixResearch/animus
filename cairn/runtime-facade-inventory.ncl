@@ -3431,6 +3431,8 @@ let entry_values = [
   entry "animus::mesh_provider" "animus" root shell shell_owned optional_stability "root feature facade for the non-default Mesh provider adapter",
   entry "animus-adapters::codegraph" "animus-adapters" adapters injection injected optional_stability "transport-neutral syntactic graph service DTOs, pure reducers, cache identity, and metadata-only receipts",
   entry "animus-std::CodeGraphHost" "animus-std" std_shell shell shell_owned optional_stability "non-default capability-scoped Rust parser and in-memory incremental graph host",
+  entry "animus-std::codebase_tool" "animus-std" std_shell shell shell_owned optional_stability "non-default exact-request-bound read-only codebase query executor and packaged smoke",
+  entry "animus::codebase_tool" "animus" root shell shell_owned optional_stability "root feature facade for the non-default read-only codebase query tool",
   entry "animus::codebase_graph" "animus" root shell shell_owned optional_stability "root feature facade for the non-default codebase graph host",
   entry "animus-std::branchfs_host" "animus-std" std_shell shell shell_owned optional_stability "non-default abort-only BranchFS and fresh-Jujutsu materialization host",
   entry "animus::branchfs_host" "animus" root shell shell_owned optional_stability "root feature facade for the non-default BranchFS speculative workspace host",

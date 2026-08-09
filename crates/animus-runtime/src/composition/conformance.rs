@@ -1047,7 +1047,7 @@ fn tool_executor_kit_receipt(
         },
     );
     let mut executor = FakeKitExecutor::new();
-    let receipt = crate::tool_executor_kit::execute_admitted_tool(&mut executor, &plan)
+    let outcome = crate::tool_executor_kit::execute_admitted_tool(&mut executor, &plan, request)
         .map_err(|error| scenario_failure(entry, format!("kit execution: {error:?}")))?;
     if executor.calls != EXPECTED_FAKE_CALL_COUNT {
         return Err(scenario_failure(
@@ -1055,7 +1055,7 @@ fn tool_executor_kit_receipt(
             "tool executor kit fake service was not called exactly once",
         ));
     }
-    Ok(receipt)
+    Ok(outcome.receipt().clone())
 }
 
 fn tool_executor_kit_missing_fails_closed(
@@ -1338,6 +1338,7 @@ impl crate::tool_executor_kit::ToolExecutorService for FakeKitExecutor {
     fn execute(
         &mut self,
         _plan: &crate::tool_executor_kit::ToolExecutionPlan,
+        _request: &animus_adapters::ToolRequest,
     ) -> Result<
         crate::tool_executor_kit::ToolExecutorOutput,
         crate::tool_executor_kit::ToolExecutorServiceFailure,
