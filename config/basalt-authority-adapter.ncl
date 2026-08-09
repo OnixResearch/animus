@@ -1,0 +1,146 @@
+# Typed non-default Basalt authority adapter profile.
+let NonEmpty = std.contract.from_predicate (fun value => std.is_string value && value != "") in
+let Blake3Identity = std.contract.from_predicate (fun value => std.is_string value && std.string.is_match "^b3:[0-9a-f]{64}$" value) in
+let GitRevision = std.contract.from_predicate (fun value => std.is_string value && std.string.is_match "^[0-9a-f]{40}$" value) in
+let Positive = std.contract.from_predicate (fun value => std.is_number value && value > 0) in
+let Mapping = {
+  animus_action | [| 'filesystem |],
+  basalt_action | [| 'document_read, 'document_write |],
+  contract | NonEmpty,
+  ability | NonEmpty,
+} in
+let Profile = {
+  schema | NonEmpty,
+  enabled_by_default | Bool,
+  license_review_required | Bool,
+  source | {
+    repository | NonEmpty,
+    revision | GitRevision,
+    license | NonEmpty,
+    policy_identity | Blake3Identity,
+    vendored_ucan_revision | GitRevision,
+    ucan_catalog_identity | Blake3Identity,
+  },
+  generic_port | {
+    concrete_basalt_types_exposed | Bool,
+    display_name_authoritative | Bool,
+    definition_identity_binding_required | Bool,
+    audience_did_required | Bool,
+  },
+  supported_mappings | Array Mapping,
+  verification_services | Array NonEmpty,
+  required_local_gates | Array NonEmpty,
+  dispatch | {
+    live_authority_retained_through_effect | Bool,
+    safe_decision_commit_required | Bool,
+    provider_can_widen_local_authority | Bool,
+    missing_service_fails_closed | Bool,
+    stale_binding_fails_closed | Bool,
+    replay_denial_fails_closed | Bool,
+  },
+  bounds | {
+    identity_capacity_bytes | Positive,
+    resource_ceiling_bytes | Positive,
+    checked_fact_allowance | Positive,
+  },
+  evidence | {
+    metadata_only | Bool,
+    raw_credentials_allowed | Bool,
+    raw_effect_payloads_allowed | Bool,
+    private_paths_allowed | Bool,
+    unrestricted_diagnostics_allowed | Bool,
+    non_claims | Array NonEmpty,
+  },
+} in
+{
+  basalt_authority_adapter | Profile = {
+    schema = "animus.basalt-authority-adapter.v1",
+    enabled_by_default = false,
+    license_review_required = true,
+    source = {
+      repository = "OnixResearch/basalt",
+      revision = "e9891e32dcdf655c6e12d0bea2a420f7cdca31c7",
+      license = "AGPL-3.0-or-later",
+      policy_identity = "b3:5475d5473ec98cbf052a83512836b0739f5dad3e7b9b0ed201eb3094b1cf39bf",
+      vendored_ucan_revision = "34449ba1f1a9ef991225e4e6683b5d6aca8c07cf",
+      ucan_catalog_identity = "b3:3266e7b1f2ce66f2ab5c8cbd7028f8bcf3502c7e64fe8d058c7b7e1f762dedb6",
+    },
+    generic_port = {
+      concrete_basalt_types_exposed = false,
+      display_name_authoritative = false,
+      definition_identity_binding_required = true,
+      audience_did_required = true,
+    },
+    supported_mappings = [
+      {
+        animus_action = 'filesystem,
+        basalt_action = 'document_read,
+        contract = "document-read",
+        ability = "document/read",
+      },
+      {
+        animus_action = 'filesystem,
+        basalt_action = 'document_write,
+        contract = "document-write",
+        ability = "document/write",
+      },
+    ],
+    verification_services = [
+      "verification-time",
+      "key-resolver",
+      "proof-store",
+      "revocation-checker",
+      "caveat-policy-set",
+      "holder-replay-admission",
+      "verification-limits",
+      "holder-invocation-limits",
+      "durable-safe-decision-commit",
+    ],
+    required_local_gates = [
+      "agent-definition",
+      "semantic-role",
+      "parent",
+      "task",
+      "model",
+      "tool",
+      "workspace",
+      "approval",
+      "sandbox",
+      "cancellation",
+      "timeout",
+      "budget",
+      "runtime-authority-seal",
+    ],
+    dispatch = {
+      live_authority_retained_through_effect = true,
+      safe_decision_commit_required = true,
+      provider_can_widen_local_authority = false,
+      missing_service_fails_closed = true,
+      stale_binding_fails_closed = true,
+      replay_denial_fails_closed = true,
+    },
+    bounds = {
+      identity_capacity_bytes = 512,
+      resource_ceiling_bytes = 4096,
+      checked_fact_allowance = 4096,
+    },
+    evidence = {
+      metadata_only = true,
+      raw_credentials_allowed = false,
+      raw_effect_payloads_allowed = false,
+      private_paths_allowed = false,
+      unrestricted_diagnostics_allowed = false,
+      non_claims = [
+        "not-global-trust",
+        "not-key-discovery-or-key-truth",
+        "not-global-revocation-freshness",
+        "not-replay-durability",
+        "not-sandbox-confinement",
+        "not-effect-correctness",
+        "not-agent-safety",
+        "not-completion-or-release-readiness",
+        "not-a-license-compatibility-exception",
+      ],
+    },
+  },
+}

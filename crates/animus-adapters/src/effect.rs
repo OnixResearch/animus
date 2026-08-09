@@ -4,6 +4,7 @@ mod approval;
 mod audit;
 mod authority;
 mod exec_policy;
+mod host_authority;
 mod input;
 mod permit;
 mod result;
@@ -31,6 +32,17 @@ pub use authority::{
     AuthorizationStatus, CapabilityPolicyContract, CapabilityRequest, CaveatSummary, GuardedAction,
     LocalCaveat, LocalCaveatDecision, LocalPolicyLayer, SandboxConstraint, SandboxState, UcanGrant,
     authorize_capability, validate_authorization_receipt_text,
+};
+pub use host_authority::{
+    AgentAuthorityBinding, AgentAuthorityBindingDraft, BindingFreshness,
+    EffectiveAuthorityDecision, HOST_AUTHORITY_NON_CLAIMS, HostAuthorityBounds,
+    HostAuthorityDecision, HostAuthorityDecisionDraft, HostAuthorityFreshnessClass,
+    HostAuthorityIssue, HostAuthorityReceipt, HostAuthorityReceiptDraft, HostAuthorityReceiptLeak,
+    HostAuthorityReplayClass, HostAuthorityRequest, HostAuthorityRequestDraft,
+    HostAuthorityService, HostAuthorityStatus, HostGateStatus, RequiredHostGates,
+    admit_agent_authority_binding, admit_host_authority_request, build_host_authority_decision,
+    build_host_authority_receipt, intersect_host_authority, validate_agent_authority_binding_set,
+    validate_host_authority_receipt_text,
 };
 pub use input::{CancellationCheck, CapabilityDecisionRequest, HostRequest, RuntimePolicyRequest};
 /// Exec-policy command intent.

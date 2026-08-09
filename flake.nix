@@ -18,7 +18,7 @@
       flake = false;
     };
     basalt = {
-      url = "git+ssh://git@github.com/OnixResearch/basalt.git?rev=005e1496a4a1be477ba84008ecbcdf8793a236c6";
+      url = "git+ssh://git@github.com/OnixResearch/basalt.git?rev=e9891e32dcdf655c6e12d0bea2a420f7cdca31c7";
       flake = false;
     };
     cairn = {
@@ -288,6 +288,7 @@
                 || baseName == "check-evaluation-composition-conformance"
                 || baseName == "check-harbor-atif-adapter"
                 || baseName == "check-harbor-atif-adapter.rs"
+                || baseName == "check-basalt-authority-adapter"
                 || baseName == "check-evidence-safety"
                 || baseName == "check-model-runtime-profiles"
                 || baseName == "check-agent-role-profiles"
@@ -345,47 +346,135 @@
           '';
           octetDylintLibPath = "${octetDylintLibDir}/lib/${octetDllPrefix}octet@${octetRustupToolchain}${octetSharedLibSuffix}";
 
-          cargoLockSpec = {
-            lockFile = ./Cargo.lock;
-            outputHashes = {
-              "basalt-0.1.0" = "sha256-kPESje/5w1vk2KKJgFz0Z+RqyxkjJAiGT7mgortULX4=";
-              "cairn-core-0.1.0" = "sha256-Xv9uAhYI+byXcKbqR+A4rESDYmmX44ZWhDLARgqbv5k=";
-              "host-control-core-0.1.0" = "sha256-oQkddmPvU3iA7jiCkQiOq0OUFQH9ufLgrsNI1zY54zo=";
-              "rat-chrome-0.1.0" = "sha256-Ct58ZfWnIe7KJ6q/a+gUMVCa4ylTuSv7ZnjI1IYHzgY=";
-              "rat-widgets-0.1.0" = "sha256-Ct58ZfWnIe7KJ6q/a+gUMVCa4ylTuSv7ZnjI1IYHzgY=";
-              "sandlock-core-0.7.0" = "sha256-pAFP4xo7ClmQBFi+kHoQ+xauXZEJvg0D6cGpkZNkAGQ=";
-              "ucan-0.1.0" = "sha256-Hn0sK7y/lnGNKWxGuqiPOlqni4OTfh+aqhMxXNZ0oTI=";
-              "ucan-core-0.1.0" = "sha256-Hn0sK7y/lnGNKWxGuqiPOlqni4OTfh+aqhMxXNZ0oTI=";
-              "verified-logic-0.1.0" = "sha256-Hn0sK7y/lnGNKWxGuqiPOlqni4OTfh+aqhMxXNZ0oTI=";
-              "verified-logic-0.2.0" = "sha256-xhKyUabrb8Xx6c4vKrWfHmaQDwZITCMNefnxB8mxmwg=";
-            };
-          };
+          cargoLock = builtins.fromTOML (builtins.readFile ./Cargo.lock);
+          renderCargoLockPackage = package:
+            let
+              renderField = name: "${name} = ${builtins.toJSON package.${name}}";
+              scalarFields = builtins.filter (name: builtins.hasAttr name package) [
+                "name"
+                "version"
+                "source"
+                "checksum"
+              ];
+              dependencyField = pkgs.lib.optional (package ? dependencies) ''
+                dependencies = [
+                ${pkgs.lib.concatMapStringsSep "\n" (dependency: " ${builtins.toJSON dependency},") package.dependencies}
+                ]'';
+            in
+            pkgs.lib.concatStringsSep "\n" (
+              [ "[[package]]" ] ++ map renderField scalarFields ++ dependencyField
+            );
+          cargoLockContentsFor = sourcePredicate: ''
+            version = ${builtins.toString cargoLock.version}
 
-          cargoDeps =
-            (pkgs.rustPlatform.importCargoLock.override {
-              fetchgit =
-                args:
-                if args.url == "ssh://git@github.com/brittonr/rats.git" then
-                  rats
-                else if args.url == "ssh://git@github.com/OnixResearch/host-control.git" then
-                  host-control
-                else if args.url == "ssh://git@github.com/OnixResearch/basalt.git" then
-                  basalt
-                else if args.url == "ssh://git@github.com/OnixResearch/cairn.git" then
-                  cairn
-                else if args.url == "ssh://git@github.com/OnixResearch/trellis.git" then
-                  trellis
-                else if args.url == "ssh://git@github.com/OnixResearch/ucan.git" then
-                  ucan
-                else
-                  pkgs.fetchgit (
-                    args
-                    // {
-                      nativeBuildInputs = (args.nativeBuildInputs or [ ]) ++ [ pkgs.openssh ];
-                    }
-                  );
-            })
-              cargoLockSpec;
+            ${pkgs.lib.concatMapStringsSep "\n\n" renderCargoLockPackage (
+              builtins.filter (package: package ? source && sourcePredicate package.source) cargoLock.package
+            )}
+          '';
+          importCargoLock = pkgs.rustPlatform.importCargoLock.override {
+            fetchgit =
+              args:
+              if args.url == "ssh://git@github.com/brittonr/rats.git" then
+                rats
+              else if args.url == "ssh://git@github.com/OnixResearch/host-control.git" then
+                host-control
+              else if args.url == "ssh://git@github.com/OnixResearch/basalt.git" then
+                basalt
+              else if args.url == "ssh://git@github.com/OnixResearch/cairn.git" then
+                cairn
+              else if args.url == "ssh://git@github.com/OnixResearch/trellis.git" then
+                trellis
+              else if args.url == "ssh://git@github.com/OnixResearch/ucan.git" then
+                ucan
+              else
+                pkgs.fetchgit (
+                  args
+                  // {
+                    nativeBuildInputs = (args.nativeBuildInputs or [ ]) ++ [ pkgs.openssh ];
+                  }
+                );
+          };
+          cargoDependencyGroups = [
+            {
+              name = "registry";
+              deps = importCargoLock {
+                lockFileContents = cargoLockContentsFor (pkgs.lib.hasPrefix "registry+");
+              };
+            }
+            {
+              name = "basalt";
+              deps = importCargoLock {
+                lockFileContents = cargoLockContentsFor (pkgs.lib.hasInfix "/basalt.git");
+                outputHashes."basalt-0.1.0" = "sha256-TtKH39yQ+adQdfu3wvh3n2D5DTaJjQ6rBcIAWD140EE=";
+              };
+            }
+            {
+              name = "cairn";
+              deps = importCargoLock {
+                lockFileContents = cargoLockContentsFor (pkgs.lib.hasInfix "/cairn.git");
+                outputHashes."cairn-core-0.1.0" = "sha256-Xv9uAhYI+byXcKbqR+A4rESDYmmX44ZWhDLARgqbv5k=";
+              };
+            }
+            {
+              name = "host-control";
+              deps = importCargoLock {
+                lockFileContents = cargoLockContentsFor (pkgs.lib.hasInfix "/host-control.git");
+                outputHashes."host-control-core-0.1.0" = "sha256-oQkddmPvU3iA7jiCkQiOq0OUFQH9ufLgrsNI1zY54zo=";
+              };
+            }
+            {
+              name = "rats";
+              deps = importCargoLock {
+                lockFileContents = cargoLockContentsFor (pkgs.lib.hasInfix "/rats.git");
+                outputHashes."rat-chrome-0.1.0" = "sha256-Ct58ZfWnIe7KJ6q/a+gUMVCa4ylTuSv7ZnjI1IYHzgY=";
+              };
+            }
+            {
+              name = "sandlock";
+              deps = importCargoLock {
+                lockFileContents = cargoLockContentsFor (pkgs.lib.hasInfix "/sandlock.git");
+                outputHashes."sandlock-core-0.7.0" = "sha256-pAFP4xo7ClmQBFi+kHoQ+xauXZEJvg0D6cGpkZNkAGQ=";
+              };
+            }
+            {
+              name = "trellis";
+              deps = importCargoLock {
+                lockFileContents = cargoLockContentsFor (pkgs.lib.hasInfix "/trellis.git");
+                outputHashes."verified-logic-0.2.0" = "sha256-xhKyUabrb8Xx6c4vKrWfHmaQDwZITCMNefnxB8mxmwg=";
+              };
+            }
+          ];
+          linkCargoDependencyGroup = group: ''
+            mkdir -p "$out/${group.name}"
+            for crate in ${group.deps}/*; do
+              crate_name="$(basename "$crate")"
+              if [ "$crate_name" != "Cargo.lock" ]; then
+                ln -s "$crate" "$out/${group.name}/$crate_name"
+              fi
+            done
+          '' + pkgs.lib.optionalString (group.name != "registry") ''
+            sed -n '/^\[source\."git+/,$p' ${group.deps}/.cargo/config.toml \
+              | sed 's/replace-with = "vendored-sources"/replace-with = "animus-${group.name}"/' \
+              >> "$out/.cargo/config.toml"
+            cat >> "$out/.cargo/config.toml" <<EOF
+
+            [source.animus-${group.name}]
+            directory = "cargo-vendor-dir/${group.name}"
+            EOF
+          '';
+          cargoDeps = pkgs.runCommand "cargo-vendor-dir" { } ''
+            mkdir -p "$out/.cargo"
+            ln -s ${./Cargo.lock} "$out/Cargo.lock"
+            cat > "$out/.cargo/config.toml" <<EOF
+            [source.crates-io]
+            replace-with = "animus-registry"
+
+            [source.animus-registry]
+            directory = "cargo-vendor-dir/registry"
+            EOF
+
+            ${pkgs.lib.concatMapStringsSep "\n" linkCargoDependencyGroup cargoDependencyGroups}
+          '';
 
           cargoNativeBuildInputs = with pkgs; [
             cargo
@@ -524,6 +613,13 @@
             export ANIMUS_HARBOR_ATIF_SKIP_NICKEL=1
             export ANIMUS_HARBOR_ATIF_SKIP_CONNECTED=1
             sh scripts/cairn/check-harbor-atif-adapter --root .
+          '';
+
+          basalt-authority-adapter = cargoCheck "animus-basalt-authority-adapter" [ pkgs.clippy pkgs.nickel ] ''
+            ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
+            export ANIMUS_BASALT_SKIP_NICKEL=1
+            export ANIMUS_BASALT_SKIP_CONNECTED=1
+            sh scripts/cairn/check-basalt-authority-adapter --root .
           '';
 
           native-evaluation-core = cargoCheck "animus-native-evaluation-core" [ pkgs.b3sum pkgs.clippy pkgs.nickel ] ''

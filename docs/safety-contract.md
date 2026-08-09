@@ -129,6 +129,10 @@ The host retains backend discovery, effect admission, filesystem, process, netwo
 
 `animus_runtime::coding_session_host` owns pure deterministic run, queue, active-leaf, durable-cursor, pending-effect, recovery, cancellation, event, and receipt reductions. It accepts only already-expanded and admitted input. It cannot discover resources or sessions, interpret commands, call providers or tools, read credentials or clocks, open storage, access a terminal, or perform persistence. The non-default `animus_std::coding_session_host` shell calls only explicit injected services and may emit a dependent provider or tool request only after the prerequisite metadata-only authority binding and message commit succeed and current enforcement is independently observed. Exact profile equality detects continuity but cannot authorize, probe, or enforce anything. Pending queue bodies remain non-transcript state until selected and committed. Resume validates the explicit store and admitted repair before continuation. Cancellation does not prove rollback. Receipts reject raw prompts, provider payloads, tool output, credentials, paths, and raw errors. See [coding-session host facade](coding-session-host.md) and [session runtime authority profiles](session-runtime-authority-profile.md).
 
+## Optional Basalt authority boundary
+
+The generic authority-provider contract is `no_std` plus `alloc` and exposes no Basalt or UCAN type. Display names are never principals. Stable agent-definition BLAKE3 identities bind explicitly to audience DIDs. The optional `AGPL-3.0-or-later` shell accepts only the closed reviewed document read/write mappings and caller-injected key, proof, revocation, caveat, replay, time, limit, and commit services. Basalt can deny but cannot widen any existing local gate. The shell retains live authority through commit-before-effect dispatch. Receipts are metadata-only and reject credentials, payloads, paths, diagnostics, and trust or completion overclaims. See [optional Basalt authority adapter](basalt-authority-adapter.md).
+
 ## Config ownership
 
 Parse configuration once at the shell boundary, validate it, and keep the typed result in owned structs such as `animus-std::RuntimeConfig` for host input loading or `animus-runtime::RuntimeConfig` for loop execution limits. Do not validate-and-drop raw settings and then re-read or re-parse them later.
@@ -168,6 +172,7 @@ cargo test -p animus-core
 cargo test -p animus-adapters
 cargo test -p animus-adapters multimodal
 scripts/cairn/check-provider-video-payloads --root .
+scripts/cairn/check-basalt-authority-adapter --root .
 scripts/cairn/check-terminal-image-protocols --root .
 scripts/cairn/check-terminal-video-playback --root .
 cargo test -p animus-preserves

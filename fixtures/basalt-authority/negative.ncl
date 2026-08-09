@@ -1,0 +1,26 @@
+# Fail-closed synthetic Basalt authority adapter scenarios.
+{
+  scenarios = [
+    "display-name-used-as-principal",
+    "missing-or-malformed-audience-did",
+    "definition-identity-substitution",
+    "subject-task-actor-role-or-session-drift",
+    "stale-binding",
+    "duplicate-binding",
+    "unsupported-action-contract-or-ability",
+    "operation-profile-mismatch",
+    "wildcard-or-path-like-resource",
+    "missing-key-proof-revocation-caveat-replay-time-or-limit-service",
+    "malformed-expired-revoked-or-denied-token",
+    "holder-signature-mismatch",
+    "replay-duplicate",
+    "provider-allow-with-local-gate-denial",
+    "safe-decision-commit-failure",
+    "raw-token-signature-proof-nonce-path-payload-or-diagnostic-in-receipt",
+    "trust-sandbox-effect-safety-completion-or-release-overclaim",
+    "default-feature-enables-basalt",
+    "concrete-basalt-type-in-generic-contract",
+  ],
+  ambient_fallback = false,
+  effect_after_denial = false,
+}

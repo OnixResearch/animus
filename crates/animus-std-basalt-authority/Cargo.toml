@@ -1,0 +1,16 @@
+[package]
+name = "animus-std-basalt-authority"
+description = "Optional live Basalt UCAN authority gate for Animus host effects."
+edition.workspace = true
+license = "AGPL-3.0-or-later"
+readme.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+animus-adapters = { path = "../animus-adapters", version = "0.1.0" }
+basalt = { git = "ssh://git@github.com/OnixResearch/basalt.git", rev = "e9891e32dcdf655c6e12d0bea2a420f7cdca31c7" }
+blake3 = "1.8"

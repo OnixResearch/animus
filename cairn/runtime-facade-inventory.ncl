@@ -88,6 +88,7 @@ let evaluation_adapters_feature = "evaluation-adapters" in
 let evaluation_host_feature = "evaluation-host" in
 let evaluation_conformance_feature = "evaluation-conformance" in
 let harbor_atif_feature = "harbor-atif" in
+let basalt_authority_feature = "basalt-authority-adapter" in
 let native_evaluation_profile_feature = "native-evaluation-profile" in
 let native_evaluation_family = "evaluation" in
 let agent_guardrail_feature = "agent-guardrail" in
@@ -317,6 +318,21 @@ let evaluation_host_record = fun export_path_value owning_crate_value source_val
   capability_family = native_evaluation_family,
 }
 in
+let basalt_authority_record = fun export_path_value owning_crate_value source_value review_note_value => {
+  export_path = export_path_value,
+  owning_crate = owning_crate_value,
+  source = source_value,
+  class = shell,
+  side_effect = shell_owned,
+  stability = optional_stability,
+  review_note = review_note_value,
+  feature_gate = basalt_authority_feature,
+  required_authority = shell_owned,
+  depends_on = ["animus-adapters::HostAuthorityService", "animus-runtime::agent_roles", "animus-runtime::runtime_authority_seal"],
+  composes_with = ["animus-std::coding_session_host"],
+  capability_family = "policy",
+}
+in
 let evaluation_conformance_record = fun export_path_value owning_crate_value source_value review_note_value => {
   export_path = export_path_value,
   owning_crate = owning_crate_value,
@@ -424,6 +440,33 @@ let agent_control_record = fun export_path_value owning_crate_value source_value
 in
 
 let entry_values = [
+  entry "animus-adapters::AgentAuthorityBinding" "animus-adapters" adapters reusable none stable "validated agent-definition identity to audience DID binding",
+  entry "animus-adapters::AgentAuthorityBindingDraft" "animus-adapters" adapters reusable none stable "caller-supplied bounded agent authority binding facts",
+  entry "animus-adapters::BindingFreshness" "animus-adapters" adapters reusable none stable "safe binding freshness class",
+  entry "animus-adapters::EffectiveAuthorityDecision" "animus-adapters" adapters reusable none stable "pure provider and local-gate intersection result",
+  entry "animus-adapters::HOST_AUTHORITY_NON_CLAIMS" "animus-adapters" adapters reusable none stable "fixed metadata-only authority receipt non-claims",
+  entry "animus-adapters::HostAuthorityBounds" "animus-adapters" adapters reusable none stable "named generic authority request bounds",
+  entry "animus-adapters::HostAuthorityDecision" "animus-adapters" adapters reusable none stable "exact metadata-only provider decision",
+  entry "animus-adapters::HostAuthorityDecisionDraft" "animus-adapters" adapters reusable none stable "caller-supplied provider decision facts",
+  entry "animus-adapters::HostAuthorityFreshnessClass" "animus-adapters" adapters reusable none stable "safe provider freshness class",
+  entry "animus-adapters::HostAuthorityIssue" "animus-adapters" adapters reusable none stable "stable generic authority issue class",
+  entry "animus-adapters::HostAuthorityReceipt" "animus-adapters" adapters reusable none stable "metadata-only generic authority receipt",
+  entry "animus-adapters::HostAuthorityReceiptDraft" "animus-adapters" adapters reusable none stable "safe generic authority receipt input",
+  entry "animus-adapters::HostAuthorityReceiptLeak" "animus-adapters" adapters reusable none stable "authority receipt leak class",
+  entry "animus-adapters::HostAuthorityReplayClass" "animus-adapters" adapters reusable none stable "safe replay admission class",
+  entry "animus-adapters::HostAuthorityRequest" "animus-adapters" adapters reusable none stable "validated implementation-neutral authority request",
+  entry "animus-adapters::HostAuthorityRequestDraft" "animus-adapters" adapters reusable none stable "caller-supplied authority request facts",
+  entry "animus-adapters::HostAuthorityService" "animus-adapters" adapters injection injected stable "replaceable injected authority provider port",
+  entry "animus-adapters::HostAuthorityStatus" "animus-adapters" adapters reusable none stable "generic allow or deny status",
+  entry "animus-adapters::HostGateStatus" "animus-adapters" adapters reusable none stable "independent local host gate result",
+  entry "animus-adapters::RequiredHostGates" "animus-adapters" adapters reusable none stable "complete additive local gate set",
+  entry "animus-adapters::admit_agent_authority_binding" "animus-adapters" adapters reusable none stable "pure exact agent authority binding admission",
+  entry "animus-adapters::admit_host_authority_request" "animus-adapters" adapters reusable none stable "pure generic authority request admission",
+  entry "animus-adapters::build_host_authority_decision" "animus-adapters" adapters reusable none stable "pure exact provider decision construction",
+  entry "animus-adapters::build_host_authority_receipt" "animus-adapters" adapters reusable none stable "pure metadata-only authority receipt construction",
+  entry "animus-adapters::intersect_host_authority" "animus-adapters" adapters reusable none stable "pure additive provider and local-gate intersection",
+  entry "animus-adapters::validate_agent_authority_binding_set" "animus-adapters" adapters reusable none stable "pure duplicate binding rejection",
+  entry "animus-adapters::validate_host_authority_receipt_text" "animus-adapters" adapters reusable none stable "pure sensitive-material and overclaim leak rejection",
   entry "animus-adapters::AgentControlAction" "animus-adapters" adapters reusable none stable "transport-neutral external agent-control action",
   entry "animus-adapters::AgentControlCheckpoint" "animus-adapters" adapters reusable none stable "exact run-bound safe checkpoint",
   entry "animus-adapters::AgentControlCheckpointKind" "animus-adapters" adapters reusable none stable "safe runtime checkpoint class",
@@ -2428,6 +2471,7 @@ let entry_values = [
   evaluation_adapters_record "animus-adapters::evaluation" "animus-adapters" adapters "non-default compatibility re-export of native evaluation adapter contracts",
   evaluation_adapters_record "animus::evaluation_adapters" "animus" root "non-default root re-export of native evaluation adapter contracts",
   evaluation_host_record "animus::evaluation_host" "animus" root "non-default explicit standard-library native evaluation host; callers supply all service authority",
+  basalt_authority_record "animus::basalt_authority" "animus" root "non-default live Basalt raw-holder authority gate; callers supply all verification, local-gate, commit, and effect authority; AGPL-3.0-or-later review required",
   evaluation_conformance_record "animus::evaluation_conformance" "animus" root "non-default deterministic conformance suite over public evaluation production paths",
   native_evaluation_profile_record "animus-std::NativeEvaluationProfileError" "animus-std" std_shell "bounded generated policy parse failure class",
   native_evaluation_profile_record "animus-std::parse_native_evaluation_policy_json" "animus-std" std_shell "strict caller-loaded generated policy parser",

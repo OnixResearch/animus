@@ -110,6 +110,10 @@ pub use animus_adapter_eval as evaluation_adapters;
 #[cfg(feature = "evaluation-host")]
 pub use animus_std_eval as evaluation_host;
 
+/// Non-default live Basalt UCAN authority gate for guarded host effects.
+#[cfg(feature = "basalt-authority-adapter")]
+pub use animus_std_basalt_authority as basalt_authority;
+
 /// Non-default deterministic native evaluation conformance suite.
 #[cfg(feature = "evaluation-conformance")]
 pub use animus_eval_conformance as evaluation_conformance;

@@ -145,6 +145,10 @@ The ledger/session service is host-injected through `animus-runtime::session_per
 
 The separate `animus_runtime::durable_session_store` core plans and validates replay-private framing, parent/sequence/hash chains, atomic active-leaf commits, recovery, and metadata-only receipts without host effects. The non-default `animus-std/durable-session-store` block alone opens explicit capability-rooted journals, acquires one writer lease, applies restrictive permissions, synchronizes each committed group, and reopens snapshots. Provider or tool continuation may treat a write as durable only after that host returns successful synchronization. See [durable local session store](durable-session-store.md).
 
+### Optional Basalt authority boundary
+
+`animus-adapters` validates an exact agent-definition identity, audience DID, subject, task, actor, semantic role-plan, session, action, contract, ability, resource, policy, grant, freshness, and operation-profile binding without calling Basalt. The non-default `animus-std-basalt-authority` shell verifies the raw holder invocation with caller-owned services. It keeps live authority in scope, intersects every existing local gate, commits safe decision evidence, and only then calls the guarded effect. Missing, stale, unsupported, mismatched, replayed, denied, or unavailable facts stop dispatch. See [optional Basalt authority adapter](basalt-authority-adapter.md).
+
 ## Validation commands
 
 Use the smallest command that covers the changed boundary:
@@ -164,6 +168,7 @@ scripts/cairn/check-agent-role-profiles --root .
 cargo test -p animus-std
 scripts/cairn/check-durable-session-store --root .
 scripts/cairn/check-coding-session-host --root .
+scripts/cairn/check-basalt-authority-adapter --root .
 scripts/cairn/check-session-authority-profile --root .
 cargo test -p animus-std-observability
 cargo check -p animus-std --no-default-features

@@ -134,6 +134,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "evaluation-host",
     "evaluation-conformance",
     "harbor-atif",
+    "basalt-authority-adapter",
     "native-evaluation-profile",
 ];
 
