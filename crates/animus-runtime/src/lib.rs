@@ -155,6 +155,9 @@ mod provenance;
 mod provider_hardening;
 #[path = "resilience/mod.rs"]
 mod resilience;
+/// Pure validation and existing-owner projection for optional transcript normalization.
+#[cfg(feature = "trajectory-transcript-adapter")]
+pub mod trajectory;
 /// Pure bounded same-plan provider retry contracts.
 pub mod provider_retry {
     pub use super::resilience::*;

@@ -57,6 +57,14 @@ pub mod pijul_vcs_adapter {
     pub use animus_std::pijul::*;
 }
 
+/// Non-default transcript normalizer contracts, pure core, and injected host shell.
+#[cfg(feature = "trajectory-transcript-adapter")]
+pub mod trajectory_transcript_adapter {
+    pub use animus_adapters::trajectory::*;
+    pub use animus_runtime::trajectory::*;
+    pub use animus_std::trajectory::*;
+}
+
 /// Re-export of the host-owned generated model-profile configuration loader.
 #[cfg(feature = "model-runtime-profiles")]
 pub use animus_std::{

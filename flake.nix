@@ -41,6 +41,10 @@
       url = "github:OnixResearch/bounded-exec/29dac88ecded94457572db3fdfaaaab95fa91525";
       flake = false;
     };
+    trajectory = {
+      url = "github:letta-ai/trajectory/a665556089d6a3c59f5806ee109b4d36f6c2ac83";
+      flake = false;
+    };
   };
 
   outputs =
@@ -58,6 +62,7 @@
       ucan,
       secretspec,
       bounded-exec,
+      trajectory,
     }:
     let
       eachSystem =
@@ -115,6 +120,14 @@
             '';
           };
 
+          trajectory-helper = pkgs.writeShellApplication {
+            name = "animus-trajectory-helper";
+            runtimeInputs = [ pkgs.nodejs_22 ];
+            text = ''
+              exec node ${trajectory}/python/src/trajectory/_vendor/trajectory-cli.mjs "$@"
+            '';
+          };
+
           check-nickel-configs = pkgs.writeShellApplication {
             name = "check-nickel-configs";
             runtimeInputs = [
@@ -165,6 +178,7 @@
               diff -u ${./config/generated/terminal-video-policy.json} "$tmp_dir/config/generated/terminal-video-policy.json"
               diff -u ${./config/generated/pijul-vcs-adapter.json} "$tmp_dir/config/generated/pijul-vcs-adapter.json"
               diff -u ${./config/generated/secret-resolution-policy.json} "$tmp_dir/config/generated/secret-resolution-policy.json"
+              diff -u ${./config/generated/trajectory-transcript-adapter.json} "$tmp_dir/config/generated/trajectory-transcript-adapter.json"
 
               nickel typecheck ${./config/nickel-export-requests.ncl}
               NICKEL_EXPORT_BIN=${nickel-export.packages.${system}.default}/bin/nickel-export \
@@ -386,6 +400,7 @@
                 || baseName == "check-pijul-vcs-adapter"
                 || baseName == "check-secretspec-host-resolution"
                 || baseName == "check-skill-source-lifecycle"
+                || baseName == "check-trajectory-transcript-adapter"
                 || baseName == "check-evidence-safety"
                 || baseName == "check-model-runtime-profiles"
                 || baseName == "check-agent-role-profiles"
@@ -764,6 +779,20 @@
             ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
             export ANIMUS_SKILL_SOURCE_SKIP_NICKEL=1
             sh scripts/cairn/check-skill-source-lifecycle --root .
+          '';
+
+          trajectory-transcript-adapter = cargoCheck "animus-trajectory-transcript-adapter" [
+            pkgs.b3sum
+            pkgs.clippy
+            pkgs.nickel
+            pkgs.nodejs_22
+          ] ''
+            ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
+            export ANIMUS_TRAJECTORY_SKIP_NICKEL=1
+            export ANIMUS_TRAJECTORY_SOURCE=${trajectory}
+            export ANIMUS_TRAJECTORY_HELPER=${self.packages.${pkgs.stdenv.hostPlatform.system}.trajectory-helper}/bin/animus-trajectory-helper
+            export ANIMUS_TRAJECTORY_NODE=${pkgs.nodejs_22}/bin/node
+            sh scripts/cairn/check-trajectory-transcript-adapter --root .
           '';
 
           native-evaluation-core = cargoCheck "animus-native-evaluation-core" [ pkgs.b3sum pkgs.clippy pkgs.nickel ] ''

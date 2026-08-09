@@ -582,6 +582,7 @@
         "rats": "rats",
         "secretspec": "secretspec",
         "systems": "systems_6",
+        "trajectory": "trajectory",
         "trellis": "trellis",
         "ucan": "ucan"
       }
@@ -918,6 +919,23 @@
       "original": {
         "owner": "nix-systems",
         "repo": "default-linux",
+        "type": "github"
+      }
+    },
+    "trajectory": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784946442,
+        "narHash": "sha256-xD3HxZxOenM2tsMYsylYPi0U4MNoG8+ddEkQSRFJE/k=",
+        "owner": "letta-ai",
+        "repo": "trajectory",
+        "rev": "a665556089d6a3c59f5806ee109b4d36f6c2ac83",
+        "type": "github"
+      },
+      "original": {
+        "owner": "letta-ai",
+        "repo": "trajectory",
+        "rev": "a665556089d6a3c59f5806ee109b4d36f6c2ac83",
         "type": "github"
       }
     },

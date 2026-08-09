@@ -43,3 +43,4 @@ diff -u config/generated/autonomous-gates-policy.json "${tmp_dir}/config/generat
 diff -u config/generated/continual-harness-policy.json "${tmp_dir}/config/generated/continual-harness-policy.json"
 diff -u config/generated/secret-resolution-policy.json "${tmp_dir}/config/generated/secret-resolution-policy.json"
 diff -u config/generated/skill-source-lifecycle-policy.json "${tmp_dir}/config/generated/skill-source-lifecycle-policy.json"
+diff -u config/generated/trajectory-transcript-adapter.json "${tmp_dir}/config/generated/trajectory-transcript-adapter.json"

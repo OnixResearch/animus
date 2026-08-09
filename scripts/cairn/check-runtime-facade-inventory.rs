@@ -130,6 +130,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "session-event-replay",
     "execution-backend-planner",
     "pijul-vcs-adapter",
+    "trajectory-transcript-adapter",
     "secretspec-host-resolution",
     "native-evaluation",
     "evaluation-adapters",

@@ -46,6 +46,7 @@ basalt_authority_adapter_source_file=${repo_root}/config/basalt-authority-adapte
 pijul_vcs_adapter_source_file=${repo_root}/config/pijul-vcs-adapter.ncl
 secret_resolution_policy_source_file=${repo_root}/config/secret-resolution-policy.ncl
 skill_source_lifecycle_policy_source_file=${repo_root}/config/skill-source-lifecycle-policy.ncl
+trajectory_transcript_adapter_source_file=${repo_root}/config/trajectory-transcript-adapter.ncl
 
 if ! command -v nickel >/dev/null 2>&1; then
   printf '%s\n' 'error: nickel is required to export repo config. Run inside `nix develop`.' >&2
@@ -99,3 +100,4 @@ nickel export --format json --field basalt_authority_adapter "${basalt_authority
 nickel export --format json --field pijul_vcs_adapter "${pijul_vcs_adapter_source_file}" > "${target_root}/config/generated/pijul-vcs-adapter.json"
 nickel export --format json --field secret_resolution_policy "${secret_resolution_policy_source_file}" > "${target_root}/config/generated/secret-resolution-policy.json"
 nickel export --format json "${skill_source_lifecycle_policy_source_file}" > "${target_root}/config/generated/skill-source-lifecycle-policy.json"
+nickel export --format json "${trajectory_transcript_adapter_source_file}" > "${target_root}/config/generated/trajectory-transcript-adapter.json"

@@ -127,6 +127,8 @@ pub mod spacewasm;
 mod status;
 mod timed;
 pub mod tool;
+/// Authority-free contracts for optional transcript normalization.
+pub mod trajectory;
 /// Adapter field validation helpers shared by `animus-adapters` and
 /// downstream crates such as `animus-router`.
 pub mod validation;

@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly EXPECTED_HELPER_BLAKE3=1ef86c7687ff8f7354cb08e515e391e66f4e894f892aa807597d4ce399f5de20
+readonly EXPECTED_SCHEMA_BLAKE3=4193e80e761f1aaa9e59545f356de02d2aa33443b4430fae4d1d82e29bca1212
+readonly EXPECTED_SOURCE_COUNT=7
+
+root=.
+if [[ ${1:-} == --root ]]; then root=${2:?missing root}; fi
+cd "$root"
+
+if [[ ${ANIMUS_TRAJECTORY_SKIP_NICKEL:-0} != 1 ]]; then
+  scripts/config/check-nickel-configs
+fi
+nickel export --format json fixtures/trajectory-transcript/positive.ncl >/dev/null
+if nickel export --format json fixtures/trajectory-transcript/negative.ncl >/dev/null 2>&1; then
+  echo 'negative trajectory Nickel fixture unexpectedly passed' >&2
+  exit 1
+fi
+
+cargo test -p animus-runtime --locked --no-default-features --features trajectory-transcript-adapter trajectory::
+cargo test -p animus-std --locked --no-default-features --features trajectory-transcript-adapter trajectory::
+cargo clippy -p animus-runtime --locked --no-default-features --features trajectory-transcript-adapter --all-targets -- -D warnings
+cargo clippy -p animus-std --locked --no-default-features --features trajectory-transcript-adapter --all-targets -- -D warnings
+cargo check --locked --no-default-features --features trajectory-transcript-adapter
+cargo check -p animus-adapters --locked --no-default-features
+cargo check -p animus-adapters --locked --no-default-features --target wasm32-unknown-unknown
+cargo check -p animus-runtime --locked --no-default-features --features trajectory-transcript-adapter --target wasm32-unknown-unknown
+cargo check -p animus-core --locked --no-default-features
+cargo check -p animus-steel --locked --no-default-features
+cargo check -p animus-tui --locked --no-default-features
+
+if grep -REn 'std::(fs|process|env)|Command::|home_dir|SQLite|sqlite|listTrajectories|normalizeCheckpoint|canonical-v1' \
+  crates/animus-adapters/src/trajectory.rs crates/animus-runtime/src/trajectory crates/animus-std/src/trajectory.rs; then
+  echo 'trajectory Rust surfaces gained excluded ambient or cloud authority' >&2
+  exit 1
+fi
+if cargo tree --locked --no-default-features \
+  | sed -E 's# \(/[^)]*\)##g' \
+  | grep -Eiq 'node|bun|npm|typescript|@letta-ai/trajectory'; then
+  echo 'default dependency graph gained a trajectory runtime dependency' >&2
+  exit 1
+fi
+
+if [[ -n ${ANIMUS_TRAJECTORY_SOURCE:-} && -n ${ANIMUS_TRAJECTORY_HELPER:-} ]]; then
+  helper_file=${ANIMUS_TRAJECTORY_SOURCE}/python/src/trajectory/_vendor/trajectory-cli.mjs
+  schema_file=${ANIMUS_TRAJECTORY_SOURCE}/schema/trajectory-v1.schema.json
+  test "$(b3sum "$helper_file" | cut -d' ' -f1)" = "$EXPECTED_HELPER_BLAKE3"
+  test "$(b3sum "$schema_file" | cut -d' ' -f1)" = "$EXPECTED_SCHEMA_BLAKE3"
+  trajectory_node=${ANIMUS_TRAJECTORY_NODE:-node}
+  source_count=0
+  for source in claude-code codex hermes letta-code openclaw openhands pi; do
+    case "$source" in
+      claude-code) fixture_dir=tool-call ;;
+      *) fixture_dir=tool-calls ;;
+    esac
+    fixture=${ANIMUS_TRAJECTORY_SOURCE}/fixtures/${source}/${fixture_dir}/input.jsonl
+    if [[ $source == hermes || $source == openhands ]]; then
+      fixture=${ANIMUS_TRAJECTORY_SOURCE}/fixtures/${source}/${fixture_dir}/input.json
+    fi
+    "$trajectory_node" -e 'const fs=require("fs"); const source=process.argv[1]; const transcript=fs.readFileSync(process.argv[2],"utf8"); process.stdout.write(JSON.stringify({version:1,requests:[{source,transcript}]}));' "$source" "$fixture" \
+      | "$ANIMUS_TRAJECTORY_HELPER" > target/trajectory-helper-response.json
+    grep -q '"ok":true' target/trajectory-helper-response.json
+    source_count=$((source_count + 1))
+  done
+  test "$source_count" -eq "$EXPECTED_SOURCE_COUNT"
+fi
+
+sh scripts/cairn/check-component-catalog --root .
+sh scripts/cairn/check-runtime-facade-inventory --root .
+sh scripts/cairn/check-evidence-safety --root .
+
+mkdir -p target/cairn/focused-rails
+cat > target/cairn/focused-rails/trajectory-transcript-adapter.md <<'RECEIPT'
+# Trajectory transcript adapter focused receipt
+
+- verdict: PASS
+- cohort: @letta-ai/trajectory 0.2.0 at a665556089d6a3c59f5806ee109b4d36f6c2ac83
+- sources: claude-code, codex, hermes, letta-code, openclaw, openhands, pi
+- execution: explicitly injected bounded service only
+- projection: neutral ledger and batch drafts only
+- privacy: reasoning, tool bodies, and source metadata omitted by default
+- evidence: metadata only
+- non-claims: authenticity, completeness, timestamp truth, execution truth, semantic equivalence, privacy, model correctness, export fitness, release eligibility
+RECEIPT
+printf '%s\n' 'focused rail trajectory-transcript-adapter: pass'
+printf '%s\n' 'receipt: target/cairn/focused-rails/trajectory-transcript-adapter.md'

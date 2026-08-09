@@ -145,6 +145,10 @@ The credential request contract is `no_std` plus `alloc` and contains public met
 
 Frozen skill sources bind exact revisions, BLAKE3 trees, and manifests. Tracked observations can create inactive candidates only. Promotion requires exact review facts and the existing host asset mutation gate. Fetching, paths, credentials, extraction, review, storage, and activation remain host owned. See [Skill-source lifecycle](skill-source-lifecycle.md).
 
+## Optional Trajectory transcript boundary
+
+The Trajectory DTO and service contracts add no Node, Bun, npm, TypeScript, filesystem, process, environment, network, SQLite, credential, clock, or persistence authority. Pure Rust revalidates the exact trajectory-v1 result. The non-default std shell calls only a caller-injected bounded executor. Reasoning, tool bodies, source metadata, and diagnostic prose are omitted by default. Projection creates existing neutral-ledger entries and batch drafts only. It does not persist, export, evaluate, or authorize the supplied content. See [Trajectory transcript adapter](trajectory-transcript-adapter.md).
+
 ## Config ownership
 
 Parse configuration once at the shell boundary, validate it, and keep the typed result in owned structs such as `animus-std::RuntimeConfig` for host input loading or `animus-runtime::RuntimeConfig` for loop execution limits. Do not validate-and-drop raw settings and then re-read or re-parse them later.

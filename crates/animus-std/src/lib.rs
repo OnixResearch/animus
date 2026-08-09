@@ -91,6 +91,9 @@ pub mod sandlock_host;
 pub mod spacewasm;
 #[cfg(feature = "syndicate-host")]
 mod syndicate;
+/// Thin host shell for the optional injected transcript normalizer.
+#[cfg(feature = "trajectory-transcript-adapter")]
+pub mod trajectory;
 
 #[cfg(feature = "active-turn-recovery")]
 pub use activeturnrecovery::{

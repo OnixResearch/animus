@@ -90,6 +90,7 @@ let evaluation_conformance_feature = "evaluation-conformance" in
 let harbor_atif_feature = "harbor-atif" in
 let basalt_authority_feature = "basalt-authority-adapter" in
 let pijul_vcs_feature = "pijul-vcs-adapter" in
+let trajectory_transcript_feature = "trajectory-transcript-adapter" in
 let secretspec_host_feature = "secretspec-host-resolution" in
 let native_evaluation_profile_feature = "native-evaluation-profile" in
 let native_evaluation_family = "evaluation" in
@@ -348,6 +349,24 @@ let pijul_vcs_record = fun export_path_value owning_crate_value source_value cla
   depends_on = ["animus-adapters::pijul", "animus-runtime::pijul"],
   composes_with = ["animus-adapters::CheckpointRecord", "animus-adapters::SnapshotRecord", "animus-runtime::ProvenanceFact"],
   capability_family = "provenance",
+}
+in
+let trajectory_transcript_record = fun export_path_value owning_crate_value source_value class_value side_effect_value review_note_value => {
+  export_path = export_path_value,
+  owning_crate = owning_crate_value,
+  source = source_value,
+  class = class_value,
+  side_effect = side_effect_value,
+  stability = optional_stability,
+  review_note = review_note_value,
+  feature_gate = trajectory_transcript_feature,
+  required_authority = side_effect_value,
+  depends_on =
+    if export_path_value == "animus-adapters::trajectory" then []
+    else if export_path_value == "animus-runtime::trajectory" then ["animus-adapters::trajectory"]
+    else ["animus-adapters::trajectory", "animus-runtime::trajectory"],
+  composes_with = ["animus-runtime::SessionLedgerEntryDraft", "animus-runtime::BatchOutputRecord"],
+  capability_family = "orchestration",
 }
 in
 let secretspec_host_record = fun export_path_value owning_crate_value source_value class_value side_effect_value review_note_value => {
@@ -2522,6 +2541,10 @@ let entry_values = [
   pijul_vcs_record "animus-runtime::pijul" "animus-runtime" runtime reusable none "pure exact-cohort validation and existing-owner projection",
   pijul_vcs_record "animus-std::pijul" "animus-std" std_shell shell shell_owned "non-default exact-cohort CLI shell over one injected bounded executor",
   pijul_vcs_record "animus::pijul_vcs_adapter" "animus" root shell shell_owned "non-default root facade for Pijul contracts, pure validation, and injected shell",
+  trajectory_transcript_record "animus-adapters::trajectory" "animus-adapters" adapters injection injected "implementation-free transcript normalization DTOs and service port",
+  trajectory_transcript_record "animus-runtime::trajectory" "animus-runtime" runtime reusable none "pure trajectory-v1 validation and existing ledger and batch draft projection",
+  trajectory_transcript_record "animus-std::trajectory" "animus-std" std_shell shell shell_owned "non-default JSON protocol shell over one injected bounded executor",
+  trajectory_transcript_record "animus::trajectory_transcript_adapter" "animus" root shell shell_owned "non-default root facade for transcript contracts, pure validation, and injected host shell",
   secretspec_host_record "animus-adapters::secret_resolution" "animus-adapters" adapters injection injected "authority-free explicit credential admission and injected service port",
   secretspec_host_record "animus::secretspec_host_resolution" "animus" root shell shell_owned "non-default root facade for bounded SecretSpec credential resolution",
   evaluation_conformance_record "animus::evaluation_conformance" "animus" root "non-default deterministic conformance suite over public evaluation production paths",
