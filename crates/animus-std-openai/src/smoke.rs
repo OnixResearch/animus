@@ -15,6 +15,8 @@ const OPENROUTER_CREDENTIAL_SOURCE: &str = "animus-live-openrouter-smoke-stdin";
 const OPENROUTER_CREDENTIAL_LABEL: &str = "brokered:animus-live-openrouter-smoke-stdin";
 const OPENROUTER_PROVIDER_ID: &str = "openrouter";
 const OPENROUTER_STATUS: &str = "LIVE_OPENROUTER_SMOKE status=passed";
+/// Exact reviewed model for every packaged live `OpenRouter` smoke.
+pub const OPENROUTER_SMOKE_MODEL_ID: &str = "deepseek/deepseek-v4-flash-0731";
 const PROMPT: &str = "Reply with the single word READY.";
 const TIMEOUT_SECONDS: u64 = 60;
 const MAX_RESPONSE_BYTES: u64 = 262_144;
@@ -125,6 +127,9 @@ pub fn plan_live_openrouter_smoke(
 ) -> Result<animus_std::ProviderDispatchPlan, LiveOpenAiSmokeError> {
     // r[impl agent_harness_runtime.packaged_live_openrouter_smoke.contract]
     // r[impl agent_harness_runtime.packaged_live_openrouter_smoke.contract.plan]
+    // r[impl agent_harness_runtime.packaged_live_openrouter_smoke.reviewed_model]
+    // r[impl agent_harness_runtime.packaged_live_openrouter_smoke.reviewed_model.pass]
+    validate_openrouter_smoke_model(model)?;
     plan_live_responses_smoke(model, OPENROUTER_COHORT)
 }
 
@@ -170,7 +175,16 @@ pub fn run_packaged_live_openrouter_smoke(
 ) -> Result<String, LiveOpenAiSmokeError> {
     // r[impl agent_harness_runtime.packaged_live_openrouter_smoke.binary]
     // r[impl agent_harness_runtime.packaged_live_openrouter_smoke.binary.pass]
+    validate_openrouter_smoke_model(model)?;
     run_packaged_live_responses_smoke(model, api_key, OPENROUTER_COHORT)
+}
+
+fn validate_openrouter_smoke_model(model: &str) -> Result<(), LiveOpenAiSmokeError> {
+    if model == OPENROUTER_SMOKE_MODEL_ID {
+        Ok(())
+    } else {
+        Err(LiveOpenAiSmokeError::InvalidModel)
+    }
 }
 
 fn plan_live_responses_smoke(
@@ -340,7 +354,7 @@ mod tests {
     use super::*;
 
     const OPENAI_MODEL_ID: &str = "gpt-5-mini";
-    const OPENROUTER_MODEL_ID: &str = "openai/gpt-5.5";
+    const SUBSTITUTED_OPENROUTER_MODEL_ID: &str = "openai/gpt-5.5";
     const RESPONSE_TEXT: &str = "READY";
     const API_KEY_SENTINEL: &str = "secret-live-key";
     const FIRST_ITEM_INDEX: usize = 0;
@@ -362,12 +376,12 @@ mod tests {
                     as fn(&animus_std::ProviderDispatchOutcome) -> String,
             ),
             (
-                plan_live_openrouter_smoke(OPENROUTER_MODEL_ID)
-                    .expect("OpenRouter model must produce plan"),
+                plan_live_openrouter_smoke(OPENROUTER_SMOKE_MODEL_ID)
+                    .expect("reviewed OpenRouter model must produce plan"),
                 OPENROUTER_STATUS,
                 OPENROUTER_PROVIDER_ID,
                 OPENROUTER_RESPONSES_ENDPOINT_IDENTITY,
-                OPENROUTER_MODEL_ID,
+                OPENROUTER_SMOKE_MODEL_ID,
                 render_live_openrouter_smoke_evidence
                     as fn(&animus_std::ProviderDispatchOutcome) -> String,
             ),
@@ -414,6 +428,11 @@ mod tests {
         );
         assert_eq!(
             plan_live_openrouter_smoke(invalid_model),
+            Err(LiveOpenAiSmokeError::InvalidModel)
+        );
+        // r[verify agent_harness_runtime.packaged_live_openrouter_smoke.reviewed_model.failure]
+        assert_eq!(
+            plan_live_openrouter_smoke(SUBSTITUTED_OPENROUTER_MODEL_ID),
             Err(LiveOpenAiSmokeError::InvalidModel)
         );
     }

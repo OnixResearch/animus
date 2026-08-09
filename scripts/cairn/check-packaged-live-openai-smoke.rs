@@ -25,7 +25,8 @@ const STALE_FIXTURE: &str =
 const DIRTY_FIXTURE: &str =
     "cairn/release-evidence-index-fixtures/dirty-live-provider.ncl";
 const OPENAI_MODEL_ID: &str = "gpt-5-mini";
-const OPENROUTER_MODEL_ID: &str = "openai/gpt-5.5";
+const OPENROUTER_MODEL_ID: &str = "deepseek/deepseek-v4-flash-0731";
+const SUBSTITUTED_OPENROUTER_MODEL_ID: &str = "openai/gpt-5.5";
 const INVALID_MODEL: &str = "invalid model with spaces";
 const CREDENTIAL_SENTINEL: &str = "packaged-live-secret-sentinel";
 const OPENAI_FAILURE_MARKER: &str = "LIVE_OPENAI_SMOKE status=failed";
@@ -72,6 +73,7 @@ fn validate_contract(root: &Path) -> Result<(), String> {
     // r[verify agent_harness_runtime.packaged_live_openai_smoke.current_head_evidence.failure]
     // r[verify agent_harness_runtime.packaged_live_openrouter_smoke.verification]
     // r[verify agent_harness_runtime.packaged_live_openrouter_smoke.docs]
+    // r[verify agent_harness_runtime.packaged_live_openrouter_smoke.reviewed_model_verification]
     let manifest = read(root, HOST_MANIFEST)?;
     let library = read(root, HOST_LIB)?;
     let core = read(root, SMOKE_CORE)?;
@@ -133,6 +135,11 @@ fn validate_contract(root: &Path) -> Result<(), String> {
         "metadata-only live smoke evidence markers are incomplete",
     )?;
     require(
+        core.contains("deepseek/deepseek-v4-flash-0731")
+            && openrouter_binary.contains("unsupported_model"),
+        "packaged OpenRouter smoke is not pinned to DeepSeek V4 Flash 0731",
+    )?;
+    require(
         live_test.contains("run_packaged_live_openai_smoke")
             && live_test.contains("#[ignore ="),
         "ignored live test does not reuse the packaged smoke",
@@ -157,6 +164,7 @@ fn validate_contract(root: &Path) -> Result<(), String> {
 fn run_checks(root: &Path) -> Result<(), String> {
     // r[verify agent_harness_runtime.packaged_live_openai_smoke.closeout]
     // r[verify agent_harness_runtime.packaged_live_openrouter_smoke.closeout]
+    // r[verify agent_harness_runtime.packaged_live_openrouter_smoke.reviewed_model_closeout]
     let checks = [
         Check {
             program: "cargo",
@@ -226,7 +234,17 @@ fn validate_packaged_denials(root: &Path) -> Result<(), String> {
         require(!invalid.status.success(), "invalid model unexpectedly passed")?;
         validate_safe_failure(&invalid, failure_marker)?;
     }
-    Ok(())
+    let substituted = capture_with_stdin(
+        root,
+        "animus-live-openrouter-smoke",
+        SUBSTITUTED_OPENROUTER_MODEL_ID,
+        format!("{CREDENTIAL_SENTINEL}\n").as_str(),
+    )?;
+    require(
+        !substituted.status.success(),
+        "substituted OpenRouter model unexpectedly passed",
+    )?;
+    validate_safe_failure(&substituted, OPENROUTER_FAILURE_MARKER)
 }
 
 fn capture_with_stdin(

@@ -29,8 +29,9 @@ pub use model::{
 #[cfg(feature = "reqwest-client")]
 pub use shell::ReqwestOpenAiHost;
 pub use smoke::{
-    LiveOpenAiSmokeError, plan_live_openai_smoke, plan_live_openrouter_smoke,
-    render_live_openai_smoke_evidence, render_live_openrouter_smoke_evidence,
+    LiveOpenAiSmokeError, OPENROUTER_SMOKE_MODEL_ID, plan_live_openai_smoke,
+    plan_live_openrouter_smoke, render_live_openai_smoke_evidence,
+    render_live_openrouter_smoke_evidence,
 };
 #[cfg(feature = "reqwest-client")]
 pub use smoke::{run_packaged_live_openai_smoke, run_packaged_live_openrouter_smoke};

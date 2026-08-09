@@ -24,7 +24,7 @@ Both cohorts support:
 
 The host rejects images, tools, tool correlation, structured output, stop sequences, streaming, endpoint substitution, and unsupported response items before data loss can occur.
 
-Provider-qualified model identities, such as `openai/gpt-5.5`, are admitted only as model identifiers. The slash does not become valid in provider or credential identifiers.
+Provider-qualified model identities, such as `deepseek/deepseek-v4-flash-0731`, are admitted only as model identifiers. The slash does not become valid in provider or credential identifiers.
 
 ## Authority and execution
 
@@ -80,7 +80,7 @@ cargo run -q -p animus-std-openai \
 For the OpenRouter endpoint:
 
 ```sh
-model_id='openai/gpt-5.5'
+model_id='deepseek/deepseek-v4-flash-0731'
 cargo run -q -p animus-std-openai \
   --features reqwest-client \
   --bin animus-live-openrouter-smoke -- \
@@ -88,7 +88,7 @@ cargo run -q -p animus-std-openai \
   --credential-stdin < /run/credentials/openrouter-api-key
 ```
 
-Each binary reads a bounded API key from standard input. Neither binary reads credential or model environment variables.
+Each binary reads a bounded API key from standard input. Neither binary reads credential or model environment variables. The OpenRouter binary rejects every model except `deepseek/deepseek-v4-flash-0731`.
 
 Each binary prints provider, endpoint, status, counts, and BLAKE3 identities. It omits the prompt, API key, model output, and raw response.
 

@@ -73,8 +73,13 @@ fn parse_args(args: &[String]) -> Result<SmokeArgs, String> {
     if !credential_stdin {
         return Err(String::from("missing_credential_stdin"));
     }
+    let model = model.ok_or_else(|| String::from("missing_model"))?;
+    // r[impl agent_harness_runtime.packaged_live_openrouter_smoke.reviewed_model.failure]
+    if model != animus_std_openai::OPENROUTER_SMOKE_MODEL_ID {
+        return Err(String::from("unsupported_model"));
+    }
     Ok(SmokeArgs {
-        model: model.ok_or_else(|| String::from("missing_model"))?,
+        model,
         credential_stdin,
     })
 }
@@ -120,7 +125,8 @@ fn decode_credential(mut input: String) -> Result<String, String> {
 mod tests {
     use super::*;
 
-    const MODEL_ID: &str = "openai/gpt-5.5";
+    const MODEL_ID: &str = animus_std_openai::OPENROUTER_SMOKE_MODEL_ID;
+    const SUBSTITUTED_MODEL_ID: &str = "openai/gpt-5.5";
 
     #[test]
     fn positive_explicit_arguments_and_credential_are_admitted() {
@@ -153,6 +159,10 @@ mod tests {
             .is_err()
         );
         assert!(parse_args(&["--unknown"].map(String::from)).is_err());
+        assert_eq!(
+            parse_args(&[ARG_MODEL, SUBSTITUTED_MODEL_ID, ARG_CREDENTIAL_STDIN].map(String::from)),
+            Err(String::from("unsupported_model"))
+        );
         assert!(decode_credential(String::new()).is_err());
         assert!(decode_credential(String::from("first\nsecond")).is_err());
         let oversized_len = usize::try_from(MAX_CREDENTIAL_STDIN_BYTES)
