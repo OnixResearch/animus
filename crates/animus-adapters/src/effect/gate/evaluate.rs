@@ -1,7 +1,3 @@
-use alloc::{format, string::String};
-
-use super::request::HostAuthorityRequest;
-
 const DECISION_DOMAIN: &[u8] = b"animus/host-authority-decision/v1";
 const BLAKE3_PREFIX: &str = "b3:";
 const BLAKE3_HEX_BYTES: usize = 64;
@@ -138,7 +134,7 @@ impl HostAuthorityReplayClass {
 #[derive(Clone, Copy, Debug)]
 pub struct HostAuthorityDecisionDraft<'a> {
     /// Exact request being decided.
-    pub request: &'a HostAuthorityRequest,
+    pub request: &'a super::input::HostAuthorityRequest,
     /// Stable provider identity.
     pub provider_identity: &'a str,
     /// Provider policy identity.
@@ -164,21 +160,21 @@ pub struct HostAuthorityDecisionDraft<'a> {
 /// Validated metadata-only provider decision.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HostAuthorityDecision {
-    request_identity: String,
-    binding_identity: String,
-    provider_identity: String,
-    policy_identity: String,
+    request_identity: alloc::string::String,
+    binding_identity: alloc::string::String,
+    provider_identity: alloc::string::String,
+    policy_identity: alloc::string::String,
     status: HostAuthorityStatus,
     issue: HostAuthorityIssue,
     action: super::super::GuardedAction,
-    ability: String,
-    principal_hash: String,
-    resource_hash: String,
+    ability: alloc::string::String,
+    principal_hash: alloc::string::String,
+    resource_hash: alloc::string::String,
     checked_fact_count: u32,
     freshness: HostAuthorityFreshnessClass,
     replay: HostAuthorityReplayClass,
-    provider_receipt_identity: String,
-    decision_identity: String,
+    provider_receipt_identity: alloc::string::String,
+    decision_identity: alloc::string::String,
 }
 
 impl HostAuthorityDecision {
@@ -273,11 +269,14 @@ impl HostAuthorityDecision {
 pub fn build_host_authority_decision(
     draft: HostAuthorityDecisionDraft<'_>,
 ) -> Result<HostAuthorityDecision, HostAuthorityIssue> {
-    let allowed = matches!(draft.status, HostAuthorityStatus::Allowed);
-    if allowed != matches!(draft.issue, HostAuthorityIssue::None)
-        || allowed && draft.freshness != HostAuthorityFreshnessClass::Current
-        || allowed && draft.replay != HostAuthorityReplayClass::Admitted
-    {
+    let is_allowed = matches!(draft.status, HostAuthorityStatus::Allowed);
+    if is_allowed != matches!(draft.issue, HostAuthorityIssue::None) {
+        return Err(HostAuthorityIssue::DecisionMismatch);
+    }
+    if is_allowed && draft.freshness != HostAuthorityFreshnessClass::Current {
+        return Err(HostAuthorityIssue::DecisionMismatch);
+    }
+    if is_allowed && draft.replay != HostAuthorityReplayClass::Admitted {
         return Err(HostAuthorityIssue::DecisionMismatch);
     }
     if draft.policy_identity != draft.request.policy_identity()
@@ -295,29 +294,31 @@ pub fn build_host_authority_decision(
             return Err(HostAuthorityIssue::InvalidIdentity);
         }
     }
+    debug_assert_eq!(draft.policy_identity, draft.request.policy_identity());
+    debug_assert!(draft.checked_fact_count <= draft.request.bounds().checked_fact_allowance);
     let decision_identity = hash_decision(&draft)?;
     Ok(HostAuthorityDecision {
-        request_identity: String::from(draft.request.request_identity()),
-        binding_identity: String::from(draft.request.binding_identity()),
-        provider_identity: String::from(draft.provider_identity),
-        policy_identity: String::from(draft.policy_identity),
+        request_identity: alloc::string::String::from(draft.request.request_identity()),
+        binding_identity: alloc::string::String::from(draft.request.binding_identity()),
+        provider_identity: alloc::string::String::from(draft.provider_identity),
+        policy_identity: alloc::string::String::from(draft.policy_identity),
         status: draft.status,
         issue: draft.issue,
         action: draft.request.action(),
-        ability: String::from(draft.request.ability()),
-        principal_hash: String::from(draft.principal_hash),
-        resource_hash: String::from(draft.resource_hash),
+        ability: alloc::string::String::from(draft.request.ability()),
+        principal_hash: alloc::string::String::from(draft.principal_hash),
+        resource_hash: alloc::string::String::from(draft.resource_hash),
         checked_fact_count: draft.checked_fact_count,
         freshness: draft.freshness,
         replay: draft.replay,
-        provider_receipt_identity: String::from(draft.provider_receipt_identity),
+        provider_receipt_identity: alloc::string::String::from(draft.provider_receipt_identity),
         decision_identity,
     })
 }
 
 /// Result from one independent Animus host gate.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum HostGateStatus {
+pub enum Status {
     /// The gate admits the exact request.
     Allowed,
     /// The gate denies the exact request.
@@ -328,31 +329,31 @@ pub enum HostGateStatus {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct RequiredHostGates {
     /// Agent-definition admission gate.
-    pub agent_definition: HostGateStatus,
+    pub agent_definition: Status,
     /// Semantic role and delegate gate.
-    pub semantic_role: HostGateStatus,
+    pub semantic_role: Status,
     /// Parent authority gate.
-    pub parent: HostGateStatus,
+    pub parent: Status,
     /// Task admission gate.
-    pub task: HostGateStatus,
+    pub task: Status,
     /// Model selection gate.
-    pub model: HostGateStatus,
+    pub model: Status,
     /// Tool capability gate.
-    pub tool: HostGateStatus,
+    pub tool: Status,
     /// Workspace admission gate.
-    pub workspace: HostGateStatus,
+    pub workspace: Status,
     /// Approval or confirmation gate.
-    pub approval: HostGateStatus,
+    pub approval: Status,
     /// Sandbox policy gate.
-    pub sandbox: HostGateStatus,
+    pub sandbox: Status,
     /// Cancellation-state gate.
-    pub cancellation: HostGateStatus,
+    pub cancellation: Status,
     /// Timeout gate.
-    pub timeout: HostGateStatus,
+    pub timeout: Status,
     /// Budget gate.
-    pub budget: HostGateStatus,
+    pub budget: Status,
     /// Runtime authority-seal gate.
-    pub runtime_authority_seal: HostGateStatus,
+    pub runtime_authority_seal: Status,
 }
 
 impl RequiredHostGates {
@@ -373,7 +374,7 @@ impl RequiredHostGates {
             self.runtime_authority_seal,
         ]
         .iter()
-        .all(|status| *status == HostGateStatus::Allowed)
+        .all(|status| *status == Status::Allowed)
     }
 }
 
@@ -423,7 +424,11 @@ fn valid_identity(value: &str, max_bytes: usize) -> bool {
         })
 }
 
-fn hash_decision(draft: &HostAuthorityDecisionDraft<'_>) -> Result<String, HostAuthorityIssue> {
+fn hash_decision(
+    draft: &HostAuthorityDecisionDraft<'_>,
+) -> Result<alloc::string::String, HostAuthorityIssue> {
+    debug_assert!(!draft.provider_identity.is_empty());
+    debug_assert!(!draft.policy_identity.is_empty());
     let checked = draft.checked_fact_count.to_be_bytes();
     let mut hasher = blake3::Hasher::new();
     hasher.update(DECISION_DOMAIN);
@@ -442,9 +447,13 @@ fn hash_decision(draft: &HostAuthorityDecisionDraft<'_>) -> Result<String, HostA
         draft.provider_receipt_identity.as_bytes(),
         draft.issue.as_str().as_bytes(),
     ] {
-        let length = u64::try_from(field.len()).map_err(|_| HostAuthorityIssue::InvalidBound)?;
-        hasher.update(&length.to_be_bytes());
+        let field_bytes =
+            u64::try_from(field.len()).map_err(|_| HostAuthorityIssue::InvalidBound)?;
+        hasher.update(&field_bytes.to_be_bytes());
         hasher.update(field);
     }
-    Ok(format!("{BLAKE3_PREFIX}{}", hasher.finalize().to_hex()))
+    Ok(alloc::format!(
+        "{BLAKE3_PREFIX}{}",
+        hasher.finalize().to_hex()
+    ))
 }

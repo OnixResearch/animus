@@ -5,9 +5,6 @@
 
 extern crate alloc;
 
-use alloc::string::String;
-use alloc::vec::Vec;
-
 /// Maximum public identifier length at this boundary.
 pub const MAX_SECRET_METADATA_CHARS: usize = 128;
 /// Required lowercase BLAKE3 hexadecimal length.
@@ -99,13 +96,13 @@ impl SecretResolutionBounds {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CredentialRequirement {
     /// Exact declaration name.
-    pub declaration: String,
+    pub declaration: alloc::string::String,
     /// Exact scope that contains the declaration.
-    pub scope: String,
+    pub scope: alloc::string::String,
     /// Allowed read-only providers.
-    pub allowed_providers: Vec<SecretProviderScheme>,
+    pub allowed_providers: alloc::vec::Vec<SecretProviderScheme>,
     /// Bounded public purpose label.
-    pub purpose: String,
+    pub purpose: alloc::string::String,
     /// Allowed destination class.
     pub destination: SecretDestinationClass,
 }
@@ -114,19 +111,19 @@ pub struct CredentialRequirement {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SecretResolutionRequest {
     /// Stable resolver implementation identity.
-    pub resolver_identity: String,
+    pub resolver_identity: alloc::string::String,
     /// BLAKE3 identity of the exact manifest bytes.
-    pub manifest_identity: String,
+    pub manifest_identity: alloc::string::String,
     /// Explicit `SecretSpec` profile.
-    pub profile: String,
+    pub profile: alloc::string::String,
     /// Explicit `SecretSpec` scope.
-    pub scope: String,
+    pub scope: alloc::string::String,
     /// Exact declaration name.
-    pub declaration: String,
+    pub declaration: alloc::string::String,
     /// Explicit provider family.
     pub provider: SecretProviderScheme,
     /// Public purpose label.
-    pub purpose: String,
+    pub purpose: alloc::string::String,
     /// Destination class.
     pub destination: SecretDestinationClass,
     /// Requested operation.
@@ -134,7 +131,7 @@ pub struct SecretResolutionRequest {
     /// Whether provider fallback was requested.
     pub provider_fallback: bool,
     /// BLAKE3 identity of the checked policy bytes.
-    pub policy_identity: String,
+    pub policy_identity: alloc::string::String,
     /// Explicit worker limits.
     pub bounds: SecretResolutionBounds,
 }
@@ -147,7 +144,7 @@ pub struct SecretResolverCapabilities {
     /// Whether an owned bounded worker is available.
     pub bounded_worker: bool,
     /// Provider families supported by this service.
-    pub providers: Vec<SecretProviderScheme>,
+    pub providers: alloc::vec::Vec<SecretProviderScheme>,
 }
 
 /// Availability of the injected resolver service.
@@ -224,12 +221,14 @@ pub fn admit_secret_resolution(
     if request.profile.is_empty() {
         return Err(SecretResolutionIssue::MissingProfile);
     }
-    if !valid_label(&request.resolver_identity)
-        || !valid_label(&request.profile)
-        || !valid_label(&request.scope)
-        || !valid_label(&request.declaration)
-        || !valid_label(&request.purpose)
-    {
+    let metadata = [
+        request.resolver_identity.as_str(),
+        request.profile.as_str(),
+        request.scope.as_str(),
+        request.declaration.as_str(),
+        request.purpose.as_str(),
+    ];
+    if metadata.iter().any(|value| !valid_label(value)) {
         return Err(SecretResolutionIssue::InvalidMetadata);
     }
     if !valid_blake3(&request.manifest_identity) || !valid_blake3(&request.policy_identity) {
@@ -265,6 +264,8 @@ pub fn admit_secret_resolution(
     if !capabilities.providers.contains(&request.provider) {
         return Err(SecretResolutionIssue::CapabilityMissing);
     }
+    debug_assert!(request.bounds.are_positive());
+    debug_assert_eq!(request.operation, SecretResolutionOperation::Read);
     Ok(SecretResolutionPlan { request })
 }
 
@@ -303,8 +304,6 @@ pub trait SecretResolutionService {
 mod tests {
     use super::*;
     use alloc::string::ToString;
-    use alloc::vec;
-
     const IDENTITY: &str = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
     const VALUE_MAX_BYTES: usize = 1_024;
     const FRAME_OVERHEAD_BYTES: usize = 32;
@@ -313,12 +312,14 @@ mod tests {
     const TIMEOUT_MS: u64 = 5_000;
     const POLL_INTERVAL_MS: u64 = 10;
     const TEARDOWN_TIMEOUT_MS: u64 = 1_000;
+    const STDOUT_MAX_BYTES: usize = VALUE_MAX_BYTES.saturating_add(FRAME_OVERHEAD_BYTES);
+    const NEGATIVE_CASE_COUNT: usize = 7;
 
     fn requirement() -> CredentialRequirement {
         CredentialRequirement {
             declaration: "API_KEY".to_string(),
             scope: "provider_api".to_string(),
-            allowed_providers: vec![SecretProviderScheme::Environment],
+            allowed_providers: alloc::vec![SecretProviderScheme::Environment],
             purpose: "provider_authentication".to_string(),
             destination: SecretDestinationClass::ProviderDispatch,
         }
@@ -341,7 +342,7 @@ mod tests {
                 value_count_max: 1,
                 input_max_bytes: INPUT_MAX_BYTES,
                 value_max_bytes: VALUE_MAX_BYTES,
-                stdout_max_bytes: VALUE_MAX_BYTES + FRAME_OVERHEAD_BYTES,
+                stdout_max_bytes: STDOUT_MAX_BYTES,
                 stderr_max_bytes: STDERR_MAX_BYTES,
                 timeout_ms: TIMEOUT_MS,
                 poll_interval_ms: POLL_INTERVAL_MS,
@@ -354,7 +355,7 @@ mod tests {
         SecretResolverCapabilities {
             read: true,
             bounded_worker: true,
-            providers: vec![SecretProviderScheme::Environment],
+            providers: alloc::vec![SecretProviderScheme::Environment],
         }
     }
 
@@ -381,6 +382,7 @@ mod tests {
             ("write", SecretResolutionIssue::WriteDenied),
             ("bounds", SecretResolutionIssue::InvalidBounds),
         ];
+        assert_eq!(cases.len(), NEGATIVE_CASE_COUNT);
         for (case, expected) in cases {
             let mut candidate = request();
             match case {

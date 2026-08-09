@@ -1,11 +1,32 @@
-use alloc::{format, string::String, vec::Vec};
-
-use super::{HostAuthorityDecision, HostAuthorityIssue, HostAuthorityStatus};
-
 const RECEIPT_DOMAIN: &[u8] = b"animus/host-authority-receipt/v1";
 const RECEIPT_SCHEMA: &str = "animus.host-authority-receipt.v1";
 const BLAKE3_PREFIX: &str = "b3:";
 const MAX_NON_CLAIMS: usize = 16;
+const CREDENTIAL_MARKERS: &[&str] = &[
+    "bearer ",
+    "compact_token",
+    "private_key",
+    "signature",
+    "proof_body",
+    "replay_nonce",
+    "credential",
+];
+const PRIVATE_MATERIAL_MARKERS: &[&str] = &[
+    "raw_prompt",
+    "tool_arguments",
+    "provider_payload",
+    "environment_value",
+    "private_path",
+    "effect_output",
+];
+const OVERCLAIM_MARKERS: &[&str] = &[
+    "globally trusted",
+    "sandbox is secure",
+    "effect is correct",
+    "agent is safe",
+    "completion proved",
+    "release ready",
+];
 
 /// Required bounded claim limits for all generic authority receipts.
 pub const HOST_AUTHORITY_NON_CLAIMS: [&str; 8] = [
@@ -23,7 +44,7 @@ pub const HOST_AUTHORITY_NON_CLAIMS: [&str; 8] = [
 #[derive(Clone, Copy, Debug)]
 pub struct HostAuthorityReceiptDraft<'a> {
     /// Exact safe decision.
-    pub decision: &'a HostAuthorityDecision,
+    pub decision: &'a super::evaluate::HostAuthorityDecision,
     /// Safe dispatch class, such as `planned`, `committed`, or `blocked`.
     pub dispatch_class: &'a str,
     /// Required non-claims. The complete fixed set is mandatory.
@@ -36,35 +57,35 @@ pub struct HostAuthorityReceipt {
     /// Receipt schema.
     pub schema: &'static str,
     /// Provider identity.
-    pub provider_identity: String,
+    pub provider_identity: alloc::string::String,
     /// Policy identity.
-    pub policy_identity: String,
+    pub policy_identity: alloc::string::String,
     /// Request identity.
-    pub request_identity: String,
+    pub request_identity: alloc::string::String,
     /// Binding identity.
-    pub binding_identity: String,
+    pub binding_identity: alloc::string::String,
     /// Decision identity.
-    pub decision_identity: String,
+    pub decision_identity: alloc::string::String,
     /// Safe action label.
     pub action: &'static str,
     /// Safe ability label.
-    pub ability: String,
+    pub ability: alloc::string::String,
     /// Decision status.
-    pub status: HostAuthorityStatus,
+    pub status: super::evaluate::HostAuthorityStatus,
     /// Safe issue class.
-    pub issue: HostAuthorityIssue,
+    pub issue: super::evaluate::HostAuthorityIssue,
     /// Checked provider fact count.
     pub checked_fact_count: u32,
     /// Redacted principal hash.
-    pub principal_hash: String,
+    pub principal_hash: alloc::string::String,
     /// Redacted resource hash.
-    pub resource_hash: String,
+    pub resource_hash: alloc::string::String,
     /// Safe dispatch class.
-    pub dispatch_class: String,
+    pub dispatch_class: alloc::string::String,
     /// Required non-claims.
-    pub non_claims: Vec<String>,
+    pub non_claims: alloc::vec::Vec<alloc::string::String>,
     /// Complete receipt identity.
-    pub receipt_identity: String,
+    pub receipt_identity: alloc::string::String,
 }
 
 /// Receipt leak class.
@@ -85,33 +106,35 @@ pub enum HostAuthorityReceiptLeak {
 /// Returns [`HostAuthorityIssue::UnsafeReceipt`] for missing non-claims or unsafe dispatch metadata.
 pub fn build_host_authority_receipt(
     draft: HostAuthorityReceiptDraft<'_>,
-) -> Result<HostAuthorityReceipt, HostAuthorityIssue> {
+) -> Result<HostAuthorityReceipt, super::evaluate::HostAuthorityIssue> {
     if draft.non_claims.len() > MAX_NON_CLAIMS
         || draft.non_claims != HOST_AUTHORITY_NON_CLAIMS
         || !safe_dispatch_class(draft.dispatch_class)
     {
-        return Err(HostAuthorityIssue::UnsafeReceipt);
+        return Err(super::evaluate::HostAuthorityIssue::UnsafeReceipt);
     }
+    debug_assert_eq!(draft.non_claims, HOST_AUTHORITY_NON_CLAIMS);
+    debug_assert!(safe_dispatch_class(draft.dispatch_class));
     let receipt_identity = receipt_identity(&draft)?;
     Ok(HostAuthorityReceipt {
         schema: RECEIPT_SCHEMA,
-        provider_identity: String::from(draft.decision.provider_identity()),
-        policy_identity: String::from(draft.decision.policy_identity()),
-        request_identity: String::from(draft.decision.request_identity()),
-        binding_identity: String::from(draft.decision.binding_identity()),
-        decision_identity: String::from(draft.decision.decision_identity()),
+        provider_identity: alloc::string::String::from(draft.decision.provider_identity()),
+        policy_identity: alloc::string::String::from(draft.decision.policy_identity()),
+        request_identity: alloc::string::String::from(draft.decision.request_identity()),
+        binding_identity: alloc::string::String::from(draft.decision.binding_identity()),
+        decision_identity: alloc::string::String::from(draft.decision.decision_identity()),
         action: draft.decision.action().as_str(),
-        ability: String::from(draft.decision.ability()),
+        ability: alloc::string::String::from(draft.decision.ability()),
         status: draft.decision.status(),
         issue: draft.decision.issue(),
         checked_fact_count: draft.decision.checked_fact_count(),
-        principal_hash: String::from(draft.decision.principal_hash()),
-        resource_hash: String::from(draft.decision.resource_hash()),
-        dispatch_class: String::from(draft.dispatch_class),
+        principal_hash: alloc::string::String::from(draft.decision.principal_hash()),
+        resource_hash: alloc::string::String::from(draft.decision.resource_hash()),
+        dispatch_class: alloc::string::String::from(draft.dispatch_class),
         non_claims: draft
             .non_claims
             .iter()
-            .map(|value| String::from(*value))
+            .map(|value| alloc::string::String::from(*value))
             .collect(),
         receipt_identity,
     })
@@ -124,46 +147,34 @@ pub fn build_host_authority_receipt(
 /// Returns the first stable leak class in credential, private-material, then overclaim order.
 pub fn validate_host_authority_receipt_text(text: &str) -> Result<(), HostAuthorityReceiptLeak> {
     let lowered = text.to_ascii_lowercase();
-    if [
-        "bearer ",
-        "compact_token",
-        "private_key",
-        "signature",
-        "proof_body",
-        "replay_nonce",
-        "credential",
-    ]
-    .iter()
-    .any(|marker| lowered.contains(marker))
+    if CREDENTIAL_MARKERS
+        .iter()
+        .any(|marker| lowered.contains(marker))
     {
         return Err(HostAuthorityReceiptLeak::Credential);
     }
-    if [
-        "raw_prompt",
-        "tool_arguments",
-        "provider_payload",
-        "environment_value",
-        "private_path",
-        "effect_output",
-    ]
-    .iter()
-    .any(|marker| lowered.contains(marker))
+    if PRIVATE_MATERIAL_MARKERS
+        .iter()
+        .any(|marker| lowered.contains(marker))
     {
         return Err(HostAuthorityReceiptLeak::PrivateMaterial);
     }
-    if [
-        "globally trusted",
-        "sandbox is secure",
-        "effect is correct",
-        "agent is safe",
-        "completion proved",
-        "release ready",
-    ]
-    .iter()
-    .any(|marker| lowered.contains(marker))
+    if OVERCLAIM_MARKERS
+        .iter()
+        .any(|marker| lowered.contains(marker))
     {
         return Err(HostAuthorityReceiptLeak::Overclaim);
     }
+    debug_assert!(
+        !CREDENTIAL_MARKERS
+            .iter()
+            .any(|marker| lowered.contains(marker))
+    );
+    debug_assert!(
+        !PRIVATE_MATERIAL_MARKERS
+            .iter()
+            .any(|marker| lowered.contains(marker))
+    );
     Ok(())
 }
 
@@ -171,7 +182,11 @@ fn safe_dispatch_class(value: &str) -> bool {
     matches!(value, "planned" | "committed" | "blocked")
 }
 
-fn receipt_identity(draft: &HostAuthorityReceiptDraft<'_>) -> Result<String, HostAuthorityIssue> {
+fn receipt_identity(
+    draft: &HostAuthorityReceiptDraft<'_>,
+) -> Result<alloc::string::String, super::evaluate::HostAuthorityIssue> {
+    debug_assert!(!draft.dispatch_class.is_empty());
+    debug_assert!(!draft.non_claims.is_empty());
     let checked = draft.decision.checked_fact_count().to_be_bytes();
     let mut hasher = blake3::Hasher::new();
     hasher.update(RECEIPT_DOMAIN);
@@ -189,15 +204,19 @@ fn receipt_identity(draft: &HostAuthorityReceiptDraft<'_>) -> Result<String, Hos
         checked.as_slice(),
         draft.dispatch_class.as_bytes(),
     ] {
-        let length = u64::try_from(field.len()).map_err(|_| HostAuthorityIssue::InvalidBound)?;
-        hasher.update(&length.to_be_bytes());
+        let field_bytes = u64::try_from(field.len())
+            .map_err(|_| super::evaluate::HostAuthorityIssue::InvalidBound)?;
+        hasher.update(&field_bytes.to_be_bytes());
         hasher.update(field);
     }
     for non_claim in draft.non_claims {
-        let length =
-            u64::try_from(non_claim.len()).map_err(|_| HostAuthorityIssue::InvalidBound)?;
-        hasher.update(&length.to_be_bytes());
+        let non_claim_bytes = u64::try_from(non_claim.len())
+            .map_err(|_| super::evaluate::HostAuthorityIssue::InvalidBound)?;
+        hasher.update(&non_claim_bytes.to_be_bytes());
         hasher.update(non_claim.as_bytes());
     }
-    Ok(format!("{BLAKE3_PREFIX}{}", hasher.finalize().to_hex()))
+    Ok(alloc::format!(
+        "{BLAKE3_PREFIX}{}",
+        hasher.finalize().to_hex()
+    ))
 }

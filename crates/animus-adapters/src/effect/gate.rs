@@ -1,25 +1,25 @@
 //! Implementation-neutral authority-provider contracts for guarded host actions.
 
-mod decision;
-mod receipt;
-mod request;
-mod service;
+mod evaluate;
+mod input;
+mod port;
+mod proof;
 
 #[cfg(test)]
 mod tests;
 
-pub use decision::{
+pub use evaluate::{
     EffectiveAuthorityDecision, HostAuthorityDecision, HostAuthorityDecisionDraft,
     HostAuthorityFreshnessClass, HostAuthorityIssue, HostAuthorityReplayClass, HostAuthorityStatus,
-    HostGateStatus, RequiredHostGates, build_host_authority_decision, intersect_host_authority,
+    RequiredHostGates, Status, build_host_authority_decision, intersect_host_authority,
 };
-pub use receipt::{
-    HOST_AUTHORITY_NON_CLAIMS, HostAuthorityReceipt, HostAuthorityReceiptDraft,
-    HostAuthorityReceiptLeak, build_host_authority_receipt, validate_host_authority_receipt_text,
-};
-pub use request::{
+pub use input::{
     AgentAuthorityBinding, AgentAuthorityBindingDraft, BindingFreshness, HostAuthorityBounds,
     HostAuthorityRequest, HostAuthorityRequestDraft, admit_agent_authority_binding,
     admit_host_authority_request, validate_agent_authority_binding_set,
 };
-pub use service::HostAuthorityService;
+pub use port::HostAuthorityService;
+pub use proof::{
+    HOST_AUTHORITY_NON_CLAIMS, HostAuthorityReceipt, HostAuthorityReceiptDraft,
+    HostAuthorityReceiptLeak, build_host_authority_receipt, validate_host_authority_receipt_text,
+};

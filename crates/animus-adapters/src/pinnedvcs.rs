@@ -6,9 +6,6 @@
 //! results. Callers must pass loaded outputs through the pure runtime validator
 //! before they project or retain any observation.
 
-use alloc::string::String;
-use alloc::vec::Vec;
-
 /// Exact reviewed Pijul CLI release.
 pub const PIJUL_CLI_RELEASE: &str = "1.0.0-beta.18";
 /// Upstream change immediately preceding the reviewed crates.io publication.
@@ -160,13 +157,13 @@ pub struct PijulRequest {
     /// Exact operation.
     pub operation: PijulOperation,
     /// Explicit repository path. Receipts must not retain this value.
-    pub repository_path: String,
+    pub repository_path: alloc::string::String,
     /// Stable safe repository identity supplied by the host.
-    pub repository_identity: String,
+    pub repository_identity: alloc::string::String,
     /// Optional exact channel name.
-    pub channel: Option<String>,
+    pub channel: Option<alloc::string::String>,
     /// Optional full change hash or unambiguous prefix.
-    pub change_selector: Option<String>,
+    pub change_selector: Option<alloc::string::String>,
     /// Explicit confirmation state.
     pub confirmation: PijulConfirmation,
 }
@@ -175,11 +172,11 @@ pub struct PijulRequest {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PijulExecutable {
     /// Absolute executable path selected by the host or Nix helper.
-    pub path: String,
+    pub path: alloc::string::String,
     /// Exact safe executable identity expected by policy.
-    pub identity: String,
+    pub identity: alloc::string::String,
     /// Exact reported release expected before invocation.
-    pub release: String,
+    pub release: alloc::string::String,
 }
 
 /// Named finite executor bounds.
@@ -205,13 +202,13 @@ pub struct PijulExecutionRequest {
     /// Exact executable binding.
     pub executable: PijulExecutable,
     /// Explicit argv items, excluding argv zero.
-    pub arguments: Vec<String>,
+    pub arguments: alloc::vec::Vec<alloc::string::String>,
     /// Explicit repository working directory.
-    pub working_directory: String,
+    pub working_directory: alloc::string::String,
     /// Explicit bounded standard input.
-    pub standard_input: Vec<u8>,
+    pub standard_input: alloc::vec::Vec<u8>,
     /// Explicit environment entries. The reviewed plan uses an empty set.
-    pub environment: Vec<(String, String)>,
+    pub environment: alloc::vec::Vec<(alloc::string::String, alloc::string::String)>,
     /// Whether ambient environment inheritance is allowed. The reviewed plan sets false.
     pub inherit_environment: bool,
     /// Named finite bounds.
@@ -226,9 +223,9 @@ pub struct PijulExecutionOutcome {
     /// Child exit code when the child exited.
     pub exit_code: Option<i32>,
     /// Retained bounded standard output.
-    pub standard_output: Vec<u8>,
+    pub standard_output: alloc::vec::Vec<u8>,
     /// Retained bounded standard error.
-    pub standard_error: Vec<u8>,
+    pub standard_error: alloc::vec::Vec<u8>,
     /// True when standard output was truncated by the executor.
     pub stdout_truncated: bool,
     /// True when standard error was truncated by the executor.
@@ -252,28 +249,28 @@ pub trait PijulBoundedExecutor {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PijulLoadedLogEntry {
     /// Full change hash.
-    pub hash: String,
+    pub hash: alloc::string::String,
     /// Optional channel state identity.
-    pub state: Option<String>,
+    pub state: Option<alloc::string::String>,
     /// Descriptive author strings loaded from CLI output.
-    pub authors: Vec<String>,
+    pub authors: alloc::vec::Vec<alloc::string::String>,
     /// Optional descriptive timestamp.
-    pub timestamp: Option<String>,
+    pub timestamp: Option<alloc::string::String>,
     /// Optional change message, omitted from all validated projections.
-    pub message: Option<String>,
+    pub message: Option<alloc::string::String>,
     /// Optional full description, denied by the reviewed profile.
-    pub description: Option<String>,
+    pub description: Option<alloc::string::String>,
     /// Optional repository-relative paths, omitted from default projections.
-    pub paths: Vec<String>,
+    pub paths: alloc::vec::Vec<alloc::string::String>,
 }
 
 /// One loaded diff status before pure cohort validation and path redaction.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PijulLoadedDiffEntry {
     /// Repository-relative path loaded from the CLI.
-    pub path: String,
+    pub path: alloc::string::String,
     /// Exact beta.18 operation label.
-    pub operation: String,
+    pub operation: alloc::string::String,
     /// Optional one-based descriptive line position.
     pub line: Option<u64>,
 }
@@ -282,7 +279,7 @@ pub struct PijulLoadedDiffEntry {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PijulLoadedChannel {
     /// Channel name.
-    pub name: String,
+    pub name: alloc::string::String,
     /// Whether the CLI marked this channel as current.
     pub is_current: bool,
 }
@@ -291,11 +288,11 @@ pub struct PijulLoadedChannel {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum PijulLoadedOutput {
     /// Reviewed beta.18 log JSON values.
-    Log(Vec<PijulLoadedLogEntry>),
+    Log(alloc::vec::Vec<PijulLoadedLogEntry>),
     /// Reviewed beta.18 diff JSON values.
-    Diff(Vec<PijulLoadedDiffEntry>),
+    Diff(alloc::vec::Vec<PijulLoadedDiffEntry>),
     /// Reviewed beta.18 channel line values.
-    Channels(Vec<PijulLoadedChannel>),
+    Channels(alloc::vec::Vec<PijulLoadedChannel>),
 }
 
 /// Untrusted backend response from the host service.
@@ -348,13 +345,13 @@ pub enum PijulServiceIssueKind {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PijulServiceIssue {
     kind: PijulServiceIssueKind,
-    subject: String,
+    subject: alloc::string::String,
 }
 
 impl PijulServiceIssue {
     /// Creates a safe service issue.
     #[must_use]
-    pub fn new(kind: PijulServiceIssueKind, subject: impl Into<String>) -> Self {
+    pub fn new(kind: PijulServiceIssueKind, subject: impl Into<alloc::string::String>) -> Self {
         Self {
             kind,
             subject: subject.into(),

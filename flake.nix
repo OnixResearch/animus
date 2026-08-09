@@ -630,6 +630,32 @@
                 mkdir -p "$out"
               '';
             };
+
+          octetCheck =
+            name: packages:
+            pkgs.runCommand name
+              {
+                nativeBuildInputs = cargoNativeBuildInputs ++ [
+                  pkgs.clippy
+                  cargoOctet
+                ];
+              }
+              ''
+                export HOME="$PWD/home"
+                export CARGO_HOME="$PWD/.cargo-home"
+                mkdir -p "$HOME" "$CARGO_HOME"
+                sed 's|directory = "cargo-vendor-dir/|directory = "${cargoDeps}/|g' \
+                  "${cargoDeps}/.cargo/config.toml" > "$CARGO_HOME/config.toml"
+                cp -r ${source} source
+                chmod -R u+w source
+                cd source
+                export TIGERSTYLE_DRIVER_PATH="${octetDriver}/bin/dylint-driver"
+                export TIGERSTYLE_LINT_LIB="${octetDylintLibPath}"
+                export TIGERSTYLE_TOOLCHAIN="${octetRustupToolchain}"
+                export RUSTFLAGS="''${RUSTFLAGS:-} --cfg animus_octet"
+                cargo-octet check ${packages}
+                mkdir -p "$out"
+              '';
         in
         {
           cargo-fmt = cargoCheck "animus-cargo-fmt" [ pkgs.rustfmt ] ''
@@ -1339,40 +1365,20 @@
                 touch "$out"
               '';
 
-          # Octet currently reports a vendored serde_core module-name finding
-          # while linting crates that pull Steel/Preserves through a store-backed
-          # Cargo vendor directory. Cargo/clippy checks still cover those crates.
-          octet =
-            pkgs.runCommand "animus-octet"
-              {
-                nativeBuildInputs = cargoNativeBuildInputs ++ [
-                  pkgs.clippy
-                  cargoOctet
-                ];
-              }
-              ''
-                export HOME="$PWD/home"
-                export CARGO_HOME="$PWD/.cargo-home"
-                mkdir -p "$HOME" "$CARGO_HOME"
-                sed 's|directory = "cargo-vendor-dir/|directory = "${cargoDeps}/|g' \
-                  "${cargoDeps}/.cargo/config.toml" > "$CARGO_HOME/config.toml"
-                cp -r ${source} source
-                chmod -R u+w source
-                cd source
-                export TIGERSTYLE_DRIVER_PATH="${octetDriver}/bin/dylint-driver"
-                export TIGERSTYLE_LINT_LIB="${octetDylintLibPath}"
-                export TIGERSTYLE_TOOLCHAIN="${octetRustupToolchain}"
-                export RUSTFLAGS="''${RUSTFLAGS:-} --cfg animus_octet"
-                cargo-octet check \
-                  -p animus \
-                  -p animus-adapters \
-                  -p animus-core \
-                  -p animus-router \
-                  -p animus-runtime \
-                  -p animus-std \
-                  -p animus-tui
-                mkdir -p "$out"
-              '';
+          adapters-octet = octetCheck "animus-adapters-octet" ''
+            -p animus-adapters
+          '';
+
+          # This broad rail can expose debt in crates outside a focused change.
+          octet = octetCheck "animus-octet" ''
+            -p animus \
+            -p animus-adapters \
+            -p animus-core \
+            -p animus-router \
+            -p animus-runtime \
+            -p animus-std \
+            -p animus-tui
+          '';
         }
       );
 

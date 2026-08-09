@@ -88,10 +88,15 @@ pub mod atif {
 pub mod rlm_kernel {
     pub use animus_adapter_rlm_kernel::*;
 }
+mod bus;
+#[cfg(test)]
+mod compatibility;
 #[cfg(test)]
 mod familycrates;
 /// Pure family-scoped messaging modes, routing, limits, and receipts.
-pub mod messaging;
+pub mod messaging {
+    pub use super::bus::*;
+}
 /// OpenClaw-inspired security audit and plugin guardrail DTOs.
 #[path = "openclaw/guardrails.rs"]
 pub mod openclaw_guardrails;
@@ -101,8 +106,12 @@ pub mod openclaw_session;
 /// Public orchestration adapter-family DTOs and service contracts.
 pub mod orchestration;
 mod outputguard;
+mod pinnedvcs;
 /// Implementation-free contracts for the optional Pijul CLI adapter.
-pub mod pijul;
+pub mod pijul {
+    pub use super::pinnedvcs::*;
+}
+mod credentials;
 mod port;
 mod profile;
 mod prompt;
@@ -115,20 +124,28 @@ mod roi;
 pub mod router;
 mod safe;
 /// Authority-free credential-resolution admission contracts.
-pub mod secret_resolution;
+pub mod secret_resolution {
+    pub use super::credentials::*;
+}
+mod packs;
 mod security;
 #[cfg(test)]
 mod security_tests;
 mod skill;
 /// Pure frozen and tracked-candidate skill-source lifecycle contracts.
-pub mod skill_source;
+pub mod skill_source {
+    pub use super::packs::*;
+}
+mod normalization;
 /// Pure opt-in SpaceWasm diagnostic admission and receipt contracts.
 pub mod spacewasm;
 mod status;
 mod timed;
 pub mod tool;
 /// Authority-free contracts for optional transcript normalization.
-pub mod trajectory;
+pub mod trajectory {
+    pub use super::normalization::*;
+}
 /// Adapter field validation helpers shared by `animus-adapters` and
 /// downstream crates such as `animus-router`.
 pub mod validation;

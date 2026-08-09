@@ -1,8 +1,3 @@
-use alloc::{format, string::String};
-
-use super::super::GuardedAction;
-use super::decision::HostAuthorityIssue;
-
 const BLAKE3_HEX_BYTES: usize = 64;
 const BLAKE3_PREFIX: &str = "b3:";
 const BASALT_BLAKE3_PREFIX: &str = "blake3:";
@@ -81,17 +76,17 @@ pub struct AgentAuthorityBindingDraft<'a> {
 /// Validated agent-definition to UCAN-principal binding.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AgentAuthorityBinding {
-    display_label: Option<String>,
-    audience_did: String,
-    agent_definition_identity: String,
-    binding_policy_identity: String,
-    freshness_identity: String,
-    subject_identity: String,
-    task_identity: String,
-    actor_identity: String,
-    role_plan_identity: String,
-    session_identity: String,
-    binding_identity: String,
+    display_label: Option<alloc::string::String>,
+    audience_did: alloc::string::String,
+    agent_definition_identity: alloc::string::String,
+    binding_policy_identity: alloc::string::String,
+    freshness_identity: alloc::string::String,
+    subject_identity: alloc::string::String,
+    task_identity: alloc::string::String,
+    actor_identity: alloc::string::String,
+    role_plan_identity: alloc::string::String,
+    session_identity: alloc::string::String,
+    binding_identity: alloc::string::String,
     bounds: HostAuthorityBounds,
 }
 
@@ -176,15 +171,15 @@ impl AgentAuthorityBinding {
 /// Returns a stable issue when a field, bound, DID, BLAKE3 identity, or freshness fact is unsafe.
 pub fn admit_agent_authority_binding(
     draft: AgentAuthorityBindingDraft<'_>,
-) -> Result<AgentAuthorityBinding, HostAuthorityIssue> {
+) -> Result<AgentAuthorityBinding, super::evaluate::HostAuthorityIssue> {
     if !draft.bounds.is_valid() {
-        return Err(HostAuthorityIssue::InvalidBound);
+        return Err(super::evaluate::HostAuthorityIssue::InvalidBound);
     }
     if draft.freshness != BindingFreshness::Current {
-        return Err(HostAuthorityIssue::StaleBinding);
+        return Err(super::evaluate::HostAuthorityIssue::StaleBinding);
     }
     if !valid_did(draft.audience_did, draft.bounds.identity_capacity_bytes) {
-        return Err(HostAuthorityIssue::InvalidPrincipal);
+        return Err(super::evaluate::HostAuthorityIssue::InvalidPrincipal);
     }
     let identities = [
         draft.agent_definition_identity,
@@ -200,14 +195,16 @@ pub fn admit_agent_authority_binding(
         .iter()
         .any(|value| !valid_blake3_identity(value, draft.bounds.identity_capacity_bytes))
     {
-        return Err(HostAuthorityIssue::InvalidIdentity);
+        return Err(super::evaluate::HostAuthorityIssue::InvalidIdentity);
     }
     if draft.display_label.is_some_and(|value| {
         !valid_safe_label(value, draft.bounds.identity_capacity_bytes)
             || value == draft.audience_did
     }) {
-        return Err(HostAuthorityIssue::UnsafeDisplayLabel);
+        return Err(super::evaluate::HostAuthorityIssue::UnsafeDisplayLabel);
     }
+    debug_assert!(draft.bounds.is_valid());
+    debug_assert_eq!(draft.freshness, BindingFreshness::Current);
     let binding_identity = hash_fields(
         BINDING_IDENTITY_DOMAIN,
         &[
@@ -223,16 +220,16 @@ pub fn admit_agent_authority_binding(
         ],
     )?;
     Ok(AgentAuthorityBinding {
-        display_label: draft.display_label.map(String::from),
-        audience_did: String::from(draft.audience_did),
-        agent_definition_identity: String::from(draft.agent_definition_identity),
-        binding_policy_identity: String::from(draft.binding_policy_identity),
-        freshness_identity: String::from(draft.freshness_identity),
-        subject_identity: String::from(draft.subject_identity),
-        task_identity: String::from(draft.task_identity),
-        actor_identity: String::from(draft.actor_identity),
-        role_plan_identity: String::from(draft.role_plan_identity),
-        session_identity: String::from(draft.session_identity),
+        display_label: draft.display_label.map(alloc::string::String::from),
+        audience_did: alloc::string::String::from(draft.audience_did),
+        agent_definition_identity: alloc::string::String::from(draft.agent_definition_identity),
+        binding_policy_identity: alloc::string::String::from(draft.binding_policy_identity),
+        freshness_identity: alloc::string::String::from(draft.freshness_identity),
+        subject_identity: alloc::string::String::from(draft.subject_identity),
+        task_identity: alloc::string::String::from(draft.task_identity),
+        actor_identity: alloc::string::String::from(draft.actor_identity),
+        role_plan_identity: alloc::string::String::from(draft.role_plan_identity),
+        session_identity: alloc::string::String::from(draft.session_identity),
         binding_identity,
         bounds: draft.bounds,
     })
@@ -245,14 +242,14 @@ pub fn admit_agent_authority_binding(
 /// Returns [`HostAuthorityIssue::DuplicateBinding`] when an identity or principal-definition pair repeats.
 pub fn validate_agent_authority_binding_set(
     bindings: &[AgentAuthorityBinding],
-) -> Result<(), HostAuthorityIssue> {
+) -> Result<(), super::evaluate::HostAuthorityIssue> {
     for (index, binding) in bindings.iter().enumerate() {
         if bindings[..index].iter().any(|prior| {
             prior.binding_identity == binding.binding_identity
                 || prior.audience_did == binding.audience_did
                     && prior.agent_definition_identity == binding.agent_definition_identity
         }) {
-            return Err(HostAuthorityIssue::DuplicateBinding);
+            return Err(super::evaluate::HostAuthorityIssue::DuplicateBinding);
         }
     }
     Ok(())
@@ -262,7 +259,7 @@ pub fn validate_agent_authority_binding_set(
 #[derive(Clone, Copy, Debug)]
 pub struct HostAuthorityRequestDraft<'a> {
     /// Guarded action class.
-    pub action: GuardedAction,
+    pub action: super::super::GuardedAction,
     /// Exact provider contract identifier.
     pub contract: &'a str,
     /// Logical capability resource. Physical paths are not admitted.
@@ -298,32 +295,32 @@ pub struct HostAuthorityRequestDraft<'a> {
 /// Validated implementation-neutral request passed to an authority provider.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HostAuthorityRequest {
-    action: GuardedAction,
-    contract: String,
-    resource: String,
-    ability: String,
-    audience_did: String,
-    agent_definition_identity: String,
-    binding_identity: String,
-    binding_policy_identity: String,
-    freshness_identity: String,
-    subject_identity: String,
-    task_identity: String,
-    actor_identity: String,
-    role_plan_identity: String,
-    session_identity: String,
-    policy_identity: String,
-    grant_identity: String,
-    operation_profile_identity: String,
-    correlation_identity: String,
-    request_identity: String,
+    action: super::super::GuardedAction,
+    contract: alloc::string::String,
+    resource: alloc::string::String,
+    ability: alloc::string::String,
+    audience_did: alloc::string::String,
+    agent_definition_identity: alloc::string::String,
+    binding_identity: alloc::string::String,
+    binding_policy_identity: alloc::string::String,
+    freshness_identity: alloc::string::String,
+    subject_identity: alloc::string::String,
+    task_identity: alloc::string::String,
+    actor_identity: alloc::string::String,
+    role_plan_identity: alloc::string::String,
+    session_identity: alloc::string::String,
+    policy_identity: alloc::string::String,
+    grant_identity: alloc::string::String,
+    operation_profile_identity: alloc::string::String,
+    correlation_identity: alloc::string::String,
+    request_identity: alloc::string::String,
     bounds: HostAuthorityBounds,
 }
 
 impl HostAuthorityRequest {
     /// Return the guarded action class.
     #[must_use]
-    pub const fn action(&self) -> GuardedAction {
+    pub const fn action(&self) -> super::super::GuardedAction {
         self.action
     }
     /// Return the provider contract.
@@ -430,40 +427,14 @@ impl HostAuthorityRequest {
 /// Returns a stable issue before any provider or host effect is called.
 pub fn admit_host_authority_request(
     draft: HostAuthorityRequestDraft<'_>,
-) -> Result<HostAuthorityRequest, HostAuthorityIssue> {
-    if !draft.bounds.is_valid() || draft.bounds != draft.binding.bounds {
-        return Err(HostAuthorityIssue::InvalidBound);
-    }
-    if !valid_safe_label(draft.contract, draft.bounds.identity_capacity_bytes)
-        || !valid_safe_label(draft.ability, draft.bounds.identity_capacity_bytes)
-        || !valid_safe_label(
-            draft.correlation_identity,
-            draft.bounds.identity_capacity_bytes,
-        )
-    {
-        return Err(HostAuthorityIssue::InvalidActionBinding);
-    }
-    if !valid_resource(draft.resource, draft.bounds.resource_ceiling_bytes) {
-        return Err(HostAuthorityIssue::InvalidResource);
-    }
-    for identity in [
-        draft.policy_identity,
-        draft.grant_identity,
-        draft.operation_profile_identity,
-    ] {
-        if !valid_blake3_identity(identity, draft.bounds.identity_capacity_bytes) {
-            return Err(HostAuthorityIssue::InvalidIdentity);
-        }
-    }
-    if draft.agent_definition_identity != draft.binding.agent_definition_identity
-        || draft.subject_identity != draft.binding.subject_identity
-        || draft.task_identity != draft.binding.task_identity
-        || draft.actor_identity != draft.binding.actor_identity
-        || draft.role_plan_identity != draft.binding.role_plan_identity
-        || draft.session_identity != draft.binding.session_identity
-    {
-        return Err(HostAuthorityIssue::BindingMismatch);
-    }
+) -> Result<HostAuthorityRequest, super::evaluate::HostAuthorityIssue> {
+    validate_request_metadata(&draft)?;
+    validate_request_binding(&draft)?;
+    debug_assert_eq!(draft.bounds, draft.binding.bounds);
+    debug_assert_eq!(
+        draft.agent_definition_identity,
+        draft.binding.agent_definition_identity
+    );
     let request_identity = hash_fields(
         REQUEST_IDENTITY_DOMAIN,
         &[
@@ -487,26 +458,93 @@ pub fn admit_host_authority_request(
     )?;
     Ok(HostAuthorityRequest {
         action: draft.action,
-        contract: String::from(draft.contract),
-        resource: String::from(draft.resource),
-        ability: String::from(draft.ability),
+        contract: alloc::string::String::from(draft.contract),
+        resource: alloc::string::String::from(draft.resource),
+        ability: alloc::string::String::from(draft.ability),
         audience_did: draft.binding.audience_did.clone(),
-        agent_definition_identity: String::from(draft.agent_definition_identity),
+        agent_definition_identity: alloc::string::String::from(draft.agent_definition_identity),
         binding_identity: draft.binding.binding_identity.clone(),
         binding_policy_identity: draft.binding.binding_policy_identity.clone(),
         freshness_identity: draft.binding.freshness_identity.clone(),
-        subject_identity: String::from(draft.subject_identity),
-        task_identity: String::from(draft.task_identity),
-        actor_identity: String::from(draft.actor_identity),
-        role_plan_identity: String::from(draft.role_plan_identity),
-        session_identity: String::from(draft.session_identity),
-        policy_identity: String::from(draft.policy_identity),
-        grant_identity: String::from(draft.grant_identity),
-        operation_profile_identity: String::from(draft.operation_profile_identity),
-        correlation_identity: String::from(draft.correlation_identity),
+        subject_identity: alloc::string::String::from(draft.subject_identity),
+        task_identity: alloc::string::String::from(draft.task_identity),
+        actor_identity: alloc::string::String::from(draft.actor_identity),
+        role_plan_identity: alloc::string::String::from(draft.role_plan_identity),
+        session_identity: alloc::string::String::from(draft.session_identity),
+        policy_identity: alloc::string::String::from(draft.policy_identity),
+        grant_identity: alloc::string::String::from(draft.grant_identity),
+        operation_profile_identity: alloc::string::String::from(draft.operation_profile_identity),
+        correlation_identity: alloc::string::String::from(draft.correlation_identity),
         request_identity,
         bounds: draft.bounds,
     })
+}
+
+fn validate_request_metadata(
+    draft: &HostAuthorityRequestDraft<'_>,
+) -> Result<(), super::evaluate::HostAuthorityIssue> {
+    if !draft.bounds.is_valid() {
+        return Err(super::evaluate::HostAuthorityIssue::InvalidBound);
+    }
+    if draft.bounds != draft.binding.bounds {
+        return Err(super::evaluate::HostAuthorityIssue::InvalidBound);
+    }
+    let safe_labels = [draft.contract, draft.ability, draft.correlation_identity];
+    if safe_labels
+        .iter()
+        .any(|value| !valid_safe_label(value, draft.bounds.identity_capacity_bytes))
+    {
+        return Err(super::evaluate::HostAuthorityIssue::InvalidActionBinding);
+    }
+    if !valid_resource(draft.resource, draft.bounds.resource_ceiling_bytes) {
+        return Err(super::evaluate::HostAuthorityIssue::InvalidResource);
+    }
+    let public_identities = [
+        draft.policy_identity,
+        draft.grant_identity,
+        draft.operation_profile_identity,
+    ];
+    if public_identities
+        .iter()
+        .any(|value| !valid_blake3_identity(value, draft.bounds.identity_capacity_bytes))
+    {
+        return Err(super::evaluate::HostAuthorityIssue::InvalidIdentity);
+    }
+    debug_assert!(draft.bounds.is_valid());
+    debug_assert!(valid_resource(
+        draft.resource,
+        draft.bounds.resource_ceiling_bytes
+    ));
+    Ok(())
+}
+
+fn validate_request_binding(
+    draft: &HostAuthorityRequestDraft<'_>,
+) -> Result<(), super::evaluate::HostAuthorityIssue> {
+    if draft.agent_definition_identity != draft.binding.agent_definition_identity {
+        return Err(super::evaluate::HostAuthorityIssue::BindingMismatch);
+    }
+    if draft.subject_identity != draft.binding.subject_identity {
+        return Err(super::evaluate::HostAuthorityIssue::BindingMismatch);
+    }
+    if draft.task_identity != draft.binding.task_identity {
+        return Err(super::evaluate::HostAuthorityIssue::BindingMismatch);
+    }
+    if draft.actor_identity != draft.binding.actor_identity {
+        return Err(super::evaluate::HostAuthorityIssue::BindingMismatch);
+    }
+    if draft.role_plan_identity != draft.binding.role_plan_identity {
+        return Err(super::evaluate::HostAuthorityIssue::BindingMismatch);
+    }
+    if draft.session_identity != draft.binding.session_identity {
+        return Err(super::evaluate::HostAuthorityIssue::BindingMismatch);
+    }
+    debug_assert_eq!(
+        draft.agent_definition_identity,
+        draft.binding.agent_definition_identity
+    );
+    debug_assert_eq!(draft.session_identity, draft.binding.session_identity);
+    Ok(())
 }
 
 fn valid_blake3_identity(value: &str, max_bytes: usize) -> bool {
@@ -547,13 +585,22 @@ fn valid_resource(value: &str, max_bytes: usize) -> bool {
         && !value.contains("file://")
 }
 
-fn hash_fields(domain: &[u8], fields: &[&str]) -> Result<String, HostAuthorityIssue> {
+fn hash_fields(
+    domain: &[u8],
+    fields: &[&str],
+) -> Result<alloc::string::String, super::evaluate::HostAuthorityIssue> {
+    debug_assert!(!domain.is_empty());
+    debug_assert!(!fields.is_empty());
     let mut hasher = blake3::Hasher::new();
     hasher.update(domain);
     for field in fields {
-        let length = u64::try_from(field.len()).map_err(|_| HostAuthorityIssue::InvalidBound)?;
-        hasher.update(&length.to_be_bytes());
+        let field_bytes = u64::try_from(field.len())
+            .map_err(|_| super::evaluate::HostAuthorityIssue::InvalidBound)?;
+        hasher.update(&field_bytes.to_be_bytes());
         hasher.update(field.as_bytes());
     }
-    Ok(format!("{BLAKE3_PREFIX}{}", hasher.finalize().to_hex()))
+    Ok(alloc::format!(
+        "{BLAKE3_PREFIX}{}",
+        hasher.finalize().to_hex()
+    ))
 }

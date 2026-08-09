@@ -1,6 +1,4 @@
 use super::*;
-use crate::GuardedAction;
-
 const HASH_A: &str = "b3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const HASH_B: &str = "b3:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 const HASH_C: &str = "b3:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc";
@@ -39,7 +37,7 @@ fn binding() -> AgentAuthorityBinding {
 
 fn request(binding: &AgentAuthorityBinding) -> HostAuthorityRequest {
     admit_host_authority_request(HostAuthorityRequestDraft {
-        action: GuardedAction::Filesystem,
+        action: crate::GuardedAction::Filesystem,
         contract: "document-write",
         resource: RESOURCE,
         ability: "document/write",
@@ -78,19 +76,19 @@ fn allowed(request: &HostAuthorityRequest) -> HostAuthorityDecision {
 
 fn all_gates() -> RequiredHostGates {
     RequiredHostGates {
-        agent_definition: HostGateStatus::Allowed,
-        semantic_role: HostGateStatus::Allowed,
-        parent: HostGateStatus::Allowed,
-        task: HostGateStatus::Allowed,
-        model: HostGateStatus::Allowed,
-        tool: HostGateStatus::Allowed,
-        workspace: HostGateStatus::Allowed,
-        approval: HostGateStatus::Allowed,
-        sandbox: HostGateStatus::Allowed,
-        cancellation: HostGateStatus::Allowed,
-        timeout: HostGateStatus::Allowed,
-        budget: HostGateStatus::Allowed,
-        runtime_authority_seal: HostGateStatus::Allowed,
+        agent_definition: Status::Allowed,
+        semantic_role: Status::Allowed,
+        parent: Status::Allowed,
+        task: Status::Allowed,
+        model: Status::Allowed,
+        tool: Status::Allowed,
+        workspace: Status::Allowed,
+        approval: Status::Allowed,
+        sandbox: Status::Allowed,
+        cancellation: Status::Allowed,
+        timeout: Status::Allowed,
+        budget: Status::Allowed,
+        runtime_authority_seal: Status::Allowed,
     }
 }
 
@@ -162,7 +160,7 @@ fn stale_name_only_drift_duplicate_wildcard_and_local_denial_fail_closed() {
         HostAuthorityIssue::DuplicateBinding
     );
     let mut drift = HostAuthorityRequestDraft {
-        action: GuardedAction::Tool,
+        action: crate::GuardedAction::Tool,
         contract: "tool-call",
         resource: "tool:read",
         ability: "tool/invoke",
@@ -193,7 +191,7 @@ fn stale_name_only_drift_duplicate_wildcard_and_local_denial_fail_closed() {
     let request = request(&binding);
     let decision = allowed(&request);
     let mut gates = all_gates();
-    gates.sandbox = HostGateStatus::Denied;
+    gates.sandbox = Status::Denied;
     let effective = intersect_host_authority(&decision, gates);
     assert_eq!(effective.status, HostAuthorityStatus::Denied);
     assert_eq!(effective.issue, HostAuthorityIssue::LocalGateDenied);

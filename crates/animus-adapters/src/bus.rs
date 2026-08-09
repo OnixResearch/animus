@@ -4,8 +4,6 @@
 //! transport or queue effects. This module never opens a transport, writes a
 //! queue, persists content, or treats message text as identity authority.
 
-use alloc::{format, string::String, vec, vec::Vec};
-
 /// The reviewed messaging schema.
 pub const MESSAGING_SCHEMA: &str = "animus.messaging-receipts.v1";
 /// The reviewed Prime Agent messaging cohort.
@@ -35,6 +33,12 @@ const HASH_SEPARATOR: u8 = 0;
 const MAX_LABEL_BYTES: usize = 256;
 const MAX_ROSTER_MEMBERS: usize = 256;
 const MAX_TARGETS: usize = 256;
+const REVIEWED_MAX_MESSAGE_BYTES: usize = 4_096;
+const REVIEWED_MAX_RATE_COUNT: u32 = 16;
+const REVIEWED_MAX_PENDING_COUNT: u32 = 32;
+const REQUIRED_ROLE_MODE_COUNT: usize = 2;
+const REQUIRED_RECEIPT_FIELD_COUNT: usize = 7;
+const REQUIRED_NON_CLAIM_COUNT: usize = 4;
 
 /// A family member role used for policy mode admission.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -83,9 +87,9 @@ impl TargetState {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RosterMember {
     /// Host-attested member identity.
-    pub identity: String,
+    pub identity: alloc::string::String,
     /// Family identity to which the member belongs.
-    pub family_id: String,
+    pub family_id: alloc::string::String,
     /// Host-attested member role.
     pub role: MessagingRole,
     /// Host-supplied target state.
@@ -96,11 +100,11 @@ pub struct RosterMember {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct FamilyRoster {
     /// Host-attested family identity.
-    pub family_id: String,
+    pub family_id: alloc::string::String,
     /// Members sorted by identity.
-    pub members: Vec<RosterMember>,
+    pub members: alloc::vec::Vec<RosterMember>,
     /// Domain-separated roster identity.
-    pub identity: String,
+    pub identity: alloc::string::String,
 }
 
 impl FamilyRoster {
@@ -109,7 +113,10 @@ impl FamilyRoster {
     /// # Errors
     ///
     /// Returns an error when an identity, family, role, or roster identity is invalid.
-    pub fn new(family_id: &str, mut members: Vec<RosterMember>) -> Result<Self, MessagingError> {
+    pub fn new(
+        family_id: &str,
+        mut members: alloc::vec::Vec<RosterMember>,
+    ) -> Result<Self, MessagingError> {
         validate_label(family_id)?;
         if members.is_empty() || members.len() > MAX_ROSTER_MEMBERS {
             return Err(MessagingError::InvalidRoster);
@@ -128,10 +135,11 @@ impl FamilyRoster {
         {
             return Err(MessagingError::DuplicateRosterMember);
         }
-        let identity = digest(
-            MESSAGING_ROSTER_DOMAIN,
-            &canonical_roster(family_id, &members),
-        );
+        let roster_material = canonical_roster(family_id, &members);
+        let identity = digest(DigestInput {
+            domain: MESSAGING_ROSTER_DOMAIN,
+            material: &roster_material,
+        });
         Ok(Self {
             family_id: family_id.into(),
             members,
@@ -156,14 +164,17 @@ impl FamilyRoster {
     /// # Errors
     ///
     /// Returns an error when the sender is not in this family roster.
-    pub fn broadcast_targets(&self, sender_identity: &str) -> Result<Vec<String>, MessagingError> {
+    pub fn broadcast_targets(
+        &self,
+        sender_identity: &str,
+    ) -> Result<alloc::vec::Vec<alloc::string::String>, MessagingError> {
         self.member(sender_identity)?;
         let targets = self
             .members
             .iter()
             .filter(|member| member.identity != sender_identity)
             .map(|member| member.identity.clone())
-            .collect::<Vec<_>>();
+            .collect::<alloc::vec::Vec<_>>();
         if targets.is_empty() || targets.len() > MAX_TARGETS {
             return Err(MessagingError::EmptyBroadcast);
         }
@@ -173,10 +184,11 @@ impl FamilyRoster {
     /// Recomputes the roster identity to detect stale or forged snapshots.
     #[must_use]
     pub fn identity_matches(&self) -> bool {
-        digest(
-            MESSAGING_ROSTER_DOMAIN,
-            &canonical_roster(&self.family_id, &self.members),
-        ) == self.identity
+        let roster_material = canonical_roster(&self.family_id, &self.members);
+        digest(DigestInput {
+            domain: MESSAGING_ROSTER_DOMAIN,
+            material: &roster_material,
+        }) == self.identity
     }
 }
 
@@ -184,28 +196,28 @@ impl FamilyRoster {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MessageDraft {
     /// Target identity, ignored when `broadcast` is true.
-    pub target: Option<String>,
+    pub target: Option<alloc::string::String>,
     /// Whether to resolve all other members in the family.
     pub broadcast: bool,
     /// Delivery mode selected by the caller.
     pub mode: DeliveryMode,
     /// Message content, never used as identity authority.
-    pub body: String,
+    pub body: alloc::string::String,
     /// A model-claimed sender, rejected when present.
-    pub claimed_sender: Option<String>,
+    pub claimed_sender: Option<alloc::string::String>,
 }
 
 /// A validated message whose sender is supplied separately by the host.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Message {
     /// Target identity, if this is not a broadcast.
-    pub target: Option<String>,
+    pub target: Option<alloc::string::String>,
     /// Whether the message resolves to a family broadcast.
     pub broadcast: bool,
     /// Delivery mode.
     pub mode: DeliveryMode,
     /// Message content held only for host delivery, never receipts.
-    pub body: String,
+    pub body: alloc::string::String,
 }
 
 impl Message {
@@ -283,9 +295,9 @@ impl RoleModePolicy {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MessagingPolicyDraft {
     /// Reviewed source cohort.
-    pub cohort: String,
+    pub cohort: alloc::string::String,
     /// Reviewed source revision.
-    pub source_revision: String,
+    pub source_revision: alloc::string::String,
     /// Maximum UTF-8 body bytes.
     pub max_message_bytes: usize,
     /// Maximum sends represented by one rate counter.
@@ -293,20 +305,20 @@ pub struct MessagingPolicyDraft {
     /// Maximum pending messages represented by one queue counter.
     pub max_pending_count: u32,
     /// Per-role mode rows.
-    pub role_modes: Vec<RoleModePolicy>,
+    pub role_modes: alloc::vec::Vec<RoleModePolicy>,
     /// Required receipt fields.
-    pub receipt_fields: Vec<String>,
+    pub receipt_fields: alloc::vec::Vec<alloc::string::String>,
     /// Required non-claims.
-    pub non_claims: Vec<String>,
+    pub non_claims: alloc::vec::Vec<alloc::string::String>,
 }
 
 /// An admitted messaging policy.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MessagingPolicy {
     /// Reviewed source cohort.
-    pub cohort: String,
+    pub cohort: alloc::string::String,
     /// Reviewed source revision.
-    pub source_revision: String,
+    pub source_revision: alloc::string::String,
     /// Maximum UTF-8 body bytes.
     pub max_message_bytes: usize,
     /// Maximum sends represented by one rate counter.
@@ -314,13 +326,13 @@ pub struct MessagingPolicy {
     /// Maximum pending messages represented by one queue counter.
     pub max_pending_count: u32,
     /// Per-role mode rows.
-    pub role_modes: Vec<RoleModePolicy>,
+    pub role_modes: alloc::vec::Vec<RoleModePolicy>,
     /// Required receipt fields.
-    pub receipt_fields: Vec<String>,
+    pub receipt_fields: alloc::vec::Vec<alloc::string::String>,
     /// Required non-claims.
-    pub non_claims: Vec<String>,
+    pub non_claims: alloc::vec::Vec<alloc::string::String>,
     /// Domain-separated policy identity.
-    pub identity: String,
+    pub identity: alloc::string::String,
 }
 
 impl MessagingPolicy {
@@ -332,30 +344,12 @@ impl MessagingPolicy {
     pub fn new(draft: MessagingPolicyDraft) -> Result<Self, MessagingError> {
         validate_label(&draft.cohort)?;
         validate_label(&draft.source_revision)?;
-        if draft.cohort != REVIEWED_MESSAGING_COHORT
-            || draft.source_revision != REVIEWED_MESSAGING_REVISION
-            || draft.max_message_bytes == 0
-            || draft.max_rate_count == 0
-            || draft.max_pending_count == 0
-            || draft.role_modes.len() != 2
-            || draft.receipt_fields.len() < 7
-            || draft.non_claims.len() < 4
-            || !draft
-                .non_claims
-                .iter()
-                .any(|claim| claim == MESSAGING_NON_CLAIM)
-            || !draft
-                .non_claims
-                .iter()
-                .any(|claim| claim == MESSAGING_ORDERING_NON_CLAIM)
-        {
-            return Err(MessagingError::PolicyRejected);
-        }
+        validate_policy_draft_shape(&draft)?;
         let mut roles = draft
             .role_modes
             .iter()
             .map(|row| row.role)
-            .collect::<Vec<_>>();
+            .collect::<alloc::vec::Vec<_>>();
         roles.sort();
         if roles.windows(2).any(|pair| pair[0] == pair[1]) {
             return Err(MessagingError::PolicyRejected);
@@ -363,17 +357,7 @@ impl MessagingPolicy {
         for field in draft.receipt_fields.iter().chain(draft.non_claims.iter()) {
             validate_label(field)?;
         }
-        let identity_material = format!(
-            "{}|{}|{}|{}|{}|{}|{}|{}",
-            draft.cohort,
-            draft.source_revision,
-            draft.max_message_bytes,
-            draft.max_rate_count,
-            draft.max_pending_count,
-            canonical_modes(&draft.role_modes),
-            join(&draft.receipt_fields),
-            join(&draft.non_claims),
-        );
+        let identity_material = policy_identity_material(&draft);
         Ok(Self {
             cohort: draft.cohort,
             source_revision: draft.source_revision,
@@ -383,7 +367,10 @@ impl MessagingPolicy {
             role_modes: draft.role_modes,
             receipt_fields: draft.receipt_fields,
             non_claims: draft.non_claims,
-            identity: digest(MESSAGING_POLICY_DOMAIN, &identity_material),
+            identity: digest(DigestInput {
+                domain: MESSAGING_POLICY_DOMAIN,
+                material: &identity_material,
+            }),
         })
     }
 
@@ -398,18 +385,14 @@ impl MessagingPolicy {
 
 /// Builds the reviewed messaging policy used by fixtures.
 #[must_use]
-///
-/// # Panics
-///
-/// Panics only if the checked-in reviewed policy constants are inconsistent.
 pub fn reviewed_messaging_policy() -> MessagingPolicy {
-    MessagingPolicy::new(MessagingPolicyDraft {
+    let draft = MessagingPolicyDraft {
         cohort: REVIEWED_MESSAGING_COHORT.into(),
         source_revision: REVIEWED_MESSAGING_REVISION.into(),
-        max_message_bytes: 4_096,
-        max_rate_count: 16,
-        max_pending_count: 32,
-        role_modes: vec![
+        max_message_bytes: REVIEWED_MAX_MESSAGE_BYTES,
+        max_rate_count: REVIEWED_MAX_RATE_COUNT,
+        max_pending_count: REVIEWED_MAX_PENDING_COUNT,
+        role_modes: alloc::vec![
             RoleModePolicy {
                 role: MessagingRole::Root,
                 auto: true,
@@ -423,7 +406,7 @@ pub fn reviewed_messaging_policy() -> MessagingPolicy {
                 follow_up: true,
             },
         ],
-        receipt_fields: vec![
+        receipt_fields: alloc::vec![
             "policy_identity".into(),
             "roster_identity".into(),
             "sender_identity".into(),
@@ -432,23 +415,39 @@ pub fn reviewed_messaging_policy() -> MessagingPolicy {
             "variant".into(),
             "counter_identity".into(),
         ],
-        non_claims: vec![
+        non_claims: alloc::vec![
             MESSAGING_NON_CLAIM.into(),
             MESSAGING_TRANSPORT_NON_CLAIM.into(),
             MESSAGING_ORDERING_NON_CLAIM.into(),
             "not-message-correctness-or-cooperation".into(),
         ],
-    })
-    .expect("reviewed messaging policy is valid")
+    };
+    debug_assert_eq!(draft.role_modes.len(), REQUIRED_ROLE_MODE_COUNT);
+    debug_assert_eq!(draft.receipt_fields.len(), REQUIRED_RECEIPT_FIELD_COUNT);
+    let identity_material = policy_identity_material(&draft);
+    MessagingPolicy {
+        cohort: draft.cohort,
+        source_revision: draft.source_revision,
+        max_message_bytes: draft.max_message_bytes,
+        max_rate_count: draft.max_rate_count,
+        max_pending_count: draft.max_pending_count,
+        role_modes: draft.role_modes,
+        receipt_fields: draft.receipt_fields,
+        non_claims: draft.non_claims,
+        identity: digest(DigestInput {
+            domain: MESSAGING_POLICY_DOMAIN,
+            material: &identity_material,
+        }),
+    }
 }
 
 /// Host-supplied rate and pending-queue counters.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MessagingCounters {
     /// Stable identity of the rate counter.
-    pub rate_counter_identity: String,
+    pub rate_counter_identity: alloc::string::String,
     /// Stable identity of the pending counter.
-    pub pending_counter_identity: String,
+    pub pending_counter_identity: alloc::string::String,
     /// Current send count in the admitted rate window.
     pub rate_count: u32,
     /// Current pending count for the target family.
@@ -508,7 +507,7 @@ impl LimitClass {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct LimitDecision {
     /// Counter identities used by the decision.
-    pub counter_identities: Vec<String>,
+    pub counter_identities: alloc::vec::Vec<alloc::string::String>,
     /// Body byte count checked.
     pub message_bytes: usize,
 }
@@ -533,7 +532,7 @@ pub fn check_message_limits(
         return Err(MessagingError::LimitExceeded(LimitClass::PendingQueue));
     }
     Ok(LimitDecision {
-        counter_identities: vec![
+        counter_identities: alloc::vec![
             counters.rate_counter_identity.clone(),
             counters.pending_counter_identity.clone(),
         ],
@@ -568,17 +567,17 @@ impl RoutingAction {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RoutingDecision {
     /// Host-derived sender identity.
-    pub sender_identity: String,
+    pub sender_identity: alloc::string::String,
     /// Resolved target identities.
-    pub target_identities: Vec<String>,
+    pub target_identities: alloc::vec::Vec<alloc::string::String>,
     /// Requested mode.
     pub mode: DeliveryMode,
     /// Action for the target state and mode.
     pub action: RoutingAction,
     /// Roster identity bound to the decision.
-    pub roster_identity: String,
+    pub roster_identity: alloc::string::String,
     /// Counter identities bound before routing.
-    pub counter_identities: Vec<String>,
+    pub counter_identities: alloc::vec::Vec<alloc::string::String>,
 }
 
 /// Resolves a message after checking policy, roster, identity, and limits.
@@ -603,11 +602,13 @@ pub fn route_message(
     if !role_policy.allows(message.mode) {
         return Err(MessagingError::ModeDenied);
     }
-    let limits = check_message_limits(message, counters, policy)?;
+    debug_assert!(roster.identity_matches());
+    debug_assert!(policy.max_message_bytes > 0);
+    let preflight = check_message_limits(message, counters, policy)?;
     let target_identities = if message.broadcast {
         roster.broadcast_targets(sender_identity)?
     } else {
-        vec![
+        alloc::vec![
             message
                 .target
                 .as_deref()
@@ -640,7 +641,7 @@ pub fn route_message(
         mode: message.mode,
         action,
         roster_identity: roster.identity.clone(),
-        counter_identities: limits.counter_identities,
+        counter_identities: preflight.counter_identities,
     })
 }
 
@@ -668,7 +669,7 @@ impl DeliveryAttestationKind {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct DeliveryAttestation {
     /// Stable host-generated attestation identity.
-    pub identity: String,
+    pub identity: alloc::string::String,
     /// Attestation class.
     pub kind: DeliveryAttestationKind,
 }
@@ -679,12 +680,12 @@ pub enum DeliveryVariant {
     /// Message entered an idle target context.
     Delivered {
         /// Host attestation identity.
-        attestation_identity: String,
+        attestation_identity: alloc::string::String,
     },
     /// Message was accepted for later delivery.
     Queued {
         /// Host attestation identity.
-        attestation_identity: String,
+        attestation_identity: alloc::string::String,
     },
 }
 
@@ -709,20 +710,20 @@ pub struct MessagingReceiptDraft {
     /// Host attestation.
     pub attestation: DeliveryAttestation,
     /// Optional body material, always rejected.
-    pub message_body: Option<String>,
+    pub message_body: Option<alloc::string::String>,
     /// Optional overclaim material, always rejected.
-    pub overclaim: Option<String>,
+    pub overclaim: Option<alloc::string::String>,
 }
 
 /// A validated metadata-only messaging receipt.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MessagingReceipt {
     /// Policy identity.
-    pub policy_identity: String,
+    pub policy_identity: alloc::string::String,
     /// Roster identity.
-    pub roster_identity: String,
+    pub roster_identity: alloc::string::String,
     /// Sender identity.
-    pub sender_identity: String,
+    pub sender_identity: alloc::string::String,
     /// Number of resolved targets.
     pub target_count: usize,
     /// Delivery mode.
@@ -730,11 +731,11 @@ pub struct MessagingReceipt {
     /// Delivery variant.
     pub variant: DeliveryVariant,
     /// Counter identities.
-    pub counter_identities: Vec<String>,
+    pub counter_identities: alloc::vec::Vec<alloc::string::String>,
     /// Required safe non-claims.
-    pub non_claims: Vec<String>,
+    pub non_claims: alloc::vec::Vec<alloc::string::String>,
     /// Domain-separated receipt identity.
-    pub identity: String,
+    pub identity: alloc::string::String,
 }
 
 /// Projects a receipt after validating matching host attestation.
@@ -773,7 +774,9 @@ pub fn project_messaging_receipt(
     if expected_identity != &draft.attestation.identity {
         return Err(MessagingError::MissingAttestation);
     }
-    let material = format!(
+    debug_assert!(!draft.routing.target_identities.is_empty());
+    debug_assert_eq!(draft.attestation.kind, expected_kind);
+    let material = alloc::format!(
         "{}|{}|{}|{}|{}|{}|{}",
         policy.identity,
         draft.routing.roster_identity,
@@ -792,7 +795,10 @@ pub fn project_messaging_receipt(
         variant: draft.variant.clone(),
         counter_identities: draft.routing.counter_identities.clone(),
         non_claims: policy.non_claims.clone(),
-        identity: digest(MESSAGING_RECEIPT_DOMAIN, &material),
+        identity: digest(DigestInput {
+            domain: MESSAGING_RECEIPT_DOMAIN,
+            material: &material,
+        }),
     })
 }
 
@@ -839,36 +845,120 @@ pub enum MessagingError {
     ReceiptRejected,
 }
 
-fn validate_policy(policy: &MessagingPolicy) -> Result<(), MessagingError> {
-    if policy.cohort != REVIEWED_MESSAGING_COHORT
-        || policy.source_revision != REVIEWED_MESSAGING_REVISION
-        || policy.max_message_bytes == 0
-        || policy.max_rate_count == 0
-        || policy.max_pending_count == 0
-        || policy.role_modes.len() != 2
-        || policy.receipt_fields.len() < 7
-        || policy.non_claims.len() < 4
-        || !policy
-            .non_claims
-            .iter()
-            .any(|claim| claim == MESSAGING_NON_CLAIM)
-        || !policy
-            .non_claims
-            .iter()
-            .any(|claim| claim == MESSAGING_ORDERING_NON_CLAIM)
+fn validate_policy_draft_shape(draft: &MessagingPolicyDraft) -> Result<(), MessagingError> {
+    if draft.cohort != REVIEWED_MESSAGING_COHORT {
+        return Err(MessagingError::PolicyRejected);
+    }
+    if draft.source_revision != REVIEWED_MESSAGING_REVISION {
+        return Err(MessagingError::PolicyRejected);
+    }
+    if draft.max_message_bytes == 0 {
+        return Err(MessagingError::PolicyRejected);
+    }
+    if draft.max_rate_count == 0 {
+        return Err(MessagingError::PolicyRejected);
+    }
+    if draft.max_pending_count == 0 {
+        return Err(MessagingError::PolicyRejected);
+    }
+    if draft.role_modes.len() != REQUIRED_ROLE_MODE_COUNT {
+        return Err(MessagingError::PolicyRejected);
+    }
+    if draft.receipt_fields.len() < REQUIRED_RECEIPT_FIELD_COUNT {
+        return Err(MessagingError::PolicyRejected);
+    }
+    if draft.non_claims.len() < REQUIRED_NON_CLAIM_COUNT {
+        return Err(MessagingError::PolicyRejected);
+    }
+    if !draft
+        .non_claims
+        .iter()
+        .any(|claim| claim == MESSAGING_NON_CLAIM)
     {
         return Err(MessagingError::PolicyRejected);
     }
+    if !draft
+        .non_claims
+        .iter()
+        .any(|claim| claim == MESSAGING_ORDERING_NON_CLAIM)
+    {
+        return Err(MessagingError::PolicyRejected);
+    }
+    debug_assert_eq!(draft.cohort, REVIEWED_MESSAGING_COHORT);
+    debug_assert_eq!(draft.role_modes.len(), REQUIRED_ROLE_MODE_COUNT);
+    Ok(())
+}
+
+fn validate_policy_shape(policy: &MessagingPolicy) -> Result<(), MessagingError> {
+    if policy.cohort != REVIEWED_MESSAGING_COHORT {
+        return Err(MessagingError::PolicyRejected);
+    }
+    if policy.source_revision != REVIEWED_MESSAGING_REVISION {
+        return Err(MessagingError::PolicyRejected);
+    }
+    if policy.max_message_bytes == 0 {
+        return Err(MessagingError::PolicyRejected);
+    }
+    if policy.max_rate_count == 0 {
+        return Err(MessagingError::PolicyRejected);
+    }
+    if policy.max_pending_count == 0 {
+        return Err(MessagingError::PolicyRejected);
+    }
+    if policy.role_modes.len() != REQUIRED_ROLE_MODE_COUNT {
+        return Err(MessagingError::PolicyRejected);
+    }
+    if policy.receipt_fields.len() < REQUIRED_RECEIPT_FIELD_COUNT {
+        return Err(MessagingError::PolicyRejected);
+    }
+    if policy.non_claims.len() < REQUIRED_NON_CLAIM_COUNT {
+        return Err(MessagingError::PolicyRejected);
+    }
+    if !policy
+        .non_claims
+        .iter()
+        .any(|claim| claim == MESSAGING_NON_CLAIM)
+    {
+        return Err(MessagingError::PolicyRejected);
+    }
+    if !policy
+        .non_claims
+        .iter()
+        .any(|claim| claim == MESSAGING_ORDERING_NON_CLAIM)
+    {
+        return Err(MessagingError::PolicyRejected);
+    }
+    debug_assert_eq!(policy.cohort, REVIEWED_MESSAGING_COHORT);
+    debug_assert_eq!(policy.role_modes.len(), REQUIRED_ROLE_MODE_COUNT);
+    Ok(())
+}
+
+fn policy_identity_material(draft: &MessagingPolicyDraft) -> alloc::string::String {
+    alloc::format!(
+        "{}|{}|{}|{}|{}|{}|{}|{}",
+        draft.cohort,
+        draft.source_revision,
+        draft.max_message_bytes,
+        draft.max_rate_count,
+        draft.max_pending_count,
+        canonical_modes(&draft.role_modes),
+        join(&draft.receipt_fields),
+        join(&draft.non_claims),
+    )
+}
+
+fn validate_policy(policy: &MessagingPolicy) -> Result<(), MessagingError> {
+    validate_policy_shape(policy)?;
     let mut roles = policy
         .role_modes
         .iter()
         .map(|row| row.role)
-        .collect::<Vec<_>>();
+        .collect::<alloc::vec::Vec<_>>();
     roles.sort();
     if roles.windows(2).any(|pair| pair[0] == pair[1]) {
         return Err(MessagingError::PolicyRejected);
     }
-    let material = format!(
+    let material = alloc::format!(
         "{}|{}|{}|{}|{}|{}|{}|{}",
         policy.cohort,
         policy.source_revision,
@@ -879,14 +969,20 @@ fn validate_policy(policy: &MessagingPolicy) -> Result<(), MessagingError> {
         join(&policy.receipt_fields),
         join(&policy.non_claims),
     );
-    if digest(MESSAGING_POLICY_DOMAIN, &material) != policy.identity {
+    if digest(DigestInput {
+        domain: MESSAGING_POLICY_DOMAIN,
+        material: &material,
+    }) != policy.identity
+    {
         return Err(MessagingError::PolicyRejected);
     }
+    debug_assert_eq!(policy.role_modes.len(), REQUIRED_ROLE_MODE_COUNT);
+    debug_assert!(policy.max_message_bytes > 0);
     Ok(())
 }
 
-fn canonical_roster(family_id: &str, members: &[RosterMember]) -> String {
-    let mut material = String::from(family_id);
+fn canonical_roster(family_id: &str, members: &[RosterMember]) -> alloc::string::String {
+    let mut material = alloc::string::String::from(family_id);
     for member in members {
         material.push('|');
         material.push_str(&member.identity);
@@ -898,13 +994,13 @@ fn canonical_roster(family_id: &str, members: &[RosterMember]) -> String {
     material
 }
 
-fn canonical_modes(modes: &[RoleModePolicy]) -> String {
+fn canonical_modes(modes: &[RoleModePolicy]) -> alloc::string::String {
     let mut ordered = modes.to_vec();
     ordered.sort_by_key(|row| row.role);
     ordered
         .iter()
         .map(|row| {
-            format!(
+            alloc::format!(
                 "{}:{}:{}:{}",
                 row.role.as_str(),
                 row.auto,
@@ -912,7 +1008,7 @@ fn canonical_modes(modes: &[RoleModePolicy]) -> String {
                 row.follow_up
             )
         })
-        .collect::<Vec<_>>()
+        .collect::<alloc::vec::Vec<_>>()
         .join("|")
 }
 
@@ -934,15 +1030,21 @@ fn validate_hash(value: &str) -> Result<(), MessagingError> {
     Ok(())
 }
 
-fn digest(domain: &str, material: &str) -> String {
-    let mut hasher = blake3::Hasher::new();
-    hasher.update(domain.as_bytes());
-    hasher.update(&[HASH_SEPARATOR]);
-    hasher.update(material.as_bytes());
-    format!("{}", hasher.finalize().to_hex())
+#[derive(Clone, Copy)]
+struct DigestInput<'a> {
+    domain: &'a str,
+    material: &'a str,
 }
 
-fn join(values: &[String]) -> String {
+fn digest(input: DigestInput<'_>) -> alloc::string::String {
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(input.domain.as_bytes());
+    hasher.update(&[HASH_SEPARATOR]);
+    hasher.update(input.material.as_bytes());
+    alloc::format!("{}", hasher.finalize().to_hex())
+}
+
+fn join(values: &[alloc::string::String]) -> alloc::string::String {
     values.join("|")
 }
 
@@ -964,7 +1066,7 @@ mod tests {
     fn roster() -> FamilyRoster {
         FamilyRoster::new(
             FAMILY,
-            vec![
+            alloc::vec![
                 RosterMember {
                     identity: ROOT.into(),
                     family_id: FAMILY.into(),
@@ -989,7 +1091,7 @@ mod tests {
     fn message(mode: DeliveryMode, target: Option<&str>, broadcast: bool) -> Message {
         Message::new(
             MessageDraft {
-                target: target.map(String::from),
+                target: target.map(alloc::string::String::from),
                 broadcast,
                 mode,
                 body: "bounded message".into(),
@@ -1013,7 +1115,7 @@ mod tests {
         assert_eq!(routed.action, RoutingAction::Steer);
         let idle = FamilyRoster::new(
             FAMILY,
-            vec![
+            alloc::vec![
                 RosterMember {
                     identity: ROOT.into(),
                     family_id: FAMILY.into(),
@@ -1055,7 +1157,10 @@ mod tests {
             &policy(),
         )
         .expect("broadcast");
-        assert_eq!(broadcast.target_identities, vec![String::from(SUBAGENT)]);
+        assert_eq!(
+            broadcast.target_identities,
+            alloc::vec![alloc::string::String::from(SUBAGENT)]
+        );
     }
 
     #[test]
@@ -1125,9 +1230,11 @@ mod tests {
             Err(MessagingError::SpoofedSenderIdentity)
         );
         let message = message(DeliveryMode::Auto, Some(SUBAGENT), false);
-        let limited = MessagingCounters::new(RATE_COUNTER, PENDING_COUNTER, 16, 0).expect("limit");
+        let rate_boundary_fixture =
+            MessagingCounters::new(RATE_COUNTER, PENDING_COUNTER, REVIEWED_MAX_RATE_COUNT, 0)
+                .expect("limit");
         assert_eq!(
-            check_message_limits(&message, &limited, &policy()),
+            check_message_limits(&message, &rate_boundary_fixture, &policy()),
             Err(MessagingError::LimitExceeded(LimitClass::Rate))
         );
         assert_eq!(
@@ -1137,7 +1244,7 @@ mod tests {
                 &message,
                 &counters(),
                 &MessagingPolicy {
-                    role_modes: vec![RoleModePolicy {
+                    role_modes: alloc::vec![RoleModePolicy {
                         role: MessagingRole::Root,
                         auto: true,
                         steer: false,

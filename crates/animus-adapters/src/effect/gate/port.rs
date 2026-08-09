@@ -1,5 +1,3 @@
-use super::{HostAuthorityDecision, HostAuthorityIssue, HostAuthorityRequest};
-
 /// Replaceable host-authority provider over implementation-neutral Animus contracts.
 pub trait HostAuthorityService {
     /// Evaluate one exact validated request without dispatching its host effect.
@@ -10,6 +8,6 @@ pub trait HostAuthorityService {
     /// denied, or unable to produce a safe exact decision.
     fn authorize(
         &mut self,
-        request: &HostAuthorityRequest,
-    ) -> Result<HostAuthorityDecision, HostAuthorityIssue>;
+        request: &super::input::HostAuthorityRequest,
+    ) -> Result<super::evaluate::HostAuthorityDecision, super::evaluate::HostAuthorityIssue>;
 }

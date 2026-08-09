@@ -4,16 +4,8 @@
 //! fetches, traverses, extracts, stores, reviews, or activates source material.
 
 #![allow(missing_docs)]
-#![allow(clippy::missing_errors_doc)]
-#![allow(clippy::struct_excessive_bools)]
 
-use alloc::string::{String, ToString};
-
-use crate::asset::{
-    HostAssetActionKind, HostAssetKind, HostAssetManifestEntry, HostAssetMutationAdmission,
-    HostAssetMutationRequestDraft, HostAssetReconciliationPlan, HostAssetServiceStatus,
-    admit_host_asset_mutation,
-};
+use alloc::string::ToString;
 
 const BLAKE3_HEX_CHARS: usize = 64;
 const MIN_REVISION_CHARS: usize = 32;
@@ -73,6 +65,8 @@ pub enum SkillSourceKind {
 }
 
 /// Host-supplied observation facts from bounded mechanisms.
+// Each boolean records one independent host attestation and preserves the public DTO.
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct SkillSourceHostFacts {
     pub process_bounded: bool,
@@ -93,13 +87,15 @@ pub struct SkillSourceCollisionFacts {
 /// Pure policy projection consumed by the reusable core.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SkillSourcePolicy {
-    policy_identity: String,
-    bounds_profile: String,
-    canonicalization_profile: String,
+    policy_identity: alloc::string::String,
+    bounds_profile: alloc::string::String,
+    canonicalization_profile: alloc::string::String,
     bounds: SkillSourceBounds,
 }
 
 /// Borrowed policy fields loaded by a host from the checked projection.
+// Each boolean denies one independent authority or unsafe source behavior.
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct SkillSourcePolicyDraft<'a> {
     pub policy_identity: &'a str,
@@ -137,6 +133,10 @@ pub enum SkillSourceIssue {
 
 impl SkillSourcePolicy {
     /// Validate a checked policy projection without evaluating Nickel at runtime.
+    ///
+    /// # Errors
+    ///
+    /// Returns an issue when identities, bounds, or denied policy flags are invalid.
     pub fn validate(draft: &SkillSourcePolicyDraft<'_>) -> Result<Self, SkillSourceIssue> {
         validate_hash(draft.policy_identity)?;
         validate_label(draft.bounds_profile)?;
@@ -144,11 +144,16 @@ impl SkillSourcePolicy {
         if !draft.bounds.valid() {
             return Err(SkillSourceIssue::InvalidBounds);
         }
-        if draft.allow_symlinks
-            || draft.allow_submodules
-            || draft.automatic_activation
-            || draft.ambient_discovery
-        {
+        if draft.allow_symlinks {
+            return Err(SkillSourceIssue::PolicyMismatch);
+        }
+        if draft.allow_submodules {
+            return Err(SkillSourceIssue::PolicyMismatch);
+        }
+        if draft.automatic_activation {
+            return Err(SkillSourceIssue::PolicyMismatch);
+        }
+        if draft.ambient_discovery {
             return Err(SkillSourceIssue::PolicyMismatch);
         }
         Ok(Self {
@@ -180,18 +185,18 @@ impl SkillSourcePolicy {
 /// Exact immutable source binding for an active skill.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct FrozenSkillSource {
-    asset_id: String,
+    asset_id: alloc::string::String,
     source_kind: SkillSourceKind,
-    origin_label: String,
-    revision: String,
-    tree_identity: String,
-    manifest_identity: String,
-    bounds_profile: String,
-    canonicalization_profile: String,
-    policy_identity: String,
-    provenance_ref: String,
-    trust_ref: String,
-    review_ref: String,
+    origin_label: alloc::string::String,
+    revision: alloc::string::String,
+    tree_identity: alloc::string::String,
+    manifest_identity: alloc::string::String,
+    bounds_profile: alloc::string::String,
+    canonicalization_profile: alloc::string::String,
+    policy_identity: alloc::string::String,
+    provenance_ref: alloc::string::String,
+    trust_ref: alloc::string::String,
+    review_ref: alloc::string::String,
 }
 
 /// Borrowed exact frozen source fields.
@@ -212,6 +217,11 @@ pub struct FrozenSkillSourceDraft<'a> {
 }
 
 impl FrozenSkillSource {
+    /// Validate one exact immutable source binding.
+    ///
+    /// # Errors
+    ///
+    /// Returns an issue when metadata, identities, revision, or policy facts are invalid.
     pub fn validate(
         policy: &SkillSourcePolicy,
         draft: &FrozenSkillSourceDraft<'_>,
@@ -295,21 +305,21 @@ pub enum TrackedCandidateClass {
 /// Validated inactive candidate or no-op observation.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TrackedSkillSourceCandidate {
-    candidate_identity: String,
-    asset_id: String,
+    candidate_identity: alloc::string::String,
+    asset_id: alloc::string::String,
     source_kind: SkillSourceKind,
-    origin_label: String,
-    tracking_label: String,
-    revision: String,
-    tree_identity: String,
-    manifest_identity: String,
-    observation_identity: String,
+    origin_label: alloc::string::String,
+    tracking_label: alloc::string::String,
+    revision: alloc::string::String,
+    tree_identity: alloc::string::String,
+    manifest_identity: alloc::string::String,
+    observation_identity: alloc::string::String,
     observed_epoch: u32,
     class: TrackedCandidateClass,
-    bounds_profile: String,
-    canonicalization_profile: String,
-    policy_identity: String,
-    provenance_ref: String,
+    bounds_profile: alloc::string::String,
+    canonicalization_profile: alloc::string::String,
+    policy_identity: alloc::string::String,
+    provenance_ref: alloc::string::String,
 }
 
 impl TrackedSkillSourceCandidate {
@@ -352,68 +362,19 @@ impl TrackedSkillSourceCandidate {
 }
 
 /// Classify a bounded host observation without activating it.
+///
+/// # Errors
+///
+/// Returns an issue when source facts are unsafe, stale, conflicting, or incomplete.
 pub fn classify_tracked_skill_source(
     policy: &SkillSourcePolicy,
     draft: &TrackedSkillSourceObservationDraft<'_>,
     active: Option<&FrozenSkillSource>,
 ) -> Result<TrackedSkillSourceCandidate, SkillSourceIssue> {
-    validate_label(draft.asset_id)?;
-    validate_label(draft.origin_label)?;
-    validate_label(draft.tracking_label)?;
-    validate_revision(draft.observed_revision)?;
-    validate_hash(draft.tree_identity)?;
-    validate_hash(draft.manifest_identity)?;
-    validate_hash(draft.observation_identity)?;
-    validate_label(draft.provenance_ref)?;
-    if draft.bounds_profile != policy.bounds_profile
-        || draft.canonicalization_profile != policy.canonicalization_profile
-        || draft.policy_identity != policy.policy_identity
-    {
-        return Err(SkillSourceIssue::PolicyMismatch);
-    }
-    if draft.collisions.duplicate_asset {
-        return Err(SkillSourceIssue::DuplicateAsset);
-    }
-    if draft.collisions.source_collision {
-        return Err(SkillSourceIssue::SourceCollision);
-    }
-    if !draft.host_facts.process_bounded
-        || !draft.host_facts.path_admitted
-        || !draft.host_facts.entry_types_admitted
-        || !draft.host_facts.symlink_free
-        || !draft.host_facts.submodule_free
-        || !draft.host_facts.complete
-    {
-        return Err(SkillSourceIssue::HostFactsDenied);
-    }
-    let age = draft
-        .current_epoch
-        .checked_sub(draft.observed_epoch)
-        .ok_or(SkillSourceIssue::StaleObservation)?;
-    if age > MAX_OBSERVATION_AGE_EPOCHS {
-        return Err(SkillSourceIssue::StaleObservation);
-    }
-    let class = match active {
-        Some(current) => {
-            if current.asset_id != draft.asset_id
-                || current.source_kind != draft.source_kind
-                || current.origin_label != draft.origin_label
-            {
-                return Err(SkillSourceIssue::SourceCollision);
-            }
-            let revision_same = current.revision == draft.observed_revision;
-            let tree_same = current.tree_identity == draft.tree_identity;
-            let manifest_same = current.manifest_identity == draft.manifest_identity;
-            if revision_same && tree_same && manifest_same {
-                TrackedCandidateClass::Unchanged
-            } else if !revision_same && !tree_same {
-                TrackedCandidateClass::ChangedInactive
-            } else {
-                return Err(SkillSourceIssue::CandidateConflict);
-            }
-        }
-        None => TrackedCandidateClass::ChangedInactive,
-    };
+    validate_tracked_observation(policy, draft)?;
+    let class = classify_candidate_change(draft, active)?;
+    debug_assert!(host_facts_are_admitted(draft.host_facts));
+    debug_assert!(draft.current_epoch >= draft.observed_epoch);
     let candidate_identity = public_identity(&[
         "candidate",
         draft.asset_id,
@@ -444,6 +405,97 @@ pub fn classify_tracked_skill_source(
     })
 }
 
+fn validate_tracked_observation(
+    policy: &SkillSourcePolicy,
+    draft: &TrackedSkillSourceObservationDraft<'_>,
+) -> Result<(), SkillSourceIssue> {
+    validate_label(draft.asset_id)?;
+    validate_label(draft.origin_label)?;
+    validate_label(draft.tracking_label)?;
+    validate_revision(draft.observed_revision)?;
+    validate_hash(draft.tree_identity)?;
+    validate_hash(draft.manifest_identity)?;
+    validate_hash(draft.observation_identity)?;
+    validate_label(draft.provenance_ref)?;
+    if draft.bounds_profile != policy.bounds_profile {
+        return Err(SkillSourceIssue::PolicyMismatch);
+    }
+    if draft.canonicalization_profile != policy.canonicalization_profile {
+        return Err(SkillSourceIssue::PolicyMismatch);
+    }
+    if draft.policy_identity != policy.policy_identity {
+        return Err(SkillSourceIssue::PolicyMismatch);
+    }
+    if draft.collisions.duplicate_asset {
+        return Err(SkillSourceIssue::DuplicateAsset);
+    }
+    if draft.collisions.source_collision {
+        return Err(SkillSourceIssue::SourceCollision);
+    }
+    if !host_facts_are_admitted(draft.host_facts) {
+        return Err(SkillSourceIssue::HostFactsDenied);
+    }
+    let age_epochs = draft
+        .current_epoch
+        .checked_sub(draft.observed_epoch)
+        .ok_or(SkillSourceIssue::StaleObservation)?;
+    if age_epochs > MAX_OBSERVATION_AGE_EPOCHS {
+        return Err(SkillSourceIssue::StaleObservation);
+    }
+    debug_assert!(host_facts_are_admitted(draft.host_facts));
+    debug_assert!(draft.current_epoch >= draft.observed_epoch);
+    Ok(())
+}
+
+fn host_facts_are_admitted(facts: SkillSourceHostFacts) -> bool {
+    if !facts.process_bounded {
+        return false;
+    }
+    if !facts.path_admitted {
+        return false;
+    }
+    if !facts.entry_types_admitted {
+        return false;
+    }
+    if !facts.symlink_free {
+        return false;
+    }
+    if !facts.submodule_free {
+        return false;
+    }
+    facts.complete
+}
+
+fn classify_candidate_change(
+    draft: &TrackedSkillSourceObservationDraft<'_>,
+    active: Option<&FrozenSkillSource>,
+) -> Result<TrackedCandidateClass, SkillSourceIssue> {
+    let Some(current) = active else {
+        return Ok(TrackedCandidateClass::ChangedInactive);
+    };
+    if current.asset_id != draft.asset_id {
+        return Err(SkillSourceIssue::SourceCollision);
+    }
+    if current.source_kind != draft.source_kind {
+        return Err(SkillSourceIssue::SourceCollision);
+    }
+    if current.origin_label != draft.origin_label {
+        return Err(SkillSourceIssue::SourceCollision);
+    }
+    debug_assert_eq!(current.asset_id, draft.asset_id);
+    debug_assert_eq!(current.origin_label, draft.origin_label);
+    let is_revision_same = current.revision == draft.observed_revision;
+    let is_tree_same = current.tree_identity == draft.tree_identity;
+    let is_manifest_same = current.manifest_identity == draft.manifest_identity;
+    if is_revision_same && is_tree_same && is_manifest_same {
+        return Ok(TrackedCandidateClass::Unchanged);
+    }
+    if !is_revision_same && !is_tree_same {
+        return Ok(TrackedCandidateClass::ChangedInactive);
+    }
+    Err(SkillSourceIssue::CandidateConflict)
+}
+
 /// Compatibility result for host asset manifests.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum SkillSourceManifestBinding {
@@ -452,14 +504,18 @@ pub enum SkillSourceManifestBinding {
 }
 
 /// Bind an existing host asset manifest to an optional exact frozen source.
+///
+/// # Errors
+///
+/// Returns an issue when an exact source does not match the admitted manifest.
 pub fn reconcile_skill_source_manifest(
-    manifest: &HostAssetManifestEntry,
+    manifest: &crate::asset::HostAssetManifestEntry,
     source: Option<&FrozenSkillSource>,
 ) -> Result<SkillSourceManifestBinding, SkillSourceIssue> {
     let Some(source) = source else {
         return Ok(SkillSourceManifestBinding::LegacyNoSourceClaim);
     };
-    if manifest.kind() != HostAssetKind::Skill
+    if manifest.kind() != crate::asset::HostAssetKind::Skill
         || manifest.asset_id() != source.asset_id
         || manifest.content_identity() != source.manifest_identity
     {
@@ -474,16 +530,16 @@ pub struct SkillSourcePromotionRequest<'a> {
     pub candidate_identity: &'a str,
     pub review_ref: &'a str,
     pub trust_ref: &'a str,
-    pub requested_action: HostAssetActionKind,
+    pub requested_action: crate::asset::HostAssetActionKind,
     pub automatic_activation: bool,
-    pub mutation: HostAssetMutationRequestDraft<'a>,
-    pub service: HostAssetServiceStatus,
+    pub mutation: crate::asset::HostAssetMutationRequestDraft<'a>,
+    pub service: crate::asset::HostAssetServiceStatus,
 }
 
 /// Passing promotion decision with the existing host mutation admission.
 pub struct SkillSourcePromotionAdmission {
     target: FrozenSkillSource,
-    mutation: HostAssetMutationAdmission,
+    mutation: crate::asset::HostAssetMutationAdmission,
 }
 
 impl SkillSourcePromotionAdmission {
@@ -492,17 +548,21 @@ impl SkillSourcePromotionAdmission {
         &self.target
     }
     #[must_use]
-    pub const fn mutation(&self) -> &HostAssetMutationAdmission {
+    pub const fn mutation(&self) -> &crate::asset::HostAssetMutationAdmission {
         &self.mutation
     }
 }
 
 /// Admit an exact candidate-to-frozen transition and preserve the host mutation gate.
+///
+/// # Errors
+///
+/// Returns an issue when review, identity, target, action, or mutation facts do not match.
 pub fn admit_skill_source_promotion(
     candidate: &TrackedSkillSourceCandidate,
     target: FrozenSkillSource,
     request: &SkillSourcePromotionRequest<'_>,
-    plan: &HostAssetReconciliationPlan,
+    plan: &crate::asset::HostAssetReconciliationPlan,
 ) -> Result<SkillSourcePromotionAdmission, SkillSourceIssue> {
     if candidate.class != TrackedCandidateClass::ChangedInactive {
         return Err(SkillSourceIssue::CandidateInactive);
@@ -512,62 +572,102 @@ pub fn admit_skill_source_promotion(
     if request.automatic_activation {
         return Err(SkillSourceIssue::AutomaticActivation);
     }
-    if request.candidate_identity != candidate.candidate_identity
-        || target.asset_id != candidate.asset_id
-        || target.source_kind != candidate.source_kind
-        || target.origin_label != candidate.origin_label
-        || target.revision != candidate.revision
-        || target.tree_identity != candidate.tree_identity
-        || target.manifest_identity != candidate.manifest_identity
-        || target.bounds_profile != candidate.bounds_profile
-        || target.canonicalization_profile != candidate.canonicalization_profile
-        || target.policy_identity != candidate.policy_identity
-        || target.provenance_ref != candidate.provenance_ref
-        || target.review_ref != request.review_ref
-        || target.trust_ref != request.trust_ref
-    {
+    if !promotion_target_matches(candidate, &target, request) {
         return Err(SkillSourceIssue::PromotionDrift);
     }
     if !matches!(
         request.requested_action,
-        HostAssetActionKind::Install | HostAssetActionKind::Update
-    ) || request.mutation.kind != request.requested_action
-        || request.mutation.asset_id != candidate.asset_id
-    {
+        crate::asset::HostAssetActionKind::Install | crate::asset::HostAssetActionKind::Update
+    ) {
         return Err(SkillSourceIssue::AutomaticActivation);
     }
-    let action_matches_content = plan.actions().iter().any(|action| {
+    if request.mutation.kind != request.requested_action {
+        return Err(SkillSourceIssue::AutomaticActivation);
+    }
+    if request.mutation.asset_id != candidate.asset_id {
+        return Err(SkillSourceIssue::AutomaticActivation);
+    }
+    debug_assert_eq!(target.revision, candidate.revision);
+    debug_assert_eq!(target.manifest_identity, candidate.manifest_identity);
+    let is_action_match = plan.actions().iter().any(|action| {
         action.action_id() == request.mutation.action_id
             && action.content_identity() == Some(candidate.manifest_identity.as_str())
     });
-    if !action_matches_content {
+    if !is_action_match {
         return Err(SkillSourceIssue::PromotionDrift);
     }
-    let mutation = admit_host_asset_mutation(plan, &request.mutation, request.service);
+    let mutation =
+        crate::asset::admit_host_asset_mutation(plan, &request.mutation, request.service);
     if mutation.request().is_none() {
         return Err(SkillSourceIssue::MutationDenied);
     }
     Ok(SkillSourcePromotionAdmission { target, mutation })
 }
 
+fn promotion_target_matches(
+    candidate: &TrackedSkillSourceCandidate,
+    target: &FrozenSkillSource,
+    request: &SkillSourcePromotionRequest<'_>,
+) -> bool {
+    if request.candidate_identity != candidate.candidate_identity {
+        return false;
+    }
+    if target.asset_id != candidate.asset_id {
+        return false;
+    }
+    if target.source_kind != candidate.source_kind {
+        return false;
+    }
+    if target.origin_label != candidate.origin_label {
+        return false;
+    }
+    if target.revision != candidate.revision {
+        return false;
+    }
+    if target.tree_identity != candidate.tree_identity {
+        return false;
+    }
+    if target.manifest_identity != candidate.manifest_identity {
+        return false;
+    }
+    if target.bounds_profile != candidate.bounds_profile {
+        return false;
+    }
+    if target.canonicalization_profile != candidate.canonicalization_profile {
+        return false;
+    }
+    if target.policy_identity != candidate.policy_identity {
+        return false;
+    }
+    if target.provenance_ref != candidate.provenance_ref {
+        return false;
+    }
+    if target.review_ref != request.review_ref {
+        return false;
+    }
+    debug_assert_eq!(target.revision, candidate.revision);
+    debug_assert_eq!(target.manifest_identity, candidate.manifest_identity);
+    target.trust_ref == request.trust_ref
+}
+
 /// Metadata-only promotion receipt.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SkillSourceReceipt {
-    receipt_identity: String,
-    candidate_identity: String,
-    asset_id: String,
-    revision: String,
-    tree_identity: String,
-    manifest_identity: String,
-    policy_identity: String,
-    observation_identity: String,
-    outcome: String,
+    receipt_identity: alloc::string::String,
+    candidate_identity: alloc::string::String,
+    asset_id: alloc::string::String,
+    revision: alloc::string::String,
+    tree_identity: alloc::string::String,
+    manifest_identity: alloc::string::String,
+    policy_identity: alloc::string::String,
+    observation_identity: alloc::string::String,
+    outcome: alloc::string::String,
 }
 
 impl SkillSourceReceipt {
     #[must_use]
     pub fn promotion(candidate: &TrackedSkillSourceCandidate) -> Self {
-        let outcome = String::from("promotion-admitted");
+        let outcome = alloc::string::String::from("promotion-admitted");
         let receipt_identity = public_identity(&[
             RECEIPT_DOMAIN,
             &candidate.candidate_identity,
@@ -597,6 +697,11 @@ impl SkillSourceReceipt {
         &self.receipt_identity
     }
 
+    /// Validate the metadata-only receipt fields.
+    ///
+    /// # Errors
+    ///
+    /// Returns an issue when a receipt field is malformed or unsafe.
     pub fn validate(&self) -> Result<(), SkillSourceIssue> {
         validate_hash(&self.receipt_identity)?;
         validate_hash(&self.candidate_identity)?;
@@ -611,6 +716,10 @@ impl SkillSourceReceipt {
 }
 
 /// Reject an unsupported interpretation of a content identity.
+///
+/// # Errors
+///
+/// Returns an issue when the claim overstates content identity or contains unsafe metadata.
 pub fn validate_skill_source_claim(claim: &str) -> Result<(), SkillSourceIssue> {
     const DENIED: &[&str] = &[
         "authentic",
@@ -651,23 +760,39 @@ fn validate_revision(value: &str) -> Result<(), SkillSourceIssue> {
 }
 
 fn validate_label(value: &str) -> Result<(), SkillSourceIssue> {
-    let safe = !value.is_empty()
-        && value.len() <= MAX_LABEL_CHARS
-        && value
-            .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b':'))
-        && !value.contains("://")
-        && !value.contains("..")
-        && !value.to_ascii_lowercase().contains("token")
-        && !value.to_ascii_lowercase().contains("credential");
-    if safe {
+    if label_is_safe(value) {
         Ok(())
     } else {
         Err(SkillSourceIssue::UnsafeMetadata)
     }
 }
 
-fn public_identity(fields: &[&str]) -> String {
+fn label_is_safe(value: &str) -> bool {
+    if value.is_empty() {
+        return false;
+    }
+    if value.len() > MAX_LABEL_CHARS {
+        return false;
+    }
+    if !value
+        .bytes()
+        .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b':'))
+    {
+        return false;
+    }
+    if value.contains("://") || value.contains("..") {
+        return false;
+    }
+    let lowercase = value.to_ascii_lowercase();
+    if lowercase.contains("token") || lowercase.contains("credential") {
+        return false;
+    }
+    debug_assert!(!value.is_empty());
+    debug_assert!(value.len() <= MAX_LABEL_CHARS);
+    true
+}
+
+fn public_identity(fields: &[&str]) -> alloc::string::String {
     let mut hasher = blake3::Hasher::new();
     for field in fields {
         hasher.update(&(field.len() as u64).to_le_bytes());
@@ -679,17 +804,28 @@ fn public_identity(fields: &[&str]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::asset::{
-        HostAssetInventoryDraft, HostAssetManifestEntryDraft, HostAssetTrust,
-        plan_host_asset_reconciliation, validate_host_asset_inventory,
-    };
-    use alloc::vec::Vec;
-
     const HASH_A: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     const HASH_B: &str = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
     const HASH_C: &str = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc";
     const REV_A: &str = "1111111111111111111111111111111111111111";
     const REV_B: &str = "2222222222222222222222222222222222222222";
+    const ACTIVE_SOURCE: SourceFixture<'_> = SourceFixture {
+        revision: REV_A,
+        tree_identity: HASH_A,
+        manifest_identity: HASH_A,
+    };
+    const CHANGED_SOURCE: SourceFixture<'_> = SourceFixture {
+        revision: REV_B,
+        tree_identity: HASH_B,
+        manifest_identity: HASH_B,
+    };
+
+    #[derive(Clone, Copy)]
+    struct SourceFixture<'a> {
+        revision: &'a str,
+        tree_identity: &'a str,
+        manifest_identity: &'a str,
+    }
 
     fn bounds() -> SkillSourceBounds {
         SkillSourceBounds {
@@ -715,16 +851,16 @@ mod tests {
         })
         .unwrap()
     }
-    fn frozen(revision: &str, tree: &str, manifest: &str) -> FrozenSkillSource {
+    fn frozen(source: SourceFixture<'_>) -> FrozenSkillSource {
         FrozenSkillSource::validate(
             &policy(),
             &FrozenSkillSourceDraft {
                 asset_id: "proof-search",
                 source_kind: SkillSourceKind::Git,
                 origin_label: "qm-reference",
-                revision,
-                tree_identity: tree,
-                manifest_identity: manifest,
+                revision: source.revision,
+                tree_identity: source.tree_identity,
+                manifest_identity: source.manifest_identity,
                 bounds_profile: "skill-tree-standard-v1",
                 canonicalization_profile: "skill-tree-blake3-v1",
                 policy_identity: HASH_A,
@@ -735,19 +871,15 @@ mod tests {
         )
         .unwrap()
     }
-    fn observation<'a>(
-        revision: &'a str,
-        tree: &'a str,
-        manifest: &'a str,
-    ) -> TrackedSkillSourceObservationDraft<'a> {
+    fn observation(source: SourceFixture<'_>) -> TrackedSkillSourceObservationDraft<'_> {
         TrackedSkillSourceObservationDraft {
             asset_id: "proof-search",
             source_kind: SkillSourceKind::Git,
             origin_label: "qm-reference",
             tracking_label: "main-line",
-            observed_revision: revision,
-            tree_identity: tree,
-            manifest_identity: manifest,
+            observed_revision: source.revision,
+            tree_identity: source.tree_identity,
+            manifest_identity: source.manifest_identity,
             observation_identity: HASH_B,
             observed_epoch: 10,
             current_epoch: 11,
@@ -772,44 +904,38 @@ mod tests {
 
     #[test]
     fn frozen_and_tracked_sources_preserve_inactive_candidate_semantics() {
-        let active = frozen(REV_A, HASH_A, HASH_A);
-        let unchanged = classify_tracked_skill_source(
-            &policy(),
-            &observation(REV_A, HASH_A, HASH_A),
-            Some(&active),
-        )
-        .unwrap();
+        let active = frozen(ACTIVE_SOURCE);
+        let unchanged =
+            classify_tracked_skill_source(&policy(), &observation(ACTIVE_SOURCE), Some(&active))
+                .unwrap();
         assert_eq!(unchanged.class(), TrackedCandidateClass::Unchanged);
-        let changed = classify_tracked_skill_source(
-            &policy(),
-            &observation(REV_B, HASH_B, HASH_B),
-            Some(&active),
-        )
-        .unwrap();
+        let changed =
+            classify_tracked_skill_source(&policy(), &observation(CHANGED_SOURCE), Some(&active))
+                .unwrap();
         assert_eq!(changed.class(), TrackedCandidateClass::ChangedInactive);
         assert_ne!(changed.manifest_identity(), active.manifest_identity());
     }
 
     #[test]
     fn malformed_stale_collision_partial_and_unsafe_inputs_fail_closed() {
-        let active = frozen(REV_A, HASH_A, HASH_A);
-        let mut cases = Vec::new();
-        let mut stale = observation(REV_B, HASH_B, HASH_B);
+        let active = frozen(ACTIVE_SOURCE);
+        let mut cases = alloc::vec::Vec::new();
+        let mut stale = observation(CHANGED_SOURCE);
         stale.current_epoch = 20;
         cases.push(stale);
-        let mut duplicate = observation(REV_B, HASH_B, HASH_B);
+        let mut duplicate = observation(CHANGED_SOURCE);
         duplicate.collisions.duplicate_asset = true;
         cases.push(duplicate);
-        let mut collision = observation(REV_B, HASH_B, HASH_B);
+        let mut collision = observation(CHANGED_SOURCE);
         collision.collisions.source_collision = true;
         cases.push(collision);
-        let mut partial = observation(REV_B, HASH_B, HASH_B);
+        let mut partial = observation(CHANGED_SOURCE);
         partial.host_facts.complete = false;
         cases.push(partial);
-        let mut symlink = observation(REV_B, HASH_B, HASH_B);
+        let mut symlink = observation(CHANGED_SOURCE);
         symlink.host_facts.symlink_free = false;
         cases.push(symlink);
-        let mut submodule = observation(REV_B, HASH_B, HASH_B);
+        let mut submodule = observation(CHANGED_SOURCE);
         submodule.host_facts.submodule_free = false;
         cases.push(submodule);
         for case in cases {
@@ -841,57 +967,66 @@ mod tests {
     #[test]
     fn exact_promotion_reuses_dry_run_and_injected_mutation_gate() {
         let candidate =
-            classify_tracked_skill_source(&policy(), &observation(REV_B, HASH_B, HASH_B), None)
-                .unwrap();
-        let manifests = [HostAssetManifestEntryDraft {
+            classify_tracked_skill_source(&policy(), &observation(CHANGED_SOURCE), None).unwrap();
+        let manifests = [crate::asset::HostAssetManifestEntryDraft {
             asset_id: "proof-search",
-            kind: HostAssetKind::Skill,
+            kind: crate::asset::HostAssetKind::Skill,
             store_label: "skill-store",
             content_identity: HASH_B,
             provenance_label: "qm-7f2c916",
-            trust: HostAssetTrust::Trusted,
+            trust: crate::asset::HostAssetTrust::Trusted,
         }];
-        let inventory = validate_host_asset_inventory(&HostAssetInventoryDraft {
-            manifests: &manifests,
-            observations: &[],
-            current_epoch: 11,
-        })
-        .unwrap();
-        let reports = crate::asset::classify_host_asset_drift(&inventory);
-        let plan = plan_host_asset_reconciliation(&reports);
+        let inventory =
+            crate::asset::validate_host_asset_inventory(&crate::asset::HostAssetInventoryDraft {
+                manifests: &manifests,
+                observations: &[],
+                current_epoch: 11,
+            })
+            .unwrap();
+        let drift_assessments = crate::asset::classify_host_asset_drift(&inventory);
+        let plan = crate::asset::plan_host_asset_reconciliation(&drift_assessments);
         let action = plan.actions().first().unwrap();
-        assert_eq!(action.kind(), HostAssetActionKind::Install);
+        assert_eq!(action.kind(), crate::asset::HostAssetActionKind::Install);
         let request = SkillSourcePromotionRequest {
             candidate_identity: candidate.candidate_identity(),
             review_ref: "review-42",
             trust_ref: "reviewed-source",
-            requested_action: HostAssetActionKind::Install,
+            requested_action: crate::asset::HostAssetActionKind::Install,
             automatic_activation: false,
-            mutation: HostAssetMutationRequestDraft {
+            mutation: crate::asset::HostAssetMutationRequestDraft {
                 action_id: action.action_id(),
                 asset_id: "proof-search",
-                kind: HostAssetActionKind::Install,
+                kind: crate::asset::HostAssetActionKind::Install,
                 capability_label: action.required_capability(),
                 plan_identity: HASH_C,
             },
-            service: HostAssetServiceStatus::Available,
+            service: crate::asset::HostAssetServiceStatus::Available,
         };
-        let direct = admit_host_asset_mutation(&plan, &request.mutation, request.service);
+        let direct =
+            crate::asset::admit_host_asset_mutation(&plan, &request.mutation, request.service);
         assert!(direct.request().is_some(), "{:?}", direct.diagnostic());
-        let target = frozen(REV_B, HASH_B, HASH_B);
+        let target = frozen(CHANGED_SOURCE);
         let admitted = admit_skill_source_promotion(&candidate, target, &request, &plan).unwrap();
         assert!(admitted.mutation().request().is_some());
 
+        assert_promotion_rejections(&candidate, request, &plan);
+    }
+
+    fn assert_promotion_rejections(
+        candidate: &TrackedSkillSourceCandidate,
+        request: SkillSourcePromotionRequest<'_>,
+        plan: &crate::asset::HostAssetReconciliationPlan,
+    ) {
         let missing_service = SkillSourcePromotionRequest {
-            service: HostAssetServiceStatus::Missing,
+            service: crate::asset::HostAssetServiceStatus::Missing,
             ..request
         };
         assert_eq!(
             admit_skill_source_promotion(
-                &candidate,
-                frozen(REV_B, HASH_B, HASH_B),
+                candidate,
+                frozen(CHANGED_SOURCE),
                 &missing_service,
-                &plan,
+                plan,
             )
             .err(),
             Some(SkillSourceIssue::MutationDenied)
@@ -901,13 +1036,7 @@ mod tests {
             ..request
         };
         assert_eq!(
-            admit_skill_source_promotion(
-                &candidate,
-                frozen(REV_B, HASH_B, HASH_B),
-                &automatic,
-                &plan,
-            )
-            .err(),
+            admit_skill_source_promotion(candidate, frozen(CHANGED_SOURCE), &automatic, plan).err(),
             Some(SkillSourceIssue::AutomaticActivation)
         );
         let drifted = SkillSourcePromotionRequest {
@@ -915,13 +1044,7 @@ mod tests {
             ..request
         };
         assert_eq!(
-            admit_skill_source_promotion(
-                &candidate,
-                frozen(REV_B, HASH_B, HASH_B),
-                &drifted,
-                &plan,
-            )
-            .err(),
+            admit_skill_source_promotion(candidate, frozen(CHANGED_SOURCE), &drifted, plan).err(),
             Some(SkillSourceIssue::PromotionDrift)
         );
     }
@@ -955,28 +1078,29 @@ mod tests {
 
     #[test]
     fn legacy_manifest_compatibility_and_safe_receipt_remain_explicit() {
-        let manifests = [HostAssetManifestEntryDraft {
+        let manifests = [crate::asset::HostAssetManifestEntryDraft {
             asset_id: "proof-search",
-            kind: HostAssetKind::Skill,
+            kind: crate::asset::HostAssetKind::Skill,
             store_label: "skill-store",
             content_identity: HASH_A,
             provenance_label: "legacy",
-            trust: HostAssetTrust::Trusted,
+            trust: crate::asset::HostAssetTrust::Trusted,
         }];
-        let inventory = validate_host_asset_inventory(&HostAssetInventoryDraft {
-            manifests: &manifests,
-            observations: &[],
-            current_epoch: 1,
-        })
-        .unwrap();
+        let inventory =
+            crate::asset::validate_host_asset_inventory(&crate::asset::HostAssetInventoryDraft {
+                manifests: &manifests,
+                observations: &[],
+                current_epoch: 1,
+            })
+            .unwrap();
         assert_eq!(
             reconcile_skill_source_manifest(&inventory.manifests()[0], None).unwrap(),
             SkillSourceManifestBinding::LegacyNoSourceClaim
         );
         let candidate = classify_tracked_skill_source(
             &policy(),
-            &observation(REV_B, HASH_B, HASH_B),
-            Some(&frozen(REV_A, HASH_A, HASH_A)),
+            &observation(CHANGED_SOURCE),
+            Some(&frozen(ACTIVE_SOURCE)),
         )
         .unwrap();
         let receipt = SkillSourceReceipt::promotion(&candidate);

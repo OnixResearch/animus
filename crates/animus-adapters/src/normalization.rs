@@ -1,7 +1,5 @@
 //! Authority-free contracts for optional transcript normalization.
 
-use alloc::{string::String, vec::Vec};
-
 /// Reviewed package name.
 pub const TRAJECTORY_PACKAGE: &str = "@letta-ai/trajectory";
 /// Reviewed package version.
@@ -206,15 +204,15 @@ pub enum TrajectoryContentDisposition {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TrajectoryPolicy {
     /// Exact helper identity.
-    pub helper_identity: String,
+    pub helper_identity: alloc::string::String,
     /// Exact schema identity.
-    pub schema_identity: String,
+    pub schema_identity: alloc::string::String,
     /// Allowed sources.
-    pub sources: Vec<TrajectorySource>,
+    pub sources: alloc::vec::Vec<TrajectorySource>,
     /// Finite bounds.
     pub bounds: TrajectoryBounds,
     /// Diagnostic dispositions.
-    pub diagnostics: Vec<TrajectoryDiagnosticPolicy>,
+    pub diagnostics: alloc::vec::Vec<TrajectoryDiagnosticPolicy>,
     /// Reasoning projection posture.
     pub reasoning: TrajectoryContentDisposition,
     /// Tool-argument projection posture.
@@ -231,24 +229,24 @@ pub struct TrajectoryNormalizeRequest {
     /// Transcript source.
     pub source: TrajectorySource,
     /// Already-loaded raw transcript, transient at the host boundary.
-    pub transcript: String,
+    pub transcript: alloc::string::String,
     /// Caller-supplied immutable source-generation identity.
-    pub source_generation_identity: String,
+    pub source_generation_identity: alloc::string::String,
     /// Revalidated policy identity.
-    pub policy_identity: String,
+    pub policy_identity: alloc::string::String,
     /// Expected helper identity.
-    pub helper_identity: String,
+    pub helper_identity: alloc::string::String,
 }
 
 /// One normalized tool call.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TrajectoryToolCall {
     /// Upstream call identity.
-    pub id: String,
+    pub id: alloc::string::String,
     /// Tool name.
-    pub name: String,
+    pub name: alloc::string::String,
     /// Serialized JSON object arguments.
-    pub arguments: String,
+    pub arguments: alloc::string::String,
 }
 
 /// One normalized trajectory-v1 record.
@@ -257,50 +255,50 @@ pub enum TrajectoryRecord {
     /// Leading source metadata.
     Meta {
         /// Source label.
-        source: String,
+        source: alloc::string::String,
         /// Optional working directory. Default policy omits it.
-        cwd: Option<String>,
+        cwd: Option<alloc::string::String>,
         /// Optional branch. Default policy omits it.
-        git_branch: Option<String>,
+        git_branch: Option<alloc::string::String>,
         /// Optional model. Default policy omits it.
-        model: Option<String>,
+        model: Option<alloc::string::String>,
     },
     /// User content.
     User {
         /// Content.
-        content: String,
+        content: alloc::string::String,
         /// Descriptive timestamp.
-        timestamp: String,
+        timestamp: alloc::string::String,
     },
     /// Hidden reasoning content.
     Reasoning {
         /// Content.
-        content: String,
+        content: alloc::string::String,
         /// Descriptive timestamp.
-        timestamp: String,
+        timestamp: alloc::string::String,
     },
     /// Assistant content.
     Assistant {
         /// Content.
-        content: String,
+        content: alloc::string::String,
         /// Descriptive timestamp.
-        timestamp: String,
+        timestamp: alloc::string::String,
     },
     /// Assistant tool-call batch.
     AssistantToolCalls {
         /// Calls.
-        tool_calls: Vec<TrajectoryToolCall>,
+        tool_calls: alloc::vec::Vec<TrajectoryToolCall>,
         /// Descriptive timestamp.
-        timestamp: String,
+        timestamp: alloc::string::String,
     },
     /// Tool result.
     Tool {
         /// Correlated call identity.
-        tool_call_id: String,
+        tool_call_id: alloc::string::String,
         /// Result content.
-        content: String,
+        content: alloc::string::String,
         /// Descriptive timestamp.
-        timestamp: String,
+        timestamp: alloc::string::String,
     },
 }
 
@@ -317,9 +315,9 @@ pub struct TrajectoryDiagnostic {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TrajectoryNormalizeResult {
     /// Normalized records.
-    pub records: Vec<TrajectoryRecord>,
+    pub records: alloc::vec::Vec<TrajectoryRecord>,
     /// Diagnostics without prose.
-    pub diagnostics: Vec<TrajectoryDiagnostic>,
+    pub diagnostics: alloc::vec::Vec<TrajectoryDiagnostic>,
 }
 
 /// Typed service failure that contains no transcript data.
