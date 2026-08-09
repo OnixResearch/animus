@@ -781,6 +781,17 @@
             sh scripts/cairn/check-skill-source-lifecycle --root .
           '';
 
+          drain-evidence-guard = pkgs.runCommand "animus-drain-evidence-guard" {
+            nativeBuildInputs = [
+              pkgs.rustc
+              pkgs.stdenv.cc
+            ];
+          } ''
+            rustc --edition=2021 ${source}/scripts/check-drain-evidence-guard.rs -o check-drain-evidence-guard
+            ./check-drain-evidence-guard --self-test
+            touch "$out"
+          '';
+
           trajectory-transcript-adapter = cargoCheck "animus-trajectory-transcript-adapter" [
             pkgs.b3sum
             pkgs.clippy
@@ -1343,7 +1354,7 @@
                 export HOME="$PWD/home"
                 export CARGO_HOME="$PWD/.cargo-home"
                 mkdir -p "$HOME" "$CARGO_HOME"
-                sed 's|directory = "cargo-vendor-dir"|directory = "${cargoDeps}"|' \
+                sed 's|directory = "cargo-vendor-dir/|directory = "${cargoDeps}/|g' \
                   "${cargoDeps}/.cargo/config.toml" > "$CARGO_HOME/config.toml"
                 cp -r ${source} source
                 chmod -R u+w source

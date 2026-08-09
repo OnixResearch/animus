@@ -220,6 +220,7 @@ scripts/cairn/check-tool-catalog --root .
 scripts/cairn/check-wasm-surface --root .
 nix run .#cargo-tigerstyle -- check
 nix run .#check-nickel-configs
+nix build .#checks.x86_64-linux.drain-evidence-guard --no-link -L
 nix build .#checks.x86_64-linux.adapter-conformance-index --no-link -L
 nix build .#checks.x86_64-linux.component-catalog --no-link -L
 nix build .#checks.x86_64-linux.runtime-kernel-split --no-link -L
@@ -239,6 +240,15 @@ nix flake check
 ```
 
 ## Cairn drain helpers
+
+Before removing a completed linked worktree, run the metadata-only evidence guard:
+
+```sh
+CARGO_TARGET_DIR=target/cargo-script \
+  scripts/check-drain-evidence-guard.rs --worktree /absolute/path/to/worktree
+```
+
+The guard blocks removal when ignored `.pi/` evidence remains or the target cannot be classified safely. See [docs/drain-evidence-guard.md](docs/drain-evidence-guard.md).
 
 Generate a Steel Scheme drain plan for selected Animus changes by asking Pi's Steel tool to run:
 

@@ -20,6 +20,7 @@ A focused rail MAY print bounded stdout instead of writing a receipt when it is 
 
 | Boundary | Command | Fixtures/evidence | Nix check |
 | --- | --- | --- | --- |
+| Drain evidence guard | `CARGO_TARGET_DIR=target/cargo-script scripts/check-drain-evidence-guard.rs --self-test` | Positive and negative metadata-only cases for primary, linked, empty, non-empty, malformed, bounded, and symlink targets | `checks.x86_64-linux.drain-evidence-guard` |
 | Lifecycle ownership map | `scripts/cairn/check-request-lifecycle --root .` | Positive and negative fixtures in `cairn/request-lifecycle-fixtures/`; marker diagnostics only | `checks.x86_64-linux.request-lifecycle` |
 | Nickel runtime-policy contracts | `scripts/cairn/check-nickel-policy-contracts --root .` | Shared primitive plus model-routing, process-job, Steel-runtime, and tool-catalog positive/negative fixtures; checked JSON and projection-receipt freshness; Rust DTO parity; receipt in `target/cairn/focused-rails/nickel-policy-contracts.md` | `checks.x86_64-linux.nickel-policy-contracts` |
 | Bounded-execution feasibility | `scripts/cairn/check-bounded-execution-evaluation --root .` | Four-consumer immutable source cohort, explicit capability states, loss-aware outcomes, positive/negative fixtures, pure Rust decision self-tests, frozen Lattice mapping, metadata-only blocked decision, and universal-sandbox non-claims; receipt in `target/cairn/focused-rails/bounded-execution-evaluation.md` | `checks.x86_64-linux.bounded-execution-evaluation` |

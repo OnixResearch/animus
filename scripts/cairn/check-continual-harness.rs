@@ -8,6 +8,8 @@ const EXPECTED_COHORT: &str = "prime-agent-continual-harness";
 const EXPECTED_SCHEMA: &str = "animus.continual-harness.v1";
 const EXPECTED_LICENSE: &str = "MIT";
 const REQUIRED_FILE_COUNT: usize = 7;
+const ARCHIVED_TASKS_PATH: &str =
+    "cairn/archive/2026-08-07-adapt-prime-agent-continual-harness/tasks.md";
 const REQUIRED_MARKERS: [&str; 8] = [
     "#![no_std]",
     "plan_promotion",
@@ -90,7 +92,7 @@ fn required_paths(root: &Path) -> Vec<PathBuf> {
         root.join("config/continual-harness-policy.ncl"),
         root.join("config/generated/continual-harness-policy.json"),
         root.join("fixtures/continual-harness/prime-agent-c5991bc.md"),
-        root.join("cairn/changes/adapt-prime-agent-continual-harness/tasks.md"),
+        root.join(ARCHIVED_TASKS_PATH),
     ]
 }
 
