@@ -34,7 +34,7 @@
 - [x] [serial] 5.1 Wire resolved credentials into one representative host adapter without changing its pure core. r[credentials.secretspec.functional_boundary]
 - [x] [serial] 5.2 Document profile, scope, provider, deployment, rotation, and rollback procedures. r[credentials.secretspec.explicit_resolution]
 - [x] [serial] 5.3 Document that SecretSpec and SOPS resolve values but do not establish caller authority. r[credentials.secretspec.no_durable_secret_material]
-- [ ] [serial] 5.4 Publish the immutable validated revision required by Lattice. r[credentials.secretspec.provider_conformance]
+- [x] [serial] 5.4 Publish the immutable validated revision required by Lattice. r[credentials.secretspec.provider_conformance]
 
 ## 6. Validate
 

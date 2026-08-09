@@ -88,7 +88,11 @@ The unblocked dry-run had plan `1b2707042da4d1e04501ec09e60ca6139ea356f5f6234fdd
 
 ## Downstream publication
 
-Lattice may consume only the archived completion revision after it is pushed as an immutable branch and verified on `origin/main`. A workspace-relative checkout remains test input only.
+The validated implementation revision `3eac1c6` was published on the immutable branch `origin/agent/drain-add-secretspec-sops-host-resolution`. Lattice may consume only the final archived completion revision after it is verified on `origin/main`. A workspace-relative checkout remains test input only.
+
+## Archive
+
+Archive execution moved the validated change to `cairn/archive/2026-08-08-add-secretspec-sops-host-resolution/`. Its plan was `cbeb4b85bb7ff7e815075832e9c40983b37a855c8a6f709ab0e7bde38df0bbe8`, and its receipt was `966a3a239f80f6623ebfbe19d05d42ced4537217939e411afff4aa9a590f7e29`.
 
 ## Non-claims
 
