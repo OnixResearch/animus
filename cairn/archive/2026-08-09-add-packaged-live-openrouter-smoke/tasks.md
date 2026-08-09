@@ -8,4 +8,4 @@
 ## Phase 2: Evidence and closeout
 
 - [x] [depends:verification] Add docs and focused Rust and Nix rail coverage. r[agent_harness_runtime.packaged_live_openrouter_smoke.docs]
-- [ ] [depends:docs] Run deterministic checks, sync the accepted spec, archive the change, commit, and run current-head live evidence with the Pi OpenRouter key. r[agent_harness_runtime.packaged_live_openrouter_smoke.closeout]
+- [x] [depends:docs] Run deterministic checks, sync the accepted spec, archive the change, commit, and run current-head live evidence with the Pi OpenRouter key. r[agent_harness_runtime.packaged_live_openrouter_smoke.closeout]

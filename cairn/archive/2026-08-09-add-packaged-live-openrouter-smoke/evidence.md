@@ -29,7 +29,17 @@ A diagnostic request used the `openrouter` key from `/home/brittonr/.pi/agent/au
 
 The smoke returned `LIVE_OPENROUTER_SMOKE status=passed`, provider `openrouter`, endpoint `openrouter-responses`, status `success`, one response item, and BLAKE3 request and response identities. It omitted the prompt, credential, raw response, and model output.
 
-This diagnostic ran from a modified worktree. It proves wire compatibility for the tested request, but it is not current-head release evidence. Closeout requires another run from a clean committed revision.
+This diagnostic ran from a modified worktree. It proves wire compatibility for the tested request, but it is not current-head release evidence.
+
+## Current-head live evidence
+
+Commit `40b59f9b2016426a5701e9d48ecb2d8f51d80a71` was clean when the packaged OpenRouter smoke ran with the Pi OpenRouter key and model `openai/gpt-5.5`.
+
+The smoke passed with provider `openrouter`, endpoint `openrouter-responses`, canonical status `success`, finish reason `stop`, and one response item. The metadata-only receipt recorded BLAKE3 request and response identities and omitted the credential, prompt, model output, and raw response.
+
+`scripts/cairn/generate-current-head-release-evidence-index --check live-providers=pass --claim live-providers` recorded that exact clean commit. `scripts/cairn/check-release-evidence-index` passed for the generated index.
+
+The terminal archive commit requires the same smoke and index checks again before integration because lifecycle closeout changes the head.
 
 ## Corrected failures
 
