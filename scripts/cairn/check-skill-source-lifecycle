@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+root=.
+if [[ ${1:-} == --root ]]; then root=${2:?missing root}; fi
+cd "$root"
+
+if [[ ${ANIMUS_SKILL_SOURCE_SKIP_NICKEL:-0} != 1 ]]; then
+  scripts/config/check-nickel-configs
+fi
+positive=$(nickel export --format json fixtures/skill-source-lifecycle/positive.ncl)
+negative=$(nickel export --format json fixtures/skill-source-lifecycle/negative.ncl)
+if grep -q 'false' <<<"$positive"; then
+  echo 'positive skill-source Nickel fixture failed' >&2
+  exit 1
+fi
+expected_negative_count=4
+actual_negative_count=$(grep -o 'false' <<<"$negative" | wc -l)
+if [[ $actual_negative_count -ne $expected_negative_count ]]; then
+  echo 'negative skill-source Nickel fixture did not reject every case' >&2
+  exit 1
+fi
+cargo test -p animus-adapters --locked skill_source::tests
+cargo clippy -p animus-adapters --all-targets -- -D warnings
+cargo check -p animus-adapters --locked --no-default-features
+cargo check -p animus-adapters --locked --no-default-features --target wasm32-unknown-unknown
+cargo check -p animus-core --locked --no-default-features
+cargo check -p animus-runtime --locked --no-default-features
+cargo check -p animus-steel --locked --no-default-features
+cargo check -p animus-tui --locked --no-default-features
+
+if cargo tree -p animus-adapters --locked | grep -Eiq '(^| )git2|gix|reqwest|curl|tar |zip |bounded-exec|cap-root|mantle'; then
+  echo 'skill-source lifecycle contaminated reusable dependencies' >&2
+  exit 1
+fi
+
+sh scripts/cairn/check-component-catalog --root .
+sh scripts/cairn/check-runtime-facade-inventory --root .
+sh scripts/cairn/check-evidence-safety --root .
+
+mkdir -p target/cairn/focused-rails
+cat > target/cairn/focused-rails/skill-source-lifecycle.md <<'RECEIPT'
+# Skill-source lifecycle focused receipt
+
+- verdict: PASS
+- source modes: frozen, tracked-candidate
+- tracked changes: inactive candidates only
+- promotion: exact review plus existing dry-run and injected mutation service
+- effects: host owned
+- evidence: metadata only
+- non-claims: authenticity, authorship, review quality, script safety, authority, confinement, release eligibility
+RECEIPT
+printf '%s\n' 'focused rail skill-source-lifecycle: pass'
+printf '%s\n' 'receipt: target/cairn/focused-rails/skill-source-lifecycle.md'

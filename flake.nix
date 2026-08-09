@@ -385,6 +385,7 @@
                 || baseName == "check-basalt-authority-adapter"
                 || baseName == "check-pijul-vcs-adapter"
                 || baseName == "check-secretspec-host-resolution"
+                || baseName == "check-skill-source-lifecycle"
                 || baseName == "check-evidence-safety"
                 || baseName == "check-model-runtime-profiles"
                 || baseName == "check-agent-role-profiles"
@@ -757,6 +758,12 @@
             export ANIMUS_SECRETSPEC_SKIP_NICKEL=1
             export ANIMUS_SECRETSPEC_SKIP_CONNECTED=1
             sh scripts/cairn/check-secretspec-host-resolution --root .
+          '';
+
+          skill-source-lifecycle = cargoCheck "animus-skill-source-lifecycle" [ pkgs.clippy pkgs.nickel ] ''
+            ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
+            export ANIMUS_SKILL_SOURCE_SKIP_NICKEL=1
+            sh scripts/cairn/check-skill-source-lifecycle --root .
           '';
 
           native-evaluation-core = cargoCheck "animus-native-evaluation-core" [ pkgs.b3sum pkgs.clippy pkgs.nickel ] ''

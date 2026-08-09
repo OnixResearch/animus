@@ -120,6 +120,8 @@ mod security;
 #[cfg(test)]
 mod security_tests;
 mod skill;
+/// Pure frozen and tracked-candidate skill-source lifecycle contracts.
+pub mod skill_source;
 /// Pure opt-in SpaceWasm diagnostic admission and receipt contracts.
 pub mod spacewasm;
 mod status;

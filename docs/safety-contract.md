@@ -141,6 +141,10 @@ The Pijul DTO and service contracts are `no_std` plus `alloc`. They do not link 
 
 The credential request contract is `no_std` plus `alloc` and contains public metadata only. It rejects implicit selection, provider fallback, and writes before provider access. The optional host clears ambient environment variables, verifies the exact manifest identity, disables SecretSpec audit persistence, and runs resolution in an owned bounded worker. SOPS uses a second read-only bounded guard. Secret material is zeroizing and can cross only a borrowed injected delivery call. Receipts omit values, value hashes, credentials, paths, and process output. Resolution does not grant caller authority. See [SecretSpec host resolution](secretspec-host-resolution.md).
 
+## Skill-source lifecycle boundary
+
+Frozen skill sources bind exact revisions, BLAKE3 trees, and manifests. Tracked observations can create inactive candidates only. Promotion requires exact review facts and the existing host asset mutation gate. Fetching, paths, credentials, extraction, review, storage, and activation remain host owned. See [Skill-source lifecycle](skill-source-lifecycle.md).
+
 ## Config ownership
 
 Parse configuration once at the shell boundary, validate it, and keep the typed result in owned structs such as `animus-std::RuntimeConfig` for host input loading or `animus-runtime::RuntimeConfig` for loop execution limits. Do not validate-and-drop raw settings and then re-read or re-parse them later.
