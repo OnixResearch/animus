@@ -114,6 +114,8 @@ mod roi;
 /// Transition shim for the dedicated `animus-router` crate.
 pub mod router;
 mod safe;
+/// Authority-free credential-resolution admission contracts.
+pub mod secret_resolution;
 mod security;
 #[cfg(test)]
 mod security_tests;

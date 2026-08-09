@@ -90,6 +90,7 @@ let evaluation_conformance_feature = "evaluation-conformance" in
 let harbor_atif_feature = "harbor-atif" in
 let basalt_authority_feature = "basalt-authority-adapter" in
 let pijul_vcs_feature = "pijul-vcs-adapter" in
+let secretspec_host_feature = "secretspec-host-resolution" in
 let native_evaluation_profile_feature = "native-evaluation-profile" in
 let native_evaluation_family = "evaluation" in
 let agent_guardrail_feature = "agent-guardrail" in
@@ -347,6 +348,21 @@ let pijul_vcs_record = fun export_path_value owning_crate_value source_value cla
   depends_on = ["animus-adapters::pijul", "animus-runtime::pijul"],
   composes_with = ["animus-adapters::CheckpointRecord", "animus-adapters::SnapshotRecord", "animus-runtime::ProvenanceFact"],
   capability_family = "provenance",
+}
+in
+let secretspec_host_record = fun export_path_value owning_crate_value source_value class_value side_effect_value review_note_value => {
+  export_path = export_path_value,
+  owning_crate = owning_crate_value,
+  source = source_value,
+  class = class_value,
+  side_effect = side_effect_value,
+  stability = optional_stability,
+  review_note = review_note_value,
+  feature_gate = secretspec_host_feature,
+  required_authority = side_effect_value,
+  depends_on = if export_path_value == "animus-adapters::secret_resolution" then [] else ["animus-adapters::secret_resolution"],
+  composes_with = ["credentials"],
+  capability_family = "credentials",
 }
 in
 let evaluation_conformance_record = fun export_path_value owning_crate_value source_value review_note_value => {
@@ -2492,6 +2508,8 @@ let entry_values = [
   pijul_vcs_record "animus-runtime::pijul" "animus-runtime" runtime reusable none "pure exact-cohort validation and existing-owner projection",
   pijul_vcs_record "animus-std::pijul" "animus-std" std_shell shell shell_owned "non-default exact-cohort CLI shell over one injected bounded executor",
   pijul_vcs_record "animus::pijul_vcs_adapter" "animus" root shell shell_owned "non-default root facade for Pijul contracts, pure validation, and injected shell",
+  secretspec_host_record "animus-adapters::secret_resolution" "animus-adapters" adapters injection injected "authority-free explicit credential admission and injected service port",
+  secretspec_host_record "animus::secretspec_host_resolution" "animus" root shell shell_owned "non-default root facade for bounded SecretSpec credential resolution",
   evaluation_conformance_record "animus::evaluation_conformance" "animus" root "non-default deterministic conformance suite over public evaluation production paths",
   native_evaluation_profile_record "animus-std::NativeEvaluationProfileError" "animus-std" std_shell "bounded generated policy parse failure class",
   native_evaluation_profile_record "animus-std::parse_native_evaluation_policy_json" "animus-std" std_shell "strict caller-loaded generated policy parser",

@@ -137,6 +137,10 @@ The generic authority-provider contract is `no_std` plus `alloc` and exposes no 
 
 The Pijul DTO and service contracts are `no_std` plus `alloc`. They do not link Pijul database crates or gain process, filesystem, environment, identity, key, network, remote, or persistence authority. Pure runtime validation admits only the exact beta.18 cohort. The optional std shell calls a caller-injected bounded executor with explicit argv and no environment inheritance. It uses hash-only log JSON because rich beta.18 logs can read identity files. Protected mutations and remote operations stop before executor dispatch. Receipts omit paths, diffs, messages, authors, process output, and unrestricted diagnostics. See [Pijul VCS adapter](pijul-vcs-adapter.md).
 
+## Optional SecretSpec credential boundary
+
+The credential request contract is `no_std` plus `alloc` and contains public metadata only. It rejects implicit selection, provider fallback, and writes before provider access. The optional host clears ambient environment variables, verifies the exact manifest identity, disables SecretSpec audit persistence, and runs resolution in an owned bounded worker. SOPS uses a second read-only bounded guard. Secret material is zeroizing and can cross only a borrowed injected delivery call. Receipts omit values, value hashes, credentials, paths, and process output. Resolution does not grant caller authority. See [SecretSpec host resolution](secretspec-host-resolution.md).
+
 ## Config ownership
 
 Parse configuration once at the shell boundary, validate it, and keep the typed result in owned structs such as `animus-std::RuntimeConfig` for host input loading or `animus-runtime::RuntimeConfig` for loop execution limits. Do not validate-and-drop raw settings and then re-read or re-parse them later.

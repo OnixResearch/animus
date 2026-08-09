@@ -122,6 +122,10 @@ pub use animus_std_eval as evaluation_host;
 #[cfg(feature = "basalt-authority-adapter")]
 pub use animus_std_basalt_authority as basalt_authority;
 
+/// Non-default bounded SecretSpec credential-resolution host.
+#[cfg(feature = "secretspec-host-resolution")]
+pub use animus_std_secretspec as secretspec_host_resolution;
+
 /// Non-default deterministic native evaluation conformance suite.
 #[cfg(feature = "evaluation-conformance")]
 pub use animus_eval_conformance as evaluation_conformance;

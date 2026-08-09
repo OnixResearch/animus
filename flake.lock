@@ -17,6 +17,23 @@
         "url": "ssh://git@github.com/OnixResearch/basalt.git"
       }
     },
+    "bounded-exec": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784441700,
+        "narHash": "sha256-BVmqyUYyoNpY6LfOABxwPO3DY88ZtXeKNg3TPoGCcL0=",
+        "owner": "OnixResearch",
+        "repo": "bounded-exec",
+        "rev": "29dac88ecded94457572db3fdfaaaab95fa91525",
+        "type": "github"
+      },
+      "original": {
+        "owner": "OnixResearch",
+        "repo": "bounded-exec",
+        "rev": "29dac88ecded94457572db3fdfaaaab95fa91525",
+        "type": "github"
+      }
+    },
     "cairn": {
       "flake": false,
       "locked": {
@@ -556,12 +573,14 @@
     "root": {
       "inputs": {
         "basalt": "basalt",
+        "bounded-exec": "bounded-exec",
         "cairn": "cairn",
         "host-control": "host-control",
         "nickel-export": "nickel-export",
         "nixpkgs": "nixpkgs_3",
         "octet": "octet",
         "rats": "rats",
+        "secretspec": "secretspec",
         "systems": "systems_6",
         "trellis": "trellis",
         "ucan": "ucan"
@@ -702,6 +721,23 @@
       "original": {
         "owner": "oxalica",
         "repo": "rust-overlay",
+        "type": "github"
+      }
+    },
+    "secretspec": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1785122304,
+        "narHash": "sha256-s8LXSo6veXTQsd2GlhHS/W3xhDz9v9fjE/5fgsk/edc=",
+        "owner": "cachix",
+        "repo": "secretspec",
+        "rev": "a8794e46ec9664a0e1a3869cc3105d0853937e48",
+        "type": "github"
+      },
+      "original": {
+        "owner": "cachix",
+        "repo": "secretspec",
+        "rev": "a8794e46ec9664a0e1a3869cc3105d0853937e48",
         "type": "github"
       }
     },

@@ -129,6 +129,7 @@ dependencies = [
  "animus-std-control",
  "animus-std-eval",
  "animus-std-lean-loop",
+ "animus-std-secretspec",
  "animus-steel",
  "animus-tui",
  "basalt",
@@ -381,6 +382,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "animus-std-secretspec"
+version = "0.1.0"
+dependencies = [
+ "animus-adapters",
+ "blake3",
+ "bounded-exec",
+ "secretspec 0.17.0 (git+https://github.com/cachix/secretspec.git?rev=a8794e46ec9664a0e1a3869cc3105d0853937e48)",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "zeroize",
+]
+
+[[package]]
 name = "animus-steel"
 version = "0.1.0"
 dependencies = [
@@ -623,7 +638,7 @@ source = "git+ssh://git@github.com/OnixResearch/basalt.git?rev=e9891e32dcdf655c6
 dependencies = [
  "blake3",
  "iddqd",
- "secretspec",
+ "secretspec 0.17.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "serde_json",
  "snafu",
@@ -713,6 +728,20 @@ checksum = "3078c7629b62d3f0439517fa394996acacc5cbc91c5a20d8c658e77abd503a71"
 dependencies = [
  "generic-array",
 ]
+
+[[package]]
+name = "bounded-exec"
+version = "0.1.0"
+source = "git+ssh://git@github.com/OnixResearch/bounded-exec.git?rev=29dac88ecded94457572db3fdfaaaab95fa91525#29dac88ecded94457572db3fdfaaaab95fa91525"
+dependencies = [
+ "bounded-exec-core",
+ "nix 0.30.1",
+]
+
+[[package]]
+name = "bounded-exec-core"
+version = "0.1.0"
+source = "git+ssh://git@github.com/OnixResearch/bounded-exec.git?rev=29dac88ecded94457572db3fdfaaaab95fa91525#29dac88ecded94457572db3fdfaaaab95fa91525"
 
 [[package]]
 name = "brotli"
@@ -2585,6 +2614,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "nix"
+version = "0.30.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "74523f3a35e05aba87a1d978330aef40f67b0304ac79c1c00b294c9830543db6"
+dependencies = [
+ "bitflags 2.13.0",
+ "cfg-if",
+ "cfg_aliases",
+ "libc",
+]
+
+[[package]]
 name = "nom"
 version = "7.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3388,7 +3429,7 @@ dependencies = [
  "goblin",
  "hudsucker",
  "libc",
- "nix",
+ "nix 0.29.0",
  "pathdiff",
  "rand 0.8.6",
  "rand_chacha 0.3.1",
@@ -3473,6 +3514,35 @@ name = "secretspec"
 version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68498f9695bb3662c157b8fd4b4665a594f1157de022ff5b0f891af4c7ec75d2"
+dependencies = [
+ "clap",
+ "colored",
+ "data-encoding",
+ "detect-coding-agent",
+ "dotenvy",
+ "etcetera",
+ "inquire",
+ "jiff",
+ "linkme",
+ "miette",
+ "percent-encoding",
+ "rand 0.9.4",
+ "rsa",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "toml 0.9.12+spec-1.1.0",
+ "url",
+ "uuid",
+]
+
+[[package]]
+name = "secretspec"
+version = "0.17.0"
+source = "git+https://github.com/cachix/secretspec.git?rev=a8794e46ec9664a0e1a3869cc3105d0853937e48#a8794e46ec9664a0e1a3869cc3105d0853937e48"
 dependencies = [
  "clap",
  "colored",

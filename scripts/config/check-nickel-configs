@@ -41,3 +41,4 @@ diff -u config/generated/evaluation-composition-conformance.json "${tmp_dir}/con
 diff -u config/generated/harbor-atif-profile.json "${tmp_dir}/config/generated/harbor-atif-profile.json"
 diff -u config/generated/autonomous-gates-policy.json "${tmp_dir}/config/generated/autonomous-gates-policy.json"
 diff -u config/generated/continual-harness-policy.json "${tmp_dir}/config/generated/continual-harness-policy.json"
+diff -u config/generated/secret-resolution-policy.json "${tmp_dir}/config/generated/secret-resolution-policy.json"

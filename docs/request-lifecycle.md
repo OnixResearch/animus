@@ -71,6 +71,7 @@ This document is the maintained ownership map for request processing. It is a re
 | Active-turn recovery core | `animus-runtime` | `active_turn_recovery::{plan_active_turn_acceptance, prepare_active_turn_checkpoint_replacement, plan_active_turn_recovery, project_active_turn_recovery_receipt}` | Pure over supplied policy, journal, transaction, authority, repair, terminal, and cleanup facts. It cannot execute host effects. |
 | Active-turn recovery host | `animus-std` | `ActiveTurnMemoryHost`, `load_active_turn_recovery_policy` behind `active-turn-recovery` | Explicit policy reads and deterministic fixture transactions only. Production durability remains consumer-owned. |
 | Pijul VCS query adapter | `animus-adapters`, `animus-runtime`, optional `animus-std` | `pijul::{PijulBackendService, validate_pijul_response, project_pijul_log, PijulCliService}` behind `pijul-vcs-adapter` | DTOs, validation, projection, and receipts are pure. The shell calls only an injected bounded executor. It denies mutations, remotes, rich identity-reading logs, discovery, and persistence. |
+| SecretSpec credential resolution | `animus-adapters`, optional `animus-std-secretspec` | `secret_resolution::{admit_secret_resolution, SecretResolutionService}` and `animus_std_secretspec::BoundedSecretSpecResolver` behind `secretspec-host-resolution` | Pure admission validates exact public metadata. The shell verifies the manifest and uses owned bounded workers. Material crosses only a borrowed injected delivery boundary. Resolution grants no caller authority. |
 | Provider retry core | `animus-runtime` | `provider_retry::{classify_provider_retry_failure, plan_provider_retry, evaluate_provider_retry_timer, project_provider_retry_receipt}` | Pure over host-loaded policy, exact invocation identities, safe failure classes, semantic stream state, and timer evidence. It cannot sleep, read clocks, route, contact providers, or mint authority. |
 | Provider retry effects | `animus-std` | `ProviderRetryTimerService`, `ProviderRetryDispatchService`, `execute_provider_retry_wait`, `dispatch_provider_retry_exact` behind `provider-retry` | Only explicitly injected timer and provider implementations are called, and dispatch requires a completed exact-correlated timer gate. |
 | Agent-control port | `animus-adapters` | `AgentControlCommand`, `AgentControlCheckpoint`, `AgentControlWait`, `AgentControlEvent` | Transport-neutral typed facts and an injected wait port only. |
@@ -153,6 +154,10 @@ The separate `animus_runtime::durable_session_store` core plans and validates re
 ### Optional Pijul VCS boundary
 
 `animus-adapters::pijul` owns implementation-free requests, loaded output, executor, and service ports. `animus-runtime::pijul` validates the exact cohort and projects safe observations into existing checkpoint, snapshot, provenance, and workspace owners. The non-default `animus-std::pijul` shell builds explicit argv and calls one injected bounded executor. Rich log output, mutation, remote, discovery, identity, key, network, and persistence behavior fail closed. See [Pijul VCS adapter](pijul-vcs-adapter.md).
+
+### Optional SecretSpec credential boundary
+
+`animus-adapters::secret_resolution` validates exact manifest identity, profile, scope, declaration, provider, purpose, destination, read operation, no-fallback state, and positive bounds. `animus-std-secretspec` then reads the explicit manifest and invokes the pinned SDK in an owned worker. SOPS resolution passes through a read-only guard that bounds the real SOPS child. The resulting value is borrowed into an injected sink and is never added to request, transcript, snapshot, receipt, or lifecycle evidence. See [SecretSpec host resolution](secretspec-host-resolution.md).
 
 ## Validation commands
 

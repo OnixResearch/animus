@@ -33,6 +33,14 @@
       url = "git+ssh://git@github.com/OnixResearch/ucan.git?rev=ad61b53e89fa45f9bf7d313ce14c45de645bf53d";
       flake = false;
     };
+    secretspec = {
+      url = "github:cachix/secretspec/a8794e46ec9664a0e1a3869cc3105d0853937e48";
+      flake = false;
+    };
+    bounded-exec = {
+      url = "github:OnixResearch/bounded-exec/29dac88ecded94457572db3fdfaaaab95fa91525";
+      flake = false;
+    };
   };
 
   outputs =
@@ -48,6 +56,8 @@
       cairn,
       trellis,
       ucan,
+      secretspec,
+      bounded-exec,
     }:
     let
       eachSystem =
@@ -154,6 +164,7 @@
               diff -u ${./config/generated/terminal-image-policy.json} "$tmp_dir/config/generated/terminal-image-policy.json"
               diff -u ${./config/generated/terminal-video-policy.json} "$tmp_dir/config/generated/terminal-video-policy.json"
               diff -u ${./config/generated/pijul-vcs-adapter.json} "$tmp_dir/config/generated/pijul-vcs-adapter.json"
+              diff -u ${./config/generated/secret-resolution-policy.json} "$tmp_dir/config/generated/secret-resolution-policy.json"
 
               nickel typecheck ${./config/nickel-export-requests.ncl}
               NICKEL_EXPORT_BIN=${nickel-export.packages.${system}.default}/bin/nickel-export \
@@ -305,6 +316,7 @@
                 || baseName == "flake.lock"
                 || baseName == ".pre-commit-config.yaml"
                 || baseName == "config.toml"
+                || baseName == "secretspec.toml"
                 || baseName == "README.md"
                 || baseName == "check-clankers-product-surfaces"
                 || baseName == "check-dogfood-readiness"
@@ -372,6 +384,7 @@
                 || baseName == "check-harbor-atif-adapter.rs"
                 || baseName == "check-basalt-authority-adapter"
                 || baseName == "check-pijul-vcs-adapter"
+                || baseName == "check-secretspec-host-resolution"
                 || baseName == "check-evidence-safety"
                 || baseName == "check-model-runtime-profiles"
                 || baseName == "check-agent-role-profiles"
@@ -469,6 +482,10 @@
                 trellis
               else if args.url == "ssh://git@github.com/OnixResearch/ucan.git" then
                 ucan
+              else if args.url == "ssh://git@github.com/OnixResearch/bounded-exec.git" then
+                bounded-exec
+              else if args.url == "https://github.com/cachix/secretspec.git" then
+                secretspec
               else
                 pkgs.fetchgit (
                   args
@@ -489,6 +506,20 @@
               deps = importCargoLock {
                 lockFileContents = cargoLockContentsFor (pkgs.lib.hasInfix "/basalt.git");
                 outputHashes."basalt-0.1.0" = "sha256-TtKH39yQ+adQdfu3wvh3n2D5DTaJjQ6rBcIAWD140EE=";
+              };
+            }
+            {
+              name = "bounded-exec";
+              deps = importCargoLock {
+                lockFileContents = cargoLockContentsFor (pkgs.lib.hasInfix "/bounded-exec.git");
+                outputHashes."bounded-exec-0.1.0" = "sha256-BVmqyUYyoNpY6LfOABxwPO3DY88ZtXeKNg3TPoGCcL0=";
+              };
+            }
+            {
+              name = "secretspec";
+              deps = importCargoLock {
+                lockFileContents = cargoLockContentsFor (pkgs.lib.hasInfix "/cachix/secretspec.git");
+                outputHashes."secretspec-0.17.0" = "sha256-s8LXSo6veXTQsd2GlhHS/W3xhDz9v9fjE/5fgsk/edc=";
               };
             }
             {
@@ -717,6 +748,15 @@
             export ANIMUS_PIJUL_SKIP_NICKEL=1
             export ANIMUS_PIJUL_SKIP_CONNECTED=1
             sh scripts/cairn/check-pijul-vcs-adapter --root .
+          '';
+
+          secretspec-host-resolution = cargoCheck "animus-secretspec-host-resolution" [ pkgs.clippy pkgs.nickel ] ''
+            test -f ${secretspec}/secretspec/Cargo.toml
+            test -f ${bounded-exec}/crates/bounded-exec/Cargo.toml
+            ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
+            export ANIMUS_SECRETSPEC_SKIP_NICKEL=1
+            export ANIMUS_SECRETSPEC_SKIP_CONNECTED=1
+            sh scripts/cairn/check-secretspec-host-resolution --root .
           '';
 
           native-evaluation-core = cargoCheck "animus-native-evaluation-core" [ pkgs.b3sum pkgs.clippy pkgs.nickel ] ''

@@ -130,6 +130,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "session-event-replay",
     "execution-backend-planner",
     "pijul-vcs-adapter",
+    "secretspec-host-resolution",
     "native-evaluation",
     "evaluation-adapters",
     "evaluation-host",
@@ -181,6 +182,7 @@ const ALLOWED_FAMILIES: &[&str] = &[
     "schedule",
     "session-event-replay",
     "execution-backend",
+    "credentials",
     "evaluation",
 ];
 
