@@ -15,6 +15,7 @@
 - The optional `trajectory-transcript-adapter` feature adds an exact `@letta-ai/trajectory` transcript-only cohort behind an injected bounded service, pure trajectory-v1 validation, and existing ledger and batch draft projection. It does not discover stores or persist normalized content; see [docs/trajectory-transcript-adapter.md](docs/trajectory-transcript-adapter.md).
 - The optional `execution-backend-planner` feature selects the weakest policy-admitted backend and requires a current host recheck before effects. It never silently falls back to a broader backend; see [docs/execution-backend-selection.md](docs/execution-backend-selection.md).
 - `crates/animus-std` is the standard-library host compatibility shell. It owns environment/config parsing, feature-gated generated model-profile and semantic-role loading, process-facing orchestration, a pure authority catalog, and facade re-exports for authority-scoped host blocks.
+- The non-default `profile-retry-smoke` feature adds `animus-profile-retry-smoke`. This binary loads explicit model-profile and retry-policy projections, resolves one exact fake target, and exercises one admitted same-plan retry through injected deterministic services. Run `scripts/cairn/check-profile-retry-host-smoke --root .` for its focused rail.
 - `crates/animus-std-observability` is the first direct authority-scoped std block. It supplies deterministic no-op and in-memory observability sinks without pulling unrelated context, provider, ingest, transport, credential, persistence, or terminal behavior.
 - `crates/animus-std-openai` is the non-default live OpenAI-compatible Responses host. Its pure core admits exact OpenAI and OpenRouter endpoint cohorts, text-only requests, and bounded responses. Its optional `reqwest-client` shell performs one explicit HTTPS attempt without discovery, retry, fallback, or raw transport evidence; see [docs/live-openai-provider-host.md](docs/live-openai-provider-host.md).
 - `crates/animus-std-control` is the focused blocking agent-control host. It supplies explicit pause, resume, cancellation, condition-variable waiting, and bounded event subscriptions without transport, persistence, or global-registry authority.
@@ -191,6 +192,7 @@ scripts/cairn/check-execution-backend-selection --root .
 scripts/cairn/check-model-runtime-profiles --root .
 scripts/cairn/check-agent-role-profiles --root .
 scripts/cairn/check-provider-retry --root .
+scripts/cairn/check-profile-retry-host-smoke --root .
 scripts/cairn/check-live-openai-provider-host --root .
 scripts/cairn/check-packaged-live-openai-smoke --root .
 scripts/cairn/check-packaged-live-openrouter-smoke --root .

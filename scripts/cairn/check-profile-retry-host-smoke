@@ -1,0 +1,208 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+readonly SUCCESS=0
+readonly PROVIDER='mock'
+readonly MODEL='mock-text'
+readonly MISSING_MODEL='missing-model'
+readonly PROMPT='private packaged profile retry prompt'
+readonly RETRYABLE_FAILURE='network-reset'
+readonly TERMINAL_FAILURE='auth'
+readonly HEADER='ANIMUS_PROFILE_RETRY_SMOKE'
+readonly COMPLETED='status=completed'
+readonly PROFILE='profile_id=mock-standard'
+readonly REASON='reason=transient_transport'
+readonly TIMER_CALLS='timer_calls=1'
+readonly MODEL_CALLS='model_calls=1'
+readonly ATTEMPTS='completed_attempts=2'
+readonly LIVE_NON_CLAIM='surface=live-provider'
+readonly PRODUCTION_NON_CLAIM='surface=production-readiness'
+readonly MISSING_ARGUMENT='issue=missing-argument'
+readonly PROFILE_POLICY_ERROR='issue=profile-policy'
+readonly RETRY_POLICY_ERROR='issue=retry-policy'
+readonly PROFILE_TARGET_ERROR='issue=profile-target'
+readonly RETRY_DECISION_ERROR='issue=retry-decision'
+readonly RETRY_DISPATCH_ERROR='issue=retry-dispatch'
+readonly RECEIPT_SCHEMA='animus.profile-retry-host-smoke-receipt.v1'
+readonly RAIL_NAME='profile-retry-host-smoke'
+readonly HEAD_UNAVAILABLE='unavailable'
+readonly DIRTY_UNKNOWN='unknown'
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+
+if [ "${1:-}" = "--root" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  repo_root=$(CDPATH= cd -- "$2" && pwd)
+fi
+
+cd "${repo_root}"
+if ! command -v b3sum >/dev/null 2>&1; then
+  printf '%s\n' 'error: b3sum is required for profile retry smoke receipts' >&2
+  exit "${FAILURE}"
+fi
+
+readonly PROFILE_POLICY="${repo_root}/config/generated/model-runtime-profiles.json"
+readonly RETRY_POLICY="${repo_root}/config/generated/provider-retry-policy.json"
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/animus-profile-retry-smoke.XXXXXX")
+trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
+readonly MALFORMED_PROFILE_POLICY="${tmp_dir}/malformed-profiles.json"
+readonly MALFORMED_RETRY_POLICY="${tmp_dir}/malformed-retry.json"
+printf '%s\n' '{' > "${MALFORMED_PROFILE_POLICY}"
+printf '%s\n' '{' > "${MALFORMED_RETRY_POLICY}"
+
+run_smoke() {
+  cargo run -q -p animus-std --features profile-retry-smoke \
+    --bin animus-profile-retry-smoke --locked -- "$@"
+}
+
+run_valid_smoke() {
+  run_smoke \
+    --profile-policy "${PROFILE_POLICY}" \
+    --retry-policy "${RETRY_POLICY}" \
+    --provider "${PROVIDER}" \
+    --model "${MODEL}" \
+    --prompt "${PROMPT}" \
+    --failure-class "${RETRYABLE_FAILURE}" \
+    "$@"
+}
+
+require_contains() {
+  haystack=$1
+  needle=$2
+  label=$3
+  case "${haystack}" in
+    *"${needle}"*) ;;
+    *)
+      printf 'error: missing %s marker: %s\n' "${label}" "${needle}" >&2
+      exit "${FAILURE}"
+      ;;
+  esac
+}
+
+require_omits() {
+  haystack=$1
+  needle=$2
+  label=$3
+  case "${haystack}" in
+    *"${needle}"*)
+      printf 'error: unsafe %s marker leaked: %s\n' "${label}" "${needle}" >&2
+      exit "${FAILURE}"
+      ;;
+    *) ;;
+  esac
+}
+
+expect_failure() {
+  expected=$1
+  shift
+  output=$(run_smoke "$@" 2>&1) && {
+    printf 'error: command unexpectedly passed for %s\n%s\n' "${expected}" "${output}" >&2
+    exit "${FAILURE}"
+  }
+  require_contains "${output}" "${expected}" 'negative-fixture'
+  require_omits "${output}" "${PROMPT}" 'negative-raw-prompt'
+}
+
+expect_valid_failure() {
+  expected=$1
+  shift
+  output=$(run_valid_smoke "$@" 2>&1) && {
+    printf 'error: command unexpectedly passed for %s\n%s\n' "${expected}" "${output}" >&2
+    exit "${FAILURE}"
+  }
+  require_contains "${output}" "${expected}" 'negative-fixture'
+  require_omits "${output}" "${PROMPT}" 'negative-raw-prompt'
+}
+
+# r[verify agent_harness_runtime.profile_retry_host_smoke.verification.rail]
+cargo test -q -p animus-std --features profile-retry-smoke profile_retry_smoke --locked
+
+positive_output=$(run_valid_smoke)
+require_contains "${positive_output}" "${HEADER}" 'header'
+require_contains "${positive_output}" "${COMPLETED}" 'status'
+require_contains "${positive_output}" "${PROFILE}" 'profile'
+require_contains "${positive_output}" "${REASON}" 'reason'
+require_contains "${positive_output}" "${TIMER_CALLS}" 'timer-count'
+require_contains "${positive_output}" "${MODEL_CALLS}" 'model-count'
+require_contains "${positive_output}" "${ATTEMPTS}" 'attempt-count'
+require_contains "${positive_output}" "${LIVE_NON_CLAIM}" 'live-non-claim'
+require_contains "${positive_output}" "${PRODUCTION_NON_CLAIM}" 'production-non-claim'
+require_omits "${positive_output}" "${PROMPT}" 'raw-prompt'
+require_omits "${positive_output}" 'deterministic profile retry response' 'raw-response'
+require_omits "${positive_output}" "${PROFILE_POLICY}" 'profile-policy-path'
+require_omits "${positive_output}" "${RETRY_POLICY}" 'retry-policy-path'
+
+expect_failure "${MISSING_ARGUMENT}"
+expect_failure "${PROFILE_POLICY_ERROR}" \
+  --profile-policy "${MALFORMED_PROFILE_POLICY}" \
+  --retry-policy "${RETRY_POLICY}" \
+  --provider "${PROVIDER}" \
+  --model "${MODEL}" \
+  --prompt "${PROMPT}" \
+  --failure-class "${RETRYABLE_FAILURE}"
+expect_failure "${RETRY_POLICY_ERROR}" \
+  --profile-policy "${PROFILE_POLICY}" \
+  --retry-policy "${MALFORMED_RETRY_POLICY}" \
+  --provider "${PROVIDER}" \
+  --model "${MODEL}" \
+  --prompt "${PROMPT}" \
+  --failure-class "${RETRYABLE_FAILURE}"
+expect_failure "${PROFILE_TARGET_ERROR}" \
+  --profile-policy "${PROFILE_POLICY}" \
+  --retry-policy "${RETRY_POLICY}" \
+  --provider "${PROVIDER}" \
+  --model "${MISSING_MODEL}" \
+  --prompt "${PROMPT}" \
+  --failure-class "${RETRYABLE_FAILURE}"
+expect_failure "${RETRY_DECISION_ERROR}" \
+  --profile-policy "${PROFILE_POLICY}" \
+  --retry-policy "${RETRY_POLICY}" \
+  --provider "${PROVIDER}" \
+  --model "${MODEL}" \
+  --prompt "${PROMPT}" \
+  --failure-class "${TERMINAL_FAILURE}"
+expect_valid_failure "${RETRY_DISPATCH_ERROR}" --cancel-timer
+expect_valid_failure "${RETRY_DISPATCH_ERROR}" --change-request
+expect_valid_failure "${RETRY_DISPATCH_ERROR}" --missing-model-service
+
+# r[verify agent_harness_runtime.profile_retry_host_smoke.receipt.current_head]
+source_hash=$(
+  b3sum \
+    crates/animus-std/Cargo.toml \
+    crates/animus-std/src/lib.rs \
+    crates/animus-std/src/profile_retry_smoke.rs \
+    crates/animus-std/src/bin/animus-profile-retry-smoke.rs \
+    config/generated/model-runtime-profiles.json \
+    config/generated/provider-retry-policy.json | b3sum | cut -d ' ' -f 1
+)
+head_commit=${HEAD_UNAVAILABLE}
+head_dirty=${DIRTY_UNKNOWN}
+if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  head_commit=$(git rev-parse HEAD)
+  if [ -n "$(git status --porcelain)" ]; then
+    head_dirty=true
+  else
+    head_dirty=false
+  fi
+fi
+mkdir -p target/cairn/focused-rails
+receipt_path=target/cairn/focused-rails/${RAIL_NAME}.md
+cat > "${receipt_path}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+head: ${head_commit}
+head_dirty: ${head_dirty}
+source_blake3: ${source_hash}
+claims: explicit-profile-loading,exact-profile-resolution,same-plan-retry,fake-timer-gate,fake-model-dispatch,metadata-only-receipt
+non_claims: live-provider,provider-reliability,fallback,streaming,persistence,tui,daemon,production-readiness
+EOF
+
+printf '%s\n' 'profile retry host smoke rail: ok'
+printf 'receipt: %s\n' "${receipt_path}"
+exit "${SUCCESS}"

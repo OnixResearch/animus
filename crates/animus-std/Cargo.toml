@@ -29,6 +29,7 @@ native-evaluation-profile = ["dep:animus-eval-core", "dep:serde", "dep:serde_jso
 mesh-provider = ["dep:serde", "dep:serde_json"]
 model-runtime-profiles = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 provider-retry = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
+profile-retry-smoke = ["model-runtime-profiles", "provider-retry"]
 pijul-vcs-adapter = ["dep:animus-runtime", "animus-runtime/pijul-vcs-adapter", "animus-runtime/provenance", "dep:serde", "dep:serde_json"]
 trajectory-transcript-adapter = ["dep:animus-runtime", "animus-runtime/trajectory-transcript-adapter", "dep:serde", "dep:serde_json"]
 rejected-attempt-context = ["dep:animus-runtime"]
@@ -55,6 +56,11 @@ required-features = ["coding-session-host"]
 name = "animus-codebase-tool-smoke"
 path = "src/bin/animus-codebase-tool-smoke.rs"
 required-features = ["codebase-tool-host"]
+
+[[bin]]
+name = "animus-profile-retry-smoke"
+path = "src/bin/animus-profile-retry-smoke.rs"
+required-features = ["profile-retry-smoke"]
 
 [[bin]]
 name = "animus-sandlock-live-fixture"

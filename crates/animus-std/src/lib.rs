@@ -77,6 +77,8 @@ mod modelprofiles;
 mod observability;
 #[cfg(feature = "pijul-vcs-adapter")]
 pub mod pijul;
+#[cfg(feature = "profile-retry-smoke")]
+mod profile_retry_smoke;
 #[cfg(feature = "provider-retry")]
 mod providerretry;
 mod providers;
@@ -228,6 +230,8 @@ pub use durablefile::{
     FileSynchronizer, load_durable_session_store_policy, open_durable_session_store,
     parse_durable_session_store_policy_json, read_durable_session_snapshot,
 };
+#[cfg(feature = "profile-retry-smoke")]
+pub use profile_retry_smoke::run_packaged_profile_retry_smoke;
 #[cfg(feature = "provider-retry")]
 pub use providerretry::{
     ProviderRetryConfigError, ProviderRetryDispatchError, ProviderRetryDispatchInput,

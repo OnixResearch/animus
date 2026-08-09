@@ -419,6 +419,7 @@
                 || baseName == "check-injected-services"
                 || baseName == "check-interrupted-tool-repair"
                 || baseName == "check-provider-retry"
+                || baseName == "check-profile-retry-host-smoke"
                 || baseName == "check-sandlock-host"
                 || baseName == "check-bounded-execution-evaluation"
                 || baseName == "check-application-host-binding"
@@ -1314,6 +1315,10 @@
 
           packaged-headless-dogfood-smoke = cargoCheck "animus-packaged-headless-dogfood-smoke" [ ] ''
             sh scripts/cairn/check-packaged-headless-dogfood-smoke --root .
+          '';
+
+          profile-retry-host-smoke = cargoCheck "animus-profile-retry-host-smoke" [ pkgs.b3sum ] ''
+            sh scripts/cairn/check-profile-retry-host-smoke --root .
           '';
 
           plugin-manifest-runtime-neutral =
