@@ -36,7 +36,7 @@ This contract does not copy Herdr's JSON protocol, start a host daemon, manage P
 ## Focused checks
 
 ```sh
-cargo test -p animus-adapters --test host_control_conformance --locked
+cargo test -p animus-adapters --test hostcontrol --locked
 scripts/cairn/check-host-control-extraction --root .
 nix build .#checks.x86_64-linux.host-control-extraction --no-link -L
 ```

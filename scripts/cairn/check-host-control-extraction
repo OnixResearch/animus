@@ -37,7 +37,7 @@ grep -F "\"repository\": \"${EXPECTED_REPOSITORY}\"" "${profile}" >/dev/null || 
 grep -F "\"revision\": \"${EXPECTED_REVISION}\"" "${profile}" >/dev/null || fail 'generated revision profile drifted'
 grep -F 'pub use host_control_core::*;' "${facade}" >/dev/null || fail 'compatibility facade is not a pure re-export'
 
-cargo test -p animus-adapters --test host_control_conformance --locked
+cargo test -p animus-adapters --test hostcontrol --locked
 cargo check -p animus-adapters --locked
 
 printf 'host-control extraction check passed for %s at %s\n' "${EXPECTED_REPOSITORY}" "${EXPECTED_REVISION}"
