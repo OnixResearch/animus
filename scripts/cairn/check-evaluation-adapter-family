@@ -52,15 +52,15 @@ sh scripts/cairn/check-component-catalog --root .
 sh scripts/cairn/check-runtime-facade-inventory --root .
 sh scripts/cairn/check-composition-conformance --root .
 
-if cargo tree -p animus-adapter-eval --edges normal | grep -Eiq "${PROHIBITED_DEPENDENCIES}"; then
+if cargo tree -p animus-adapter-eval --edges normal --format '{lib}' | grep -Eiq "${PROHIBITED_DEPENDENCIES}"; then
   printf '%s\n' 'error: host authority dependency leaked into animus-adapter-eval' >&2
   exit "${FAILURE}"
 fi
-if cargo tree -p animus --edges normal | grep -Fq 'animus-adapter-eval'; then
+if cargo tree -p animus --edges normal --format '{lib}' | grep -Fq 'animus_adapter_eval'; then
   printf '%s\n' 'error: evaluation adapters leaked into the default root facade' >&2
   exit "${FAILURE}"
 fi
-if cargo tree -p animus-adapters --edges normal | grep -Fq 'animus-adapter-eval'; then
+if cargo tree -p animus-adapters --edges normal --format '{lib}' | grep -Fq 'animus_adapter_eval'; then
   printf '%s\n' 'error: evaluation adapters leaked into the default adapter facade' >&2
   exit "${FAILURE}"
 fi

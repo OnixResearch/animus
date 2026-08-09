@@ -133,6 +133,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "evaluation-adapters",
     "evaluation-host",
     "evaluation-conformance",
+    "harbor-atif",
     "native-evaluation-profile",
 ];
 

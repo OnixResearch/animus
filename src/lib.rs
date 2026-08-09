@@ -128,6 +128,10 @@ pub mod harbor_evaluation {
     };
 }
 
+/// Non-default authority-free ATIF-v1.7 adapter contracts.
+#[cfg(feature = "harbor-atif")]
+pub use animus_adapter_atif as harbor_atif;
+
 /// Non-default SpaceWasm diagnostic contracts and injected host service.
 #[cfg(feature = "spacewasm-diagnostic")]
 pub mod spacewasm_diagnostic {

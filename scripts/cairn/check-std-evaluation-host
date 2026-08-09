@@ -53,15 +53,15 @@ sh scripts/cairn/check-active-turn-recovery --root .
 sh scripts/cairn/check-durable-session-store --root .
 sh scripts/cairn/check-evidence-safety --root .
 
-if cargo tree -p animus --edges normal | grep -Fq 'animus-std-eval'; then
+if cargo tree -p animus --edges normal --format '{lib}' | grep -Fq 'animus_std_eval'; then
   printf '%s\n' 'error: evaluation host leaked into the default root facade' >&2
   exit "${FAILURE}"
 fi
-if ! cargo tree -p animus --no-default-features --features evaluation-host --edges normal | grep -Fq 'animus-std-eval'; then
+if ! cargo tree -p animus --no-default-features --features evaluation-host --edges normal --format '{lib}' | grep -Fq 'animus_std_eval'; then
   printf '%s\n' 'error: evaluation-host feature does not select animus-std-eval' >&2
   exit "${FAILURE}"
 fi
-if cargo tree -p animus-std-eval --edges normal | grep -Eiq '(^|[-_])(tokio|reqwest|hyper|axum|bollard|kube|python|pydantic|harbor)([-_]|$)'; then
+if cargo tree -p animus-std-eval --edges normal --format '{lib}' | grep -Eiq '(^|[-_])(tokio|reqwest|hyper|axum|bollard|kube|python|pydantic|harbor)([-_]|$)'; then
   printf '%s\n' 'error: prohibited concrete runtime dependency leaked into animus-std-eval' >&2
   exit "${FAILURE}"
 fi

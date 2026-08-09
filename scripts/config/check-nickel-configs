@@ -38,5 +38,6 @@ diff -u config/generated/harbor-evaluation-profile.json "${tmp_dir}/config/gener
 diff -u config/generated/native-evaluation-policy.json "${tmp_dir}/config/generated/native-evaluation-policy.json"
 diff -u config/generated/evaluation-host-policy.json "${tmp_dir}/config/generated/evaluation-host-policy.json"
 diff -u config/generated/evaluation-composition-conformance.json "${tmp_dir}/config/generated/evaluation-composition-conformance.json"
+diff -u config/generated/harbor-atif-profile.json "${tmp_dir}/config/generated/harbor-atif-profile.json"
 diff -u config/generated/autonomous-gates-policy.json "${tmp_dir}/config/generated/autonomous-gates-policy.json"
 diff -u config/generated/continual-harness-policy.json "${tmp_dir}/config/generated/continual-harness-policy.json"

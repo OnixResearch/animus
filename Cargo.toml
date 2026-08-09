@@ -3,6 +3,7 @@ members = [
   "crates/animus-adapter-continual",
   "crates/animus-adapter-daemon",
   "crates/animus-adapter-eval",
+  "crates/animus-adapter-atif",
   "crates/animus-adapter-observability",
   "crates/animus-adapter-rlm-kernel",
   "crates/animus-adapter-safe",
@@ -111,7 +112,9 @@ evaluation-adapters = ["native-evaluation", "dep:animus-adapter-eval", "animus-a
 evaluation-host = ["std", "evaluation-adapters", "dep:animus-std-eval"]
 evaluation-conformance = ["evaluation-host", "harbor-eval", "dep:animus-eval-conformance"]
 native-evaluation-profile = ["std", "native-evaluation", "animus-std/native-evaluation-profile"]
-harbor-eval = ["std", "evaluation-adapters", "animus-runtime/harbor-eval", "animus-std/harbor-eval"]
+harbor-eval = ["std", "evaluation-adapters", "harbor-atif", "animus-runtime/harbor-eval", "animus-std/harbor-eval"]
+harbor-atif = ["dep:animus-adapter-atif", "animus-adapters/harbor-atif"]
+harbor-atif-json = ["harbor-atif", "animus-adapter-atif/json-codec", "animus-adapters/harbor-atif-json"]
 mesh-provider = ["std", "animus-std/mesh-provider"]
 spacewasm-diagnostic = ["std", "animus-std/spacewasm-diagnostic"]
 std = ["dep:animus-std"]
@@ -150,6 +153,7 @@ animus-acp-stdio-host = { path = "crates/animus-acp-stdio-host", version = "0.1.
 animus-adapter-continual = { path = "crates/animus-adapter-continual", version = "0.1.0", optional = true }
 animus-adapter-daemon = { path = "crates/animus-adapter-daemon", version = "0.1.0", optional = true }
 animus-adapter-eval = { path = "crates/animus-adapter-eval", version = "0.1.0", optional = true }
+animus-adapter-atif = { path = "crates/animus-adapter-atif", version = "0.1.0", optional = true }
 animus-adapter-rlm-kernel = { path = "crates/animus-adapter-rlm-kernel", version = "0.1.0", optional = true }
 animus-adapter-weave = { path = "crates/animus-adapter-weave", version = "0.1.0", optional = true }
 animus-adapters = { path = "crates/animus-adapters", version = "0.1.0" }

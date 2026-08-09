@@ -11,7 +11,7 @@ cargo clippy -p animus-runtime --all-targets -- -D warnings
 cargo clippy -p animus-adapters --all-targets -- -D warnings
 cargo clippy -p animus-std --no-default-features --features harbor-eval --all-targets -- -D warnings
 for args in '-p animus-adapters --no-default-features' '-p animus-runtime --no-default-features' '-p animus --no-default-features' '-p animus'; do
-  if cargo tree $args --edges normal | grep -Eiq "$PROHIBITED"; then
+  if cargo tree $args --edges normal --format '{lib}' | grep -Eiq "$PROHIBITED"; then
     echo "Harbor/Python/container/cloud dependency leaked into $args" >&2
     exit 1
   fi

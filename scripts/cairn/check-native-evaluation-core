@@ -50,15 +50,15 @@ cargo check -p animus-eval-core --target wasm32-unknown-unknown --locked
 cargo check -p animus --no-default-features --features native-evaluation --target wasm32-unknown-unknown --locked
 cargo check -p animus-runtime --no-default-features --features native-evaluation --target wasm32-unknown-unknown --locked
 
-if cargo tree -p animus-eval-core --edges normal | grep -Eiq "${PROHIBITED_DEPENDENCIES}"; then
+if cargo tree -p animus-eval-core --edges normal --format '{lib}' | grep -Eiq "${PROHIBITED_DEPENDENCIES}"; then
   printf '%s\n' 'error: host authority dependency leaked into animus-eval-core' >&2
   exit "${FAILURE}"
 fi
-if cargo tree -p animus --edges normal | grep -Fq 'animus-eval-core'; then
+if cargo tree -p animus --edges normal --format '{lib}' | grep -Fq 'animus_eval_core'; then
   printf '%s\n' 'error: native evaluation leaked into the default root facade' >&2
   exit "${FAILURE}"
 fi
-if cargo tree -p animus-runtime --no-default-features --edges normal | grep -Fq 'animus-eval-core'; then
+if cargo tree -p animus-runtime --no-default-features --edges normal --format '{lib}' | grep -Fq 'animus_eval_core'; then
   printf '%s\n' 'error: native evaluation leaked into the default-free runtime' >&2
   exit "${FAILURE}"
 fi

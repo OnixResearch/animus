@@ -82,6 +82,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "loop",
     "mesh-provider",
     "harbor-eval",
+    "harbor-atif",
     "spacewasm-diagnostic",
     "model-runtime-profiles",
     "agent-role-profiles",

@@ -33,7 +33,7 @@ schedule-reliability = []
 session-event-replay = []
 execution-backend-planner = []
 native-evaluation = ["dep:animus-eval-core"]
-harbor-eval = ["native-evaluation", "animus-adapters/evaluation"]
+harbor-eval = ["native-evaluation", "animus-adapters/evaluation", "animus-adapters/harbor-atif", "dep:animus-adapter-atif"]
 batch = []
 compaction = []
 dataset-export = []
@@ -51,6 +51,7 @@ steel = ["dep:animus-steel"]
 
 [dependencies]
 animus-adapter-rlm-kernel = { path = "../animus-adapter-rlm-kernel", version = "0.1.0", optional = true }
+animus-adapter-atif = { path = "../animus-adapter-atif", version = "0.1.0", optional = true }
 animus-adapters = { path = "../animus-adapters", version = "0.1.0" }
 animus-core = { path = "../animus-core", version = "0.1.0" }
 animus-eval-core = { path = "../animus-eval-core", version = "0.1.0", optional = true }

@@ -286,6 +286,8 @@
                 || baseName == "check-std-evaluation-host"
                 || baseName == "check-std-evaluation-host.rs"
                 || baseName == "check-evaluation-composition-conformance"
+                || baseName == "check-harbor-atif-adapter"
+                || baseName == "check-harbor-atif-adapter.rs"
                 || baseName == "check-evidence-safety"
                 || baseName == "check-model-runtime-profiles"
                 || baseName == "check-agent-role-profiles"
@@ -515,6 +517,13 @@
             ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
             export ANIMUS_HARBOR_SKIP_NICKEL=1
             sh scripts/cairn/check-harbor-evaluation --root .
+          '';
+
+          harbor-atif-adapter = cargoCheck "animus-harbor-atif-adapter" [ pkgs.clippy pkgs.nickel ] ''
+            ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
+            export ANIMUS_HARBOR_ATIF_SKIP_NICKEL=1
+            export ANIMUS_HARBOR_ATIF_SKIP_CONNECTED=1
+            sh scripts/cairn/check-harbor-atif-adapter --root .
           '';
 
           native-evaluation-core = cargoCheck "animus-native-evaluation-core" [ pkgs.b3sum pkgs.clippy pkgs.nickel ] ''

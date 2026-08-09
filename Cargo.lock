@@ -101,6 +101,7 @@ name = "animus"
 version = "0.1.0"
 dependencies = [
  "animus-acp-stdio-host",
+ "animus-adapter-atif",
  "animus-adapter-continual",
  "animus-adapter-daemon",
  "animus-adapter-eval",
@@ -135,6 +136,15 @@ dependencies = [
  "animus-runtime",
  "animus-std",
  "animus-tui",
+ "blake3",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "animus-adapter-atif"
+version = "0.1.0"
+dependencies = [
  "blake3",
  "serde",
  "serde_json",
@@ -192,6 +202,7 @@ dependencies = [
 name = "animus-adapters"
 version = "0.1.0"
 dependencies = [
+ "animus-adapter-atif",
  "animus-adapter-continual",
  "animus-adapter-daemon",
  "animus-adapter-eval",
@@ -272,6 +283,7 @@ dependencies = [
 name = "animus-runtime"
 version = "0.1.0"
 dependencies = [
+ "animus-adapter-atif",
  "animus-adapter-rlm-kernel",
  "animus-adapters",
  "animus-core",

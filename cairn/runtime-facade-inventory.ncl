@@ -87,6 +87,7 @@ let native_evaluation_feature = "native-evaluation" in
 let evaluation_adapters_feature = "evaluation-adapters" in
 let evaluation_host_feature = "evaluation-host" in
 let evaluation_conformance_feature = "evaluation-conformance" in
+let harbor_atif_feature = "harbor-atif" in
 let native_evaluation_profile_feature = "native-evaluation-profile" in
 let native_evaluation_family = "evaluation" in
 let agent_guardrail_feature = "agent-guardrail" in
@@ -265,6 +266,21 @@ let native_evaluation_record = fun export_path_value owning_crate_value source_v
   stability = optional_stability,
   review_note = review_note_value,
   feature_gate = native_evaluation_feature,
+  required_authority = none,
+  depends_on = [],
+  composes_with = ["animus-runtime::harbor_eval"],
+  capability_family = native_evaluation_family,
+}
+in
+let harbor_atif_record = fun export_path_value owning_crate_value source_value review_note_value => {
+  export_path = export_path_value,
+  owning_crate = owning_crate_value,
+  source = source_value,
+  class = reusable,
+  side_effect = none,
+  stability = optional_stability,
+  review_note = review_note_value,
+  feature_gate = harbor_atif_feature,
   required_authority = none,
   depends_on = [],
   composes_with = ["animus-runtime::harbor_eval"],
@@ -2407,6 +2423,8 @@ let entry_values = [
   messaging_record "animus::messaging_receipts" "animus" root "optional compatibility re-export of messaging receipt contracts",
   native_evaluation_record "animus-runtime::native_evaluation" "animus-runtime" runtime "optional runtime re-export of the authority-free evaluation core",
   native_evaluation_record "animus::native_evaluation" "animus" root "optional root re-export of the authority-free evaluation core",
+  harbor_atif_record "animus-adapters::atif" "animus-adapters" adapters "non-default compatibility re-export of ATIF-v1.7 contracts",
+  harbor_atif_record "animus::harbor_atif" "animus" root "non-default root re-export of ATIF-v1.7 contracts",
   evaluation_adapters_record "animus-adapters::evaluation" "animus-adapters" adapters "non-default compatibility re-export of native evaluation adapter contracts",
   evaluation_adapters_record "animus::evaluation_adapters" "animus" root "non-default root re-export of native evaluation adapter contracts",
   evaluation_host_record "animus::evaluation_host" "animus" root "non-default explicit standard-library native evaluation host; callers supply all service authority",

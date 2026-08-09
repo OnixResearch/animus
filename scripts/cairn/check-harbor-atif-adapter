@@ -1,0 +1,90 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+readonly ROOT_FLAG=--root
+readonly DEFAULT_ROOT=.
+readonly CHECKER_SOURCE=scripts/cairn/check-harbor-atif-adapter.rs
+readonly CHECKER_TARGET=target/cairn/check-harbor-atif-adapter
+readonly RECEIPT=target/cairn/focused-rails/harbor-atif-adapter.md
+readonly FORBIDDEN_DEPENDENCIES='(^|[-_])(harbor|python|pydantic|tokio|reqwest|hyper|docker|kubernetes|boto|cloud)([-_]|$)'
+
+root=${DEFAULT_ROOT}
+if [ "${1:-}" = "${ROOT_FLAG}" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  root=$2
+fi
+cd "${root}"
+
+mkdir -p "$(dirname "${CHECKER_TARGET}")" "$(dirname "${RECEIPT}")"
+rustc --edition=2021 --test "${CHECKER_SOURCE}" -o "${CHECKER_TARGET}-tests"
+"${CHECKER_TARGET}-tests"
+rustc --edition=2021 "${CHECKER_SOURCE}" -o "${CHECKER_TARGET}"
+"${CHECKER_TARGET}" .
+
+if [ "${ANIMUS_HARBOR_ATIF_SKIP_NICKEL:-0}" != "1" ]; then
+  scripts/config/check-nickel-configs
+fi
+nickel export --format json fixtures/harbor-atif/positive.ncl >/dev/null
+nickel export --format json fixtures/harbor-atif/negative.ncl >/dev/null
+
+cargo test -p animus-adapter-atif --features json-codec --locked
+cargo clippy -p animus-adapter-atif --all-targets --features json-codec -- -D warnings
+cargo check -p animus-adapter-atif --no-default-features --locked
+cargo check -p animus-adapter-atif --target wasm32-unknown-unknown --no-default-features --locked
+cargo test -p animus-runtime --no-default-features --features harbor-eval harbor_eval --locked
+cargo test -p animus --no-default-features --features harbor-eval,harbor-atif-json --test harbor_atif_integration --locked
+cargo check -p animus --no-default-features --features harbor-atif --locked
+cargo check -p animus --no-default-features --features harbor-atif-json --locked
+
+if cargo tree -p animus-adapter-atif --no-default-features --edges normal --format '{lib}' | grep -Eiq "${FORBIDDEN_DEPENDENCIES}"; then
+  printf '%s\n' 'error: host or Harbor dependency leaked into the no-default ATIF crate' >&2
+  exit "${FAILURE}"
+fi
+if cargo tree -p animus --edges normal --format '{lib}' | grep -Fq 'animus_adapter_atif'; then
+  printf '%s\n' 'error: ATIF adapter leaked into the default root facade' >&2
+  exit "${FAILURE}"
+fi
+
+sh scripts/cairn/check-component-catalog
+sh scripts/cairn/check-runtime-facade-inventory
+sh scripts/cairn/check-evidence-safety --root .
+
+if [ "${ANIMUS_HARBOR_ATIF_SKIP_CONNECTED:-0}" != "1" ]; then
+  sh scripts/cairn/check-harbor-evaluation --root .
+  sh scripts/cairn/check-neutral-ledger --root .
+  cargo test -p animus-runtime batch --locked
+  cargo test -p animus-runtime subagents --locked
+  cargo test -p animus-runtime multimodal --locked
+  cargo test -p animus-runtime dataset_export --locked
+  cargo test -p animus-eval-conformance --locked
+fi
+
+cat > "${RECEIPT}" <<'EOF'
+schema: animus.focused-rail.v1
+rail: harbor-atif-adapter
+status: pass
+cohort:
+- harbor_release: v0.18.0
+- harbor_revision: 527d50deb63a5d279e8c20593c18a2cbc7f61f9e
+- atif_schema: ATIF-v1.7
+- source_cohort_identity: b3:78d4a45481206483c89269eeb515854552bb4185b4db41a966047d8f124cfe4f
+coverage:
+- typed Nickel profile and Rust policy revalidation
+- caller-byte JSON codec and deterministic encode
+- complete selected DTO and semantic validation
+- graph and unresolved reference checks
+- loss-visible import and non-inventing export
+- metadata-only receipts
+- positive and negative production entrypoints
+- no-default, Wasm, and dependency isolation
+non_claims:
+- no live Harbor, Python, Pydantic, provider, tool, process, filesystem, network, credential, clock, scheduler, persistence, image, continuation, or subagent reference was exercised
+- no source authenticity, completeness, privacy, verifier soundness, artifact authenticity, benchmark validity, training fitness, authoritative completion, production readiness, or release eligibility is established
+EOF
+
+printf '%s\n' 'focused rail harbor-atif-adapter: pass'
+printf 'receipt: %s\n' "${RECEIPT}"

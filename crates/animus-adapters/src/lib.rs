@@ -79,6 +79,11 @@ pub mod daemon_workers {
 pub mod evaluation {
     pub use animus_adapter_eval::*;
 }
+/// Non-default compatibility facade for ATIF-v1.7 adapter contracts.
+#[cfg(feature = "harbor-atif")]
+pub mod atif {
+    pub use animus_adapter_atif::*;
+}
 /// Compatibility facade for pure model-facing RLM kernel contracts.
 pub mod rlm_kernel {
     pub use animus_adapter_rlm_kernel::*;

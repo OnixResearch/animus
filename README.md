@@ -17,6 +17,7 @@
 - `crates/animus-std-observability` is the first direct authority-scoped std block. It supplies deterministic no-op and in-memory observability sinks without pulling unrelated context, provider, ingest, transport, credential, persistence, or terminal behavior.
 - `crates/animus-std-control` is the focused blocking agent-control host. It supplies explicit pause, resume, cancellation, condition-variable waiting, and bounded event subscriptions without transport, persistence, or global-registry authority.
 - `crates/animus-eval-core` is the non-default no-std native evaluation core. It owns pure taskset, recipe, episode-reference, reward, resume, and metadata-only receipt decisions; see [docs/native-evaluation-core.md](docs/native-evaluation-core.md).
+- `crates/animus-adapter-atif` is the non-default no-std ATIF-v1.7 adapter family. It owns caller-byte JSON, complete selected-cohort DTO validation, graph/reference classification, import/export drafts, explicit loss reports, and metadata-only receipts; see [docs/harbor-atif-json-adapter.md](docs/harbor-atif-json-adapter.md). Run `scripts/cairn/check-harbor-atif-adapter --root .` for its focused rail.
 - `crates/animus-adapter-eval` is the non-default no-std native evaluation adapter family. It owns nine separate implementation-free service ports, exact request and observation binding, bounded model-call projections, ordering gates, and metadata-only receipts; see [docs/evaluation-adapter-family.md](docs/evaluation-adapter-family.md). Run `scripts/cairn/check-evaluation-adapter-family --root .` for its focused rail.
 - `crates/animus-std-eval` is the non-default explicit native evaluation host. It composes checked plans with caller-supplied task, agent, model, tool, verifier, artifact, timer, cancellation, cleanup, and storage services; see [docs/native-evaluation-host.md](docs/native-evaluation-host.md). Run `scripts/cairn/check-std-evaluation-host --root .` for its focused rail.
 - `crates/animus-eval-conformance` is the non-default deterministic evaluation conformance suite. It runs paired positive and expected-negative fixtures through public production APIs with injected finite fakes; see [docs/evaluation-composition-conformance.md](docs/evaluation-composition-conformance.md). Run `scripts/cairn/check-evaluation-composition-conformance --root .` for its focused rail.
@@ -26,7 +27,7 @@
 - `crates/animus-tui` is the optional terminal UI host shell. It keeps Rats/Subwayrat/Ratatui-facing dependencies outside reusable core, adapter, Steel, and std runtime contracts; see [docs/ratatui-tool-host-surface.md](docs/ratatui-tool-host-surface.md) for the host bridge, [docs/terminal-image-protocols.md](docs/terminal-image-protocols.md) for bounded static images, and [docs/terminal-video-playback.md](docs/terminal-video-playback.md) for non-default playback over injected decoded frames.
 - The root `animus` package is a thin compatibility layer that re-exports the workspace crates.
 
-Embedders should depend on the smallest crate set they need: `animus-core` for pure state, `animus-adapters` for port contracts, `animus-preserves-schema` for schema metadata, `animus-preserves-adapter` for adapter-only Preserves text/binary payloads, `animus-preserves` for the broad compatibility facade and runtime-adjacent Preserves families, `animus-steel` for the main scriptable agent-loop fabric, `animus-runtime` for reusable loop orchestration over injected adapters, `animus-std` for the default compatibility host shell, `animus-std-observability` for direct deterministic std sinks, `animus-std-control` for external pause/resume and bounded event subscriptions, `animus-tui` for an optional Subwayrat-backed terminal host shell, or root `animus` for the combined compatibility surface. The root `animus` crate enables the `std` feature by default for compatibility; disable default features to select the no-std facade over `animus-core` and `animus-adapters`. Runtime configuration is parsed once at the shell boundary and stored in typed structs before being passed into the core. Component calls cross typed adapter contracts so model, tool, memory, and host integrations can be swapped without changing core logic.
+Embedders should depend on the smallest crate set they need: `animus-core` for pure state, `animus-adapters` for port contracts, `animus-preserves-schema` for schema metadata, `animus-preserves-adapter` for adapter-only Preserves text/binary payloads, `animus-preserves` for the broad compatibility facade and runtime-adjacent Preserves families, `animus-steel` for the main scriptable agent-loop fabric, `animus-runtime` for reusable loop orchestration over injected adapters, `animus-std` for the default compatibility host shell, `animus-std-observability` for direct deterministic std sinks, `animus-std-control` for external pause/resume and bounded event subscriptions, `animus-adapter-atif` for exact optional ATIF-v1.7 interchange, `animus-tui` for an optional Subwayrat-backed terminal host shell, or root `animus` for the combined compatibility surface. The root `animus` crate enables the `std` feature by default for compatibility; disable default features to select the no-std facade over `animus-core` and `animus-adapters`. Runtime configuration is parsed once at the shell boundary and stored in typed structs before being passed into the core. Component calls cross typed adapter contracts so model, tool, memory, and host integrations can be swapped without changing core logic.
 
 ## Development safety rails
 
@@ -114,6 +115,7 @@ The supported Wasm compile boundary targets `wasm32-unknown-unknown` for determi
 cargo check -p animus-core --target wasm32-unknown-unknown --locked
 cargo check -p animus-adapter-safe --target wasm32-unknown-unknown --locked
 cargo check -p animus-adapter-rlm-kernel --target wasm32-unknown-unknown --locked
+cargo check -p animus-adapter-atif --target wasm32-unknown-unknown --no-default-features --locked
 cargo check -p animus-adapter-observability --target wasm32-unknown-unknown --locked
 cargo check -p animus-adapters --target wasm32-unknown-unknown --locked
 cargo check -p animus-router --target wasm32-unknown-unknown --locked
@@ -143,6 +145,7 @@ cargo test -p animus-preserves syndicate --locked
 scripts/cairn/check-preserves-boundary-schemas --root .
 cargo test -p animus-steel
 cargo test -p animus-adapter-rlm-kernel
+cargo test -p animus-adapter-atif --features json-codec --locked
 cargo test -p animus-runtime --features rlm-kernel rlm_kernel
 cargo check -p animus --features rlm-kernel
 cargo test -p animus-runtime
@@ -194,6 +197,7 @@ scripts/cairn/check-request-lifecycle --root .
 scripts/cairn/check-steel-runtime-policy --root .
 scripts/cairn/check-rlm-kernel --root .
 scripts/cairn/check-neutral-ledger --root .
+scripts/cairn/check-harbor-atif-adapter --root .
 scripts/cairn/check-injected-services --root .
 sh scripts/cairn/check-runtime-authority-seal --root .
 scripts/cairn/check-composition-conformance --root .

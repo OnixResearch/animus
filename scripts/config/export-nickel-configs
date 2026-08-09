@@ -41,6 +41,7 @@ terminal_video_policy_source_file=${repo_root}/config/terminal-video-policy.ncl
 native_evaluation_policy_source_file=${repo_root}/config/native-evaluation-policy.ncl
 evaluation_host_policy_source_file=${repo_root}/config/evaluation-host-policy.ncl
 evaluation_composition_conformance_source_file=${repo_root}/config/evaluation-composition-conformance.ncl
+harbor_atif_profile_source_file=${repo_root}/config/harbor-atif-profile.ncl
 
 if ! command -v nickel >/dev/null 2>&1; then
   printf '%s\n' 'error: nickel is required to export repo config. Run inside `nix develop`.' >&2
@@ -89,3 +90,4 @@ nickel export --format json --field terminal_video_policy "${terminal_video_poli
 nickel export --format json --field native_evaluation_policy "${native_evaluation_policy_source_file}" > "${target_root}/config/generated/native-evaluation-policy.json"
 nickel export --format json --field evaluation_host_policy "${evaluation_host_policy_source_file}" > "${target_root}/config/generated/evaluation-host-policy.json"
 nickel export --format json --field evaluation_composition_conformance "${evaluation_composition_conformance_source_file}" > "${target_root}/config/generated/evaluation-composition-conformance.json"
+nickel export --format json --field harbor_atif_profile "${harbor_atif_profile_source_file}" > "${target_root}/config/generated/harbor-atif-profile.json"

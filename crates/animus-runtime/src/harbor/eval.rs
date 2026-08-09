@@ -1,5 +1,7 @@
 //! Pure deterministic planning, ATIF projection, reward reduction, and receipts.
 
+pub use animus_adapter_atif::{AtifImportProjection, ValidatedTrajectory};
+
 pub use animus_eval_core::{
     CompatNetworkPosture as NetworkPosture, CompatPlanError as PlanError, CompatRoute as Route,
     CompatTask as Task, CompatTrialPlan as TrialPlan, MAX_COMPAT_CONCURRENCY as MAX_CONCURRENCY,
@@ -183,6 +185,38 @@ pub fn project_atif(value: &AtifTrajectory<'_>) -> Result<AtifProjection, AtifEr
         calls: calls_total,
         observations: observations_total,
         hidden_reasoning_redactions: redactions,
+    })
+}
+
+/// Project metadata from the complete ATIF adapter validation and import lanes.
+///
+/// This entrypoint does not infer or require a terminal trial outcome. The Harbor
+/// evaluation host must supply that outcome through its existing explicit owner.
+///
+/// # Errors
+/// Returns a bound or identity error when supplied projections do not match.
+pub fn project_validated_atif(
+    validated: &ValidatedTrajectory,
+    imported: &AtifImportProjection,
+) -> Result<AtifProjection, AtifError> {
+    if imported.semantic_identity != validated.semantic_identity() {
+        return Err(AtifError::Correlation);
+    }
+    let counts = validated.counts();
+    let steps = usize::try_from(counts.steps).map_err(|_| AtifError::Bound)?;
+    let calls = usize::try_from(counts.tool_calls).map_err(|_| AtifError::Bound)?;
+    let observations = usize::try_from(counts.observation_results).map_err(|_| AtifError::Bound)?;
+    let hidden_reasoning_redactions =
+        usize::try_from(imported.hidden_reasoning_redactions).map_err(|_| AtifError::Bound)?;
+    if steps == 0 || steps > MAX_ATIF_STEPS || hidden_reasoning_redactions > steps {
+        return Err(AtifError::Bound);
+    }
+    Ok(AtifProjection {
+        identity: validated.semantic_identity().into(),
+        steps,
+        calls,
+        observations,
+        hidden_reasoning_redactions,
     })
 }
 

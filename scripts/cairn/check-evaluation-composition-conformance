@@ -45,11 +45,11 @@ nickel export --format json fixtures/evaluation-composition-conformance/negative
 cargo test -p animus-eval-conformance --locked
 cargo clippy -p animus-eval-conformance --all-targets -- -D warnings
 
-if cargo tree -p animus-eval-conformance --edges normal | grep -Eiq "${FORBIDDEN_DEPENDENCIES}"; then
+if cargo tree -p animus-eval-conformance --edges normal --format '{lib}' | grep -Eiq "${FORBIDDEN_DEPENDENCIES}"; then
   printf '%s\n' 'error: live or upstream runtime dependency leaked into evaluation conformance' >&2
   exit "${FAILURE}"
 fi
-if cargo tree -p animus --edges normal | grep -Fq 'animus-eval-conformance'; then
+if cargo tree -p animus --edges normal --format '{lib}' | grep -Fq 'animus_eval_conformance'; then
   printf '%s\n' 'error: evaluation conformance leaked into the default root facade' >&2
   exit "${FAILURE}"
 fi
