@@ -34,9 +34,11 @@ The audit checked license isolation, exact argv comparison, shell absence, expli
 - `scripts/cairn/check-dogfood-readiness --root .` — PASS.
 - `cargo tigerstyle check` — BLOCKED by the same 254 existing findings. No finding names `animus-std-check-exec` or the real-check smoke. The final finding remains `crates/animus-runtime/src/rejected_attempt/tests.rs:127`.
 
-## Pending final-head evidence
+## Clean implementation-head evidence
 
-The clean-current-head `--live` rail must run after the implementation commit and again after archive integration. The final receipt must report `mode: live`, `head_dirty: false`, and the published head.
+`scripts/cairn/check-real-check-completion-host-smoke --root . --live` passed on clean implementation commit `4c5d60f5f8891d542e9e0291c8736f78ca669f2f`. The receipt reported `mode: live`, `head_dirty: false`, and source BLAKE3 `cd2f4186da9c619a2af4637527e77cb649a5d264302ba83a9448aaea57ff2c77`.
+
+Archive integration changes the head. The rail must run again from the final archived commit before publication.
 
 ## Non-claims
 
