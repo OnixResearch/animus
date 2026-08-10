@@ -23,7 +23,7 @@ fi
 cd "${root}"
 
 for marker in "${RELEASE}" "${SOURCE_CHANGE}" "${SOURCE_STATE}" "${CRATE_CHECKSUM}" "${COHORT_IDENTITY}" "${LICENSE}"; do
-  if ! grep -Fq "${marker}" config/pijul-vcs-adapter.ncl crates/animus-adapters/src/pijul.rs docs/pijul-vcs-adapter.md; then
+  if ! grep -Fq "${marker}" config/pijul-vcs-adapter.ncl crates/animus-adapters/src/pinnedvcs.rs docs/pijul-vcs-adapter.md; then
     printf 'error: Pijul cohort marker is missing: %s\n' "${marker}" >&2
     exit "${FAILURE}"
   fi
@@ -57,7 +57,7 @@ if cargo tree -p animus --features pijul-vcs-adapter --edges normal --format '{l
   printf '%s\n' 'error: Pijul database crates leaked into the optional CLI adapter' >&2
   exit "${FAILURE}"
 fi
-if grep -Eq 'std::process|Command::|libpijul::|sanakirja::' crates/animus-adapters/src/pijul.rs crates/animus-runtime/src/pijul/*.rs; then
+if grep -Eq 'std::process|Command::|libpijul::|sanakirja::' crates/animus-adapters/src/pinnedvcs.rs crates/animus-runtime/src/pijul/*.rs; then
   printf '%s\n' 'error: ambient process or database authority leaked into reusable Pijul contracts' >&2
   exit "${FAILURE}"
 fi

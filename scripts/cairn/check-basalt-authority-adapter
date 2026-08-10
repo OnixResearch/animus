@@ -45,7 +45,7 @@ if cargo tree -p animus --edges normal --format '{lib}' | grep -Eiq '(^|[-_])(ba
   printf '%s\n' 'error: Basalt or UCAN leaked into the default root facade' >&2
   exit "${FAILURE}"
 fi
-if grep -Eq 'basalt::|ucan::' crates/animus-adapters/src/effect/host_authority.rs crates/animus-adapters/src/effect/host_authority/*.rs; then
+if grep -Eq 'basalt::|ucan::' crates/animus-adapters/src/effect/gate.rs crates/animus-adapters/src/effect/gate/*.rs; then
   printf '%s\n' 'error: concrete Basalt or UCAN type leaked into the generic authority contracts' >&2
   exit "${FAILURE}"
 fi

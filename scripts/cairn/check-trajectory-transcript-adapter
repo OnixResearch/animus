@@ -31,7 +31,7 @@ cargo check -p animus-steel --locked --no-default-features
 cargo check -p animus-tui --locked --no-default-features
 
 if grep -REn 'std::(fs|process|env)|Command::|home_dir|SQLite|sqlite|listTrajectories|normalizeCheckpoint|canonical-v1' \
-  crates/animus-adapters/src/trajectory.rs crates/animus-runtime/src/trajectory crates/animus-std/src/trajectory.rs; then
+  crates/animus-adapters/src/normalization.rs crates/animus-runtime/src/trajectory crates/animus-std/src/trajectory.rs; then
   echo 'trajectory Rust surfaces gained excluded ambient or cloud authority' >&2
   exit 1
 fi
