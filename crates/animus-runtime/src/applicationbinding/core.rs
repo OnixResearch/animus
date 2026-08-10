@@ -1,19 +1,5 @@
 //! Pure validation, projection, commit, dispatch, and explanation logic.
 
-use super::data::{
-    FIRST_SEQUENCE, HASH_HEX_CHARS, HASH_SEPARATOR, KAMACITE_BINDING_RECEIPT_SCHEMA,
-    KAMACITE_BINDING_SCHEMA, KAMACITE_CORE_BLAKE3, KAMACITE_PRODUCER_REVISION,
-    KAMACITE_RECEIPT_SCHEMA_BLAKE3, KAMACITE_SCHEMA_BLAKE3, KAMACITE_VALIDATION_RECEIPT_BLAKE3,
-    MAX_EFFECT_OPERATIONS, NEXT_FOCUSED_CHECK, PILOT_BINDING_HASH_DOMAIN, PILOT_COMMIT_HASH_DOMAIN,
-    PILOT_EXPLANATION_SCHEMA, REDACTION_MARKER, REQUIRED_NON_CLAIMS,
-};
-use super::data::{
-    KamaciteContractCohort, PilotApplicationHostBinding, PilotBindingCommit, PilotBindingDraft,
-    PilotBindingParts, PilotCommitDraft, PilotDispatchAdmission, PilotDispatchDraft,
-    PilotEnforcementClass, PilotEnforcementObservation, PilotError, PilotIdentity,
-    PilotIdentityDomain, PilotIssue, PilotIssueCode,
-};
-use crate::runtime_authority_seal::{RuntimeAuthorityUnitState, start_runtime_authority_effect};
 use core::fmt::Write as _;
 
 const FIELD_COHORT: &str = "kamacite_contract";
@@ -44,13 +30,16 @@ const JSON_NULL: &str = "null";
 ///
 /// Returns an invalid-identity issue when `hex` is not one lowercase BLAKE3 value.
 pub fn admit_pilot_identity(
-    domain: PilotIdentityDomain,
+    domain: super::data::PilotIdentityDomain,
     hex: &str,
-) -> Result<PilotIdentity, PilotError> {
+) -> Result<super::data::PilotIdentity, super::data::PilotError> {
     if !is_valid_hash(hex) {
-        return Err(error(PilotIssueCode::InvalidIdentity, "identity"));
+        return Err(error(
+            super::data::PilotIssueCode::InvalidIdentity,
+            "identity",
+        ));
     }
-    Ok(PilotIdentity::new(domain, String::from(hex)))
+    Ok(super::data::PilotIdentity::new(domain, String::from(hex)))
 }
 
 /// Validate and project one authority-free pilot binding from already-loaded identities.
@@ -60,16 +49,16 @@ pub fn admit_pilot_identity(
 /// Returns deterministic issues for stale cohorts, wrong identity roles, ambiguous hosts, open
 /// effects, cohort drift, unsafe fields, or weakened non-claims.
 pub fn project_application_host_binding(
-    draft: &PilotBindingDraft<'_>,
-) -> Result<PilotApplicationHostBinding, PilotError> {
+    draft: &super::data::PilotBindingDraft<'_>,
+) -> Result<super::data::PilotApplicationHostBinding, super::data::PilotError> {
     let issues = validate_binding_draft(draft);
     if !issues.is_empty() {
-        return Err(PilotError::from_issues(issues));
+        return Err(super::data::PilotError::from_issues(issues));
     }
 
     let [host_profile_identity] = draft.host_profile_identities else {
         return Err(error(
-            PilotIssueCode::AmbiguousHostProfile,
+            super::data::PilotIssueCode::AmbiguousHostProfile,
             FIELD_HOST_PROFILE,
         ));
     };
@@ -82,23 +71,28 @@ pub fn project_application_host_binding(
         .collect::<Vec<_>>();
     non_claims.sort();
     let projection_hex = binding_projection_hash(draft, &effect_operation_identities, &non_claims);
-    let binding_identity = PilotIdentity::new(PilotIdentityDomain::Projection, projection_hex);
+    let binding_identity = super::data::PilotIdentity::new(
+        super::data::PilotIdentityDomain::Projection,
+        projection_hex,
+    );
 
-    Ok(PilotApplicationHostBinding::from_parts(PilotBindingParts {
-        application_identity: draft.application_identity.clone(),
-        entrypoint_identity: draft.entrypoint_identity.clone(),
-        input_schema_identity: draft.input_schema_identity.clone(),
-        output_schema_identity: draft.output_schema_identity.clone(),
-        effect_summary_identity: draft.effect_summary_identity.clone(),
-        effect_operation_identities,
-        host_profile_identity: host_profile_identity.clone(),
-        adapter_cohort_identity: draft.adapter_cohort_identity.clone(),
-        resource_profile_identity: draft.resource_profile_identity.clone(),
-        policy_identity: draft.policy_identity.clone(),
-        compatibility_identity: draft.compatibility_identity.clone(),
-        binding_identity,
-        non_claims,
-    }))
+    Ok(super::data::PilotApplicationHostBinding::from_parts(
+        super::data::PilotBindingParts {
+            application_identity: draft.application_identity.clone(),
+            entrypoint_identity: draft.entrypoint_identity.clone(),
+            input_schema_identity: draft.input_schema_identity.clone(),
+            output_schema_identity: draft.output_schema_identity.clone(),
+            effect_summary_identity: draft.effect_summary_identity.clone(),
+            effect_operation_identities,
+            host_profile_identity: host_profile_identity.clone(),
+            adapter_cohort_identity: draft.adapter_cohort_identity.clone(),
+            resource_profile_identity: draft.resource_profile_identity.clone(),
+            policy_identity: draft.policy_identity.clone(),
+            compatibility_identity: draft.compatibility_identity.clone(),
+            binding_identity,
+            non_claims,
+        },
+    ))
 }
 
 /// Bind the pilot projection and the existing durable session binding before effects.
@@ -107,40 +101,43 @@ pub fn project_application_host_binding(
 ///
 /// Returns a sequence or session-profile mismatch before creating commit evidence.
 pub fn commit_application_host_binding(
-    draft: PilotCommitDraft<'_>,
-) -> Result<PilotBindingCommit, PilotError> {
+    draft: super::data::PilotCommitDraft<'_>,
+) -> Result<super::data::PilotBindingCommit, super::data::PilotError> {
     let mut issues = Vec::new();
-    if draft.application_binding_sequence < FIRST_SEQUENCE
-        || draft.session_binding_sequence < FIRST_SEQUENCE
+    if draft.application_binding_sequence < super::data::FIRST_SEQUENCE
+        || draft.session_binding_sequence < super::data::FIRST_SEQUENCE
     {
-        issues.push(issue(PilotIssueCode::InvalidSequence, FIELD_SEQUENCE));
+        issues.push(issue(
+            super::data::PilotIssueCode::InvalidSequence,
+            FIELD_SEQUENCE,
+        ));
     }
     if draft.session_binding.profile().profile_identity()
         != draft.binding.host_profile_identity().hex()
     {
         issues.push(issue(
-            PilotIssueCode::SessionBindingMismatch,
+            super::data::PilotIssueCode::SessionBindingMismatch,
             FIELD_SESSION_BINDING,
         ));
     }
     if !issues.is_empty() {
-        return Err(PilotError::from_issues(issues));
+        return Err(super::data::PilotError::from_issues(issues));
     }
 
     let highest_binding_sequence = draft
         .application_binding_sequence
         .max(draft.session_binding_sequence);
     let mut hasher = blake3::Hasher::new();
-    hash_part(&mut hasher, PILOT_COMMIT_HASH_DOMAIN);
+    hash_part(&mut hasher, super::data::PILOT_COMMIT_HASH_DOMAIN);
     hash_part(&mut hasher, draft.binding.binding_identity().hex());
     hash_part(&mut hasher, draft.session_binding.binding_identity());
     hash_part(&mut hasher, &draft.application_binding_sequence.to_string());
     hash_part(&mut hasher, &draft.session_binding_sequence.to_string());
-    let commit_identity = PilotIdentity::new(
-        PilotIdentityDomain::Receipt,
+    let commit_identity = super::data::PilotIdentity::new(
+        super::data::PilotIdentityDomain::Receipt,
         hasher.finalize().to_hex().to_string(),
     );
-    Ok(PilotBindingCommit::new(
+    Ok(super::data::PilotBindingCommit::new(
         draft.binding.binding_identity().clone(),
         String::from(draft.session_binding.binding_identity()),
         highest_binding_sequence,
@@ -155,20 +152,23 @@ pub fn commit_application_host_binding(
 /// Returns deterministic issues when binding order, operation declaration, the accepted seal, or
 /// any current enforcement observation fails.
 pub fn prepare_pilot_dispatch(
-    draft: PilotDispatchDraft<'_>,
-) -> Result<PilotDispatchAdmission, PilotError> {
+    draft: super::data::PilotDispatchDraft<'_>,
+) -> Result<super::data::PilotDispatchAdmission, super::data::PilotError> {
     let issues = validate_dispatch_binding(&draft);
     if !issues.is_empty() {
-        return Err(PilotError::from_issues(issues));
+        return Err(super::data::PilotError::from_issues(issues));
     }
-    let running_unit =
-        start_runtime_authority_effect(draft.sealed_unit, draft.recheck).map_err(|_| {
-            error(
-                PilotIssueCode::CurrentEnforcementDenied,
-                FIELD_CURRENT_ENFORCEMENT,
-            )
-        })?;
-    Ok(PilotDispatchAdmission {
+    let running_unit = crate::runtime_authority_seal::start_runtime_authority_effect(
+        draft.sealed_unit,
+        draft.recheck,
+    )
+    .map_err(|_| {
+        error(
+            super::data::PilotIssueCode::CurrentEnforcementDenied,
+            FIELD_CURRENT_ENFORCEMENT,
+        )
+    })?;
+    Ok(super::data::PilotDispatchAdmission {
         binding_identity: draft.binding.binding_identity().clone(),
         commit_identity: draft.commit.commit_identity().clone(),
         operation_identity: draft.operation.clone(),
@@ -178,7 +178,7 @@ pub fn prepare_pilot_dispatch(
 
 /// Render the Kamacite-compatible JSON input shape without metadata or authority claims.
 #[must_use]
-pub fn render_kamacite_binding_json(binding: &PilotApplicationHostBinding) -> String {
+pub fn render_kamacite_binding_json(binding: &super::data::PilotApplicationHostBinding) -> String {
     let operations = binding
         .effect_operation_identities()
         .iter()
@@ -238,9 +238,11 @@ pub fn render_kamacite_binding_json(binding: &PilotApplicationHostBinding) -> St
 
 /// Render a bounded read-only explanation for an admitted binding.
 #[must_use]
-pub fn explain_application_host_binding(binding: &PilotApplicationHostBinding) -> String {
+pub fn explain_application_host_binding(
+    binding: &super::data::PilotApplicationHostBinding,
+) -> String {
     let mut output = String::new();
-    let _ = writeln!(output, "schema={PILOT_EXPLANATION_SCHEMA}");
+    let _ = writeln!(output, "schema={}", super::data::PILOT_EXPLANATION_SCHEMA);
     let _ = writeln!(
         output,
         "projection_identity={}",
@@ -282,58 +284,60 @@ pub fn explain_application_host_binding(binding: &PilotApplicationHostBinding) -
         binding.resource_profile_identity().hex()
     );
     let _ = writeln!(output, "compatibility=exact-frozen-kamacite-cohort");
-    let _ = writeln!(output, "redaction={REDACTION_MARKER}");
+    let _ = writeln!(output, "redaction={}", super::data::REDACTION_MARKER);
     for non_claim in binding.non_claims() {
         let _ = writeln!(output, "non_claim={non_claim}");
     }
-    let _ = writeln!(output, "next_check={NEXT_FOCUSED_CHECK}");
+    let _ = writeln!(output, "next_check={}", super::data::NEXT_FOCUSED_CHECK);
     output
 }
 
 /// Render stable issue codes for a denied binding or dispatch attempt.
 #[must_use]
-pub fn explain_application_host_binding_error(error: &PilotError) -> String {
+pub fn explain_application_host_binding_error(error: &super::data::PilotError) -> String {
     let mut output = String::new();
-    let _ = writeln!(output, "schema={PILOT_EXPLANATION_SCHEMA}");
+    let _ = writeln!(output, "schema={}", super::data::PILOT_EXPLANATION_SCHEMA);
     let _ = writeln!(output, "status=denied");
     for issue in error.issues() {
         let _ = writeln!(output, "issue={}", issue.code.as_str());
     }
-    let _ = writeln!(output, "redaction={REDACTION_MARKER}");
-    let _ = writeln!(output, "next_check={NEXT_FOCUSED_CHECK}");
+    let _ = writeln!(output, "redaction={}", super::data::REDACTION_MARKER);
+    let _ = writeln!(output, "next_check={}", super::data::NEXT_FOCUSED_CHECK);
     output
 }
 
-fn validate_binding_draft(draft: &PilotBindingDraft<'_>) -> Vec<PilotIssue> {
+fn validate_binding_draft(
+    draft: &super::data::PilotBindingDraft<'_>,
+) -> Vec<super::data::PilotIssue> {
     let mut issues = Vec::new();
     validate_cohort(draft.cohort, &mut issues);
     validate_identity_domain(
         draft.application_identity,
-        PilotIdentityDomain::TargetArtifact,
+        super::data::PilotIdentityDomain::TargetArtifact,
         FIELD_APPLICATION,
         &mut issues,
     );
     validate_identity_domain(
         draft.entrypoint_identity,
-        PilotIdentityDomain::TargetArtifact,
+        super::data::PilotIdentityDomain::TargetArtifact,
         FIELD_ENTRYPOINT,
         &mut issues,
     );
     validate_identity_domain(
         draft.input_schema_identity,
-        PilotIdentityDomain::Adapter,
+        super::data::PilotIdentityDomain::Adapter,
         FIELD_INPUT_SCHEMA,
         &mut issues,
     );
     validate_identity_domain(
         draft.output_schema_identity,
-        PilotIdentityDomain::Adapter,
+        super::data::PilotIdentityDomain::Adapter,
         FIELD_OUTPUT_SCHEMA,
         &mut issues,
     );
     validate_identity_domain(
         draft.effect_summary_identity,
-        PilotIdentityDomain::AlgebraicEffect,
+        super::data::PilotIdentityDomain::AlgebraicEffect,
         FIELD_EFFECT_SUMMARY,
         &mut issues,
     );
@@ -341,25 +345,25 @@ fn validate_binding_draft(draft: &PilotBindingDraft<'_>) -> Vec<PilotIssue> {
     validate_host(draft, &mut issues);
     validate_identity_domain(
         draft.adapter_cohort_identity,
-        PilotIdentityDomain::Adapter,
+        super::data::PilotIdentityDomain::Adapter,
         FIELD_ADAPTER_COHORT,
         &mut issues,
     );
     validate_identity_domain(
         draft.resource_profile_identity,
-        PilotIdentityDomain::Adapter,
+        super::data::PilotIdentityDomain::Adapter,
         FIELD_RESOURCE_PROFILE,
         &mut issues,
     );
     validate_identity_domain(
         draft.policy_identity,
-        PilotIdentityDomain::Adapter,
+        super::data::PilotIdentityDomain::Adapter,
         FIELD_POLICY,
         &mut issues,
     );
     validate_identity_domain(
         draft.compatibility_identity,
-        PilotIdentityDomain::EvidenceChain,
+        super::data::PilotIdentityDomain::EvidenceChain,
         FIELD_COMPATIBILITY,
         &mut issues,
     );
@@ -368,35 +372,44 @@ fn validate_binding_draft(draft: &PilotBindingDraft<'_>) -> Vec<PilotIssue> {
     issues
 }
 
-fn validate_cohort(cohort: KamaciteContractCohort<'_>, issues: &mut Vec<PilotIssue>) {
-    let exact = cohort.binding_schema == KAMACITE_BINDING_SCHEMA
-        && cohort.receipt_schema == KAMACITE_BINDING_RECEIPT_SCHEMA
-        && cohort.producer_revision == KAMACITE_PRODUCER_REVISION
-        && cohort.schema_blake3 == KAMACITE_SCHEMA_BLAKE3
-        && cohort.receipt_schema_blake3 == KAMACITE_RECEIPT_SCHEMA_BLAKE3
-        && cohort.validation_receipt_blake3 == KAMACITE_VALIDATION_RECEIPT_BLAKE3
-        && cohort.core_blake3 == KAMACITE_CORE_BLAKE3;
+fn validate_cohort(
+    cohort: super::data::KamaciteContractCohort<'_>,
+    issues: &mut Vec<super::data::PilotIssue>,
+) {
+    let exact = cohort.binding_schema == super::data::KAMACITE_BINDING_SCHEMA
+        && cohort.receipt_schema == super::data::KAMACITE_BINDING_RECEIPT_SCHEMA
+        && cohort.producer_revision == super::data::KAMACITE_PRODUCER_REVISION
+        && cohort.schema_blake3 == super::data::KAMACITE_SCHEMA_BLAKE3
+        && cohort.receipt_schema_blake3 == super::data::KAMACITE_RECEIPT_SCHEMA_BLAKE3
+        && cohort.validation_receipt_blake3 == super::data::KAMACITE_VALIDATION_RECEIPT_BLAKE3
+        && cohort.core_blake3 == super::data::KAMACITE_CORE_BLAKE3;
     if !exact {
-        issues.push(issue(PilotIssueCode::StaleKamaciteContract, FIELD_COHORT));
+        issues.push(issue(
+            super::data::PilotIssueCode::StaleKamaciteContract,
+            FIELD_COHORT,
+        ));
     }
 }
 
-fn validate_effects(draft: &PilotBindingDraft<'_>, issues: &mut Vec<PilotIssue>) {
+fn validate_effects(
+    draft: &super::data::PilotBindingDraft<'_>,
+    issues: &mut Vec<super::data::PilotIssue>,
+) {
     if !draft.effect_summary_closed {
         issues.push(issue(
-            PilotIssueCode::OpenEffectSummary,
+            super::data::PilotIssueCode::OpenEffectSummary,
             FIELD_EFFECT_SUMMARY,
         ));
     }
     if draft.effect_operation_identities.is_empty() {
         issues.push(issue(
-            PilotIssueCode::MissingEffectOperation,
+            super::data::PilotIssueCode::MissingEffectOperation,
             FIELD_EFFECT_OPERATION,
         ));
     }
-    if draft.effect_operation_identities.len() > MAX_EFFECT_OPERATIONS {
+    if draft.effect_operation_identities.len() > super::data::MAX_EFFECT_OPERATIONS {
         issues.push(issue(
-            PilotIssueCode::TooManyEffectOperations,
+            super::data::PilotIssueCode::TooManyEffectOperations,
             FIELD_EFFECT_OPERATION,
         ));
     }
@@ -404,7 +417,7 @@ fn validate_effects(draft: &PilotBindingDraft<'_>, issues: &mut Vec<PilotIssue>)
     for operation in &operations {
         validate_identity_domain(
             operation,
-            PilotIdentityDomain::EffectOperation,
+            super::data::PilotIdentityDomain::EffectOperation,
             FIELD_EFFECT_OPERATION,
             issues,
         );
@@ -412,58 +425,76 @@ fn validate_effects(draft: &PilotBindingDraft<'_>, issues: &mut Vec<PilotIssue>)
     operations.sort();
     if operations.windows(2).any(|window| window[0] == window[1]) {
         issues.push(issue(
-            PilotIssueCode::DuplicateEffectOperation,
+            super::data::PilotIssueCode::DuplicateEffectOperation,
             FIELD_EFFECT_OPERATION,
         ));
     }
 }
 
-fn validate_host(draft: &PilotBindingDraft<'_>, issues: &mut Vec<PilotIssue>) {
+fn validate_host(
+    draft: &super::data::PilotBindingDraft<'_>,
+    issues: &mut Vec<super::data::PilotIssue>,
+) {
     match draft.host_profile_identities {
         [] => issues.push(issue(
-            PilotIssueCode::MissingHostProfile,
+            super::data::PilotIssueCode::MissingHostProfile,
             FIELD_HOST_PROFILE,
         )),
         [host] => validate_identity_domain(
             host,
-            PilotIdentityDomain::Evaluator,
+            super::data::PilotIdentityDomain::Evaluator,
             FIELD_HOST_PROFILE,
             issues,
         ),
         _ => issues.push(issue(
-            PilotIssueCode::AmbiguousHostProfile,
+            super::data::PilotIssueCode::AmbiguousHostProfile,
             FIELD_HOST_PROFILE,
         )),
     }
 }
 
-fn validate_expected_cohorts(draft: &PilotBindingDraft<'_>, issues: &mut Vec<PilotIssue>) {
+fn validate_expected_cohorts(
+    draft: &super::data::PilotBindingDraft<'_>,
+    issues: &mut Vec<super::data::PilotIssue>,
+) {
     if draft.adapter_cohort_identity != draft.expected_adapter_cohort_identity {
-        issues.push(issue(PilotIssueCode::CohortMismatch, FIELD_ADAPTER_COHORT));
+        issues.push(issue(
+            super::data::PilotIssueCode::CohortMismatch,
+            FIELD_ADAPTER_COHORT,
+        ));
     }
     if draft.resource_profile_identity != draft.expected_resource_profile_identity {
         issues.push(issue(
-            PilotIssueCode::CohortMismatch,
+            super::data::PilotIssueCode::CohortMismatch,
             FIELD_RESOURCE_PROFILE,
         ));
     }
     if let [host] = draft.host_profile_identities {
         if host != draft.expected_host_profile_identity {
-            issues.push(issue(PilotIssueCode::CohortMismatch, FIELD_HOST_PROFILE));
+            issues.push(issue(
+                super::data::PilotIssueCode::CohortMismatch,
+                FIELD_HOST_PROFILE,
+            ));
         }
     }
 }
 
-fn validate_claim_boundary(draft: &PilotBindingDraft<'_>, issues: &mut Vec<PilotIssue>) {
+fn validate_claim_boundary(
+    draft: &super::data::PilotBindingDraft<'_>,
+    issues: &mut Vec<super::data::PilotIssue>,
+) {
     if !draft.semantic_claims.is_empty() {
         issues.push(issue(
-            PilotIssueCode::AuthorityOverclaim,
+            super::data::PilotIssueCode::AuthorityOverclaim,
             FIELD_SEMANTIC_CLAIMS,
         ));
     }
-    for required in REQUIRED_NON_CLAIMS {
+    for required in super::data::REQUIRED_NON_CLAIMS {
         if !draft.non_claims.contains(&required) {
-            issues.push(issue(PilotIssueCode::MissingNonClaim, FIELD_NON_CLAIMS));
+            issues.push(issue(
+                super::data::PilotIssueCode::MissingNonClaim,
+                FIELD_NON_CLAIMS,
+            ));
         }
     }
     let sensitive = draft.sensitive;
@@ -475,44 +506,55 @@ fn validate_claim_boundary(draft: &PilotBindingDraft<'_>, issues: &mut Vec<Pilot
         || sensitive.environment_value.is_some()
         || sensitive.host_path.is_some()
     {
-        issues.push(issue(PilotIssueCode::UnsafeField, FIELD_SENSITIVE));
+        issues.push(issue(
+            super::data::PilotIssueCode::UnsafeField,
+            FIELD_SENSITIVE,
+        ));
     }
 }
 
-fn validate_dispatch_binding(draft: &PilotDispatchDraft<'_>) -> Vec<PilotIssue> {
+fn validate_dispatch_binding(
+    draft: &super::data::PilotDispatchDraft<'_>,
+) -> Vec<super::data::PilotIssue> {
     let mut issues = Vec::new();
     let binding = draft.binding;
     let commit = draft.commit;
     let sealed_unit = draft.sealed_unit;
     let operation = draft.operation;
     if commit.binding_identity() != binding.binding_identity() {
-        issues.push(issue(PilotIssueCode::BindingMismatch, FIELD_BINDING));
+        issues.push(issue(
+            super::data::PilotIssueCode::BindingMismatch,
+            FIELD_BINDING,
+        ));
     }
     if commit.session_binding_identity() != sealed_unit.durable_binding_identity() {
         issues.push(issue(
-            PilotIssueCode::SessionBindingMismatch,
+            super::data::PilotIssueCode::SessionBindingMismatch,
             FIELD_SESSION_BINDING,
         ));
     }
     if draft.effect_sequence <= commit.highest_binding_sequence() {
-        issues.push(issue(PilotIssueCode::EffectBeforeBinding, FIELD_SEQUENCE));
+        issues.push(issue(
+            super::data::PilotIssueCode::EffectBeforeBinding,
+            FIELD_SEQUENCE,
+        ));
     }
     validate_identity_domain(
         operation,
-        PilotIdentityDomain::EffectOperation,
+        super::data::PilotIdentityDomain::EffectOperation,
         FIELD_EFFECT_OPERATION,
         &mut issues,
     );
     if !binding.effect_operation_identities().contains(operation) {
         issues.push(issue(
-            PilotIssueCode::UndeclaredOperation,
+            super::data::PilotIssueCode::UndeclaredOperation,
             FIELD_EFFECT_OPERATION,
         ));
     }
-    if sealed_unit.state() != RuntimeAuthorityUnitState::Sealed
+    if sealed_unit.state() != crate::runtime_authority_seal::RuntimeAuthorityUnitState::Sealed
         || sealed_unit.seal_receipt_identity().is_none()
     {
-        issues.push(issue(PilotIssueCode::MissingSeal, FIELD_SEAL));
+        issues.push(issue(super::data::PilotIssueCode::MissingSeal, FIELD_SEAL));
     }
     let exact_seal = sealed_unit.authority_profile_identity()
         == binding.host_profile_identity().hex()
@@ -523,17 +565,17 @@ fn validate_dispatch_binding(draft: &PilotDispatchDraft<'_>) -> Vec<PilotIssue> 
             .iter()
             .any(|identity| identity == operation.hex());
     if !exact_seal {
-        issues.push(issue(PilotIssueCode::WidenedSeal, FIELD_SEAL));
+        issues.push(issue(super::data::PilotIssueCode::WidenedSeal, FIELD_SEAL));
     }
     validate_current_enforcement(draft.enforcement, &mut issues);
     issues
 }
 
 fn validate_current_enforcement(
-    observations: &[PilotEnforcementObservation],
-    issues: &mut Vec<PilotIssue>,
+    observations: &[super::data::PilotEnforcementObservation],
+    issues: &mut Vec<super::data::PilotIssue>,
 ) {
-    for class in PilotEnforcementClass::ALL {
+    for class in super::data::PilotEnforcementClass::ALL {
         let matching = observations
             .iter()
             .filter(|observation| observation.class == class)
@@ -541,7 +583,7 @@ fn validate_current_enforcement(
         match matching.as_slice() {
             [observation] if observation.admitted => {}
             _ => issues.push(issue(
-                PilotIssueCode::CurrentEnforcementDenied,
+                super::data::PilotIssueCode::CurrentEnforcementDenied,
                 FIELD_CURRENT_ENFORCEMENT,
             )),
         }
@@ -549,12 +591,12 @@ fn validate_current_enforcement(
 }
 
 fn binding_projection_hash(
-    draft: &PilotBindingDraft<'_>,
-    operations: &[PilotIdentity],
+    draft: &super::data::PilotBindingDraft<'_>,
+    operations: &[super::data::PilotIdentity],
     non_claims: &[String],
 ) -> String {
     let mut hasher = blake3::Hasher::new();
-    hash_part(&mut hasher, PILOT_BINDING_HASH_DOMAIN);
+    hash_part(&mut hasher, super::data::PILOT_BINDING_HASH_DOMAIN);
     hash_identity(&mut hasher, draft.application_identity);
     hash_identity(&mut hasher, draft.entrypoint_identity);
     hash_identity(&mut hasher, draft.input_schema_identity);
@@ -575,30 +617,33 @@ fn binding_projection_hash(
 }
 
 fn validate_identity_domain(
-    identity: &PilotIdentity,
-    expected: PilotIdentityDomain,
+    identity: &super::data::PilotIdentity,
+    expected: super::data::PilotIdentityDomain,
     field: &'static str,
-    issues: &mut Vec<PilotIssue>,
+    issues: &mut Vec<super::data::PilotIssue>,
 ) {
     if !is_valid_hash(identity.hex()) {
-        issues.push(issue(PilotIssueCode::InvalidIdentity, field));
+        issues.push(issue(super::data::PilotIssueCode::InvalidIdentity, field));
     }
     if identity.domain() != expected {
-        issues.push(issue(PilotIssueCode::WrongIdentityDomain, field));
+        issues.push(issue(
+            super::data::PilotIssueCode::WrongIdentityDomain,
+            field,
+        ));
     }
 }
 
-fn hash_identity(hasher: &mut blake3::Hasher, identity: &PilotIdentity) {
+fn hash_identity(hasher: &mut blake3::Hasher, identity: &super::data::PilotIdentity) {
     hash_part(hasher, identity.domain().as_str());
     hash_part(hasher, identity.hex());
 }
 
 fn hash_part(hasher: &mut blake3::Hasher, value: &str) {
     hasher.update(value.as_bytes());
-    hasher.update(HASH_SEPARATOR);
+    hasher.update(super::data::HASH_SEPARATOR);
 }
 
-fn identity_json(identity: &PilotIdentity) -> String {
+fn identity_json(identity: &super::data::PilotIdentity) -> String {
     format!(
         "{{\"algorithm\":\"blake3\",\"domain\":\"{}\",\"hex\":\"{}\"}}",
         identity.domain().as_str(),
@@ -607,17 +652,17 @@ fn identity_json(identity: &PilotIdentity) -> String {
 }
 
 fn is_valid_hash(value: &str) -> bool {
-    value.len() == HASH_HEX_CHARS
+    value.len() == super::data::HASH_HEX_CHARS
         && value
             .as_bytes()
             .iter()
             .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(byte))
 }
 
-const fn issue(code: PilotIssueCode, field: &'static str) -> PilotIssue {
-    PilotIssue { code, field }
+const fn issue(code: super::data::PilotIssueCode, field: &'static str) -> super::data::PilotIssue {
+    super::data::PilotIssue { code, field }
 }
 
-fn error(code: PilotIssueCode, field: &'static str) -> PilotError {
-    PilotError::from_issues(vec![issue(code, field)])
+fn error(code: super::data::PilotIssueCode, field: &'static str) -> super::data::PilotError {
+    super::data::PilotError::from_issues(vec![issue(code, field)])
 }

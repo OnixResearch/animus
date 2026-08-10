@@ -1,19 +1,4 @@
 use super::*;
-use crate::dogfood_shell::{
-    DogfoodFakeServices, DogfoodRunRequest, DogfoodServiceState, run_fake_dogfood_shell,
-};
-use crate::runtime_authority_seal::{
-    RuntimeAuthorityExpectedViewDraft, RuntimeAuthorityObservationStatus,
-    RuntimeAuthorityObservedViewDraft, RuntimeAuthorityReceiptDraft, RuntimeAuthorityRecheckDraft,
-    RuntimeAuthoritySensitiveDraft, RuntimeAuthorityUnit, RuntimeAuthorityUnitDraft,
-    RuntimeAuthorityUnitState, RuntimeAuthorityViewClass, commit_runtime_authority_seal,
-    prepare_runtime_authority_seal,
-};
-use crate::session_authority_profile::{
-    SessionAuthorityBinding, SessionAuthorityBindingDraft, SessionAuthorityComponentClass,
-    SessionAuthorityComponentDraft, SessionAuthorityProfileDraft, build_session_authority_binding,
-    build_session_authority_profile,
-};
 
 const HASH_A: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const HASH_B: &str = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
@@ -107,33 +92,39 @@ fn draft(fixture: &Fixture) -> PilotBindingDraft<'_> {
     }
 }
 
-fn session_binding() -> SessionAuthorityBinding {
-    let components = SessionAuthorityComponentClass::ALL
+fn session_binding() -> crate::session_authority_profile::SessionAuthorityBinding {
+    let components = crate::session_authority_profile::SessionAuthorityComponentClass::ALL
         .iter()
         .copied()
-        .map(|class| SessionAuthorityComponentDraft {
-            class,
-            identity: HASH_6,
-        })
+        .map(
+            |class| crate::session_authority_profile::SessionAuthorityComponentDraft {
+                class,
+                identity: HASH_6,
+            },
+        )
         .collect::<Vec<_>>();
-    let profile = build_session_authority_profile(SessionAuthorityProfileDraft {
-        components: components.as_slice(),
-    })
+    let profile = crate::session_authority_profile::build_session_authority_profile(
+        crate::session_authority_profile::SessionAuthorityProfileDraft {
+            components: components.as_slice(),
+        },
+    )
     .expect("profile");
-    build_session_authority_binding(SessionAuthorityBindingDraft {
-        profile: &profile,
-        authorization_identity: HASH_7,
-        branch_id: "pilot-branch",
-        prior_head_hash: HASH_8,
-        prior_profile_identity: None,
-    })
+    crate::session_authority_profile::build_session_authority_binding(
+        crate::session_authority_profile::SessionAuthorityBindingDraft {
+            profile: &profile,
+            authorization_identity: HASH_7,
+            branch_id: "pilot-branch",
+            prior_head_hash: HASH_8,
+            prior_profile_identity: None,
+        },
+    )
     .expect("binding")
 }
 
 fn sealed_unit(
     binding: &PilotApplicationHostBinding,
-    session: &SessionAuthorityBinding,
-) -> RuntimeAuthorityUnit {
+    session: &crate::session_authority_profile::SessionAuthorityBinding,
+) -> crate::runtime_authority_seal::RuntimeAuthorityUnit {
     let operation_values = binding
         .effect_operation_identities()
         .iter()
@@ -141,44 +132,63 @@ fn sealed_unit(
         .collect::<Vec<_>>();
     let resources = [HASH_9];
     let declared = [
-        (RuntimeAuthorityViewClass::SessionLineage, HASH_A),
         (
-            RuntimeAuthorityViewClass::DurableBinding,
+            crate::runtime_authority_seal::RuntimeAuthorityViewClass::SessionLineage,
+            HASH_A,
+        ),
+        (
+            crate::runtime_authority_seal::RuntimeAuthorityViewClass::DurableBinding,
             session.binding_identity(),
         ),
         (
-            RuntimeAuthorityViewClass::AuthorityProfile,
+            crate::runtime_authority_seal::RuntimeAuthorityViewClass::AuthorityProfile,
             binding.host_profile_identity().hex(),
         ),
-        (RuntimeAuthorityViewClass::EnforcementObservation, HASH_B),
-        (RuntimeAuthorityViewClass::OperationSet, HASH_C),
         (
-            RuntimeAuthorityViewClass::AdapterCohort,
+            crate::runtime_authority_seal::RuntimeAuthorityViewClass::EnforcementObservation,
+            HASH_B,
+        ),
+        (
+            crate::runtime_authority_seal::RuntimeAuthorityViewClass::OperationSet,
+            HASH_C,
+        ),
+        (
+            crate::runtime_authority_seal::RuntimeAuthorityViewClass::AdapterCohort,
             binding.adapter_cohort_identity().hex(),
         ),
         (
-            RuntimeAuthorityViewClass::ResourceProfile,
+            crate::runtime_authority_seal::RuntimeAuthorityViewClass::ResourceProfile,
             binding.resource_profile_identity().hex(),
         ),
-        (RuntimeAuthorityViewClass::ResourceBudget, HASH_D),
-        (RuntimeAuthorityViewClass::RuntimeServices, HASH_E),
+        (
+            crate::runtime_authority_seal::RuntimeAuthorityViewClass::ResourceBudget,
+            HASH_D,
+        ),
+        (
+            crate::runtime_authority_seal::RuntimeAuthorityViewClass::RuntimeServices,
+            HASH_E,
+        ),
     ];
     let expected = declared
         .iter()
-        .map(|(class, value)| RuntimeAuthorityExpectedViewDraft {
-            class: *class,
-            identity: value,
-        })
+        .map(
+            |(class, value)| crate::runtime_authority_seal::RuntimeAuthorityExpectedViewDraft {
+                class: *class,
+                identity: value,
+            },
+        )
         .collect::<Vec<_>>();
     let observed = declared
         .iter()
-        .map(|(class, value)| RuntimeAuthorityObservedViewDraft {
-            class: *class,
-            identity: value,
-            status: RuntimeAuthorityObservationStatus::Current,
-        })
+        .map(
+            |(class, value)| crate::runtime_authority_seal::RuntimeAuthorityObservedViewDraft {
+                class: *class,
+                identity: value,
+                status: crate::runtime_authority_seal::RuntimeAuthorityObservationStatus::Current,
+            },
+        )
         .collect::<Vec<_>>();
-    let unit_draft = RuntimeAuthorityUnitDraft {
+    let unit_draft = crate::runtime_authority_seal::RuntimeAuthorityUnitDraft {
         session_id: "session.pilot",
         dispatch_id: "dispatch.pilot",
         session_lineage_identity: HASH_A,
@@ -195,29 +205,32 @@ fn sealed_unit(
         expected_views: expected.as_slice(),
         observed_views: observed.as_slice(),
     };
-    let plan = prepare_runtime_authority_seal(
+    let plan = crate::runtime_authority_seal::prepare_runtime_authority_seal(
         unit_draft,
-        RuntimeAuthorityReceiptDraft {
-            sensitive: RuntimeAuthoritySensitiveDraft::default(),
+        crate::runtime_authority_seal::RuntimeAuthorityReceiptDraft {
+            sensitive: crate::runtime_authority_seal::RuntimeAuthoritySensitiveDraft::default(),
             semantic_claims: &[],
         },
     )
     .expect("seal plan");
-    commit_runtime_authority_seal(&plan, plan.receipt().receipt_identity.as_str())
-        .expect("sealed unit")
+    crate::runtime_authority_seal::commit_runtime_authority_seal(
+        &plan,
+        plan.receipt().receipt_identity.as_str(),
+    )
+    .expect("sealed unit")
 }
 
 fn recheck<'a>(
     binding: &'a PilotApplicationHostBinding,
-    session: &'a SessionAuthorityBinding,
-) -> RuntimeAuthorityRecheckDraft<'a> {
+    session: &'a crate::session_authority_profile::SessionAuthorityBinding,
+) -> crate::runtime_authority_seal::RuntimeAuthorityRecheckDraft<'a> {
     let operations = binding
         .effect_operation_identities()
         .iter()
         .map(PilotIdentity::hex)
         .collect::<Vec<_>>();
     let resources = vec![HASH_9];
-    RuntimeAuthorityRecheckDraft {
+    crate::runtime_authority_seal::RuntimeAuthorityRecheckDraft {
         session_lineage_identity: HASH_A,
         authority_profile_identity: binding.host_profile_identity().hex(),
         durable_binding_identity: session.binding_identity(),
@@ -299,10 +312,10 @@ fn committed_binding_and_existing_seal_precede_fake_backed_effect() {
     .expect("dispatch admission");
     assert_eq!(
         admission.running_unit.state(),
-        RuntimeAuthorityUnitState::Running
+        crate::runtime_authority_seal::RuntimeAuthorityUnitState::Running
     );
 
-    let request = DogfoodRunRequest {
+    let request = crate::dogfood_shell::DogfoodRunRequest {
         prompt_hash: HASH_A.to_owned(),
         policy_profile: "pilot-policy".to_owned(),
         model_capability: "model.fake".to_owned(),
@@ -310,14 +323,14 @@ fn committed_binding_and_existing_seal_precede_fake_backed_effect() {
         tool_metadata: Some("tool.fake".to_owned()),
         noninteractive: true,
     };
-    let services = DogfoodFakeServices {
-        model_service: DogfoodServiceState::Available,
-        tool_service: DogfoodServiceState::Available,
+    let services = crate::dogfood_shell::DogfoodFakeServices {
+        model_service: crate::dogfood_shell::DogfoodServiceState::Available,
+        tool_service: crate::dogfood_shell::DogfoodServiceState::Available,
         allowed_capabilities: vec!["model.fake".to_owned()],
         model_response_summary: "accepted".to_owned(),
         tool_response_summary: Some("accepted".to_owned()),
     };
-    assert!(run_fake_dogfood_shell(&request, &services).is_ok());
+    assert!(crate::dogfood_shell::run_fake_dogfood_shell(&request, &services).is_ok());
 }
 
 #[test]
