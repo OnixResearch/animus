@@ -63,6 +63,9 @@ let acp_feature = "acp-stdio-host" in
 let acp_family = "acp" in
 let agent_control_feature = "agent-control" in
 let agent_control_family = "agent-control" in
+let authoritative_completion_smoke_feature = "authoritative-completion-smoke" in
+let multi_role_smoke_feature = "multi-role-smoke" in
+let profile_retry_smoke_feature = "profile-retry-smoke" in
 let openai_provider_feature = "openai-provider-host" in
 let openai_provider_family = "model" in
 let lean_loop_feature = "lean-loop" in
@@ -504,6 +507,21 @@ let agent_control_record = fun export_path_value owning_crate_value source_value
   depends_on = ["animus-adapters::AgentControlWait", "animus-runtime::AgentControlState"],
   composes_with = ["animus-std::coding_session_host"],
   capability_family = agent_control_family,
+}
+in
+let std_smoke_record = fun export_path_value class_value side_effect_value feature_gate_value required_authority_value capability_family_value review_note_value => {
+  export_path = export_path_value,
+  owning_crate = "animus-std",
+  source = std_shell,
+  class = class_value,
+  side_effect = side_effect_value,
+  stability = optional_stability,
+  review_note = review_note_value,
+  feature_gate = feature_gate_value,
+  required_authority = required_authority_value,
+  depends_on = [],
+  composes_with = [],
+  capability_family = capability_family_value,
 }
 in
 
@@ -3447,9 +3465,12 @@ let entry_values = [
   entry "animus-std::AgentCheckExecutionRequest" "animus-std" std_shell shell shell_owned stable "host check execution request",
   entry "animus-std::AgentCheckExecutionService" "animus-std" std_shell shell shell_owned stable "injected host check execution service",
   entry "animus-std::AgentCheckRegistryConfigError" "animus-std" std_shell shell shell_owned stable "agent check registry configuration error",
+  std_smoke_record "animus-std::AuthoritativeCompletionSmokeReport" reusable none authoritative_completion_smoke_feature none "headless" "bounded authoritative-completion report data",
   entry "animus-std::CairnCompletionSummary" "animus-std" std_shell shell shell_owned stable "host-loaded Cairn completion summary",
   entry "animus-std::CairnCompletionValidationRequest" "animus-std" std_shell shell shell_owned stable "Cairn completion validation request",
   entry "animus-std::CairnCompletionValidationService" "animus-std" std_shell shell shell_owned stable "injected Cairn completion validation service",
+  std_smoke_record "animus-std::CompletionCairnFactoryRequest" reusable none authoritative_completion_smoke_feature none "headless" "caller-supplied Cairn factory request facts",
+  std_smoke_record "animus-std::CompletionCairnServiceFactory" injection injected authoritative_completion_smoke_feature injected "headless" "injected Cairn completion service factory",
   entry "animus-std::ChangedArtifactObservationRequest" "animus-std" std_shell shell shell_owned stable "changed-artifact observation request",
   entry "animus-std::ChangedArtifactObservationService" "animus-std" std_shell shell shell_owned stable "injected changed-artifact observation service",
   entry "animus-std::CodeGraphHostError" "animus-std" std_shell shell shell_owned optional_stability "code graph host error",
@@ -3461,7 +3482,11 @@ let entry_values = [
   entry "animus-std::HostArtifactObservation" "animus-std" std_shell shell shell_owned stable "host artifact observation",
   entry "animus-std::HostCheckExecutionObservation" "animus-std" std_shell shell shell_owned stable "host check execution observation",
   entry "animus-std::ObservedChangedArtifact" "animus-std" std_shell shell shell_owned stable "observed changed artifact metadata",
+  std_smoke_record "animus-std::evaluate_packaged_authoritative_completion_with_services" shell shell_owned authoritative_completion_smoke_feature shell_owned "headless" "packaged authoritative-completion shell over injected services",
   entry "animus-std::load_agent_check_registry" "animus-std" std_shell shell shell_owned stable "explicit-path agent check registry loader",
+  std_smoke_record "animus-std::run_packaged_authoritative_completion_smoke" shell shell_owned authoritative_completion_smoke_feature shell_owned "headless" "fixture-backed packaged authoritative-completion smoke shell",
+  std_smoke_record "animus-std::run_packaged_multi_role_smoke" shell shell_owned multi_role_smoke_feature shell_owned "orchestration" "fixture-backed packaged multi-role smoke shell",
+  std_smoke_record "animus-std::run_packaged_profile_retry_smoke" shell shell_owned profile_retry_smoke_feature shell_owned "model" "fixture-backed packaged profile-retry smoke shell",
   entry "animus-std::parse_agent_check_registry_json" "animus-std" std_shell shell shell_owned stable "agent check registry JSON parser",
   entry "animus-std::parse_code_graph_profile_json" "animus-std" std_shell shell shell_owned optional_stability "code graph profile JSON parser",
   entry "animus-std::sandlock_host" "animus-std" std_shell shell shell_owned optional_stability "Sandlock host facade",
