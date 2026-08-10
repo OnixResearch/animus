@@ -18,6 +18,7 @@ const HASH_9: &str = "9999999999999999999999999999999999999999999999999999999999
 const APPLICATION_SEQUENCE: u64 = 1;
 const SESSION_SEQUENCE: u64 = 2;
 const EFFECT_SEQUENCE: u64 = 3;
+const DECLARED_VIEW_COUNT: usize = 9;
 
 struct Fixture {
     application: PilotIdentity,
@@ -92,7 +93,7 @@ fn draft(fixture: &Fixture) -> PilotBindingDraft<'_> {
     }
 }
 
-fn session_binding() -> crate::session_authority_profile::SessionAuthorityBinding {
+fn session_authority() -> crate::session_authority_profile::SessionAuthorityBinding {
     let components = crate::session_authority_profile::SessionAuthorityComponentClass::ALL
         .iter()
         .copied()
@@ -109,7 +110,7 @@ fn session_binding() -> crate::session_authority_profile::SessionAuthorityBindin
         },
     )
     .expect("profile");
-    crate::session_authority_profile::build_session_authority_binding(
+    let authority = crate::session_authority_profile::build_session_authority_binding(
         crate::session_authority_profile::SessionAuthorityBindingDraft {
             profile: &profile,
             authorization_identity: HASH_7,
@@ -118,20 +119,25 @@ fn session_binding() -> crate::session_authority_profile::SessionAuthorityBindin
             prior_profile_identity: None,
         },
     )
-    .expect("binding")
+    .expect("binding");
+    assert_eq!(
+        authority.profile().profile_identity(),
+        profile.profile_identity()
+    );
+    assert!(!authority.binding_identity().is_empty());
+    authority
 }
 
-fn sealed_unit(
-    binding: &PilotApplicationHostBinding,
-    session: &crate::session_authority_profile::SessionAuthorityBinding,
-) -> crate::runtime_authority_seal::RuntimeAuthorityUnit {
-    let operation_values = binding
-        .effect_operation_identities()
-        .iter()
-        .map(PilotIdentity::hex)
-        .collect::<Vec<_>>();
-    let resources = [HASH_9];
-    let declared = [
+type DeclaredView<'a> = (
+    crate::runtime_authority_seal::RuntimeAuthorityViewClass,
+    &'a str,
+);
+
+fn declared_views<'a>(
+    binding: &'a PilotApplicationHostBinding,
+    session: &'a crate::session_authority_profile::SessionAuthorityBinding,
+) -> [DeclaredView<'a>; DECLARED_VIEW_COUNT] {
+    [
         (
             crate::runtime_authority_seal::RuntimeAuthorityViewClass::SessionLineage,
             HASH_A,
@@ -168,8 +174,13 @@ fn sealed_unit(
             crate::runtime_authority_seal::RuntimeAuthorityViewClass::RuntimeServices,
             HASH_E,
         ),
-    ];
-    let expected = declared
+    ]
+}
+
+fn expected_views<'a>(
+    declared: &'a [DeclaredView<'a>],
+) -> Vec<crate::runtime_authority_seal::RuntimeAuthorityExpectedViewDraft<'a>> {
+    declared
         .iter()
         .map(
             |(class, value)| crate::runtime_authority_seal::RuntimeAuthorityExpectedViewDraft {
@@ -177,8 +188,13 @@ fn sealed_unit(
                 identity: value,
             },
         )
-        .collect::<Vec<_>>();
-    let observed = declared
+        .collect()
+}
+
+fn observed_views<'a>(
+    declared: &'a [DeclaredView<'a>],
+) -> Vec<crate::runtime_authority_seal::RuntimeAuthorityObservedViewDraft<'a>> {
+    declared
         .iter()
         .map(
             |(class, value)| crate::runtime_authority_seal::RuntimeAuthorityObservedViewDraft {
@@ -187,7 +203,22 @@ fn sealed_unit(
                 status: crate::runtime_authority_seal::RuntimeAuthorityObservationStatus::Current,
             },
         )
+        .collect()
+}
+
+fn sealed_unit(
+    binding: &PilotApplicationHostBinding,
+    session: &crate::session_authority_profile::SessionAuthorityBinding,
+) -> crate::runtime_authority_seal::RuntimeAuthorityUnit {
+    let operation_values = binding
+        .effect_operation_identities()
+        .iter()
+        .map(PilotIdentity::hex)
         .collect::<Vec<_>>();
+    let resources = [HASH_9];
+    let declared = declared_views(binding, session);
+    let expected = expected_views(&declared);
+    let observed = observed_views(&declared);
     let unit_draft = crate::runtime_authority_seal::RuntimeAuthorityUnitDraft {
         session_id: "session.pilot",
         dispatch_id: "dispatch.pilot",
@@ -213,11 +244,17 @@ fn sealed_unit(
         },
     )
     .expect("seal plan");
-    crate::runtime_authority_seal::commit_runtime_authority_seal(
+    let unit = crate::runtime_authority_seal::commit_runtime_authority_seal(
         &plan,
         plan.receipt().receipt_identity.as_str(),
     )
-    .expect("sealed unit")
+    .expect("sealed unit");
+    assert_eq!(
+        unit.state(),
+        crate::runtime_authority_seal::RuntimeAuthorityUnitState::Sealed
+    );
+    assert!(unit.seal_receipt_identity().is_some());
+    unit
 }
 
 fn recheck<'a>(
@@ -230,7 +267,7 @@ fn recheck<'a>(
         .map(PilotIdentity::hex)
         .collect::<Vec<_>>();
     let resources = vec![HASH_9];
-    crate::runtime_authority_seal::RuntimeAuthorityRecheckDraft {
+    let recheck = crate::runtime_authority_seal::RuntimeAuthorityRecheckDraft {
         session_lineage_identity: HASH_A,
         authority_profile_identity: binding.host_profile_identity().hex(),
         durable_binding_identity: session.binding_identity(),
@@ -243,7 +280,10 @@ fn recheck<'a>(
         operation_identities: Box::leak(operations.into_boxed_slice()),
         resource_identities: Box::leak(resources.into_boxed_slice()),
         admitted: true,
-    }
+    };
+    assert!(!recheck.operation_identities.is_empty());
+    assert!(!recheck.resource_identities.is_empty());
+    recheck
 }
 
 fn enforcement() -> Vec<PilotEnforcementObservation> {
@@ -263,7 +303,7 @@ fn has_issue(error: &PilotError, code: PilotIssueCode) -> bool {
 
 #[test]
 fn canonical_projection_is_stable_safe_and_kamacite_shaped() {
-    let session = session_binding();
+    let session = session_authority();
     let first_fixture = fixture(session.profile().profile_identity());
     let first = project_application_host_binding(&draft(&first_fixture)).expect("projection");
     let mut reversed_fixture = fixture(session.profile().profile_identity());
@@ -288,8 +328,8 @@ fn canonical_projection_is_stable_safe_and_kamacite_shaped() {
 }
 
 #[test]
-fn committed_binding_and_existing_seal_precede_fake_backed_effect() {
-    let session = session_binding();
+fn committed_projection_and_existing_seal_precede_fake_backed_effect() {
+    let session = session_authority();
     let fixture = fixture(session.profile().profile_identity());
     let binding = project_application_host_binding(&draft(&fixture)).expect("projection");
     let commit = commit_application_host_binding(PilotCommitDraft {
@@ -334,8 +374,8 @@ fn committed_binding_and_existing_seal_precede_fake_backed_effect() {
 }
 
 #[test]
-fn contract_host_effect_and_boundary_failures_are_stable() {
-    let session = session_binding();
+fn contract_effect_and_boundary_failures_are_stable() {
+    let session = session_authority();
     let mut fixture = fixture(session.profile().profile_identity());
 
     let mut stale = draft(&fixture);
@@ -366,12 +406,12 @@ fn contract_host_effect_and_boundary_failures_are_stable() {
     let error = project_application_host_binding(&duplicate).expect_err("duplicate");
     assert!(has_issue(&error, PilotIssueCode::DuplicateEffectOperation));
 
-    let oversized_operations = (0..=super::data::MAX_EFFECT_OPERATIONS)
+    let overbound_operations = (0..=super::data::MAX_EFFECT_OPERATIONS)
         .map(|_| fixture.operations[0].clone())
         .collect::<Vec<_>>();
-    let mut oversized = draft(&fixture);
-    oversized.effect_operation_identities = oversized_operations.as_slice();
-    let error = project_application_host_binding(&oversized).expect_err("oversized");
+    let mut overbound_draft = draft(&fixture);
+    overbound_draft.effect_operation_identities = overbound_operations.as_slice();
+    let error = project_application_host_binding(&overbound_draft).expect_err("overbound");
     assert!(has_issue(&error, PilotIssueCode::TooManyEffectOperations));
 
     let wrong_domain_operations = vec![fixture.input_schema.clone()];
@@ -403,7 +443,7 @@ fn contract_host_effect_and_boundary_failures_are_stable() {
 
 #[test]
 fn dispatch_denies_early_unknown_widened_and_current_failures() {
-    let session = session_binding();
+    let session = session_authority();
     let fixture = fixture(session.profile().profile_identity());
     let binding = project_application_host_binding(&draft(&fixture)).expect("projection");
     let commit = commit_application_host_binding(PilotCommitDraft {
