@@ -417,6 +417,7 @@
                 || baseName == "check-authoritative-agent-completion"
                 || baseName == "check-active-turn-recovery"
                 || baseName == "check-pending-input-vault"
+                || baseName == "check-transactional-daemon-handoff"
                 || baseName == "check-conversation-projection"
                 || baseName == "check-session-branch-explorer"
                 || baseName == "check-injected-services"
@@ -1036,6 +1037,13 @@
 
           pending-input-vault = cargoCheck "animus-pending-input-vault" [ pkgs.b3sum ] ''
             sh scripts/cairn/check-pending-input-vault --root .
+          '';
+
+          transactional-daemon-handoff = cargoCheck "animus-transactional-daemon-handoff" [
+            pkgs.b3sum
+            pkgs.clippy
+          ] ''
+            sh scripts/cairn/check-transactional-daemon-handoff --root .
           '';
 
           conversation-projection = cargoCheck "animus-conversation-projection" [

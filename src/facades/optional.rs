@@ -83,6 +83,10 @@ pub use animus_adapter_continual as continual_harness;
 #[cfg(feature = "daemon-workers")]
 pub use animus_adapter_daemon as daemon_workers;
 
+/// Non-default transactional daemon-handoff contracts and injected host shell.
+#[cfg(feature = "daemon-handoff")]
+pub use animus_std::daemon_handoff_host as daemon_handoff;
+
 /// Re-export of the optional family-scoped messaging contracts.
 #[cfg(feature = "messaging-receipts")]
 pub use animus_adapters::messaging as messaging_receipts;

@@ -12,6 +12,12 @@ Animus models session restore as typed planning and safe evidence, not as PTY tr
 - `RestoreReceipt` validates safe restore evidence and rejects raw history, credentials, shell commands, full paths, and transcript bodies.
 - `LedgerSessionService`, `LedgerReplayRequest`, `SessionRestoreRequest`, `plan_ledger_replay`, `plan_session_restore`, and `LedgerSessionReceiptDraft` define the host-injected replay/restore seam over already-loaded ledger entries; missing services, stale snapshots, conflicting branches, malformed ranges, ambient global-store fallback, and unsafe receipts fail closed.
 
+## Transactional worker replacement
+
+The separate [transactional daemon handoff](transactional-daemon-handoff.md) implements one bounded worker replacement transaction. It binds an exact durable session head, composer-draft identity, pending-input generation, active-turn generation, authority profile, and policy before lease release.
+
+That transaction does not change the generic restore plan. It does not make a reconstructed layout, transcript replay, native provider resume, PTY, or process state part of worker handoff.
+
 ## Degraded outcomes
 
 Unsupported capabilities, missing or malformed native references, stale or duplicated references, unsupported resume labels, disabled or unsafe history replay, unsupported handoff claims, and explicit fallbacks produce degraded outcomes. A degraded target never claims process survival, native resume, handoff success, or conversation continuity.

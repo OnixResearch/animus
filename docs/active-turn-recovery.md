@@ -64,6 +64,8 @@ The [pending-input vault](pending-input-vault.md) projects accepted active-turn 
 
 A cancelling or terminal control phase cannot become a parked or running entry. Existing cancellation and terminal fields own those outcomes.
 
+The [transactional daemon handoff](transactional-daemon-handoff.md) binds the current active-turn generation into durable handoff state. Replacement readiness requires that exact generation. The handoff does not replace acceptance, checkpoint, steering, recovery, cancellation, or provider gates.
+
 ## Policy and receipts
 
 `config/active-turn-recovery-policy.ncl` is the policy source. Rust revalidates the generated JSON before it plans recovery.

@@ -95,6 +95,12 @@ mod contract;
 #[allow(excessive_file_length)]
 #[path = "continuation/mod.rs"]
 mod controller;
+#[path = "daemonhandoff/mod.rs"]
+mod handover;
+/// Pure strict-idle, monotonic lease handoff, claim, rollback, and receipt contracts.
+pub mod daemon_handoff {
+    pub use crate::handover::*;
+}
 mod dataset_export;
 #[path = "dogfoodshell.rs"]
 pub mod dogfood_shell;

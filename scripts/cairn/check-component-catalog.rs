@@ -90,6 +90,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "agent-role-profiles",
     "active-turn-recovery",
     "pending-input-vault",
+    "daemon-handoff",
     "conversation-view-projection",
     "session-branch-explorer",
     "provider-retry",

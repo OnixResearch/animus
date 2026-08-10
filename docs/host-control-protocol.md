@@ -25,6 +25,12 @@ The separate [agent-control feature](agent-control-pubsub.md) owns pause, resume
 
 Host control does not own the agent-control state machine. Agent control does not own topology, selectors, sockets, layouts, PTYs, or transport authorization.
 
+## Daemon handoff relationship
+
+The [transactional daemon handoff](transactional-daemon-handoff.md) core projects its transaction states into the existing semantic status vocabulary. Host Control remains a transport-neutral observer. It does not acquire lease, process, endpoint, readiness, or old-worker exit authority.
+
+A future Tile integration can consume these status facts through a separate Tile-owned change. That work must not make Animus or Host Control the owner of Tile transport, PTYs, topology, or product policy.
+
 ## ACP relationship
 
 The optional [ACP stdio host](acp-stdio-host.md) is a separate bounded local protocol adapter, not a replacement host-control owner. It delegates lifecycle actions to the coding-session facade and does not gain process, daemon, remote-control, endpoint-discovery, credential, or host-shutdown authority.

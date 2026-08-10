@@ -46,6 +46,14 @@ mod config;
 mod context;
 #[cfg(feature = "conversation-view-projection")]
 mod conversationprojection;
+#[cfg(feature = "daemon-handoff")]
+#[path = "daemonhandoff/mod.rs"]
+mod handover_shell;
+/// Non-default transactional daemon-handoff host over injected services.
+#[cfg(feature = "daemon-handoff")]
+pub mod daemon_handoff_host {
+    pub use crate::handover_shell::*;
+}
 #[cfg(feature = "syndicate-host")]
 mod dataspace;
 mod document;

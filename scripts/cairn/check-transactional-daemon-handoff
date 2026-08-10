@@ -1,0 +1,143 @@
+#!/usr/bin/env sh
+# r[verify agent_harness_runtime.daemon_handoff.idle.valid]
+# r[verify agent_harness_runtime.daemon_handoff.idle.busy]
+# r[verify agent_harness_runtime.daemon_handoff.transaction.success]
+# r[verify agent_harness_runtime.daemon_handoff.transaction.invalid]
+# r[verify agent_harness_runtime.daemon_handoff.claim.allowed]
+# r[verify agent_harness_runtime.daemon_handoff.claim.denied]
+# r[verify agent_harness_runtime.daemon_handoff.cancellation.timeout]
+# r[verify agent_harness_runtime.daemon_handoff.cancellation.survivor]
+# r[verify agent_harness_runtime.daemon_handoff.cancellation.late_claim]
+# r[verify agent_harness_runtime.daemon_handoff.session_state.ready]
+# r[verify agent_harness_runtime.daemon_handoff.session_state.drift]
+# r[verify agent_harness_runtime.daemon_handoff.evidence.safe]
+# r[verify agent_harness_runtime.daemon_handoff.evidence.rejects]
+set -eu
+
+readonly FAILURE=1
+readonly RAIL_NAME='transactional-daemon-handoff'
+readonly RECEIPT_SCHEMA='animus.focused-rail-receipt.v1'
+readonly RUNTIME_SOURCE='crates/animus-runtime/src/daemonhandoff'
+readonly ADAPTER_SOURCE='crates/animus-adapter-daemon/src/handoff.rs'
+readonly HOST_SOURCE='crates/animus-std/src/daemonhandoff'
+readonly BOUNDARY_DOC='docs/transactional-daemon-handoff.md'
+readonly POSITIVE_FAMILIES='strict-idle,commit-before-release,authenticated-claim,exact-readiness,old-worker-exit,status-projection,metadata-receipt,fake-host-smoke'
+readonly NEGATIVE_FAMILIES='busy-class,ambiguous-class,skipped-transition,replayed-transition,tampered-transition,stale-generation,wrong-process,wrong-endpoint,wrong-protocol,stale-authentication,duplicate-claim,late-claim,spawn-failure,readiness-timeout,partial-teardown,surviving-descendant,rollback-drift,receipt-leak,overclaim'
+
+root='.'
+if [ "${1:-}" = '--root' ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  root=$2
+fi
+cd "${root}"
+
+for command in cargo b3sum grep; do
+  if ! command -v "${command}" >/dev/null 2>&1; then
+    printf 'error: %s is required\n' "${command}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+for marker in \
+  'validate_strict_idle' \
+  'prepare_handoff' \
+  'pause_ingress' \
+  'release_lease' \
+  'admit_claim' \
+  'commit_readiness' \
+  'plan_cancellation' \
+  'validate_lease_restoration_preconditions' \
+  'host_control_status' \
+  'project_handoff_receipt'
+do
+  if ! grep -R -F "${marker}" "${RUNTIME_SOURCE}" >/dev/null; then
+    printf 'error: missing runtime marker: %s\n' "${marker}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+for marker in \
+  'HandoffHostServices' \
+  'HandoffClaimObservation' \
+  'HandoffReadinessObservation' \
+  'HandoffTerminationObservation'
+do
+  if ! grep -F "${marker}" "${ADAPTER_SOURCE}" >/dev/null; then
+    printf 'error: missing adapter marker: %s\n' "${marker}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+for marker in \
+  'cancel_and_restore' \
+  'commit_cancelled' \
+  'terminate_and_observe' \
+  'restore_cancelled_lease' \
+  'resume_ingress'
+do
+  if ! grep -R -F "${marker}" "${HOST_SOURCE}" >/dev/null; then
+    printf 'error: missing host ordering marker: %s\n' "${marker}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+for marker in \
+  'Handoff admission requires one exact snapshot' \
+  'commits cancellation before it requests process termination' \
+  'The old worker cannot exit before readiness commits' \
+  'Tile can later consume these semantic observations' \
+  'Receipts reject draft text' \
+  'does not transfer PTYs' \
+  'does not prove sandboxing' \
+  'or runtime dependencies'
+do
+  if ! grep -F "${marker}" "${BOUNDARY_DOC}" >/dev/null; then
+    printf 'error: missing boundary documentation marker: %s\n' "${marker}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+if grep -R -E 'std::fs|std::process|Command::new|std::env|TcpStream|UdpSocket|SystemTime::now|Instant::now' \
+  "${RUNTIME_SOURCE}" --include='*.rs' >/dev/null 2>&1
+then
+  printf '%s\n' 'error: daemon-handoff core gained ambient host authority' >&2
+  exit "${FAILURE}"
+fi
+
+cargo test -p animus-runtime handover::tests --locked
+cargo test -p animus-adapter-daemon transaction::tests --locked
+cargo test -p animus-std --features daemon-handoff handover_shell::tests --locked
+cargo check -p animus-runtime --no-default-features --target wasm32-unknown-unknown --locked
+cargo check -p animus-adapter-daemon --no-default-features --target wasm32-unknown-unknown --locked
+cargo check -p animus-std --no-default-features --features daemon-handoff --locked
+cargo check -p animus --no-default-features --features daemon-handoff --locked
+cargo clippy -p animus-runtime -p animus-adapter-daemon -p animus-std -p animus --all-targets --features daemon-handoff --locked -- -D warnings
+cargo run -q -p animus-std --features daemon-handoff --bin animus-daemon-handoff-smoke --locked
+
+core_hash=$(b3sum "${RUNTIME_SOURCE}/core.rs" | cut -d ' ' -f 1)
+receipt_hash=$(b3sum "${RUNTIME_SOURCE}/evidence.rs" | cut -d ' ' -f 1)
+adapter_hash=$(b3sum "${ADAPTER_SOURCE}" | cut -d ' ' -f 1)
+host_hash=$(b3sum "${HOST_SOURCE}/host.rs" | cut -d ' ' -f 1)
+doc_hash=$(b3sum "${BOUNDARY_DOC}" | cut -d ' ' -f 1)
+mkdir -p target/cairn/focused-rails
+receipt_path=target/cairn/focused-rails/${RAIL_NAME}.md
+cat > "${receipt_path}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+core_blake3: ${core_hash}
+receipt_core_blake3: ${receipt_hash}
+adapter_blake3: ${adapter_hash}
+host_blake3: ${host_hash}
+doc_blake3: ${doc_hash}
+positive_fixture_families: ${POSITIVE_FAMILIES}
+negative_fixture_families: ${NEGATIVE_FAMILIES}
+claims: strict-idle-admission,commit-before-release,single-authenticated-claim,exact-readiness,exit-after-ready,cancellation-before-teardown,complete-tree-before-restore,next-generation-lease,ingress-resumes-last,metadata-only-receipts
+non_claims: pty-migration,process-memory-continuity,provider-session-transfer,sandboxing,remote-security,exactly-once-effects,power-loss-durability,production-readiness,release-eligibility
+EOF
+
+printf '%s\n' 'focused rail transactional-daemon-handoff: pass'
+printf 'receipt: %s\n' "${receipt_path}"

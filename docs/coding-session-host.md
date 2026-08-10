@@ -66,6 +66,8 @@ The separate [active-turn recovery](active-turn-recovery.md) contract protects a
 
 The [pending-input vault](pending-input-vault.md) combines active and queued durable references for one explicit restart review. Restore does not bypass this host. Each restored reference must pass current queue, authority, policy, durable-commit, and provider gates before the host can load its body or submit work. A corrupt or cleanup-required vault blocks ordinary ingress.
 
+The [transactional daemon handoff](transactional-daemon-handoff.md) binds this host's durable session head and composer-draft identity before lease release. A replacement worker must prove those exact values before the old worker can exit. Handoff does not gain transcript, queue, provider, tool, or global-store authority from this host.
+
 Child-process tests prove that a committed session reopens after process exit and that an incomplete trailing transaction does not become continuation authority. These tests do not prove filesystem, kernel, device-cache, power-loss, backup, replication, encryption, or production-recovery correctness.
 
 ## Safe evidence

@@ -17,6 +17,14 @@
 
 extern crate alloc;
 
+#[path = "handoff.rs"]
+mod transaction;
+/// Stable public module name for transactional handoff DTOs and ports.
+pub mod handoff {
+    pub use crate::transaction::*;
+}
+pub use transaction::*;
+
 use alloc::{format, string::String, vec, vec::Vec};
 
 /// The daemon contract schema.

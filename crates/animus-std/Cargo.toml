@@ -23,6 +23,7 @@ execution-backend-planner = ["dep:animus-runtime", "animus-runtime/execution-bac
 session-branch-explorer = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 codebase-graph-host = ["dep:serde", "dep:serde_json", "dep:tree-sitter", "dep:tree-sitter-rust"]
 codebase-tool-host = ["codebase-graph-host", "dep:animus-runtime"]
+daemon-handoff = ["pending-input-vault"]
 dogfood-smoke = ["dep:animus-runtime"]
 durable-session-store = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 harbor-eval = ["dep:animus-runtime", "animus-runtime/harbor-eval", "animus-adapters/evaluation", "dep:serde_json"]
@@ -49,6 +50,11 @@ syndicate-host = ["dep:animus-preserves"]
 name = "animus-dogfood-smoke"
 path = "src/bin/animus-dogfood-smoke.rs"
 required-features = ["dogfood-smoke"]
+
+[[bin]]
+name = "animus-daemon-handoff-smoke"
+path = "src/bin/animus-daemon-handoff-smoke.rs"
+required-features = ["daemon-handoff"]
 
 [[bin]]
 name = "animus-coding-session-smoke"

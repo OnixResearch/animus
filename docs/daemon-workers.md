@@ -27,6 +27,12 @@ Worker and kernel process separation supplies lifecycle facts: independent crash
 
 Use a separate sandbox contract when a host needs security isolation. Do not infer security properties from process separation.
 
+## Transactional replacement
+
+The separate [transactional daemon handoff](transactional-daemon-handoff.md) boundary replaces one session worker through strict idle admission and a generation-bound lease transaction. It reuses daemon role separation, but it does not add process or endpoint authority to this reusable contract.
+
+Detach and reattach remain client-subscription operations. Transactional replacement is a worker-ownership operation. Neither operation transfers PTYs, terminal state, process memory, provider sessions, credentials, or transcript bodies.
+
 ## Receipts
 
 Daemon receipts contain policy, role, envelope, attachment, recovery, health, bounded-count, and BLAKE3 identity fields. They also contain the `not-security-sandbox` non-claim. Prompt bodies, client input, transcript content, credentials, paths, and overclaims fail closed.

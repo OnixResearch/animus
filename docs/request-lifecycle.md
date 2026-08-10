@@ -24,6 +24,7 @@ This document is the maintained ownership map for request processing. It is a re
 13. **Canonical conversation projection** is owned by `animus-runtime::conversation_projection`. It derives snapshot-first views from one admitted ledger branch. Render caches cannot become model context, ledger truth, tool authority, or completion evidence.
 13. **Active-turn durability and recovery** are owned by `animus-runtime::active_turn_recovery`. The pure core plans accepted-message transactions, checkpoint replacement, steering append, recovery, and receipts. Provider dispatch requires exact durable acceptance evidence. Storage, transactions, provider calls, tool calls, clocks, cancellation, and cleanup remain host-owned.
 13a. **Pending-entry restart review** is owned by `animus-runtime::pending_input_vault` and the non-default `animus-std::pending_input_vault_host`. The pure core validates exact conversation-scoped ordering, corruption, dispositions, and receipts. The shell calls only an injected store service. Recovery never submits input automatically, and body access requires a new exact current admission.
+13b. **Transactional daemon handoff** is owned by `animus-runtime::daemon_handoff`, versioned `animus-adapter-daemon` ports, and the non-default `animus-std::daemon_handoff_host`. It pauses ingress, binds durable session state, and transfers one generation-fenced worker lease. It grants no prompt, queue, provider, tool, PTY, credential, path, or global-store authority.
 13. **Live OpenAI execution** is owned by the non-default `animus-std-openai` host. Pure admission accepts only the exact OpenAI Responses endpoint and a text-only non-streaming cohort. The optional shell uses an explicit API key, timeout, cancellation observation, and response limit for one HTTPS attempt.
 14. **Provider retry admission** is owned by `animus-runtime::provider_retry`. After one admitted provider attempt fails, the host supplies only a versioned safe native-class observation. The pure core maps a canonical reason, verifies the exact provider/model/request/profile/prompt/tool/format/reasoning/stream/credential/policy identity, denies retry after accepted semantic stream output, selects a bounded deterministic delay, and gates the next attempt on exact injected-timer evidence. Routing, fallback, clocks, cancellation observation, provider contact, event delivery, and completion remain host-owned.
 13. **External agent control** is owned by implementation-free `animus-adapters` commands/checkpoints/wait port, the pure `animus-runtime` revisioned reducer, and the explicit `animus-std-control` synchronized host. Runtime gates run before fabric, model, and tool dispatch. Coding sessions gate provider, tool, and summarizer effects after prerequisite commits. External transport, authentication, selector resolution, and durable pause remain host-owned.
@@ -76,6 +77,7 @@ This document is the maintained ownership map for request processing. It is a re
 | Active-turn recovery host | `animus-std` | `ActiveTurnMemoryHost`, `load_active_turn_recovery_policy` behind `active-turn-recovery` | Explicit policy reads and deterministic fixture transactions only. Production durability remains consumer-owned. |
 | Pending-entry recovery core | `animus-runtime` | `pending_input_vault::{project_startup, plan_disposition, reduce_commit, plan_recovery_control, project_receipt}` | Pure over supplied durable facts. It has no store, clock, provider, queue, transcript, or cleanup authority. |
 | Pending-entry recovery host | `animus-std` | `pending_input_vault_host::Host` behind `pending-input-vault` | Calls one injected service. It commits evidence before cleanup and loads bodies only after exact current admission. |
+| Transactional daemon handoff | `animus-runtime`, `animus-adapter-daemon`, optional `animus-std` | `daemon_handoff::{validate_strict_idle, prepare_handoff, admit_claim, commit_readiness, plan_cancellation, restore_lease}` and `daemon_handoff_host::HandoffHost` behind `daemon-handoff` | Pure reducers validate supplied facts. The host calls only injected ingress, state, lease, process, endpoint, readiness, and exit services. |
 | Pijul VCS query adapter | `animus-adapters`, `animus-runtime`, optional `animus-std` | `pijul::{PijulBackendService, validate_pijul_response, project_pijul_log, PijulCliService}` behind `pijul-vcs-adapter` | DTOs, validation, projection, and receipts are pure. The shell calls only an injected bounded executor. It denies mutations, remotes, rich identity-reading logs, discovery, and persistence. |
 | SecretSpec credential resolution | `animus-adapters`, optional `animus-std-secretspec` | `secret_resolution::{admit_secret_resolution, SecretResolutionService}` and `animus_std_secretspec::BoundedSecretSpecResolver` behind `secretspec-host-resolution` | Pure admission validates exact public metadata. The shell verifies the manifest and uses owned bounded workers. Material crosses only a borrowed injected delivery boundary. Resolution grants no caller authority. |
 | Skill-source lifecycle | `animus-adapters` | `skill_source::{classify_tracked_skill_source, admit_skill_source_promotion}` | Pure frozen and inactive-candidate classification. Acquisition and mutation stay behind host-owned services. |
@@ -145,6 +147,10 @@ Conversation views start with one complete redaction-safe snapshot. Exact cursor
 ### Pending-entry recovery boundary
 
 `animus_runtime::pending_input_vault` combines active accepted input, steering, follow-up, command, and attachment-reference facts in one exact ordered projection. Complete state requires explicit review. Corruption blocks ordinary ingress without hiding separately authorized recovery controls. Restore returns references only; current coding-session admission remains authoritative. The non-default standard host commits disposition evidence before cleanup and never loads a body during startup. See [pending-input vault](pending-input-vault.md).
+
+### Transactional daemon-handoff boundary
+
+`animus_runtime::daemon_handoff` starts only from exact strict idle. The host pauses all ingress, commits the session head and recovery generations, then releases the old lease. One authenticated generation-bound claimant must prove exact readiness before old-worker exit. Cancellation commits before complete owned-tree teardown. Lease restoration uses the next generation, and ingress resumes last. See [transactional daemon handoff](transactional-daemon-handoff.md).
 
 ### Live OpenAI provider boundary
 
@@ -218,6 +224,7 @@ scripts/cairn/check-provider-retry --root .
 scripts/cairn/check-live-openai-provider-host --root .
 scripts/cairn/check-active-turn-recovery --root .
 scripts/cairn/check-pending-input-vault --root .
+scripts/cairn/check-transactional-daemon-handoff --root .
 scripts/cairn/check-conversation-projection --root .
 scripts/cairn/check-session-branch-explorer --root .
 scripts/cairn/check-request-lifecycle --root .

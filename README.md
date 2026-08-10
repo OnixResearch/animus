@@ -33,7 +33,7 @@
 - `crates/animus-eval-conformance` is the non-default deterministic evaluation conformance suite. It runs paired positive and expected-negative fixtures through public production APIs with injected finite fakes; see [docs/evaluation-composition-conformance.md](docs/evaluation-composition-conformance.md). Run `scripts/cairn/check-evaluation-composition-conformance --root .` for its focused rail.
 - `crates/animus-adapter-weave` is the optional non-default universal-weave branching adapter. It wraps the pinned DAG weave behind Animus-owned DTOs, named bounds, and metadata-only BLAKE3 receipts; see [docs/universal-weave-adapter.md](docs/universal-weave-adapter.md).
 - `crates/animus-adapter-continual` is the optional no-std continual-harness refinement boundary. It admits evidence-bound session-local supplemental updates, snapshot-before-update plans, exact rollback, explicit promotion plans, and metadata-only receipts; see [docs/continual-harness.md](docs/continual-harness.md).
-- `crates/animus-adapter-daemon` is the optional no-std client, supervisor, and worker lifecycle boundary. It keeps execution in one worker tree, makes detach subscription-only, admits live/current reattach, and rejects sandbox claims; see [docs/daemon-workers.md](docs/daemon-workers.md).
+- `crates/animus-adapter-daemon` is the optional no-std daemon contract boundary. It owns client, supervisor, worker, and versioned handoff ports without process, endpoint, lease, or storage authority; see [docs/daemon-workers.md](docs/daemon-workers.md) and [docs/transactional-daemon-handoff.md](docs/transactional-daemon-handoff.md).
 - `crates/animus-tui` is the optional terminal UI host shell. It keeps Rats/Subwayrat/Ratatui-facing dependencies outside reusable core, adapter, Steel, and std runtime contracts; see [docs/ratatui-tool-host-surface.md](docs/ratatui-tool-host-surface.md) for the host bridge, [docs/terminal-image-protocols.md](docs/terminal-image-protocols.md) for bounded static images, and [docs/terminal-video-playback.md](docs/terminal-video-playback.md) for non-default playback over injected decoded frames.
 - The root `animus` package is a thin compatibility layer that re-exports the workspace crates.
 
@@ -82,6 +82,8 @@ See [docs/canonical-conversation-view-projection.md](docs/canonical-conversation
 See [docs/active-turn-recovery.md](docs/active-turn-recovery.md) for durable acceptance, atomic checkpoint replacement, steering recovery, no-rerun composition, and metadata-only receipts.
 
 See [docs/pending-input-vault.md](docs/pending-input-vault.md) for explicit restart review, generation-fenced restore and discard, corruption controls, injected storage services, and metadata-only receipts.
+
+See [docs/transactional-daemon-handoff.md](docs/transactional-daemon-handoff.md) for strict-idle worker replacement, commit-before-release, exact readiness, complete-tree rollback, Host Control status projection, and metadata-only receipts.
 
 See [docs/redacted-session-tree-export.md](docs/redacted-session-tree-export.md) for validated-metadata topology projection, redaction-first Nickel policy, deterministic script-free artifacts, explicit destination-capability writes, and exact metadata-only receipts.
 
@@ -191,6 +193,7 @@ scripts/cairn/check-nickel-policy-contracts --root .
 scripts/cairn/check-autonomous-gates --root .
 scripts/cairn/check-continual-harness --root .
 scripts/cairn/check-daemon-workers --root .
+scripts/cairn/check-transactional-daemon-handoff --root .
 scripts/cairn/check-messaging-receipts --root .
 scripts/cairn/check-persistent-goals --root .
 scripts/cairn/check-schedule-reliability --root .
@@ -254,6 +257,7 @@ nix build .#checks.x86_64-linux.neutral-ledger --no-link -L
 nix build .#checks.x86_64-linux.safe-receipts-artifacts --no-link -L
 nix build .#checks.x86_64-linux.continual-harness --no-link -L
 nix build .#checks.x86_64-linux.daemon-workers --no-link -L
+nix build .#checks.x86_64-linux.transactional-daemon-handoff --no-link -L
 nix build .#checks.x86_64-linux.messaging-receipts --no-link -L
 nix build .#checks.x86_64-linux.persistent-goals --no-link -L
 nix build .#checks.x86_64-linux.current-head-release-evidence-index --no-link -L

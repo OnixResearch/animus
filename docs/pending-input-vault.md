@@ -48,6 +48,8 @@ Receipts contain bounded conversation, branch, store, authority, policy, generat
 
 Receipts reject input bodies, attachment content, prompts, tool data, provider data, credentials, environment values, physical paths, and raw store errors.
 
+The [transactional daemon handoff](transactional-daemon-handoff.md) binds the current vault generation before lease release. Replacement readiness must observe that exact generation. Handoff does not load entry bodies, choose a disposition, repeat a completed disposition, or bypass current admission.
+
 ## Autolith reference boundary
 
 The reviewed behavior reference is Autolith commit `8755dc516c9f6c1126b148d3fc426312095de871`, under the ISC license. Animus adapted no-automatic-submit, exact-order, idempotent-import, visible-corruption, and conversation-isolation scenarios.

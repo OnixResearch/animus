@@ -79,6 +79,8 @@ let continual_feature = "continual-harness" in
 let continual_family = "refinement" in
 let daemon_feature = "daemon-workers" in
 let daemon_family = "daemon-workers" in
+let daemon_handoff_feature = "daemon-handoff" in
+let daemon_handoff_family = "daemon-handoff" in
 let messaging_feature = "messaging-receipts" in
 let messaging_family = "messaging-receipts" in
 let persistent_goals_feature = "persistent-goals" in
@@ -250,6 +252,21 @@ let daemon_record = fun export_path_value owning_crate_value source_value review
   depends_on = [],
   composes_with = ["animus-adapters::HostTopologySnapshot"],
   capability_family = daemon_family,
+}
+in
+let daemon_handoff_record = fun export_path_value owning_crate_value source_value class_value side_effect_value authority_value dependencies_value review_note_value => {
+  export_path = export_path_value,
+  owning_crate = owning_crate_value,
+  source = source_value,
+  class = class_value,
+  side_effect = side_effect_value,
+  stability = optional_stability,
+  review_note = review_note_value,
+  feature_gate = daemon_handoff_feature,
+  required_authority = authority_value,
+  depends_on = dependencies_value,
+  composes_with = ["animus-adapters::HostTopologySnapshot"],
+  capability_family = daemon_handoff_family,
 }
 in
 let messaging_record = fun export_path_value owning_crate_value source_value review_note_value => {
@@ -2552,6 +2569,9 @@ let entry_values = [
   continual_record "animus::continual_harness" "animus" root "optional compatibility re-export of continual-harness contracts",
   daemon_record "animus-adapters::daemon_workers" "animus-adapters" adapters "no-std client, supervisor, worker, attachment, recovery, containment, and metadata-only receipt contracts",
   daemon_record "animus::daemon_workers" "animus" root "optional compatibility re-export of daemon worker contracts",
+  daemon_handoff_record "animus-runtime::daemon_handoff" "animus-runtime" runtime reusable none none ["animus-runtime::pending_input_vault", "animus-runtime::active_turn_recovery", "animus-runtime::coding_session_host"] "pure strict-idle, monotonic handoff, exact claim, readiness, rollback, Host Control status, and metadata-only receipt contracts",
+  daemon_handoff_record "animus-std::daemon_handoff_host" "animus-std" std_shell shell shell_owned shell_owned ["animus-runtime::daemon_handoff", "animus-std::pending_input_vault_host", "animus-std::coding_session_host"] "non-default injected host shell over versioned adapter ports with commit-before-release, readiness-before-exit, and cancellation-before-teardown ordering",
+  daemon_handoff_record "animus::daemon_handoff" "animus" root shell shell_owned shell_owned ["animus-runtime::daemon_handoff", "animus-std::daemon_handoff_host"] "non-default root facade for pure transaction contracts, versioned ports, and the injected host shell",
   messaging_record "animus-adapters::messaging" "animus-adapters" adapters "host-derived family roster, pure delivery modes, pre-routing limits, and delivered/queued metadata-only receipts",
   {
     export_path = "animus-adapters::skill_source",
