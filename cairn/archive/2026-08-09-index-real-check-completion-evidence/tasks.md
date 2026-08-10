@@ -6,4 +6,4 @@
 - [x] [depends:agent_harness_runtime.real_check_evidence_index.generator] Reject missing, stale, dirty, malformed, fixture, non-passing, source-unbound, wrong-check, wrong-Cairn, duplicate, and conflicting evidence. r[agent_harness_runtime.real_check_evidence_index.validation]
 - [x] [depends:agent_harness_runtime.real_check_evidence_index.validation] Add positive and negative Nickel fixtures plus generated-index cases. r[agent_harness_runtime.real_check_evidence_index.verification]
 - [x] [depends:agent_harness_runtime.real_check_evidence_index.verification] Update README, release-index documentation, roadmap, and focused rail commands. r[agent_harness_runtime.real_check_evidence_index.docs]
-- [ ] [serial] Run focused, dogfood, Nix, Cairn, clean-current-head, sync, and archive checks before publication. r[agent_harness_runtime.real_check_evidence_index.closeout]
+- [x] [serial] Run focused, dogfood, Nix, Cairn, clean-current-head, sync, and archive checks before publication. r[agent_harness_runtime.real_check_evidence_index.closeout]
