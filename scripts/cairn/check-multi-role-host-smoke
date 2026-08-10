@@ -1,0 +1,204 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+readonly SUCCESS=0
+readonly SUBJECT='private packaged multi-role subject'
+readonly HEADER='ANIMUS_MULTI_ROLE_SMOKE'
+readonly COMPLETED='status=completed'
+readonly ROLE_COUNT='role_count=4'
+readonly IMPLEMENTER='role_id=implementer'
+readonly REVIEWER='role_id=reviewer'
+readonly VERIFIER='role_id=verifier'
+readonly JUDGE='role_id=judge'
+readonly VETO='effect=veto'
+readonly MUTATION_REJECTED='reviewer_mutation_rejected=true'
+readonly CLAIM_REJECTED='completion_claim_rejected=true'
+readonly CANDIDATE_REJECTED='completion_candidate_rejected=true'
+readonly NO_COMPLETION='authoritative_completion=false'
+readonly PROVIDER_NON_CLAIM='surface=provider-quality'
+readonly COMPLETION_NON_CLAIM='surface=authoritative-completion'
+readonly PRODUCTION_NON_CLAIM='surface=production-readiness'
+readonly MISSING_ARGUMENT='issue=missing-argument'
+readonly ROLE_POLICY_ERROR='issue=role-policy'
+readonly MODEL_POLICY_ERROR='issue=model-policy'
+readonly SEPARATION_ERROR='issue=separation'
+readonly OUTPUT_ERROR='issue=output'
+readonly MUTATION_ERROR='issue=reviewer-mutation'
+readonly RECEIPT_SCHEMA='animus.multi-role-host-smoke-receipt.v1'
+readonly RAIL_NAME='multi-role-host-smoke'
+readonly HEAD_UNAVAILABLE='unavailable'
+readonly DIRTY_UNKNOWN='unknown'
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+
+if [ "${1:-}" = "--root" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  repo_root=$(CDPATH= cd -- "$2" && pwd)
+fi
+
+cd "${repo_root}"
+if ! command -v b3sum >/dev/null 2>&1; then
+  printf '%s\n' 'error: b3sum is required for multi-role smoke receipts' >&2
+  exit "${FAILURE}"
+fi
+
+readonly ROLE_POLICY="${repo_root}/config/generated/agent-role-profiles.json"
+readonly MODEL_POLICY="${repo_root}/config/generated/model-runtime-profiles.json"
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/animus-multi-role-smoke.XXXXXX")
+trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
+readonly MALFORMED_ROLE_POLICY="${tmp_dir}/malformed-roles.json"
+readonly MALFORMED_MODEL_POLICY="${tmp_dir}/malformed-models.json"
+readonly MISSING_ROLE_POLICY="${tmp_dir}/missing-role.json"
+printf '%s\n' '{' > "${MALFORMED_ROLE_POLICY}"
+printf '%s\n' '{' > "${MALFORMED_MODEL_POLICY}"
+sed '0,/"role_id": "judge"/s//"role_id": "missing-judge"/' \
+  "${ROLE_POLICY}" > "${MISSING_ROLE_POLICY}"
+
+run_smoke() {
+  cargo run -q -p animus-std --features multi-role-smoke \
+    --bin animus-multi-role-smoke --locked -- "$@"
+}
+
+run_valid_smoke() {
+  run_smoke \
+    --role-policy "${ROLE_POLICY}" \
+    --model-policy "${MODEL_POLICY}" \
+    --subject "${SUBJECT}" \
+    "$@"
+}
+
+require_contains() {
+  haystack=$1
+  needle=$2
+  label=$3
+  case "${haystack}" in
+    *"${needle}"*) ;;
+    *)
+      printf 'error: missing %s marker: %s\n' "${label}" "${needle}" >&2
+      exit "${FAILURE}"
+      ;;
+  esac
+}
+
+require_omits() {
+  haystack=$1
+  needle=$2
+  label=$3
+  case "${haystack}" in
+    *"${needle}"*)
+      printf 'error: unsafe %s marker leaked: %s\n' "${label}" "${needle}" >&2
+      exit "${FAILURE}"
+      ;;
+    *) ;;
+  esac
+}
+
+expect_failure() {
+  expected=$1
+  shift
+  output=$(run_smoke "$@" 2>&1) && {
+    printf 'error: command unexpectedly passed for %s\n%s\n' "${expected}" "${output}" >&2
+    exit "${FAILURE}"
+  }
+  require_contains "${output}" "${expected}" 'negative-fixture'
+  require_omits "${output}" "${SUBJECT}" 'negative-subject'
+}
+
+expect_valid_failure() {
+  expected=$1
+  shift
+  output=$(run_valid_smoke "$@" 2>&1) && {
+    printf 'error: command unexpectedly passed for %s\n%s\n' "${expected}" "${output}" >&2
+    exit "${FAILURE}"
+  }
+  require_contains "${output}" "${expected}" 'negative-fixture'
+  require_omits "${output}" "${SUBJECT}" 'negative-subject'
+}
+
+# r[verify agent_harness_runtime.multi_role_host_smoke.verification.rail]
+cargo test -q -p animus-std --features multi-role-smoke multirolesmoke --locked
+
+positive_output=$(run_valid_smoke)
+require_contains "${positive_output}" "${HEADER}" 'header'
+require_contains "${positive_output}" "${COMPLETED}" 'status'
+require_contains "${positive_output}" "${ROLE_COUNT}" 'role-count'
+require_contains "${positive_output}" "${IMPLEMENTER}" 'implementer'
+require_contains "${positive_output}" "${REVIEWER}" 'reviewer'
+require_contains "${positive_output}" "${VERIFIER}" 'verifier'
+require_contains "${positive_output}" "${JUDGE}" 'judge'
+require_contains "${positive_output}" "${VETO}" 'judge-veto'
+require_contains "${positive_output}" "${MUTATION_REJECTED}" 'mutation-boundary'
+require_contains "${positive_output}" "${CLAIM_REJECTED}" 'completion-claim-boundary'
+require_contains "${positive_output}" "${CANDIDATE_REJECTED}" 'completion-candidate-boundary'
+require_contains "${positive_output}" "${NO_COMPLETION}" 'completion-non-claim'
+require_contains "${positive_output}" "${PROVIDER_NON_CLAIM}" 'provider-non-claim'
+require_contains "${positive_output}" "${COMPLETION_NON_CLAIM}" 'completion-non-claim-row'
+require_contains "${positive_output}" "${PRODUCTION_NON_CLAIM}" 'production-non-claim'
+require_omits "${positive_output}" "${SUBJECT}" 'raw-subject'
+require_omits "${positive_output}" "${ROLE_POLICY}" 'role-policy-path'
+require_omits "${positive_output}" "${MODEL_POLICY}" 'model-policy-path'
+require_omits "${positive_output}" 'judge rationale' 'judge-rationale'
+
+expect_failure "${MISSING_ARGUMENT}"
+expect_failure "${ROLE_POLICY_ERROR}" \
+  --role-policy "${MALFORMED_ROLE_POLICY}" \
+  --model-policy "${MODEL_POLICY}" \
+  --subject "${SUBJECT}"
+expect_failure "${MODEL_POLICY_ERROR}" \
+  --role-policy "${ROLE_POLICY}" \
+  --model-policy "${MALFORMED_MODEL_POLICY}" \
+  --subject "${SUBJECT}"
+expect_failure "${ROLE_POLICY_ERROR}" \
+  --role-policy "${MISSING_ROLE_POLICY}" \
+  --model-policy "${MODEL_POLICY}" \
+  --subject "${SUBJECT}"
+expect_valid_failure "${SEPARATION_ERROR}" --collapse-reviewer-actor
+expect_valid_failure "${OUTPUT_ERROR}" --deny-judge-veto
+expect_valid_failure "${MUTATION_ERROR}" --require-reviewer-mutation
+expect_valid_failure "${OUTPUT_ERROR}" --claim-completion
+
+# r[verify agent_harness_runtime.multi_role_host_smoke.receipt.current_head]
+source_hash=$(
+  b3sum \
+    crates/animus-std/Cargo.toml \
+    crates/animus-std/src/lib.rs \
+    crates/animus-std/src/multirolesmoke/mod.rs \
+    crates/animus-std/src/multirolesmoke/composition.rs \
+    crates/animus-std/src/multirolesmoke/workflow.rs \
+    crates/animus-std/src/multirolesmoke/tests.rs \
+    crates/animus-std/src/bin/animus-multi-role-smoke.rs \
+    config/generated/agent-role-profiles.json \
+    config/generated/model-runtime-profiles.json \
+    scripts/cairn/check-multi-role-host-smoke | b3sum | cut -d ' ' -f 1
+)
+head_commit=${HEAD_UNAVAILABLE}
+head_dirty=${DIRTY_UNKNOWN}
+if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  head_commit=$(git rev-parse HEAD)
+  if [ -n "$(git status --porcelain)" ]; then
+    head_dirty=true
+  else
+    head_dirty=false
+  fi
+fi
+mkdir -p target/cairn/focused-rails
+receipt_path=target/cairn/focused-rails/${RAIL_NAME}.md
+cat > "${receipt_path}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+head: ${head_commit}
+head_dirty: ${head_dirty}
+source_blake3: ${source_hash}
+claims: explicit-role-loading,exact-model-profile-binding,four-role-activation,capability-intersection,separation-enforcement,separate-output-authority,judge-veto,metadata-only-receipts
+non_claims: live-provider,provider-quality,verifier-soundness,human-independence,mutation-execution,authoritative-completion,tui,daemon,production-readiness
+EOF
+
+printf '%s\n' 'multi-role host smoke rail: ok'
+printf 'receipt: %s\n' "${receipt_path}"
+exit "${SUCCESS}"

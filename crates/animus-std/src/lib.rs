@@ -73,6 +73,8 @@ pub mod mesh;
 mod modelevidence;
 #[cfg(feature = "model-runtime-profiles")]
 mod modelprofiles;
+#[cfg(feature = "multi-role-smoke")]
+mod multirolesmoke;
 #[cfg(feature = "observability-host")]
 mod observability;
 #[cfg(feature = "pijul-vcs-adapter")]
@@ -230,6 +232,8 @@ pub use durablefile::{
     FileSynchronizer, load_durable_session_store_policy, open_durable_session_store,
     parse_durable_session_store_policy_json, read_durable_session_snapshot,
 };
+#[cfg(feature = "multi-role-smoke")]
+pub use multirolesmoke::run_packaged_multi_role_smoke;
 #[cfg(feature = "profile-retry-smoke")]
 pub use profile_retry_smoke::run_packaged_profile_retry_smoke;
 #[cfg(feature = "provider-retry")]

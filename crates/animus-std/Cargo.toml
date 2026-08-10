@@ -28,6 +28,7 @@ harbor-eval = ["dep:animus-runtime", "animus-runtime/harbor-eval", "animus-adapt
 native-evaluation-profile = ["dep:animus-eval-core", "dep:serde", "dep:serde_json"]
 mesh-provider = ["dep:serde", "dep:serde_json"]
 model-runtime-profiles = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
+multi-role-smoke = ["agent-role-profiles", "model-runtime-profiles"]
 provider-retry = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 profile-retry-smoke = ["model-runtime-profiles", "provider-retry"]
 pijul-vcs-adapter = ["dep:animus-runtime", "animus-runtime/pijul-vcs-adapter", "animus-runtime/provenance", "dep:serde", "dep:serde_json"]
@@ -61,6 +62,11 @@ required-features = ["codebase-tool-host"]
 name = "animus-profile-retry-smoke"
 path = "src/bin/animus-profile-retry-smoke.rs"
 required-features = ["profile-retry-smoke"]
+
+[[bin]]
+name = "animus-multi-role-smoke"
+path = "src/bin/animus-multi-role-smoke.rs"
+required-features = ["multi-role-smoke"]
 
 [[bin]]
 name = "animus-sandlock-live-fixture"
