@@ -44,7 +44,7 @@ const FORBIDDEN_SOURCE_MARKERS: [&str; 7] = [
 
 fn main() {
     let root = parse_root();
-    let source = read(&root.join("crates/animus-adapters/src/messaging.rs"));
+    let source = read(&root.join("crates/animus-adapters/src/bus.rs"));
     for marker in REQUIRED_SOURCE_MARKERS {
         assert!(source.contains(marker), "missing messaging source marker: {marker}");
     }
