@@ -10,6 +10,8 @@
 
 use super::*;
 
+type ControlDirective = animus_adapters::AgentControlCommand;
+
 const SESSION_ID: &str = "session.one";
 const BRANCH_ID: &str = "branch.active";
 const POLICY_ID: &str = "durable-active-turn";
@@ -190,7 +192,7 @@ fn durable_parked_control_blocks_recovery_until_exact_resume() {
     );
     let run_id = animus_adapters::AgentControlRunId::new(CONTROL_RUN_ID).expect("run id");
     let initial = crate::AgentControlState::new(run_id.clone());
-    let pause = animus_adapters::AgentControlCommand::new(
+    let pause = ControlDirective::new(
         run_id.clone(),
         animus_adapters::AgentControlCommandId::new(PAUSE_COMMAND_ID).expect("pause command id"),
         initial.revision(),
@@ -213,7 +215,7 @@ fn durable_parked_control_blocks_recovery_until_exact_resume() {
     assert_eq!(parked_plan.action(), ActiveTurnRecoveryAction::Parked);
     assert!(!parked_plan.provider_continuation_allowed());
 
-    let resume = animus_adapters::AgentControlCommand::new(
+    let resume = ControlDirective::new(
         run_id,
         animus_adapters::AgentControlCommandId::new(RESUME_COMMAND_ID).expect("resume command id"),
         paused.revision(),
@@ -242,7 +244,7 @@ fn cancelling_control_cannot_be_persisted_as_parked_or_runnable() {
     );
     let run_id = animus_adapters::AgentControlRunId::new(CONTROL_RUN_ID).expect("run id");
     let initial = crate::AgentControlState::new(run_id.clone());
-    let cancel = animus_adapters::AgentControlCommand::new(
+    let cancel = ControlDirective::new(
         run_id,
         animus_adapters::AgentControlCommandId::new(CANCEL_COMMAND_ID).expect("cancel command id"),
         initial.revision(),
