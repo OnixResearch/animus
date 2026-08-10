@@ -60,6 +60,8 @@ A real tool result remains in the ordered checkpoint. Recovery never replaces it
 
 Provider continuation also needs current authority, cancellation, repair, agent-control, and exact provider-plan gates. Durable acceptance alone does not grant authority.
 
+The [pending-input vault](pending-input-vault.md) projects accepted active-turn and steering references with other pending input for explicit restart review. It does not replace this module's acceptance journal or provider gate. Restore returns identities only and requires a new exact current admission before body access.
+
 A cancelling or terminal control phase cannot become a parked or running entry. Existing cancellation and terminal fields own those outcomes.
 
 ## Policy and receipts
@@ -84,5 +86,7 @@ It does not prove tool non-execution, transcript completeness, task completion, 
 
 ```sh
 scripts/cairn/check-active-turn-recovery --root .
+scripts/cairn/check-pending-input-vault --root .
 nix build .#checks.x86_64-linux.active-turn-recovery --no-link -L
+nix build .#checks.x86_64-linux.pending-input-vault --no-link -L
 ```

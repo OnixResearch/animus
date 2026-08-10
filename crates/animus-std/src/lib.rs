@@ -86,6 +86,9 @@ mod profile_retry_smoke;
 #[cfg(feature = "provider-retry")]
 mod providerretry;
 mod providers;
+#[cfg(feature = "pending-input-vault")]
+#[path = "pendinginputvault.rs"]
+mod recovery_vault;
 #[cfg(feature = "session-tree-export")]
 #[path = "sessiontreeexport.rs"]
 mod redactedwriter;
@@ -185,6 +188,11 @@ pub use modelevidence::{
     ModelEvidenceIngestRequest, ModelEvidenceIngestServiceState, ModelEvidenceSource,
     plan_model_evidence_ingest, validate_model_evidence_at_shell,
 };
+/// Non-default injected host for explicit pending-entry recovery.
+#[cfg(feature = "pending-input-vault")]
+pub mod pending_input_vault_host {
+    pub use super::recovery_vault::*;
+}
 #[cfg(feature = "model-runtime-profiles")]
 pub use modelprofiles::{
     ModelRuntimeProfileConfigError, ModelRuntimeProfileJsonErrorKind, load_model_runtime_profiles,

@@ -1,0 +1,94 @@
+#!/usr/bin/env sh
+# r[verify agent_harness_runtime.pending_input_vault.verification.complete]
+# r[verify agent_harness_runtime.pending_input_vault.verification.incomplete]
+set -eu
+
+readonly FAILURE=1
+readonly RAIL_NAME='pending-input-vault'
+readonly RECEIPT_SCHEMA='animus.focused-rail-receipt.v1'
+readonly RUNTIME_SOURCE='crates/animus-runtime/src/pendinginputvault'
+readonly HOST_SOURCE='crates/animus-std/src/pendinginputvault.rs'
+readonly BOUNDARY_DOC='docs/pending-input-vault.md'
+readonly POSITIVE_FAMILIES='mixed-class-order,review,inspection,selected-restore,discard,repeated-disposition,cleanup-retry,empty-vault,repair-control,retained-restore-material,admitted-body'
+readonly NEGATIVE_FAMILIES='automatic-submit,duplicate,missing,reordered,mixed-generation,oversized,uncertain-commit,stale-generation,changed-selection,cross-conversation,authority-drift,forged-plan,missing-restore-material,receipt-leak,overclaim,missing-service'
+
+root='.'
+if [ "${1:-}" = '--root' ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  root=$2
+fi
+cd "${root}"
+
+for command in cargo b3sum; do
+  if ! command -v "${command}" >/dev/null 2>&1; then
+    printf 'error: %s is required\n' "${command}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+for marker in \
+  'project_startup' \
+  'plan_disposition' \
+  'reduce_commit' \
+  'plan_recovery_control' \
+  'ordinary_ingress_allowed' \
+  'project_receipt' \
+  'load_after_admission'
+do
+  if ! grep -R -F "${marker}" "${RUNTIME_SOURCE}" "${HOST_SOURCE}" >/dev/null; then
+    printf 'error: missing production marker: %s\n' "${marker}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+for marker in \
+  'Startup does not load an entry body' \
+  'Disposition evidence commits before cleanup' \
+  'no runtime dependency on Autolith' \
+  'ordinary prompt, continue, steer, follow-up, and automatic dispatch' \
+  'Receipts reject input bodies' \
+  'production readiness'
+do
+  if ! grep -F "${marker}" "${BOUNDARY_DOC}" >/dev/null; then
+    printf 'error: missing boundary documentation marker: %s\n' "${marker}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+if grep -R -E 'std::fs|std::process|Command::new|std::env|TcpStream|UdpSocket|SystemTime::now|Instant::now' \
+  "${RUNTIME_SOURCE}" --include='*.rs' >/dev/null 2>&1
+then
+  printf '%s\n' 'error: pending-input core gained ambient host authority' >&2
+  exit "${FAILURE}"
+fi
+
+cargo test -p animus-runtime pending_input_vault --locked
+cargo test -p animus-std --features pending-input-vault --lib recovery_vault --locked
+cargo check -p animus-runtime --no-default-features --target wasm32-unknown-unknown --locked
+cargo check -p animus-std --no-default-features --features pending-input-vault --locked
+
+source_hash=$(b3sum "${RUNTIME_SOURCE}/core.rs" | cut -d ' ' -f 1)
+receipt_hash=$(b3sum "${RUNTIME_SOURCE}/evidence.rs" | cut -d ' ' -f 1)
+host_hash=$(b3sum "${HOST_SOURCE}" | cut -d ' ' -f 1)
+doc_hash=$(b3sum "${BOUNDARY_DOC}" | cut -d ' ' -f 1)
+mkdir -p target/cairn/focused-rails
+receipt_path=target/cairn/focused-rails/${RAIL_NAME}.md
+cat > "${receipt_path}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+core_blake3: ${source_hash}
+receipt_core_blake3: ${receipt_hash}
+host_blake3: ${host_hash}
+doc_blake3: ${doc_hash}
+positive_fixture_families: ${POSITIVE_FAMILIES}
+negative_fixture_families: ${NEGATIVE_FAMILIES}
+claims: explicit-boundary,exact-order,review-before-ingress,generation-fenced-disposition,commit-before-cleanup,corruption-blocks,metadata-only-receipts
+non_claims: power-loss-durability,store-correctness,operator-intent,provider-delivery,exactly-once-effects,transcript-completeness,encryption,production-readiness,release-eligibility
+EOF
+
+printf '%s\n' 'focused rail pending-input-vault: pass'
+printf 'receipt: %s\n' "${receipt_path}"

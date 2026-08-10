@@ -29,6 +29,7 @@ harbor-eval = ["dep:animus-runtime", "animus-runtime/harbor-eval", "animus-adapt
 native-evaluation-profile = ["dep:animus-eval-core", "dep:serde", "dep:serde_json"]
 mesh-provider = ["dep:serde", "dep:serde_json"]
 model-runtime-profiles = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
+pending-input-vault = ["coding-session-host", "active-turn-recovery"]
 multi-role-smoke = ["agent-role-profiles", "model-runtime-profiles"]
 provider-retry = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 profile-retry-smoke = ["model-runtime-profiles", "provider-retry"]

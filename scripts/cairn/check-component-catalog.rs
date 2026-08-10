@@ -89,6 +89,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "openai-provider-host",
     "agent-role-profiles",
     "active-turn-recovery",
+    "pending-input-vault",
     "conversation-view-projection",
     "session-branch-explorer",
     "provider-retry",

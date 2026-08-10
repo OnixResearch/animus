@@ -64,6 +64,8 @@ The gate lets prerequisite commit, recovery, and cancellation effects continue. 
 
 The separate [active-turn recovery](active-turn-recovery.md) contract protects accepted work before provider dispatch. Host integration must bind its transaction evidence to this session authority.
 
+The [pending-input vault](pending-input-vault.md) combines active and queued durable references for one explicit restart review. Restore does not bypass this host. Each restored reference must pass current queue, authority, policy, durable-commit, and provider gates before the host can load its body or submit work. A corrupt or cleanup-required vault blocks ordinary ingress.
+
 Child-process tests prove that a committed session reopens after process exit and that an incomplete trailing transaction does not become continuation authority. These tests do not prove filesystem, kernel, device-cache, power-loss, backup, replication, encryption, or production-recovery correctness.
 
 ## Safe evidence

@@ -142,6 +142,9 @@ pub mod nested_subagent_graphs;
 #[allow(excessive_file_length)]
 #[path = "kanban.rs"]
 mod orchestration;
+/// Pure pending-entry recovery and injected host service contracts.
+#[path = "pendinginputvault/mod.rs"]
+pub mod pending_input_vault;
 mod pi_compaction;
 /// Pure validation and existing-owner projection for the optional Pijul CLI adapter.
 #[cfg(feature = "pijul-vcs-adapter")]

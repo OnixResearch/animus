@@ -415,6 +415,7 @@
                 || baseName == "check-aeneas-proof-campaign"
                 || baseName == "check-authoritative-agent-completion"
                 || baseName == "check-active-turn-recovery"
+                || baseName == "check-pending-input-vault"
                 || baseName == "check-conversation-projection"
                 || baseName == "check-session-branch-explorer"
                 || baseName == "check-injected-services"
@@ -1025,6 +1026,10 @@
             pkgs.nickel
           ] ''
             sh scripts/cairn/check-active-turn-recovery --root .
+          '';
+
+          pending-input-vault = cargoCheck "animus-pending-input-vault" [ pkgs.b3sum ] ''
+            sh scripts/cairn/check-pending-input-vault --root .
           '';
 
           conversation-projection = cargoCheck "animus-conversation-projection" [

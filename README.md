@@ -80,6 +80,8 @@ See [docs/canonical-conversation-view-projection.md](docs/canonical-conversation
 
 See [docs/active-turn-recovery.md](docs/active-turn-recovery.md) for durable acceptance, atomic checkpoint replacement, steering recovery, no-rerun composition, and metadata-only receipts.
 
+See [docs/pending-input-vault.md](docs/pending-input-vault.md) for explicit restart review, generation-fenced restore and discard, corruption controls, injected storage services, and metadata-only receipts.
+
 See [docs/redacted-session-tree-export.md](docs/redacted-session-tree-export.md) for validated-metadata topology projection, redaction-first Nickel policy, deterministic script-free artifacts, explicit destination-capability writes, and exact metadata-only receipts.
 
 See [docs/nickel-policy-contracts.md](docs/nickel-policy-contracts.md) for shared authoring-time contracts, checked policy projections, Rust DTO parity, authority ownership, and projection non-claims.
@@ -205,6 +207,7 @@ scripts/cairn/check-packaged-live-openai-smoke --root .
 scripts/cairn/check-packaged-live-openrouter-smoke --root .
 scripts/cairn/check-codebase-tool-host --root .
 scripts/cairn/check-active-turn-recovery --root .
+scripts/cairn/check-pending-input-vault --root .
 scripts/cairn/check-conversation-projection --root .
 scripts/cairn/check-session-branch-explorer --root .
 scripts/cairn/check-clankers-product-surfaces --root .
