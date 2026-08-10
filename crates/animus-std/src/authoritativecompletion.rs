@@ -207,6 +207,7 @@ pub trait ChangedArtifactObservationService {
 }
 
 /// Host-owned final-subject hashing request.
+#[allow(clippy::struct_field_names)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct FinalSubjectHashRequest<'a> {
     /// BLAKE3 identity of the changed-artifact snapshot.
@@ -330,6 +331,7 @@ pub trait CompletionArtifactPersistenceService {
 }
 
 /// Exact-pinned Cairn completion-validation request.
+#[allow(clippy::struct_field_names)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct CairnCompletionValidationRequest<'a> {
     /// BLAKE3 identity of the repository-owned contract artifact.
@@ -513,12 +515,12 @@ mod tests {
         }
 
         let mut observer = Observer { calls: 0 };
-        let observed = observer
+        let artifacts = observer
             .observe(ChangedArtifactObservationRequest {
                 workspace_label: "repository-root",
             })
             .expect("injected fixture should observe");
         assert_eq!(observer.calls, 1);
-        assert_eq!(observed.len(), 1);
+        assert_eq!(artifacts.len(), 1);
     }
 }

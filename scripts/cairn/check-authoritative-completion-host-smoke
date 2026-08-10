@@ -1,0 +1,236 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+readonly SUCCESS=0
+readonly SUBJECT='private packaged authoritative completion subject'
+readonly HEADER='ANIMUS_AUTHORITATIVE_COMPLETION_SMOKE'
+readonly COMPLETED='status=completed'
+readonly COMPLETION='authoritative_completion=true'
+readonly JUDGE_SELECT='judge_decision=select'
+readonly CHECK_COUNTS='required_checks=2 passed_checks=2'
+readonly OBSERVER_CALLS='artifact_observer_calls=1'
+readonly HASHER_CALLS='subject_hasher_calls=1'
+readonly EXECUTOR_CALLS='check_executor_calls=2'
+readonly PERSIST_CALLS='artifact_persister_calls=2'
+readonly CAIRN_CALLS='cairn_validator_calls=1'
+readonly ORACLE_NON_CLAIM='surface=check-oracle-soundness'
+readonly EXECUTION_NON_CLAIM='surface=honest-external-execution'
+readonly RELEASE_NON_CLAIM='surface=release-readiness'
+readonly PRODUCTION_NON_CLAIM='surface=production-readiness'
+readonly MISSING_ARGUMENT='issue=missing-argument'
+readonly ROLE_POLICY_ERROR='issue=role-policy'
+readonly MODEL_POLICY_ERROR='issue=model-policy'
+readonly REGISTRY_ERROR='issue=check-registry'
+readonly HEAD_STATE_ERROR='issue=head-state'
+readonly VETO_ERROR='issue=judge-veto'
+readonly SELF_ATTESTATION_ERROR='issue=role-self-attestation'
+readonly DIRTY_ERROR='issue=head-dirty'
+readonly MISSING_RESULT_ERROR='issue=missing-result'
+readonly STALE_SUBJECT_ERROR='issue=stale-subject'
+readonly MISSING_CAIRN_ERROR='issue=missing-cairn'
+readonly RECEIPT_SCHEMA='animus.authoritative-completion-host-smoke-receipt.v1'
+readonly RAIL_NAME='authoritative-completion-host-smoke'
+readonly HEAD_UNAVAILABLE='unavailable'
+readonly DIRTY_UNKNOWN='unknown'
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+
+if [ "${1:-}" = "--root" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  repo_root=$(CDPATH= cd -- "$2" && pwd)
+fi
+
+cd "${repo_root}"
+if ! command -v b3sum >/dev/null 2>&1; then
+  printf '%s\n' 'error: b3sum is required for completion smoke receipts' >&2
+  exit "${FAILURE}"
+fi
+
+readonly ROLE_POLICY="${repo_root}/config/generated/agent-role-profiles.json"
+readonly MODEL_POLICY="${repo_root}/config/generated/model-runtime-profiles.json"
+readonly CHECK_REGISTRY="${repo_root}/config/generated/agent-check-registry.json"
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/animus-authoritative-completion-smoke.XXXXXX")
+trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
+readonly MALFORMED_ROLE_POLICY="${tmp_dir}/malformed-roles.json"
+readonly MALFORMED_MODEL_POLICY="${tmp_dir}/malformed-models.json"
+readonly MALFORMED_REGISTRY="${tmp_dir}/malformed-registry.json"
+printf '%s\n' '{' > "${MALFORMED_ROLE_POLICY}"
+printf '%s\n' '{' > "${MALFORMED_MODEL_POLICY}"
+printf '%s\n' '{' > "${MALFORMED_REGISTRY}"
+
+run_smoke() {
+  cargo run -q -p animus-std --features authoritative-completion-smoke \
+    --bin animus-authoritative-completion-smoke --locked -- "$@"
+}
+
+run_valid_smoke() {
+  run_smoke \
+    --role-policy "${ROLE_POLICY}" \
+    --model-policy "${MODEL_POLICY}" \
+    --check-registry "${CHECK_REGISTRY}" \
+    --subject "${SUBJECT}" \
+    --head-state clean \
+    "$@"
+}
+
+require_contains() {
+  haystack=$1
+  needle=$2
+  label=$3
+  case "${haystack}" in
+    *"${needle}"*) ;;
+    *)
+      printf 'error: missing %s marker: %s\n' "${label}" "${needle}" >&2
+      exit "${FAILURE}"
+      ;;
+  esac
+}
+
+require_omits() {
+  haystack=$1
+  needle=$2
+  label=$3
+  case "${haystack}" in
+    *"${needle}"*)
+      printf 'error: unsafe %s marker leaked: %s\n' "${label}" "${needle}" >&2
+      exit "${FAILURE}"
+      ;;
+    *) ;;
+  esac
+}
+
+expect_failure() {
+  expected=$1
+  shift
+  output=$(run_smoke "$@" 2>&1) && {
+    printf 'error: command unexpectedly passed for %s\n%s\n' "${expected}" "${output}" >&2
+    exit "${FAILURE}"
+  }
+  require_contains "${output}" "${expected}" 'negative-fixture'
+  require_omits "${output}" "${SUBJECT}" 'negative-subject'
+}
+
+expect_valid_failure() {
+  expected=$1
+  shift
+  output=$(run_valid_smoke "$@" 2>&1) && {
+    printf 'error: command unexpectedly passed for %s\n%s\n' "${expected}" "${output}" >&2
+    exit "${FAILURE}"
+  }
+  require_contains "${output}" "${expected}" 'negative-fixture'
+  require_omits "${output}" "${SUBJECT}" 'negative-subject'
+}
+
+# r[verify agent_harness_runtime.authoritative_completion_host_smoke.verification.rail]
+cargo test -q -p animus-std --features authoritative-completion-smoke \
+  authoritative_completion_smoke --locked
+
+positive_output=$(run_valid_smoke)
+require_contains "${positive_output}" "${HEADER}" 'header'
+require_contains "${positive_output}" "${COMPLETED}" 'status'
+require_contains "${positive_output}" "${COMPLETION}" 'completion'
+require_contains "${positive_output}" "${JUDGE_SELECT}" 'judge-selection'
+require_contains "${positive_output}" "${CHECK_COUNTS}" 'check-counts'
+require_contains "${positive_output}" "${OBSERVER_CALLS}" 'observer-calls'
+require_contains "${positive_output}" "${HASHER_CALLS}" 'hasher-calls'
+require_contains "${positive_output}" "${EXECUTOR_CALLS}" 'executor-calls'
+require_contains "${positive_output}" "${PERSIST_CALLS}" 'persistence-calls'
+require_contains "${positive_output}" "${CAIRN_CALLS}" 'cairn-calls'
+require_contains "${positive_output}" "${ORACLE_NON_CLAIM}" 'oracle-non-claim'
+require_contains "${positive_output}" "${EXECUTION_NON_CLAIM}" 'execution-non-claim'
+require_contains "${positive_output}" "${RELEASE_NON_CLAIM}" 'release-non-claim'
+require_contains "${positive_output}" "${PRODUCTION_NON_CLAIM}" 'production-non-claim'
+require_omits "${positive_output}" "${SUBJECT}" 'raw-subject'
+require_omits "${positive_output}" "${ROLE_POLICY}" 'role-policy-path'
+require_omits "${positive_output}" "${MODEL_POLICY}" 'model-policy-path'
+require_omits "${positive_output}" "${CHECK_REGISTRY}" 'registry-path'
+require_omits "${positive_output}" 'completion-request' 'candidate-request'
+require_omits "${positive_output}" 'nix run' 'check-command'
+require_omits "${positive_output}" 'judge rationale' 'judge-rationale'
+
+expect_failure "${MISSING_ARGUMENT}"
+expect_failure "${ROLE_POLICY_ERROR}" \
+  --role-policy "${MALFORMED_ROLE_POLICY}" \
+  --model-policy "${MODEL_POLICY}" \
+  --check-registry "${CHECK_REGISTRY}" \
+  --subject "${SUBJECT}" \
+  --head-state clean
+expect_failure "${MODEL_POLICY_ERROR}" \
+  --role-policy "${ROLE_POLICY}" \
+  --model-policy "${MALFORMED_MODEL_POLICY}" \
+  --check-registry "${CHECK_REGISTRY}" \
+  --subject "${SUBJECT}" \
+  --head-state clean
+expect_failure "${REGISTRY_ERROR}" \
+  --role-policy "${ROLE_POLICY}" \
+  --model-policy "${MODEL_POLICY}" \
+  --check-registry "${MALFORMED_REGISTRY}" \
+  --subject "${SUBJECT}" \
+  --head-state clean
+expect_failure "${HEAD_STATE_ERROR}" \
+  --role-policy "${ROLE_POLICY}" \
+  --model-policy "${MODEL_POLICY}" \
+  --check-registry "${CHECK_REGISTRY}" \
+  --subject "${SUBJECT}" \
+  --head-state unknown
+expect_valid_failure "${VETO_ERROR}" --judge-veto
+expect_valid_failure "${SELF_ATTESTATION_ERROR}" --role-self-attestation
+expect_failure "${DIRTY_ERROR}" \
+  --role-policy "${ROLE_POLICY}" \
+  --model-policy "${MODEL_POLICY}" \
+  --check-registry "${CHECK_REGISTRY}" \
+  --subject "${SUBJECT}" \
+  --head-state dirty
+expect_valid_failure "${MISSING_RESULT_ERROR}" --missing-result
+expect_valid_failure "${STALE_SUBJECT_ERROR}" --stale-subject
+expect_valid_failure "${MISSING_CAIRN_ERROR}" --missing-cairn
+
+# r[verify agent_harness_runtime.authoritative_completion_host_smoke.receipt.current_head]
+source_hash=$(
+  b3sum \
+    crates/animus-std/Cargo.toml \
+    crates/animus-std/src/lib.rs \
+    crates/animus-std/src/authoritativecompletion.rs \
+    crates/animus-std/src/multirolesmoke/mod.rs \
+    crates/animus-std/src/multirolesmoke/workflow.rs \
+    crates/animus-std/src/authoritative_completion_smoke/mod.rs \
+    crates/animus-std/src/authoritative_completion_smoke/fixtures.rs \
+    crates/animus-std/src/authoritative_completion_smoke/workflow.rs \
+    crates/animus-std/src/authoritative_completion_smoke/tests.rs \
+    crates/animus-std/src/bin/animus-authoritative-completion-smoke.rs \
+    config/generated/agent-role-profiles.json \
+    config/generated/model-runtime-profiles.json \
+    config/generated/agent-check-registry.json \
+    scripts/cairn/check-authoritative-completion-host-smoke | b3sum | cut -d ' ' -f 1
+)
+head_commit=${HEAD_UNAVAILABLE}
+head_dirty=${DIRTY_UNKNOWN}
+if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  head_commit=$(git rev-parse HEAD)
+  if [ -n "$(git status --porcelain)" ]; then
+    head_dirty=true
+  else
+    head_dirty=false
+  fi
+fi
+mkdir -p target/cairn/focused-rails
+receipt_path=target/cairn/focused-rails/${RAIL_NAME}.md
+cat > "${receipt_path}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+head: ${head_commit}
+head_dirty: ${head_dirty}
+source_blake3: ${source_hash}
+claims: explicit-policy-loading,four-role-advisory,judge-selection,judge-veto-gate,exact-check-selection,pass-only-evidence,matching-cairn-summary,authoritative-completion-receipt,metadata-only-output
+non_claims: check-oracle-soundness,honest-external-execution,live-provider,verifier-soundness,human-independence,mutation-execution,release-readiness,tui,daemon,production-readiness
+EOF
+
+printf '%s\n' 'authoritative completion host smoke rail: ok'
+printf 'receipt: %s\n' "${receipt_path}"
+exit "${SUCCESS}"

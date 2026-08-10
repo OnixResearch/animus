@@ -20,6 +20,8 @@ mod activeturnrecovery;
 mod adapters;
 #[cfg(feature = "agent-role-profiles")]
 mod agentroles;
+#[cfg(feature = "authoritative-completion-smoke")]
+mod authoritative_completion_smoke;
 #[cfg(feature = "authoritative-completion")]
 #[path = "authoritativecompletion.rs"]
 mod authoritativecompletion;
@@ -119,6 +121,8 @@ pub use agentroles::{
     AgentRoleConfigError, AgentRoleJsonErrorKind, load_agent_role_profiles,
     parse_agent_role_profiles_json,
 };
+#[cfg(feature = "authoritative-completion-smoke")]
+pub use authoritative_completion_smoke::run_packaged_authoritative_completion_smoke;
 #[cfg(feature = "authoritative-completion")]
 pub use authoritativecompletion::{
     AgentCheckExecutionRequest, AgentCheckExecutionService, AgentCheckRegistryConfigError,

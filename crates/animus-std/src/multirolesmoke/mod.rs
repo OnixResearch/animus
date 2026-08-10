@@ -3,6 +3,10 @@
 mod composition;
 mod workflow;
 
+#[cfg(feature = "authoritative-completion-smoke")]
+pub(crate) use workflow::JudgeDecision;
+#[cfg(feature = "authoritative-completion-smoke")]
+use workflow::{JudgeWorkflowInput, run_workflow_with_judge};
 use workflow::{WorkflowReport, run_workflow};
 
 const ARG_ROLE_POLICY: &str = "--role-policy";
@@ -24,6 +28,8 @@ const ERROR_UNKNOWN_ARGUMENT: &str = "unknown-argument";
 const ERROR_CONFLICTING_FIXTURE: &str = "conflicting-fixture";
 const ERROR_ROLE_POLICY: &str = "role-policy";
 const ERROR_MODEL_POLICY: &str = "model-policy";
+#[cfg(feature = "authoritative-completion-smoke")]
+const ERROR_ADVISORY: &str = "advisory";
 const SUBJECT_HASH_DOMAIN: &str = "animus.multi-role-smoke.subject.v1";
 const HASH_SEPARATOR: &str = "|";
 const EXPECTED_ROLE_COUNT: usize = 4;
@@ -53,6 +59,43 @@ pub(super) enum SmokeFixture {
     DenyJudgeVeto,
     RequireReviewerMutation,
     ClaimCompletion,
+}
+
+#[cfg(feature = "authoritative-completion-smoke")]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct MultiRoleAdvisory {
+    pub advisory_hash: String,
+    pub judge_decision: JudgeDecision,
+    pub role_count: usize,
+    pub authoritative_completion: bool,
+}
+
+#[cfg(feature = "authoritative-completion-smoke")]
+pub(crate) fn compose_multi_role_advisory(
+    roles: &animus_runtime::agent_roles::AgentRoleCatalog,
+    model_profiles: &animus_runtime::ModelRuntimeProfileSet,
+    subject_hash: &str,
+    judge_decision: JudgeDecision,
+) -> Result<MultiRoleAdvisory, String> {
+    // r[impl agent_harness_runtime.authoritative_completion_host_smoke.role_boundary]
+    let report = run_workflow_with_judge(JudgeWorkflowInput {
+        roles,
+        model_profiles,
+        subject_hash,
+        fixture: SmokeFixture::Admitted,
+        judge_decision,
+    })?;
+    let judge = report.roles.last().ok_or_else(|| error(ERROR_ADVISORY))?;
+    if judge.output_effect != judge_decision.as_str() || report.authoritative_completion {
+        return Err(error(ERROR_ADVISORY));
+    }
+    let rendered = render_report(&report);
+    Ok(MultiRoleAdvisory {
+        advisory_hash: domain_hash("animus.multi-role-smoke.advisory.v1", rendered.as_str()),
+        judge_decision,
+        role_count: report.roles.len(),
+        authoritative_completion: report.authoritative_completion,
+    })
 }
 
 /// Run the packaged four-role smoke from explicit CLI arguments.

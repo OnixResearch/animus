@@ -17,6 +17,7 @@
 - `crates/animus-std` is the standard-library host compatibility shell. It owns environment/config parsing, feature-gated generated model-profile and semantic-role loading, process-facing orchestration, a pure authority catalog, and facade re-exports for authority-scoped host blocks.
 - The non-default `profile-retry-smoke` feature adds `animus-profile-retry-smoke`. This binary loads explicit model-profile and retry-policy projections, resolves one exact fake target, and exercises one admitted same-plan retry through injected deterministic services. Run `scripts/cairn/check-profile-retry-host-smoke --root .` for its focused rail.
 - The non-default `multi-role-smoke` feature adds `animus-multi-role-smoke`. This binary loads explicit role and model-profile projections. It activates exact implementer, reviewer, verifier, and judge assignments over one immutable subject. Separate capabilities admit each assignment and output. The smoke proves reviewer mutation rejection, judge veto authority, and completion non-equivalence without provider or tool effects. Run `scripts/cairn/check-multi-role-host-smoke --root .` for its focused rail.
+- The non-default `authoritative-completion-smoke` feature adds `animus-authoritative-completion-smoke`. This binary keeps four-role output advisory, blocks on judge veto or dirty state, and grants completion only for exact pass-only selected results plus a matching Cairn summary. Its services are deterministic fakes. It does not prove check-oracle soundness or honest external execution. Run `scripts/cairn/check-authoritative-completion-host-smoke --root .` for its focused rail.
 - `crates/animus-std-observability` is the first direct authority-scoped std block. It supplies deterministic no-op and in-memory observability sinks without pulling unrelated context, provider, ingest, transport, credential, persistence, or terminal behavior.
 - `crates/animus-std-openai` is the non-default live OpenAI-compatible Responses host. Its pure core admits exact OpenAI and OpenRouter endpoint cohorts, text-only requests, and bounded responses. Its optional `reqwest-client` shell performs one explicit HTTPS attempt without discovery, retry, fallback, or raw transport evidence; see [docs/live-openai-provider-host.md](docs/live-openai-provider-host.md).
 - `crates/animus-std-control` is the focused blocking agent-control host. It supplies explicit pause, resume, cancellation, condition-variable waiting, and bounded event subscriptions without transport, persistence, or global-registry authority.
@@ -193,6 +194,7 @@ scripts/cairn/check-execution-backend-selection --root .
 scripts/cairn/check-model-runtime-profiles --root .
 scripts/cairn/check-agent-role-profiles --root .
 scripts/cairn/check-multi-role-host-smoke --root .
+scripts/cairn/check-authoritative-completion-host-smoke --root .
 scripts/cairn/check-provider-retry --root .
 scripts/cairn/check-profile-retry-host-smoke --root .
 scripts/cairn/check-live-openai-provider-host --root .

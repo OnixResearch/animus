@@ -15,6 +15,7 @@ default = ["observability-host"]
 active-turn-recovery = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 agent-role-profiles = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 authoritative-completion = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
+authoritative-completion-smoke = ["authoritative-completion", "multi-role-smoke"]
 branchfs-host = []
 coding-session-host = ["durable-session-store", "runtime-authority-seal"]
 conversation-view-projection = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
@@ -62,6 +63,11 @@ required-features = ["codebase-tool-host"]
 name = "animus-profile-retry-smoke"
 path = "src/bin/animus-profile-retry-smoke.rs"
 required-features = ["profile-retry-smoke"]
+
+[[bin]]
+name = "animus-authoritative-completion-smoke"
+path = "src/bin/animus-authoritative-completion-smoke.rs"
+required-features = ["authoritative-completion-smoke"]
 
 [[bin]]
 name = "animus-multi-role-smoke"

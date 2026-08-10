@@ -1,5 +1,7 @@
 //! Deterministic four-role coordinator for the packaged multi-role smoke.
 
+#[cfg(feature = "authoritative-completion-smoke")]
+use animus_runtime::agent_roles::AGENT_ROLE_SELECT_ABILITY;
 use animus_runtime::agent_roles::{
     AGENT_ROLE_ACTIVATE_ABILITY, AGENT_ROLE_ASSIGN_ABILITY, AGENT_ROLE_CAPABILITY_CONTRACT,
     AGENT_ROLE_EMIT_CANDIDATE_ABILITY, AGENT_ROLE_EMIT_REVIEW_ABILITY,
@@ -58,6 +60,23 @@ const STATE_DIMENSIONS: &[AgentRoleSeparationDimension] = &[
     AgentRoleSeparationDimension::RubricImmutable,
 ];
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum JudgeDecision {
+    #[cfg(feature = "authoritative-completion-smoke")]
+    Select,
+    Veto,
+}
+
+#[cfg(feature = "authoritative-completion-smoke")]
+impl JudgeDecision {
+    pub(crate) const fn as_str(self) -> &'static str {
+        match self {
+            Self::Select => "select",
+            Self::Veto => "veto",
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 struct RoleSpec {
     role_id: &'static str,
@@ -115,6 +134,15 @@ pub(super) struct WorkflowReport {
     pub roles: Vec<RoleRecord>,
     pub boundaries: BoundaryReport,
     pub authoritative_completion: bool,
+}
+
+#[derive(Clone, Copy)]
+pub(super) struct JudgeWorkflowInput<'a> {
+    pub roles: &'a AgentRoleCatalog,
+    pub model_profiles: &'a ModelRuntimeProfileSet,
+    pub subject_hash: &'a str,
+    pub fixture: SmokeFixture,
+    pub judge_decision: JudgeDecision,
 }
 
 struct WorkflowContext<'a> {
@@ -213,14 +241,26 @@ pub(super) fn run_workflow(
     subject_hash: &str,
     fixture: SmokeFixture,
 ) -> Result<WorkflowReport, String> {
+    run_workflow_with_judge(JudgeWorkflowInput {
+        roles,
+        model_profiles,
+        subject_hash,
+        fixture,
+        judge_decision: JudgeDecision::Veto,
+    })
+}
+
+pub(super) fn run_workflow_with_judge(
+    input: JudgeWorkflowInput<'_>,
+) -> Result<WorkflowReport, String> {
     // r[impl agent_harness_runtime.multi_role_host_smoke.activation]
     // r[impl agent_harness_runtime.multi_role_host_smoke.separation]
     // r[impl agent_harness_runtime.multi_role_host_smoke.outputs]
     let context = WorkflowContext {
-        catalog: roles,
-        model_profiles,
-        subject: subject_hash,
-        fixture,
+        catalog: input.roles,
+        model_profiles: input.model_profiles,
+        subject: input.subject_hash,
+        fixture: input.fixture,
     };
     let genesis = genesis_origin();
     let implementer = build_role(RoleBuildRequest {
@@ -243,7 +283,7 @@ pub(super) fn run_workflow(
     })?;
     let judge = build_role(RoleBuildRequest {
         context: &context,
-        spec: ROLE_SPECS[JUDGE_INDEX],
+        spec: judge_role_spec(input.judge_decision),
         origin: &reviewer.origin,
         evidence: Some(verifier.record.output_hash.as_str()),
     })?;
@@ -262,6 +302,18 @@ pub(super) fn run_workflow(
         },
         authoritative_completion: false,
     })
+}
+
+const fn judge_role_spec(decision: JudgeDecision) -> RoleSpec {
+    match decision {
+        #[cfg(feature = "authoritative-completion-smoke")]
+        JudgeDecision::Select => RoleSpec {
+            role_id: JUDGE,
+            effect: AgentRoleOutputEffect::Select,
+            output_ability: AGENT_ROLE_SELECT_ABILITY,
+        },
+        JudgeDecision::Veto => ROLE_SPECS[JUDGE_INDEX],
+    }
 }
 
 fn build_role(request: RoleBuildRequest<'_>) -> Result<BuiltRole, String> {

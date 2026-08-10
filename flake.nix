@@ -421,6 +421,7 @@
                 || baseName == "check-provider-retry"
                 || baseName == "check-profile-retry-host-smoke"
                 || baseName == "check-multi-role-host-smoke"
+                || baseName == "check-authoritative-completion-host-smoke"
                 || baseName == "check-sandlock-host"
                 || baseName == "check-bounded-execution-evaluation"
                 || baseName == "check-application-host-binding"
@@ -1324,6 +1325,10 @@
 
           multi-role-host-smoke = cargoCheck "animus-multi-role-host-smoke" [ pkgs.b3sum ] ''
             sh scripts/cairn/check-multi-role-host-smoke --root .
+          '';
+
+          authoritative-completion-host-smoke = cargoCheck "animus-authoritative-completion-host-smoke" [ pkgs.b3sum ] ''
+            sh scripts/cairn/check-authoritative-completion-host-smoke --root .
           '';
 
           plugin-manifest-runtime-neutral =
