@@ -106,7 +106,7 @@ pub struct ReviewHandoffFacts {
 
 /// Current VCS facts observed by a host.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct VcsAttemptFacts {
+pub struct VcsFacts {
     /// Provider class.
     pub provider: VcsProvider,
     /// Attempt identity.
@@ -140,7 +140,7 @@ pub struct RejectionContextFacts {
 
 /// Versioned planning policy projected from Nickel.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct RejectedAttemptPolicy {
+pub struct PlanningContract {
     /// Policy identity.
     pub policy_id: String,
     /// Admitted review profiles.
@@ -159,7 +159,7 @@ pub struct RejectedAttemptPolicy {
 
 /// Complete already-loaded input to the pure planner.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct RejectedAttemptRequest {
+pub struct Request {
     /// Expected task identity.
     pub task_id: TaskIdentity,
     /// Expected run identity.
@@ -175,14 +175,14 @@ pub struct RejectedAttemptRequest {
     /// Review facts.
     pub review: ReviewHandoffFacts,
     /// Current VCS facts.
-    pub vcs: VcsAttemptFacts,
+    pub vcs: VcsFacts,
     /// Model-visible context candidates.
     pub context: RejectionContextFacts,
 }
 
 /// Safe context plan for a later fresh iteration.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct RejectedAttemptContextPlan {
+pub struct ContextPlan {
     /// Bound task identity.
     pub task_id: TaskIdentity,
     /// Bound run identity.
@@ -209,7 +209,7 @@ pub struct RejectedAttemptContextPlan {
 
 /// Metadata-only rejected-attempt receipt.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct RejectedAttemptReceipt {
+pub struct EvidenceReceipt {
     /// Receipt identity.
     pub receipt_id: ReceiptIdentity,
     /// Task identity.
@@ -234,7 +234,7 @@ pub struct RejectedAttemptReceipt {
 
 /// Fail-closed planning issue.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum RejectedAttemptIssue {
+pub enum Issue {
     /// A required nominal identity is blank.
     MissingIdentity,
     /// Review evidence is absent, invalid, or not admitted.
