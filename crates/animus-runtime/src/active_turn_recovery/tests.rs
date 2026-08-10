@@ -9,7 +9,6 @@
 )]
 
 use super::*;
-use animus_adapters::AgentControlCommand as ControlInput;
 
 const SESSION_ID: &str = "session.one";
 const BRANCH_ID: &str = "branch.active";
@@ -191,7 +190,7 @@ fn durable_parked_control_blocks_recovery_until_exact_resume() {
     );
     let run_id = animus_adapters::AgentControlRunId::new(CONTROL_RUN_ID).expect("run id");
     let initial = crate::AgentControlState::new(run_id.clone());
-    let pause = ControlInput::new(
+    let pause = animus_adapters::AgentControlCommand::new(
         run_id.clone(),
         animus_adapters::AgentControlCommandId::new(PAUSE_COMMAND_ID).expect("pause command id"),
         initial.revision(),
@@ -207,32 +206,14 @@ fn durable_parked_control_blocks_recovery_until_exact_resume() {
     let paused = crate::reduce_agent_control_checkpoint(&requested, &checkpoint)
         .expect("paused checkpoint")
         .into_state();
-    let parked_sequence = u32::try_from(snapshot.entries.len()).expect("bounded entry count");
-    let parked = prepare_active_turn_control_entry(
-        &policy,
-        ActiveTurnControlEntryDraft {
-            turn_hash: snapshot.turn_hash.as_str(),
-            sequence: parked_sequence,
-            prepared_bytes: PREPARED_ENTRY_BYTES,
-            control: &paused,
-        },
-    )
-    .expect("parked entry");
-    assert_eq!(parked.kind, ActiveTurnJournalEntryKind::ControlParked);
-    snapshot.entries.push(parked);
-    snapshot.checkpoint_hash = active_turn_checkpoint_hash(
-        &policy,
-        snapshot.turn_hash.as_str(),
-        snapshot.generation,
-        snapshot.entries.as_slice(),
-    )
-    .expect("parked checkpoint hash");
+    let parked_kind = append_control_entry(&policy, &mut snapshot, &paused);
+    assert_eq!(parked_kind, ActiveTurnJournalEntryKind::ControlParked);
 
     let parked_plan = plan_active_turn_recovery(&policy, &snapshot).expect("parked plan");
     assert_eq!(parked_plan.action(), ActiveTurnRecoveryAction::Parked);
     assert!(!parked_plan.provider_continuation_allowed());
 
-    let resume = ControlInput::new(
+    let resume = animus_adapters::AgentControlCommand::new(
         run_id,
         animus_adapters::AgentControlCommandId::new(RESUME_COMMAND_ID).expect("resume command id"),
         paused.revision(),
@@ -241,29 +222,8 @@ fn durable_parked_control_blocks_recovery_until_exact_resume() {
     let running = crate::reduce_agent_control_command(&paused, &resume)
         .expect("resume transition")
         .into_state();
-    let running_sequence = u32::try_from(snapshot.entries.len()).expect("bounded entry count");
-    let running_entry = prepare_active_turn_control_entry(
-        &policy,
-        ActiveTurnControlEntryDraft {
-            turn_hash: snapshot.turn_hash.as_str(),
-            sequence: running_sequence,
-            prepared_bytes: PREPARED_ENTRY_BYTES,
-            control: &running,
-        },
-    )
-    .expect("running entry");
-    assert_eq!(
-        running_entry.kind,
-        ActiveTurnJournalEntryKind::ControlRunning
-    );
-    snapshot.entries.push(running_entry);
-    snapshot.checkpoint_hash = active_turn_checkpoint_hash(
-        &policy,
-        snapshot.turn_hash.as_str(),
-        snapshot.generation,
-        snapshot.entries.as_slice(),
-    )
-    .expect("running checkpoint hash");
+    let running_kind = append_control_entry(&policy, &mut snapshot, &running);
+    assert_eq!(running_kind, ActiveTurnJournalEntryKind::ControlRunning);
 
     let running_plan = plan_active_turn_recovery(&policy, &snapshot).expect("running plan");
     assert_eq!(
@@ -282,7 +242,7 @@ fn cancelling_control_cannot_be_persisted_as_parked_or_runnable() {
     );
     let run_id = animus_adapters::AgentControlRunId::new(CONTROL_RUN_ID).expect("run id");
     let initial = crate::AgentControlState::new(run_id.clone());
-    let cancel = ControlInput::new(
+    let cancel = animus_adapters::AgentControlCommand::new(
         run_id,
         animus_adapters::AgentControlCommandId::new(CANCEL_COMMAND_ID).expect("cancel command id"),
         initial.revision(),
@@ -538,6 +498,34 @@ fn receipt_rejects_every_private_and_overclaim_class() {
         assert_eq!(failure.issue(), ActiveTurnRecoveryIssue::ReceiptLeak);
         assert!(!format!("{failure:?}").contains(PRIVATE_VALUE));
     }
+}
+
+fn append_control_entry(
+    policy: &ActiveTurnRecoveryPolicy,
+    snapshot: &mut ActiveTurnRecoverySnapshot,
+    control: &crate::AgentControlState,
+) -> ActiveTurnJournalEntryKind {
+    let sequence = u32::try_from(snapshot.entries.len()).expect("bounded entry count");
+    let entry = prepare_active_turn_control_entry(
+        policy,
+        ActiveTurnControlEntryDraft {
+            turn_hash: snapshot.turn_hash.as_str(),
+            sequence,
+            prepared_bytes: PREPARED_ENTRY_BYTES,
+            control,
+        },
+    )
+    .expect("control entry");
+    let kind = entry.kind;
+    snapshot.entries.push(entry);
+    snapshot.checkpoint_hash = active_turn_checkpoint_hash(
+        policy,
+        snapshot.turn_hash.as_str(),
+        snapshot.generation,
+        snapshot.entries.as_slice(),
+    )
+    .expect("control checkpoint hash");
+    kind
 }
 
 fn policy() -> ActiveTurnRecoveryPolicy {
