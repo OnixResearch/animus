@@ -54,7 +54,7 @@ A passing repair receipt establishes only that supplied metadata describes a com
 ## Verification
 
 ```text
-cargo test -p animus-runtime --locked session_recovery
+cargo test -p animus-session-core --locked session_recovery
 scripts/cairn/check-interrupted-tool-repair --root .
 scripts/cairn/check-active-turn-recovery --root .
 scripts/cairn/check-safe-receipts-artifacts --root .

@@ -29,4 +29,4 @@ Receipts record operation kind, source and target session hashes, source head ha
 
 ## Verification
 
-Focused coverage lives in `crates/animus-runtime/src/session_branching.rs` and covers positive fork, duplicate, label update, deterministic receipt hashing, and negative stale cut point, suffix-discard denial, missing checkpoint, unsafe edit body, duplicate target identity, unsafe copy inheritance, ambient authority, and receipt leak fixtures.
+Focused coverage lives in `crates/animus-session-core/src/branching.rs` and covers positive fork, duplicate, label update, deterministic receipt hashing, and negative stale cut point, suffix-discard denial, missing checkpoint, unsafe edit body, duplicate target identity, unsafe copy inheritance, ambient authority, and receipt leak fixtures.

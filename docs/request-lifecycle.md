@@ -212,7 +212,7 @@ cargo test -p animus-std-observability
 cargo check -p animus-std --no-default-features
 scripts/cairn/check-tool-catalog --root .
 cargo test -p animus-runtime session_persistence --locked
-cargo test -p animus-runtime session_recovery --locked
+cargo test -p animus-session-core session_recovery --locked
 scripts/cairn/check-interrupted-tool-repair --root .
 scripts/cairn/check-provider-retry --root .
 scripts/cairn/check-live-openai-provider-host --root .

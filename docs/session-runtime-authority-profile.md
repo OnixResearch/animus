@@ -58,7 +58,7 @@ Run from the repository root:
 ```sh
 scripts/cairn/check-session-authority-profile --root .
 nix build .#checks.x86_64-linux.session-authority-profile --no-link
-cargo test -p animus-runtime sessionauthority::tests --locked
+cargo test -p animus-session-core sessionauthority::tests --locked
 cargo test -p animus-runtime sessionhost::tests --locked
 cargo test -p animus-std --features coding-session-host coding_session::tests --locked
 ```

@@ -2,7 +2,7 @@
 # r[verify agent_harness_runtime.conversation_view_projection.verification]
 set -eu
 readonly FAILURE=1
-readonly SOURCE='crates/animus-runtime/src/conversationprojection.rs'
+readonly SOURCE='crates/animus-session-core/src/conversationprojection.rs'
 readonly STD_SOURCE='crates/animus-std/src/conversationprojection.rs'
 readonly POLICY='config/conversation-projection-policy.ncl'
 readonly FIXTURES='config/conversation-projection-policy/fixtures'
@@ -16,10 +16,13 @@ nickel export --format json --field conversation_projection_policy "${POLICY}" >
 nickel export --format json --field fixture "${FIXTURES}/valid-minimal.ncl" >/dev/null
 fixture_error=$(mktemp); trap 'rm -f "${fixture_error}"' EXIT HUP INT TERM
 for fixture in "${FIXTURES}"/negative-*.ncl; do expected=$(nickel export --format raw --field expected_issue "${fixture}"); if nickel export --format json --field fixture "${fixture}" >/dev/null 2>"${fixture_error}"; then printf 'error: negative fixture passed: %s\n' "${fixture}" >&2; exit "${FAILURE}"; fi; grep -F "${expected}" "${fixture_error}" >/dev/null || { printf 'error: expected %s\n' "${expected}" >&2; exit "${FAILURE}"; }; done
-cargo test -p animus-runtime conversation_projection --locked
+cargo test -p animus-session-core conversation_projection --locked
+cargo test -p animus-runtime --test sessioncorefacade --locked
 cargo test -p animus-std --features conversation-view-projection conversationprojection --locked
-cargo clippy -p animus-runtime --all-targets --locked -- -D warnings
-cargo clippy -p animus-std --all-targets --features conversation-view-projection --locked -- -D warnings
+cargo clippy -p animus-session-core --all-targets --locked --no-deps -- -D warnings
+cargo clippy -p animus-runtime --all-targets --locked --no-deps -- -D warnings
+cargo clippy -p animus-std --all-targets --features conversation-view-projection --locked --no-deps -- -D warnings
+cargo check -p animus-session-core --target wasm32-unknown-unknown --locked
 cargo check -p animus-runtime --no-default-features --locked
 cargo check -p animus-std --no-default-features --locked
 source_hash=$(b3sum "${SOURCE}" "${STD_SOURCE}" "${POLICY}" "${FIXTURES}"/*.ncl | b3sum | cut -d ' ' -f 1)

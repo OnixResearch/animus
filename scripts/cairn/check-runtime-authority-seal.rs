@@ -13,7 +13,7 @@ const RAIL_NAME: &str = "runtime-authority-seal";
 const RECEIPT_PATH: &str = "target/cairn/focused-rails/runtime-authority-seal.md";
 const DOC_PATH: &str = "docs/runtime-authority-seal.md";
 const INVENTORY_PATH: &str = "cairn/runtime-facade-inventory.ncl";
-const PURE_ROOT: &str = "crates/animus-runtime/src/authorityseal";
+const PURE_ROOT: &str = "crates/animus-session-core/src/authorityseal";
 const RUNTIME_TEST_COUNT: usize = 10;
 const HOST_TEST_COUNT: usize = 4;
 
@@ -115,7 +115,7 @@ fn validate_test_inventory(root: &Path) -> Result<(), String> {
     let runtime_list = capture(
         root,
         "cargo",
-        &["test", "-p", "animus-runtime", "--locked", "--", "--list"],
+        &["test", "-p", "animus-session-core", "--locked", "--", "--list"],
     )?;
     validate_output_markers(
         "runtime test inventory",
@@ -144,7 +144,25 @@ fn run_checks(root: &Path) -> Result<(), String> {
     run_command(
         root,
         "cargo",
-        &["test", "-p", "animus-runtime", "authorityseal", "--locked"],
+        &[
+            "test",
+            "-p",
+            "animus-session-core",
+            "authorityseal",
+            "--locked",
+        ],
+    )?;
+    run_command(
+        root,
+        "cargo",
+        &[
+            "test",
+            "-p",
+            "animus-runtime",
+            "--test",
+            "sessioncorefacade",
+            "--locked",
+        ],
     )?;
     run_command(
         root,
@@ -159,20 +177,23 @@ fn run_checks(root: &Path) -> Result<(), String> {
             "--locked",
         ],
     )?;
-    run_command(
-        root,
-        "cargo",
-        &[
-            "clippy",
-            "-p",
-            "animus-runtime",
-            "--all-targets",
-            "--locked",
-            "--",
-            "-D",
-            "warnings",
-        ],
-    )?;
+    for package in ["animus-session-core", "animus-runtime"] {
+        run_command(
+            root,
+            "cargo",
+            &[
+                "clippy",
+                "-p",
+                package,
+                "--all-targets",
+                "--locked",
+                "--no-deps",
+                "--",
+                "-D",
+                "warnings",
+            ],
+        )?;
+    }
     run_command(
         root,
         "cargo",
@@ -184,6 +205,7 @@ fn run_checks(root: &Path) -> Result<(), String> {
             "runtime-authority-seal",
             "--all-targets",
             "--locked",
+            "--no-deps",
             "--",
             "-D",
             "warnings",

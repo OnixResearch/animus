@@ -9,7 +9,7 @@ readonly RAIL_NAME='session-tree-export'
 readonly POLICY_SOURCE='config/session-tree-export-policy.ncl'
 readonly GENERATED_POLICY='config/generated/session-tree-export-policy.json'
 readonly POLICY_FIXTURES='config/session-tree-export-policy/fixtures'
-readonly RUNTIME_SOURCE='crates/animus-runtime/src/sessionexport'
+readonly RUNTIME_SOURCE='crates/animus-session-core/src/sessionexport'
 readonly RUNTIME_ROOT='crates/animus-runtime/src/lib.rs'
 readonly STD_SOURCE='crates/animus-std/src/sessiontreeexport.rs'
 readonly STD_TEST_SOURCE='crates/animus-std/src/sessiontreeexport/tests.rs'
@@ -53,7 +53,7 @@ do
   fi
 done
 
-if ! grep -F 'pub mod session_tree_export {' "${RUNTIME_ROOT}" >/dev/null; then
+if ! grep -F 'pub use animus_session_core::session_tree_export;' "${RUNTIME_ROOT}" >/dev/null; then
   printf '%s\n' 'error: session-tree-export public module is missing' >&2
   exit "${FAILURE}"
 fi
@@ -87,15 +87,18 @@ for fixture in "${POLICY_FIXTURES}"/negative-*.ncl; do
   fi
 done
 
-cargo test -p animus-runtime --locked redactedview
+cargo test -p animus-session-core --locked redactedview
 cargo test -p animus-std --features session-tree-export --locked redactedwriter
 cargo test -p animus-runtime --locked dataset_export
 cargo test -p animus-runtime --locked session_persistence
 cargo test -p animus-runtime --locked pi_compaction
-cargo test -p animus-runtime --locked session_recovery
-cargo clippy -p animus-runtime --all-targets --locked -- -D warnings
-cargo clippy -p animus-std --all-targets --features session-tree-export --locked -- -D warnings
+cargo test -p animus-session-core --locked session_recovery
+cargo test -p animus-runtime --test sessioncorefacade --locked
+cargo clippy -p animus-session-core --all-targets --locked --no-deps -- -D warnings
+cargo clippy -p animus-runtime --all-targets --locked --no-deps -- -D warnings
+cargo clippy -p animus-std --all-targets --features session-tree-export --locked --no-deps -- -D warnings
 cargo check -p animus --features session-tree-export --locked
+cargo check -p animus-session-core --target wasm32-unknown-unknown --locked
 cargo check -p animus-runtime --no-default-features --locked
 cargo check -p animus-std --no-default-features --locked
 cargo check -p animus --no-default-features --locked

@@ -301,10 +301,22 @@ dependencies = [
  "animus-adapters",
  "animus-core",
  "animus-eval-core",
+ "animus-session-core",
  "animus-steel",
  "blake3",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "animus-session-core"
+version = "0.1.0"
+dependencies = [
+ "animus-adapters",
+ "blake3",
+ "serde",
+ "serde_json",
+ "toml 0.8.23",
 ]
 
 [[package]]

@@ -1,4 +1,5 @@
 #!/usr/bin/env sh
+# r[agent_harness_runtime.session_core_crate.catalog]
 set -eu
 
 readonly FAILURE=1

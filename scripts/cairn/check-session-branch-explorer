@@ -21,18 +21,20 @@ for fixture in config/session-branch-explorer-policy/fixtures/negative-*.ncl; do
   fi
 done
 
-cargo test -p animus-runtime branch_explorer --locked
+cargo test -p animus-session-core branch_explorer --locked
+cargo test -p animus-runtime --test sessioncorefacade --locked
 cargo test -p animus-std --features session-branch-explorer sessionbranchexplorer --locked
 cargo test -p animus-tui branch_explorer --locked
+cargo check -p animus-session-core --target wasm32-unknown-unknown --locked
 cargo check -p animus-runtime --no-default-features --locked
 cargo check -p animus-runtime --target wasm32-unknown-unknown --no-default-features --locked
 cargo check --no-default-features --features session-branch-explorer --locked
 
-if grep -Eq 'std::fs|std::process|std::net|SystemTime|Command::new|TcpStream|UdpSocket' crates/animus-runtime/src/branch_explorer/*.rs; then
+if grep -Eq 'std::fs|std::process|std::net|SystemTime|Command::new|TcpStream|UdpSocket' crates/animus-session-core/src/branch_explorer/*.rs; then
   printf '%s\n' 'branch explorer pure core gained ambient authority' >&2
   exit "${FAILURE}"
 fi
-if grep -Eq 'universal[_-]weave|loro|rkyv' crates/animus-runtime/Cargo.toml crates/animus-tui/Cargo.toml; then
+if grep -Eq 'universal[_-]weave|loro|rkyv' crates/animus-session-core/Cargo.toml crates/animus-runtime/Cargo.toml crates/animus-tui/Cargo.toml; then
   printf '%s\n' 'branch explorer gained a rejected runtime dependency' >&2
   exit "${FAILURE}"
 fi

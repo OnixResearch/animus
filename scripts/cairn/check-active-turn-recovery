@@ -9,7 +9,7 @@ readonly RECEIPT_SCHEMA='animus.focused-rail-receipt.v1'
 readonly POLICY_SOURCE='config/active-turn-recovery-policy.ncl'
 readonly GENERATED_POLICY='config/generated/active-turn-recovery-policy.json'
 readonly POLICY_FIXTURES='config/active-turn-recovery-policy/fixtures'
-readonly RUNTIME_SOURCE='crates/animus-runtime/src/active_turn_recovery'
+readonly RUNTIME_SOURCE='crates/animus-session-core/src/active_turn_recovery'
 readonly RUNTIME_ROOT='crates/animus-runtime/src/lib.rs'
 readonly STD_SOURCE='crates/animus-std/src/activeturnrecovery.rs'
 readonly CONTRACT_DOC='docs/active-turn-recovery.md'
@@ -42,7 +42,7 @@ do
   fi
 done
 
-if ! grep -F 'pub mod active_turn_recovery;' "${RUNTIME_ROOT}" >/dev/null; then
+if ! grep -F 'pub use animus_session_core::active_turn_recovery;' "${RUNTIME_ROOT}" >/dev/null; then
   printf '%s\n' 'error: active-turn recovery public module is missing' >&2
   exit "${FAILURE}"
 fi
@@ -73,12 +73,15 @@ for fixture in "${POLICY_FIXTURES}"/negative-*.ncl; do
   fi
 done
 
-cargo test -p animus-runtime --locked active_turn_recovery
+cargo test -p animus-session-core --locked active_turn_recovery
 cargo test -p animus-std --features active-turn-recovery --locked activeturnrecovery
-cargo test -p animus-runtime --locked session_recovery
+cargo test -p animus-session-core --locked session_recovery
 cargo test -p animus-runtime --locked resilience
-cargo clippy -p animus-runtime --all-targets --locked -- -D warnings
-cargo clippy -p animus-std --all-targets --features active-turn-recovery --locked -- -D warnings
+cargo test -p animus-runtime --test sessioncorefacade --locked
+cargo clippy -p animus-session-core --all-targets --locked --no-deps -- -D warnings
+cargo clippy -p animus-runtime --all-targets --locked --no-deps -- -D warnings
+cargo clippy -p animus-std --all-targets --features active-turn-recovery --locked --no-deps -- -D warnings
+cargo check -p animus-session-core --target wasm32-unknown-unknown --locked
 cargo check -p animus-runtime --no-default-features --locked
 cargo check -p animus-std --no-default-features --locked
 cargo check -p animus --no-default-features --locked

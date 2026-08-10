@@ -6,7 +6,7 @@ use std::process::ExitCode;
 const SUCCESS: u8 = 0;
 const FAILURE: u8 = 1;
 const REQUIRED_FILES: [&str; 8] = [
-    "crates/animus-runtime/src/sessioneventreplay.rs",
+    "crates/animus-session-core/src/sessioneventreplay.rs",
     "config/session-event-replay-policy.ncl",
     "config/generated/session-event-replay-policy.json",
     "docs/session-event-replay.md",
@@ -75,7 +75,7 @@ fn read_inputs(root: &Path) -> Result<Inputs, String> {
             .map_err(|error| format!("cannot read {relative}: {error}"))
     };
     Ok(Inputs {
-        source: read("crates/animus-runtime/src/sessioneventreplay.rs")?,
+        source: read("crates/animus-session-core/src/sessioneventreplay.rs")?,
         policy: read("config/session-event-replay-policy.ncl")?,
         readme: read("README.md")?,
         docs: read("docs/session-event-replay.md")?,
