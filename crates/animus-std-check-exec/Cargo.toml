@@ -1,0 +1,41 @@
+[package]
+name = "animus-std-check-exec"
+description = "Optional bounded selected-check host for Animus completion evidence."
+edition.workspace = true
+license = "AGPL-3.0-or-later"
+readme.workspace = true
+rust-version.workspace = true
+version.workspace = true
+autobins = false
+
+[lints]
+workspace = true
+
+[features]
+default = []
+test-fixtures = []
+
+[[bin]]
+name = "animus-real-check-completion-smoke"
+path = "src/bin/animus-real-check-completion-smoke.rs"
+
+[[bin]]
+name = "animus-check-exec-fixture"
+path = "src/bin/animus-check-exec-fixture.rs"
+required-features = ["test-fixtures"]
+
+[[test]]
+name = "bounded-completion"
+path = "tests/bounded-completion.rs"
+required-features = ["test-fixtures"]
+
+[dependencies]
+animus-runtime = { path = "../animus-runtime", version = "0.1.0", default-features = false }
+animus-std = { path = "../animus-std", version = "0.1.0", default-features = false, features = ["authoritative-completion-smoke"] }
+blake3 = "1.8.5"
+bounded-exec = { git = "ssh://git@github.com/OnixResearch/bounded-exec.git", rev = "29dac88ecded94457572db3fdfaaaab95fa91525" }
+cairn_core = { package = "cairn-core", git = "ssh://git@github.com/OnixResearch/cairn.git", rev = "cf5c4a5c10361ca20a13addf14954407d6857028" }
+serde_json = "1.0.149"
+
+[dev-dependencies]
+tempfile = "3"

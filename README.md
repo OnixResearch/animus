@@ -18,6 +18,7 @@
 - The non-default `profile-retry-smoke` feature adds `animus-profile-retry-smoke`. This binary loads explicit model-profile and retry-policy projections, resolves one exact fake target, and exercises one admitted same-plan retry through injected deterministic services. Run `scripts/cairn/check-profile-retry-host-smoke --root .` for its focused rail.
 - The non-default `multi-role-smoke` feature adds `animus-multi-role-smoke`. This binary loads explicit role and model-profile projections. It activates exact implementer, reviewer, verifier, and judge assignments over one immutable subject. Separate capabilities admit each assignment and output. The smoke proves reviewer mutation rejection, judge veto authority, and completion non-equivalence without provider or tool effects. Run `scripts/cairn/check-multi-role-host-smoke --root .` for its focused rail.
 - The non-default `authoritative-completion-smoke` feature adds `animus-authoritative-completion-smoke`. This binary keeps four-role output advisory, blocks on judge veto or dirty state, and grants completion only for exact pass-only selected results plus a matching Cairn summary. Its services are deterministic fakes. It does not prove check-oracle soundness or honest external execution. Run `scripts/cairn/check-authoritative-completion-host-smoke --root .` for its focused rail.
+- `crates/animus-std-check-exec` is the separate non-default `AGPL-3.0-or-later` process host for `animus-real-check-completion-smoke`. It runs the exact reviewed `nickel-config` and `cairn-validate` argv through pinned `bounded-exec`, then validates the same observations with pinned `cairn-core` before completion. The fixture rail is `scripts/cairn/check-real-check-completion-host-smoke --root .`. Add `--live` only from a clean Git head to create current-head evidence. This rung does not prove check-oracle soundness, executable authenticity, sandboxing, hermeticity, release readiness, or production readiness.
 - `crates/animus-std-observability` is the first direct authority-scoped std block. It supplies deterministic no-op and in-memory observability sinks without pulling unrelated context, provider, ingest, transport, credential, persistence, or terminal behavior.
 - `crates/animus-std-openai` is the non-default live OpenAI-compatible Responses host. Its pure core admits exact OpenAI and OpenRouter endpoint cohorts, text-only requests, and bounded responses. Its optional `reqwest-client` shell performs one explicit HTTPS attempt without discovery, retry, fallback, or raw transport evidence; see [docs/live-openai-provider-host.md](docs/live-openai-provider-host.md).
 - `crates/animus-std-control` is the focused blocking agent-control host. It supplies explicit pause, resume, cancellation, condition-variable waiting, and bounded event subscriptions without transport, persistence, or global-registry authority.
@@ -195,6 +196,8 @@ scripts/cairn/check-model-runtime-profiles --root .
 scripts/cairn/check-agent-role-profiles --root .
 scripts/cairn/check-multi-role-host-smoke --root .
 scripts/cairn/check-authoritative-completion-host-smoke --root .
+scripts/cairn/check-real-check-completion-host-smoke --root .
+scripts/cairn/check-real-check-completion-host-smoke --root . --live
 scripts/cairn/check-provider-retry --root .
 scripts/cairn/check-profile-retry-host-smoke --root .
 scripts/cairn/check-live-openai-provider-host --root .
@@ -238,6 +241,7 @@ nix build .#checks.x86_64-linux.runtime-kernel-split --no-link -L
 nix build .#checks.x86_64-linux.adapter-family-crates --no-link -L
 nix build .#checks.x86_64-linux.ast-grep-agent-boundary-audits --no-link -L
 nix build .#checks.x86_64-linux.dogfood-readiness --no-link -L
+nix build .#checks.x86_64-linux.real-check-completion-host-smoke --no-link -L
 nix build .#checks.x86_64-linux.packaged-headless-dogfood-smoke --no-link -L
 nix build .#checks.x86_64-linux.clash-ucan-authority --no-link -L
 nix build .#checks.x86_64-linux.neutral-ledger --no-link -L

@@ -5,7 +5,15 @@ mod workflow;
 
 use std::path::Path;
 
-use workflow::{CompletionReport, LoadedCompletionInput, run_completion_workflow};
+use crate::{
+    AgentCheckExecutionService, CairnCompletionValidationService, HostCheckExecutionObservation,
+};
+use animus_runtime::authoritative_completion::{AgentCheckSelection, ExecutionEvidenceReport};
+use fixtures::{FixtureCairnValidatorFactory, FixtureCheckExecutor};
+pub use workflow::CompletionReport as AuthoritativeCompletionSmokeReport;
+#[cfg(test)]
+use workflow::run_completion_workflow;
+use workflow::{LoadedCompletionInput, run_completion_workflow_with_services};
 
 const ARG_ROLE_POLICY: &str = "--role-policy";
 const ARG_MODEL_POLICY: &str = "--model-policy";
@@ -85,13 +93,69 @@ pub(super) enum HeadState {
     Dirty,
 }
 
-/// Run the packaged authoritative-completion smoke from explicit CLI values.
+/// Inputs used to bind a Cairn validator to selected observations.
+#[derive(Clone, Copy, Debug)]
+pub struct CompletionCairnFactoryRequest<'a> {
+    /// Workflow contract identity.
+    pub contract_hash: &'a str,
+    /// Exact selected checks.
+    pub selection: &'a AgentCheckSelection,
+    /// Host-produced bounded observations in selected order.
+    pub observations: &'a [HostCheckExecutionObservation],
+    /// Admitted pass-only or non-passing evidence report.
+    pub evidence: &'a ExecutionEvidenceReport,
+}
+
+/// Factory for a completion-validation service bound to selected observations.
+pub trait CompletionCairnServiceFactory {
+    /// Host-private factory failure.
+    type Error;
+    /// Prepared Cairn validation service.
+    type Service: CairnCompletionValidationService;
+
+    /// Bind one validator to the exact selection and admitted observations.
+    ///
+    /// # Errors
+    ///
+    /// Returns a host-private error if the validator cannot be prepared.
+    fn create(
+        &mut self,
+        request: CompletionCairnFactoryRequest<'_>,
+    ) -> Result<Self::Service, Self::Error>;
+}
+
+/// Run the deterministic packaged authoritative-completion smoke.
 ///
 /// # Errors
 ///
 /// Returns a stable bounded issue when parsing, loading, role composition,
 /// selected-check evidence, Cairn validation, or completion reduction fails.
 pub fn run_packaged_authoritative_completion_smoke(args: &[String]) -> Result<String, String> {
+    let mut executor = FixtureCheckExecutor::default();
+    let mut cairn_factory = FixtureCairnValidatorFactory;
+    let report = evaluate_packaged_authoritative_completion_with_services(
+        args,
+        &mut executor,
+        &mut cairn_factory,
+    )?;
+    Ok(render_report(&report))
+}
+
+/// Evaluate packaged completion with caller-owned execution and Cairn services.
+///
+/// # Errors
+///
+/// Returns a stable bounded issue when parsing, loading, role composition,
+/// selected-check evidence, Cairn validation, or completion reduction fails.
+pub fn evaluate_packaged_authoritative_completion_with_services<E, F>(
+    args: &[String],
+    executor: &mut E,
+    cairn_factory: &mut F,
+) -> Result<AuthoritativeCompletionSmokeReport, String>
+where
+    E: AgentCheckExecutionService,
+    F: CompletionCairnServiceFactory,
+{
     let parsed = parse_args(args)?;
     let roles = super::load_agent_role_profiles(parsed.role_policy_path.as_str())
         .map_err(|_failure| error(ERROR_ROLE_POLICY))?;
@@ -99,15 +163,18 @@ pub fn run_packaged_authoritative_completion_smoke(args: &[String]) -> Result<St
         .map_err(|_failure| error(ERROR_MODEL_POLICY))?;
     let registry = super::load_agent_check_registry(Path::new(parsed.check_registry_path.as_str()))
         .map_err(|_failure| error(ERROR_CHECK_REGISTRY))?;
-    let report = run_completion_workflow(LoadedCompletionInput {
-        roles: &roles,
-        model_profiles: &models,
-        registry: &registry,
-        subject: parsed.subject.as_str(),
-        head_state: parsed.head_state,
-        fixture: parsed.fixture,
-    })?;
-    Ok(render_report(&report))
+    run_completion_workflow_with_services(
+        LoadedCompletionInput {
+            roles: &roles,
+            model_profiles: &models,
+            registry: &registry,
+            subject: parsed.subject.as_str(),
+            head_state: parsed.head_state,
+            fixture: parsed.fixture,
+        },
+        executor,
+        cairn_factory,
+    )
 }
 
 fn parse_args(args: &[String]) -> Result<SmokeArgs, String> {
@@ -181,7 +248,7 @@ fn select_fixture(
     Err(error(ERROR_CONFLICTING_FIXTURE))
 }
 
-fn render_report(report: &CompletionReport) -> String {
+fn render_report(report: &AuthoritativeCompletionSmokeReport) -> String {
     // r[impl agent_harness_runtime.authoritative_completion_host_smoke.receipt]
     let mut lines = vec![format!(
         "{RECORD_HEADER} schema={SMOKE_SCHEMA} status={STATUS_COMPLETED} authoritative_completion={} judge_decision={} required_checks={} passed_checks={} role_advisory_hash={} registry_hash={} selection_hash={} final_subject_hash={} execution_evidence_hash={} cairn_receipt_hash={} candidate_hash={} completion_receipt_hash={} artifact_observer_calls={} subject_hasher_calls={} check_executor_calls={} artifact_persister_calls={} cairn_validator_calls={}",

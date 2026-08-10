@@ -1,0 +1,156 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+readonly SUCCESS=0
+readonly SUBJECT='private real-check completion subject'
+readonly HEADER='ANIMUS_REAL_CHECK_COMPLETION_SMOKE'
+readonly COMPLETE='authoritative_completion=true'
+readonly EXECUTED='bounded_external_execution=true'
+readonly COUNTS='required_checks=2 passed_checks=2'
+readonly CAIRN_CALLS='cairn_validator_calls=1'
+readonly ORACLE_NON_CLAIM='surface=check-oracle-soundness'
+readonly SANDBOX_NON_CLAIM='surface=sandboxing'
+readonly RELEASE_NON_CLAIM='surface=release-readiness'
+readonly RECEIPT_SCHEMA='animus.real-check-completion-host-smoke-receipt.v1'
+readonly RAIL_NAME='real-check-completion-host-smoke'
+readonly HEAD_UNAVAILABLE='unavailable'
+readonly DIRTY_UNKNOWN='unknown'
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+live_mode=false
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --root)
+      if [ -z "${2:-}" ]; then
+        printf '%s\n' 'error: --root requires a path' >&2
+        exit "${FAILURE}"
+      fi
+      repo_root=$(CDPATH= cd -- "$2" && pwd)
+      shift 2
+      ;;
+    --live)
+      live_mode=true
+      shift
+      ;;
+    *)
+      printf 'error: unknown argument: %s\n' "$1" >&2
+      exit "${FAILURE}"
+      ;;
+  esac
+done
+
+cd "${repo_root}"
+for command in cargo b3sum; do
+  if ! command -v "${command}" >/dev/null 2>&1; then
+    printf 'error: %s is required\n' "${command}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+# r[verify agent_harness_runtime.real_check_completion_host_smoke.verification.fixtures]
+cargo test -q -p animus-std-check-exec --features test-fixtures --locked
+
+mode=fixture
+claims='bounded-fixture-child,pinned-cairn-core,command-drift-rejection,missing-executable-rejection,nonzero-rejection,timeout-rejection,signal-rejection,output-overflow-rejection,stale-cairn-rejection,metadata-only-output'
+
+if [ "${live_mode}" = true ]; then
+  for command in git nix; do
+    if ! command -v "${command}" >/dev/null 2>&1; then
+      printf 'error: %s is required for live mode\n' "${command}" >&2
+      exit "${FAILURE}"
+    fi
+  done
+  if [ -n "$(git status --porcelain)" ]; then
+    printf '%s\n' 'error: live real-check smoke requires a clean Git worktree' >&2
+    exit "${FAILURE}"
+  fi
+  tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/animus-real-check-completion.XXXXXX")
+  trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
+  role_policy="${repo_root}/config/generated/agent-role-profiles.json"
+  model_policy="${repo_root}/config/generated/model-runtime-profiles.json"
+  check_registry="${repo_root}/config/generated/agent-check-registry.json"
+  output=$(
+    cargo run -q -p animus-std-check-exec \
+      --bin animus-real-check-completion-smoke --locked -- \
+      --repository-root "${repo_root}" \
+      --execution-path "${PATH}" \
+      --execution-home "${HOME}" \
+      --execution-tmp "${tmp_dir}" \
+      --role-policy "${role_policy}" \
+      --model-policy "${model_policy}" \
+      --check-registry "${check_registry}" \
+      --subject "${SUBJECT}" \
+      --head-state clean
+  )
+  for marker in "${HEADER}" "${COMPLETE}" "${EXECUTED}" "${COUNTS}" "${CAIRN_CALLS}" "${ORACLE_NON_CLAIM}" "${SANDBOX_NON_CLAIM}" "${RELEASE_NON_CLAIM}"; do
+    case "${output}" in
+      *"${marker}"*) ;;
+      *)
+        printf 'error: live output omitted marker: %s\n' "${marker}" >&2
+        exit "${FAILURE}"
+        ;;
+    esac
+  done
+  for forbidden in "${SUBJECT}" "${role_policy}" "${model_policy}" "${check_registry}" 'private-fixture-output' 'nix run' 'validate --root'; do
+    case "${output}" in
+      *"${forbidden}"*)
+        printf 'error: live output leaked forbidden value\n' >&2
+        exit "${FAILURE}"
+        ;;
+      *) ;;
+    esac
+  done
+  mode=live
+  claims='exact-registry-argv,bounded-child-observations,pinned-cairn-core,pass-only-completion,clean-current-head,metadata-only-output'
+fi
+
+source_hash=$(
+  b3sum \
+    Cargo.toml \
+    Cargo.lock \
+    crates/animus-std/Cargo.toml \
+    crates/animus-std/src/lib.rs \
+    crates/animus-std/src/authoritative_completion_smoke/mod.rs \
+    crates/animus-std/src/authoritative_completion_smoke/fixtures.rs \
+    crates/animus-std/src/authoritative_completion_smoke/workflow.rs \
+    crates/animus-std-check-exec/Cargo.toml \
+    crates/animus-std-check-exec/src/lib.rs \
+    crates/animus-std-check-exec/src/executor.rs \
+    crates/animus-std-check-exec/src/cairn.rs \
+    crates/animus-std-check-exec/src/bin/animus-real-check-completion-smoke.rs \
+    crates/animus-std-check-exec/src/bin/animus-check-exec-fixture.rs \
+    crates/animus-std-check-exec/tests/bounded-completion.rs \
+    config/generated/agent-check-registry.json \
+    scripts/cairn/check-real-check-completion-host-smoke | b3sum | cut -d ' ' -f 1
+)
+head_commit=${HEAD_UNAVAILABLE}
+head_dirty=${DIRTY_UNKNOWN}
+if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  head_commit=$(git rev-parse HEAD)
+  if [ -n "$(git status --porcelain)" ]; then
+    head_dirty=true
+  else
+    head_dirty=false
+  fi
+fi
+mkdir -p target/cairn/focused-rails
+receipt_path=target/cairn/focused-rails/${RAIL_NAME}.md
+cat > "${receipt_path}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+mode: ${mode}
+status: pass
+head: ${head_commit}
+head_dirty: ${head_dirty}
+source_blake3: ${source_hash}
+claims: ${claims}
+non_claims: check-oracle-soundness,executable-authenticity,sandboxing,hermeticity,child-correctness,side-effect-safety,live-provider,release-readiness,production-readiness
+EOF
+
+printf '%s\n' 'real-check completion host smoke rail: ok'
+printf 'mode: %s\n' "${mode}"
+printf 'receipt: %s\n' "${receipt_path}"
+exit "${SUCCESS}"

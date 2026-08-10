@@ -16,10 +16,14 @@ use animus_runtime::authoritative_completion::{
 };
 
 use super::fixtures::{
-    FixtureArtifactObserver, FixtureArtifactPersister, FixtureCairnValidator, FixtureCheckExecutor,
-    FixtureSubjectHasher, artifact_byte_count,
+    FixtureArtifactObserver, FixtureArtifactPersister, FixtureSubjectHasher, artifact_byte_count,
 };
-use super::{CompletionFixture, HeadState, domain_hash, error};
+#[cfg(test)]
+use super::fixtures::{FixtureCairnValidatorFactory, FixtureCheckExecutor};
+use super::{
+    CompletionCairnFactoryRequest, CompletionCairnServiceFactory, CompletionFixture, HeadState,
+    domain_hash, error,
+};
 
 const ERROR_ROLE_ADVISORY: &str = "role-advisory";
 const ERROR_ROLE_SELF_ATTESTATION: &str = "role-self-attestation";
@@ -53,21 +57,108 @@ pub(super) struct LoadedCompletionInput<'a> {
     pub fixture: CompletionFixture,
 }
 
+/// Metadata-only result of the packaged completion workflow.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(super) struct CompletionReport {
-    pub role_advisory_hash: String,
-    pub judge_decision: &'static str,
-    pub registry_hash: String,
-    pub selection_hash: String,
-    pub final_subject_hash: String,
-    pub execution_evidence_hash: String,
-    pub cairn_receipt_hash: String,
-    pub candidate_hash: String,
-    pub completion_receipt_hash: String,
-    pub required_check_count: usize,
-    pub passed_check_count: usize,
-    pub service_calls: HostServiceCalls,
-    pub authoritative_completion: bool,
+pub struct CompletionReport {
+    pub(super) role_advisory_hash: String,
+    pub(super) judge_decision: &'static str,
+    pub(super) registry_hash: String,
+    pub(super) selection_hash: String,
+    pub(super) final_subject_hash: String,
+    pub(super) execution_evidence_hash: String,
+    pub(super) cairn_receipt_hash: String,
+    pub(super) candidate_hash: String,
+    pub(super) completion_receipt_hash: String,
+    pub(super) required_check_count: usize,
+    pub(super) passed_check_count: usize,
+    pub(super) service_calls: HostServiceCalls,
+    pub(super) authoritative_completion: bool,
+}
+
+impl CompletionReport {
+    /// Return the role-advisory identity.
+    #[must_use]
+    pub fn role_advisory_hash(&self) -> &str {
+        self.role_advisory_hash.as_str()
+    }
+
+    /// Return the judge decision label.
+    #[must_use]
+    pub const fn judge_decision(&self) -> &str {
+        self.judge_decision
+    }
+
+    /// Return the registry identity.
+    #[must_use]
+    pub fn registry_hash(&self) -> &str {
+        self.registry_hash.as_str()
+    }
+
+    /// Return the selected-check identity.
+    #[must_use]
+    pub fn selection_hash(&self) -> &str {
+        self.selection_hash.as_str()
+    }
+
+    /// Return the final subject identity.
+    #[must_use]
+    pub fn final_subject_hash(&self) -> &str {
+        self.final_subject_hash.as_str()
+    }
+
+    /// Return the aggregate execution-evidence identity.
+    #[must_use]
+    pub fn execution_evidence_hash(&self) -> &str {
+        self.execution_evidence_hash.as_str()
+    }
+
+    /// Return the Cairn receipt identity used by completion.
+    #[must_use]
+    pub fn cairn_receipt_hash(&self) -> &str {
+        self.cairn_receipt_hash.as_str()
+    }
+
+    /// Return the completion-candidate identity.
+    #[must_use]
+    pub fn candidate_hash(&self) -> &str {
+        self.candidate_hash.as_str()
+    }
+
+    /// Return the authoritative-completion receipt identity.
+    #[must_use]
+    pub fn completion_receipt_hash(&self) -> &str {
+        self.completion_receipt_hash.as_str()
+    }
+
+    /// Return the number of required checks.
+    #[must_use]
+    pub const fn required_check_count(&self) -> usize {
+        self.required_check_count
+    }
+
+    /// Return the number of passing checks.
+    #[must_use]
+    pub const fn passed_check_count(&self) -> usize {
+        self.passed_check_count
+    }
+
+    /// Return the number of check-executor calls.
+    #[must_use]
+    pub const fn check_executor_calls(&self) -> usize {
+        self.service_calls.check_executor
+    }
+
+    /// Return the number of Cairn-validator calls.
+    #[must_use]
+    pub const fn cairn_validator_calls(&self) -> usize {
+        self.service_calls.cairn_validator
+    }
+
+    /// Return whether the bounded selected scope completed authoritatively.
+    #[must_use]
+    pub const fn authoritative_completion(&self) -> bool {
+        self.authoritative_completion
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -89,11 +180,27 @@ struct ReportInput<'a> {
     service_calls: HostServiceCalls,
 }
 
+#[cfg(test)]
 pub(super) fn run_completion_workflow(
     input: LoadedCompletionInput<'_>,
 ) -> Result<CompletionReport, String> {
+    let mut executor = FixtureCheckExecutor::default();
+    let mut cairn_factory = FixtureCairnValidatorFactory;
+    run_completion_workflow_with_services(input, &mut executor, &mut cairn_factory)
+}
+
+pub(super) fn run_completion_workflow_with_services<E, F>(
+    input: LoadedCompletionInput<'_>,
+    executor: &mut E,
+    cairn_factory: &mut F,
+) -> Result<CompletionReport, String>
+where
+    E: AgentCheckExecutionService,
+    F: CompletionCairnServiceFactory,
+{
     // r[impl agent_harness_runtime.authoritative_completion_host_smoke.host_services]
     // r[impl agent_harness_runtime.authoritative_completion_host_smoke.completion]
+    // r[impl agent_harness_runtime.real_check_completion_host_smoke.composition]
     let (subject_seed, advisory) = prepare_role_advisory(input)?;
     let mut artifact_observer = FixtureArtifactObserver::new(subject_seed.clone());
     let artifacts = artifact_observer
@@ -131,8 +238,8 @@ pub(super) fn run_completion_workflow(
     } else {
         selection.final_subject_hash().to_string()
     };
-    let mut executor = FixtureCheckExecutor::default();
-    let mut observations = execute_checks(&selection, &mut executor)?;
+    let mut observations = execute_checks(&selection, executor)?;
+    let executed_check_count = observations.len();
     if input.fixture == CompletionFixture::MissingResult {
         observations.pop();
     }
@@ -159,19 +266,25 @@ pub(super) fn run_completion_workflow(
         contract_hash.as_str(),
         evidence.evidence_hash(),
     )?;
-    let mut cairn = FixtureCairnValidator::new(&selection, &evidence);
-    let summary = if input.fixture == CompletionFixture::MissingCairn {
-        None
+    let (summary, cairn_validator_calls) = if input.fixture == CompletionFixture::MissingCairn {
+        (None, 0)
     } else {
-        Some(
-            cairn
-                .validate_completion(CairnCompletionValidationRequest {
-                    contract_hash: contract_hash.as_str(),
-                    results_hash: evidence.evidence_hash(),
-                    final_subject_hash: selection.final_subject_hash(),
-                })
-                .map_err(|_failure| error(ERROR_CAIRN))?,
-        )
+        let mut cairn = cairn_factory
+            .create(CompletionCairnFactoryRequest {
+                contract_hash: contract_hash.as_str(),
+                selection: &selection,
+                observations: observations.as_slice(),
+                evidence: &evidence,
+            })
+            .map_err(|_failure| error(ERROR_CAIRN))?;
+        let summary = cairn
+            .validate_completion(CairnCompletionValidationRequest {
+                contract_hash: contract_hash.as_str(),
+                results_hash: evidence.evidence_hash(),
+                final_subject_hash: selection.final_subject_hash(),
+            })
+            .map_err(|_failure| error(ERROR_CAIRN))?;
+        (Some(summary), 1)
     };
     let outcome = evaluate_with_summary(&candidate, &selection, &evidence, summary.as_ref());
     finish_report(ReportInput {
@@ -184,9 +297,9 @@ pub(super) fn run_completion_workflow(
         service_calls: HostServiceCalls {
             artifact_observer: artifact_observer.calls,
             subject_hasher: subject_hasher.calls,
-            check_executor: executor.calls,
+            check_executor: executed_check_count,
             artifact_persister: persister.calls,
-            cairn_validator: cairn.calls,
+            cairn_validator: cairn_validator_calls,
         },
     })
 }
@@ -260,10 +373,13 @@ fn select_checks(
     })
 }
 
-fn execute_checks(
+fn execute_checks<E>(
     selection: &AgentCheckSelection,
-    executor: &mut FixtureCheckExecutor,
-) -> Result<Vec<crate::HostCheckExecutionObservation>, String> {
+    executor: &mut E,
+) -> Result<Vec<crate::HostCheckExecutionObservation>, String>
+where
+    E: AgentCheckExecutionService,
+{
     let mut observations = Vec::with_capacity(selection.required_checks().len());
     for check in selection.required_checks() {
         let observation = executor

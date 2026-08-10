@@ -126,6 +126,7 @@ dependencies = [
  "animus-std",
  "animus-std-agent-guardrail",
  "animus-std-basalt-authority",
+ "animus-std-check-exec",
  "animus-std-control",
  "animus-std-eval",
  "animus-std-lean-loop",
@@ -344,6 +345,19 @@ dependencies = [
  "animus-adapters",
  "basalt",
  "blake3",
+]
+
+[[package]]
+name = "animus-std-check-exec"
+version = "0.1.0"
+dependencies = [
+ "animus-runtime",
+ "animus-std",
+ "blake3",
+ "bounded-exec",
+ "cairn-core",
+ "serde_json",
+ "tempfile",
 ]
 
 [[package]]

@@ -22,6 +22,7 @@ members = [
   "crates/animus-std-agent-guardrail",
   "crates/animus-std-basalt-authority",
   "crates/animus-std-control",
+  "crates/animus-std-check-exec",
   "crates/animus-std-eval",
   "crates/animus-std-lean-loop",
   "crates/animus-std-observability",
@@ -110,6 +111,7 @@ codebase-graph-host = ["std", "animus-std/codebase-graph-host"]
 codebase-tool-host = ["std", "runtime", "animus-std/codebase-tool-host"]
 durable-session-store = ["std", "runtime", "animus-std/durable-session-store"]
 agent-guardrail = ["dep:animus-std-agent-guardrail"]
+real-check-completion-host = ["std", "dep:animus-std-check-exec"]
 lean-loop = ["runtime", "dep:animus-std-lean-loop"]
 native-evaluation = ["dep:animus-eval-core"]
 evaluation-adapters = ["native-evaluation", "dep:animus-adapter-eval", "animus-adapters/evaluation"]
@@ -176,6 +178,7 @@ animus-std = { path = "crates/animus-std", version = "0.1.0", optional = true }
 animus-std-agent-guardrail = { path = "crates/animus-std-agent-guardrail", version = "0.1.0", optional = true }
 animus-std-basalt-authority = { path = "crates/animus-std-basalt-authority", version = "0.1.0", optional = true }
 animus-std-control = { path = "crates/animus-std-control", version = "0.1.0", optional = true }
+animus-std-check-exec = { path = "crates/animus-std-check-exec", version = "0.1.0", optional = true }
 animus-std-eval = { path = "crates/animus-std-eval", version = "0.1.0", optional = true }
 animus-std-lean-loop = { path = "crates/animus-std-lean-loop", version = "0.1.0", optional = true }
 animus-std-openai = { path = "crates/animus-std-openai", version = "0.1.0", optional = true }

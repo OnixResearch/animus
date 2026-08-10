@@ -122,7 +122,11 @@ pub use agentroles::{
     parse_agent_role_profiles_json,
 };
 #[cfg(feature = "authoritative-completion-smoke")]
-pub use authoritative_completion_smoke::run_packaged_authoritative_completion_smoke;
+pub use authoritative_completion_smoke::{
+    AuthoritativeCompletionSmokeReport, CompletionCairnFactoryRequest,
+    CompletionCairnServiceFactory, evaluate_packaged_authoritative_completion_with_services,
+    run_packaged_authoritative_completion_smoke,
+};
 #[cfg(feature = "authoritative-completion")]
 pub use authoritativecompletion::{
     AgentCheckExecutionRequest, AgentCheckExecutionService, AgentCheckRegistryConfigError,

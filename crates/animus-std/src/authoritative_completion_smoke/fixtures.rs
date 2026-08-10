@@ -9,7 +9,7 @@ use crate::{
     HostCheckExecutionObservation, ObservedChangedArtifact,
 };
 
-use super::domain_hash;
+use super::{CompletionCairnFactoryRequest, CompletionCairnServiceFactory, domain_hash};
 
 const CHANGED_PATH: &str = "docs/authoritative-completion-smoke.md";
 const CHANGED_SURFACE: &str = "documentation";
@@ -150,7 +150,7 @@ pub(super) struct FixtureCairnValidator {
 }
 
 impl FixtureCairnValidator {
-    pub(super) fn new(
+    fn new(
         selection: &animus_runtime::authoritative_completion::AgentCheckSelection,
         evidence: &animus_runtime::authoritative_completion::ExecutionEvidenceReport,
     ) -> Self {
@@ -170,6 +170,23 @@ impl FixtureCairnValidator {
             expected_results_hash: evidence.evidence_hash().to_string(),
             calls: 0,
         }
+    }
+}
+
+pub(super) struct FixtureCairnValidatorFactory;
+
+impl CompletionCairnServiceFactory for FixtureCairnValidatorFactory {
+    type Error = ();
+    type Service = FixtureCairnValidator;
+
+    fn create(
+        &mut self,
+        request: CompletionCairnFactoryRequest<'_>,
+    ) -> Result<Self::Service, Self::Error> {
+        Ok(FixtureCairnValidator::new(
+            request.selection,
+            request.evidence,
+        ))
     }
 }
 
