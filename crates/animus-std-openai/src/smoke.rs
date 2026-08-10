@@ -1,10 +1,13 @@
 use std::fmt;
+#[cfg(feature = "reqwest-client")]
 use std::time::Duration;
 
+#[cfg(feature = "reqwest-client")]
 use crate::{
-    CancellationState, HostError, OFFICIAL_OPENAI_RESPONSES_ENDPOINT_IDENTITY,
-    OFFICIAL_OPENAI_RESPONSES_URL, OPENROUTER_RESPONSES_ENDPOINT_IDENTITY,
-    OPENROUTER_RESPONSES_URL, OpenAiHostConfig,
+    CancellationState, OFFICIAL_OPENAI_RESPONSES_URL, OPENROUTER_RESPONSES_URL, OpenAiHostConfig,
+};
+use crate::{
+    HostError, OFFICIAL_OPENAI_RESPONSES_ENDPOINT_IDENTITY, OPENROUTER_RESPONSES_ENDPOINT_IDENTITY,
 };
 
 const OPENAI_CREDENTIAL_SOURCE: &str = "animus-live-openai-smoke-stdin";
@@ -18,7 +21,9 @@ const OPENROUTER_STATUS: &str = "LIVE_OPENROUTER_SMOKE status=passed";
 /// Exact reviewed model for every packaged live `OpenRouter` smoke.
 pub const OPENROUTER_SMOKE_MODEL_ID: &str = "deepseek/deepseek-v4-flash-0731";
 const PROMPT: &str = "Reply with the single word READY.";
+#[cfg(feature = "reqwest-client")]
 const TIMEOUT_SECONDS: u64 = 60;
+#[cfg(any(feature = "reqwest-client", test))]
 const MAX_RESPONSE_BYTES: u64 = 262_144;
 const OUTPUT_LIMIT: u32 = 32;
 const CONTEXT_BUDGET: u32 = 8_192;
@@ -36,6 +41,7 @@ const NON_CLAIMS: &str =
 struct SmokeCohort {
     provider_id: &'static str,
     endpoint_identity: &'static str,
+    #[cfg(feature = "reqwest-client")]
     endpoint_url: &'static str,
     credential_source: &'static str,
     credential_label: &'static str,
@@ -47,6 +53,7 @@ struct SmokeCohort {
 const OPENAI_COHORT: SmokeCohort = SmokeCohort {
     provider_id: OPENAI_PROVIDER_ID,
     endpoint_identity: OFFICIAL_OPENAI_RESPONSES_ENDPOINT_IDENTITY,
+    #[cfg(feature = "reqwest-client")]
     endpoint_url: OFFICIAL_OPENAI_RESPONSES_URL,
     credential_source: OPENAI_CREDENTIAL_SOURCE,
     credential_label: OPENAI_CREDENTIAL_LABEL,
@@ -58,6 +65,7 @@ const OPENAI_COHORT: SmokeCohort = SmokeCohort {
 const OPENROUTER_COHORT: SmokeCohort = SmokeCohort {
     provider_id: OPENROUTER_PROVIDER_ID,
     endpoint_identity: OPENROUTER_RESPONSES_ENDPOINT_IDENTITY,
+    #[cfg(feature = "reqwest-client")]
     endpoint_url: OPENROUTER_RESPONSES_URL,
     credential_source: OPENROUTER_CREDENTIAL_SOURCE,
     credential_label: OPENROUTER_CREDENTIAL_LABEL,
