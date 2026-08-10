@@ -692,6 +692,34 @@ let change_entries = [
     "add-std-evaluation-host",
     "agent_harness_runtime.composability.conformance_matrix",
   ] ["add-provider-projection-conformance-fixtures", "add-harbor-atif-json-adapter", "add-durable-active-turn-recovery"],
+  change "add-request-context-and-skill-turn-lifecycle" core_role "policy-guidance" [
+    "add-per-model-runtime-profiles",
+    "add-skill-source-lifecycle-contracts",
+    "agent_harness_runtime.clankers_prompt_assembly.sources",
+  ] ["add-concrete-mcp-client-host"],
+  change "add-durable-pending-input-vault" host_role "concrete-adapters" [
+    "add-durable-active-turn-recovery",
+    "add-coding-session-host-facade",
+    "agent_harness_runtime.coding_session_host.queues",
+  ] ["add-transactional-daemon-handoff"],
+  change "add-concrete-mcp-client-host" host_role "concrete-adapters" [
+    "add-request-context-and-skill-turn-lifecycle",
+    "add-tool-executor-kit",
+    "agent_harness_runtime.claude_code_mcp.transport",
+    "agent_harness_runtime.clankers_safe_receipts.closeout",
+  ] [],
+  change "add-revision-gated-workspace-edit-host" host_role "concrete-adapters" [
+    "add-tool-executor-kit",
+    "agent_harness_runtime.zerostack_hashed_edit.host_mutation",
+    "agent_harness_runtime.clankers_safe_receipts.closeout",
+  ] [],
+  change "add-transactional-daemon-handoff" product_role "ui-headless" [
+    "define-dogfoodable-host-readiness-roadmap",
+    "add-durable-pending-input-vault",
+    "agent_harness_runtime.daemon_workers.boundary",
+    "agent_harness_runtime.validation",
+    "agent_harness_runtime.clankers_safe_receipts.closeout",
+  ] [],
 ]
 in
 
@@ -787,6 +815,11 @@ let overlap_entries = [
   overlap "native-evaluation-service-ports" "add-evaluation-adapter-family" ["add-native-evaluation-core", "add-std-evaluation-host", "add-harbor-atif-json-adapter"],
   overlap "native-evaluation-host" "add-std-evaluation-host" ["add-evaluation-adapter-family", "add-durable-active-turn-recovery", "add-concrete-provider-streaming-adapters", "add-harbor-atif-json-adapter"],
   overlap "native-evaluation-conformance" "add-evaluation-composition-conformance" ["add-native-evaluation-core", "add-evaluation-adapter-family", "add-std-evaluation-host", "add-provider-projection-conformance-fixtures", "add-harbor-atif-json-adapter"],
+  overlap "request-context-and-skill-turn-lifecycle" "add-request-context-and-skill-turn-lifecycle" ["add-per-model-runtime-profiles", "add-skill-source-lifecycle-contracts", "add-concrete-mcp-client-host"],
+  overlap "durable-pending-input-recovery" "add-durable-pending-input-vault" ["add-durable-active-turn-recovery", "add-coding-session-host-facade", "add-transactional-daemon-handoff"],
+  overlap "concrete-mcp-client-host" "add-concrete-mcp-client-host" ["add-request-context-and-skill-turn-lifecycle", "add-tool-executor-kit"],
+  overlap "revision-gated-workspace-edit-host" "add-revision-gated-workspace-edit-host" ["add-tool-executor-kit", "add-host-tool-executor-capability-packs"],
+  overlap "transactional-daemon-handoff" "add-transactional-daemon-handoff" ["add-durable-pending-input-vault", "add-coding-session-host-facade", "extract-host-control-protocol"],
 ]
 in
 

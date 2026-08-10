@@ -1,6 +1,63 @@
 use super::super::*;
 use super::support::*;
 
+const CONTRIBUTION_LIMIT: u16 = 4;
+const OMISSION_LIMIT: u16 = 4;
+const CONTRIBUTION_COST: u32 = 1;
+
+fn assert_contribution_binding(plan: &ModelInvocationPlan, alternate_plan: &ModelInvocationPlan) {
+    // r[verify agent_harness_runtime.request_context_contributions.composition.bound]
+    // r[verify agent_harness_runtime.request_context_contributions.composition.drift]
+    let provider_request =
+        crate::request_context::ProviderRequestIdentity::new("provider-request-a");
+    let contribution_binding =
+        crate::request_context::binding_from_model_invocation(plan, provider_request.clone());
+    let payload = crate::request_context::blake3_payload_identity(b"mandatory context");
+    let contribution =
+        crate::request_context::validate_contribution(crate::request_context::ContributionDraft {
+            contribution_id: "mandatory-context",
+            source: crate::request_context::ContributionSource::Prompt,
+            trust: crate::request_context::ContributionTrust::Trusted,
+            posture: crate::request_context::ContributionPosture::Mandatory,
+            priority: 0,
+            budget_cost: CONTRIBUTION_COST,
+            payload_identity: payload.as_str(),
+            deduplication_key: "mandatory-context",
+            supersedes: &[],
+            conflict_group: None,
+            lifetime: crate::request_context::ContributionLifetime::CurrentRequest,
+            sensitivity: crate::request_context::ContributionSensitivity::RequestLocal,
+            safe_label: "mandatory-context",
+        })
+        .expect("model contribution must validate");
+    let contribution_plan = crate::request_context::reduce_contributions(
+        &[contribution],
+        &contribution_binding,
+        crate::request_context::ContributionPolicy {
+            max_contributions: CONTRIBUTION_LIMIT,
+            context_budget: PROFILE_CONTEXT_UNITS,
+            max_omissions: OMISSION_LIMIT,
+        },
+    )
+    .expect("contribution plan must bind model composition");
+    assert_eq!(
+        crate::request_context::validate_model_invocation_binding(
+            &contribution_plan,
+            plan,
+            provider_request.clone(),
+        ),
+        Ok(())
+    );
+    assert_eq!(
+        crate::request_context::validate_model_invocation_binding(
+            &contribution_plan,
+            alternate_plan,
+            provider_request,
+        ),
+        Err(crate::request_context::ContributionIssue::InvocationDrift)
+    );
+}
+
 #[test]
 fn profile_contract_and_identity_validate_deterministically() {
     // r[verify agent_harness_runtime.model_runtime_profiles.contract]
@@ -144,6 +201,8 @@ fn composition_preserves_mandatory_prompt_progressive_skill_and_exact_tool() {
     );
     assert!(!alternate_plan.memory_use_enabled());
     assert!(alternate_plan.tools().is_empty());
+
+    assert_contribution_binding(&plan, &alternate_plan);
 }
 
 #[test]

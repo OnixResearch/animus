@@ -137,6 +137,9 @@ mod prelude;
 pub mod production_memory_policy;
 mod provenance;
 mod provider_hardening;
+/// Pure request-local context selection and injected skill-turn loading contracts.
+#[path = "requestcontext/mod.rs"]
+pub mod request_context;
 #[path = "resilience/mod.rs"]
 mod resilience;
 /// Pure validation and existing-owner projection for optional transcript normalization.

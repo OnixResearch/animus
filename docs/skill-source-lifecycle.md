@@ -23,6 +23,10 @@ Legacy host asset manifests remain valid, but they make no source-lifecycle clai
 
 Mantle can materialize a selected frozen source. This does not transfer acquisition, review, mutation, or runtime authority to Animus.
 
+## Request-local selection
+
+Source promotion does not select a skill for a model request. The [request-context contribution reducer](request-context-contributions.md) binds an already-admitted selection to the exact manifest, body, target, profile, model plan, provider request, and next terminal response. The host still owns body loading and all skill effects.
+
 ## Rotation and rollback
 
 To update a skill, create and review a new inactive candidate. Promote it to a new frozen identity through a fresh host asset dry-run. Do not move the old frozen record in place.
