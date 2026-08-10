@@ -316,7 +316,7 @@ pub struct PilotEnforcementObservation {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct PilotDispatchDraft<'a> {
     pub binding: &'a PilotApplicationHostBinding,
-    pub commit: &'a PilotBindingCommit,
+    pub commit: &'a PilotCommit,
     pub sealed_unit: &'a super::super::runtime_authority_seal::RuntimeAuthorityUnit,
     pub operation: &'a PilotIdentity,
     pub effect_sequence: u64,
@@ -333,14 +333,14 @@ pub struct PilotCommitDraft<'a> {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct PilotBindingCommit {
+pub struct PilotCommit {
     binding_identity: PilotIdentity,
     session_binding_identity: String,
     highest_binding_sequence: u64,
     commit_identity: PilotIdentity,
 }
 
-impl PilotBindingCommit {
+impl PilotCommit {
     #[must_use]
     pub const fn binding_identity(&self) -> &PilotIdentity {
         &self.binding_identity

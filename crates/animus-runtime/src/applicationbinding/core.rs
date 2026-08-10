@@ -1,7 +1,5 @@
 //! Pure validation, projection, commit, dispatch, and explanation logic.
 
-use core::fmt::Write as _;
-
 const FIELD_COHORT: &str = "kamacite_contract";
 const FIELD_APPLICATION: &str = "application_identity";
 const FIELD_ENTRYPOINT: &str = "entrypoint_identity";
@@ -48,6 +46,10 @@ pub fn admit_pilot_identity(
 ///
 /// Returns deterministic issues for stale cohorts, wrong identity roles, ambiguous hosts, open
 /// effects, cohort drift, unsafe fields, or weakened non-claims.
+///
+/// # Panics
+///
+/// Panics if the validated projection violates an internal binding invariant.
 pub fn project_application_host_binding(
     draft: &super::data::PilotBindingDraft<'_>,
 ) -> Result<super::data::PilotApplicationHostBinding, super::data::PilotError> {
@@ -76,8 +78,8 @@ pub fn project_application_host_binding(
         projection_hex,
     );
 
-    Ok(super::data::PilotApplicationHostBinding::from_parts(
-        super::data::PilotBindingParts {
+    let binding =
+        super::data::PilotApplicationHostBinding::from_parts(super::data::PilotBindingParts {
             application_identity: draft.application_identity.clone(),
             entrypoint_identity: draft.entrypoint_identity.clone(),
             input_schema_identity: draft.input_schema_identity.clone(),
@@ -91,8 +93,10 @@ pub fn project_application_host_binding(
             compatibility_identity: draft.compatibility_identity.clone(),
             binding_identity,
             non_claims,
-        },
-    ))
+        });
+    assert_eq!(binding.host_profile_identity(), host_profile_identity);
+    assert_eq!(binding.non_claims().len(), draft.non_claims.len());
+    Ok(binding)
 }
 
 /// Bind the pilot projection and the existing durable session binding before effects.
@@ -100,9 +104,13 @@ pub fn project_application_host_binding(
 /// # Errors
 ///
 /// Returns a sequence or session-profile mismatch before creating commit evidence.
-pub fn commit_application_host_binding(
+///
+/// # Panics
+///
+/// Panics if the validated commit violates an internal sequence or identity invariant.
+pub fn commit_projection(
     draft: super::data::PilotCommitDraft<'_>,
-) -> Result<super::data::PilotBindingCommit, super::data::PilotError> {
+) -> Result<super::data::PilotCommit, super::data::PilotError> {
     let mut issues = Vec::new();
     if draft.application_binding_sequence < super::data::FIRST_SEQUENCE
         || draft.session_binding_sequence < super::data::FIRST_SEQUENCE
@@ -137,12 +145,15 @@ pub fn commit_application_host_binding(
         super::data::PilotIdentityDomain::Receipt,
         hasher.finalize().to_hex().to_string(),
     );
-    Ok(super::data::PilotBindingCommit::new(
+    let commit = super::data::PilotCommit::new(
         draft.binding.binding_identity().clone(),
         String::from(draft.session_binding.binding_identity()),
         highest_binding_sequence,
         commit_identity,
-    ))
+    );
+    assert!(commit.highest_binding_sequence() >= draft.application_binding_sequence);
+    assert_eq!(commit.binding_identity(), draft.binding.binding_identity());
+    Ok(commit)
 }
 
 /// Admit one dependent pilot operation after exact binding, seal, and current checks.
@@ -151,10 +162,14 @@ pub fn commit_application_host_binding(
 ///
 /// Returns deterministic issues when binding order, operation declaration, the accepted seal, or
 /// any current enforcement observation fails.
+///
+/// # Panics
+///
+/// Panics if the admitted dispatch violates an internal identity or state invariant.
 pub fn prepare_pilot_dispatch(
     draft: super::data::PilotDispatchDraft<'_>,
 ) -> Result<super::data::PilotDispatchAdmission, super::data::PilotError> {
-    let issues = validate_dispatch_binding(&draft);
+    let issues = validate_dispatch(&draft);
     if !issues.is_empty() {
         return Err(super::data::PilotError::from_issues(issues));
     }
@@ -168,15 +183,28 @@ pub fn prepare_pilot_dispatch(
             FIELD_CURRENT_ENFORCEMENT,
         )
     })?;
-    Ok(super::data::PilotDispatchAdmission {
+    let admission = super::data::PilotDispatchAdmission {
         binding_identity: draft.binding.binding_identity().clone(),
         commit_identity: draft.commit.commit_identity().clone(),
         operation_identity: draft.operation.clone(),
         running_unit,
-    })
+    };
+    assert_eq!(
+        &admission.binding_identity,
+        draft.binding.binding_identity()
+    );
+    assert_eq!(
+        admission.running_unit.state(),
+        crate::runtime_authority_seal::RuntimeAuthorityUnitState::Running
+    );
+    Ok(admission)
 }
 
 /// Render the Kamacite-compatible JSON input shape without metadata or authority claims.
+///
+/// # Panics
+///
+/// Panics if the rendered JSON omits its schema or empty semantic-claim boundary.
 #[must_use]
 pub fn render_kamacite_binding_json(binding: &super::data::PilotApplicationHostBinding) -> String {
     let operations = binding
@@ -191,7 +219,7 @@ pub fn render_kamacite_binding_json(binding: &super::data::PilotApplicationHostB
         .map(|value| format!("\"{value}\""))
         .collect::<Vec<_>>()
         .join(",");
-    format!(
+    let json = format!(
         concat!(
             "{{\"kind\":\"application-host-binding\",",
             "\"schema_version\":\"{}\",",
@@ -233,90 +261,73 @@ pub fn render_kamacite_binding_json(binding: &super::data::PilotApplicationHostB
         identity_json(binding.resource_profile_identity()),
         identity_json(binding.host_profile_identity()),
         non_claims,
-    )
+    );
+    assert!(json.contains(binding.kamacite_schema()));
+    assert!(json.contains("\"semantic_claims\":[]"));
+    json
 }
 
 /// Render a bounded read-only explanation for an admitted binding.
 ///
 /// # Panics
 ///
-/// Panics if formatting into an owned [`String`] fails.
+/// Panics if an internal explanation invariant is incorrect.
 #[must_use]
 pub fn explain_application_host_binding(
     binding: &super::data::PilotApplicationHostBinding,
 ) -> String {
     let mut output = String::new();
-    assert!(writeln!(output, "schema={}", super::data::PILOT_EXPLANATION_SCHEMA).is_ok());
-    assert!(
-        writeln!(
-            output,
-            "projection_identity={}",
-            binding.binding_identity().hex()
-        )
-        .is_ok()
-    );
-    assert!(
-        writeln!(
-            output,
-            "application_identity={}",
-            binding.application_identity().hex()
-        )
-        .is_ok()
-    );
-    assert!(
-        writeln!(
-            output,
-            "entrypoint_identity={}",
-            binding.entrypoint_identity().hex()
-        )
-        .is_ok()
-    );
-    assert!(
-        writeln!(
-            output,
-            "effect_summary_identity={}",
-            binding.effect_summary_identity().hex()
-        )
-        .is_ok()
-    );
-    assert!(
-        writeln!(
-            output,
-            "effect_classes={}",
-            binding.effect_operation_identities().len()
-        )
-        .is_ok()
-    );
-    assert!(
-        writeln!(
-            output,
-            "host_profile_identity={}",
-            binding.host_profile_identity().hex()
-        )
-        .is_ok()
-    );
-    assert!(
-        writeln!(
-            output,
-            "adapter_cohort_identity={}",
-            binding.adapter_cohort_identity().hex()
-        )
-        .is_ok()
-    );
-    assert!(
-        writeln!(
-            output,
-            "resource_profile_identity={}",
-            binding.resource_profile_identity().hex()
-        )
-        .is_ok()
-    );
-    assert!(writeln!(output, "compatibility=exact-frozen-kamacite-cohort").is_ok());
-    assert!(writeln!(output, "redaction={}", super::data::REDACTION_MARKER).is_ok());
+    output.push_str(&explanation_line((
+        "schema",
+        super::data::PILOT_EXPLANATION_SCHEMA,
+    )));
+    output.push_str(&explanation_line((
+        "projection_identity",
+        binding.binding_identity().hex(),
+    )));
+    output.push_str(&explanation_line((
+        "application_identity",
+        binding.application_identity().hex(),
+    )));
+    output.push_str(&explanation_line((
+        "entrypoint_identity",
+        binding.entrypoint_identity().hex(),
+    )));
+    output.push_str(&explanation_line((
+        "effect_summary_identity",
+        binding.effect_summary_identity().hex(),
+    )));
+    let effect_class_count = binding.effect_operation_identities().len().to_string();
+    output.push_str(&explanation_line(("effect_classes", &effect_class_count)));
+    output.push_str(&explanation_line((
+        "host_profile_identity",
+        binding.host_profile_identity().hex(),
+    )));
+    output.push_str(&explanation_line((
+        "adapter_cohort_identity",
+        binding.adapter_cohort_identity().hex(),
+    )));
+    output.push_str(&explanation_line((
+        "resource_profile_identity",
+        binding.resource_profile_identity().hex(),
+    )));
+    output.push_str(&explanation_line((
+        "compatibility",
+        "exact-frozen-kamacite-cohort",
+    )));
+    output.push_str(&explanation_line((
+        "redaction",
+        super::data::REDACTION_MARKER,
+    )));
     for non_claim in binding.non_claims() {
-        assert!(writeln!(output, "non_claim={non_claim}").is_ok());
+        output.push_str(&explanation_line(("non_claim", non_claim)));
     }
-    assert!(writeln!(output, "next_check={}", super::data::NEXT_FOCUSED_CHECK).is_ok());
+    output.push_str(&explanation_line((
+        "next_check",
+        super::data::NEXT_FOCUSED_CHECK,
+    )));
+    assert!(output.starts_with("schema="));
+    assert!(output.ends_with('\n'));
     output
 }
 
@@ -324,109 +335,112 @@ pub fn explain_application_host_binding(
 ///
 /// # Panics
 ///
-/// Panics if formatting into an owned [`String`] fails.
+/// Panics if an internal explanation invariant is incorrect.
 #[must_use]
-pub fn explain_application_host_binding_error(error: &super::data::PilotError) -> String {
+pub fn explain_error(error: &super::data::PilotError) -> String {
     let mut output = String::new();
-    assert!(writeln!(output, "schema={}", super::data::PILOT_EXPLANATION_SCHEMA).is_ok());
-    assert!(writeln!(output, "status=denied").is_ok());
+    output.push_str(&explanation_line((
+        "schema",
+        super::data::PILOT_EXPLANATION_SCHEMA,
+    )));
+    output.push_str(&explanation_line(("status", "denied")));
     for issue in error.issues() {
-        assert!(writeln!(output, "issue={}", issue.code.as_str()).is_ok());
+        output.push_str(&explanation_line(("issue", issue.code.as_str())));
     }
-    assert!(writeln!(output, "redaction={}", super::data::REDACTION_MARKER).is_ok());
-    assert!(writeln!(output, "next_check={}", super::data::NEXT_FOCUSED_CHECK).is_ok());
+    output.push_str(&explanation_line((
+        "redaction",
+        super::data::REDACTION_MARKER,
+    )));
+    output.push_str(&explanation_line((
+        "next_check",
+        super::data::NEXT_FOCUSED_CHECK,
+    )));
+    assert!(output.starts_with("schema="));
+    assert!(output.ends_with('\n'));
     output
+}
+
+fn explanation_line(field: (&str, &str)) -> String {
+    format!("{}={}\n", field.0, field.1)
 }
 
 fn validate_binding_draft(
     draft: &super::data::PilotBindingDraft<'_>,
 ) -> Vec<super::data::PilotIssue> {
-    let mut issues = Vec::new();
-    validate_cohort(draft.cohort, &mut issues);
-    validate_identity_domain(
+    let mut issues = Vec::with_capacity(super::data::MAX_PILOT_ISSUES);
+    issues.extend(validate_cohort(draft.cohort));
+    issues.extend(validate_identity_domain(
         draft.application_identity,
         super::data::PilotIdentityDomain::TargetArtifact,
         FIELD_APPLICATION,
-        &mut issues,
-    );
-    validate_identity_domain(
+    ));
+    issues.extend(validate_identity_domain(
         draft.entrypoint_identity,
         super::data::PilotIdentityDomain::TargetArtifact,
         FIELD_ENTRYPOINT,
-        &mut issues,
-    );
-    validate_identity_domain(
+    ));
+    issues.extend(validate_identity_domain(
         draft.input_schema_identity,
         super::data::PilotIdentityDomain::Adapter,
         FIELD_INPUT_SCHEMA,
-        &mut issues,
-    );
-    validate_identity_domain(
+    ));
+    issues.extend(validate_identity_domain(
         draft.output_schema_identity,
         super::data::PilotIdentityDomain::Adapter,
         FIELD_OUTPUT_SCHEMA,
-        &mut issues,
-    );
-    validate_identity_domain(
+    ));
+    issues.extend(validate_identity_domain(
         draft.effect_summary_identity,
         super::data::PilotIdentityDomain::AlgebraicEffect,
         FIELD_EFFECT_SUMMARY,
-        &mut issues,
-    );
-    validate_effects(draft, &mut issues);
-    validate_host(draft, &mut issues);
-    validate_identity_domain(
+    ));
+    issues.extend(validate_effects(draft));
+    issues.extend(validate_selected_profile(draft));
+    issues.extend(validate_identity_domain(
         draft.adapter_cohort_identity,
         super::data::PilotIdentityDomain::Adapter,
         FIELD_ADAPTER_COHORT,
-        &mut issues,
-    );
-    validate_identity_domain(
+    ));
+    issues.extend(validate_identity_domain(
         draft.resource_profile_identity,
         super::data::PilotIdentityDomain::Adapter,
         FIELD_RESOURCE_PROFILE,
-        &mut issues,
-    );
-    validate_identity_domain(
+    ));
+    issues.extend(validate_identity_domain(
         draft.policy_identity,
         super::data::PilotIdentityDomain::Adapter,
         FIELD_POLICY,
-        &mut issues,
-    );
-    validate_identity_domain(
+    ));
+    issues.extend(validate_identity_domain(
         draft.compatibility_identity,
         super::data::PilotIdentityDomain::EvidenceChain,
         FIELD_COMPATIBILITY,
-        &mut issues,
-    );
-    validate_expected_cohorts(draft, &mut issues);
-    validate_claim_boundary(draft, &mut issues);
+    ));
+    issues.extend(validate_expected_cohorts(draft));
+    issues.extend(validate_claim_boundary(draft));
+    assert!(issues.len() <= super::data::MAX_PILOT_ISSUES);
+    assert!(issues.iter().all(|issue| !issue.field.is_empty()));
     issues
 }
 
 fn validate_cohort(
     cohort: super::data::KamaciteContractCohort<'_>,
-    issues: &mut Vec<super::data::PilotIssue>,
-) {
-    let exact = cohort.binding_schema == super::data::KAMACITE_BINDING_SCHEMA
+) -> Option<super::data::PilotIssue> {
+    let is_exact = cohort.binding_schema == super::data::KAMACITE_BINDING_SCHEMA
         && cohort.receipt_schema == super::data::KAMACITE_BINDING_RECEIPT_SCHEMA
         && cohort.producer_revision == super::data::KAMACITE_PRODUCER_REVISION
         && cohort.schema_blake3 == super::data::KAMACITE_SCHEMA_BLAKE3
         && cohort.receipt_schema_blake3 == super::data::KAMACITE_RECEIPT_SCHEMA_BLAKE3
         && cohort.validation_receipt_blake3 == super::data::KAMACITE_VALIDATION_RECEIPT_BLAKE3
         && cohort.core_blake3 == super::data::KAMACITE_CORE_BLAKE3;
-    if !exact {
-        issues.push(issue(
-            super::data::PilotIssueCode::StaleKamaciteContract,
-            FIELD_COHORT,
-        ));
-    }
+    (!is_exact).then_some(issue(
+        super::data::PilotIssueCode::StaleKamaciteContract,
+        FIELD_COHORT,
+    ))
 }
 
-fn validate_effects(
-    draft: &super::data::PilotBindingDraft<'_>,
-    issues: &mut Vec<super::data::PilotIssue>,
-) {
+fn validate_effects(draft: &super::data::PilotBindingDraft<'_>) -> Vec<super::data::PilotIssue> {
+    let mut issues = Vec::with_capacity(super::data::MAX_PILOT_ISSUES);
     if !draft.effect_summary_closed {
         issues.push(issue(
             super::data::PilotIssueCode::OpenEffectSummary,
@@ -447,12 +461,11 @@ fn validate_effects(
     }
     let mut operations = draft.effect_operation_identities.to_vec();
     for operation in &operations {
-        validate_identity_domain(
+        issues.extend(validate_identity_domain(
             operation,
             super::data::PilotIdentityDomain::EffectOperation,
             FIELD_EFFECT_OPERATION,
-            issues,
-        );
+        ));
     }
     operations.sort();
     if operations.windows(2).any(|window| window[0] == window[1]) {
@@ -461,34 +474,35 @@ fn validate_effects(
             FIELD_EFFECT_OPERATION,
         ));
     }
+    assert_eq!(operations.len(), draft.effect_operation_identities.len());
+    assert!(issues.len() <= super::data::MAX_PILOT_ISSUES);
+    issues
 }
 
-fn validate_host(
+fn validate_selected_profile(
     draft: &super::data::PilotBindingDraft<'_>,
-    issues: &mut Vec<super::data::PilotIssue>,
-) {
+) -> Vec<super::data::PilotIssue> {
     match draft.host_profile_identities {
-        [] => issues.push(issue(
+        [] => vec![issue(
             super::data::PilotIssueCode::MissingHostProfile,
             FIELD_HOST_PROFILE,
-        )),
-        [host] => validate_identity_domain(
-            host,
+        )],
+        [profile] => validate_identity_domain(
+            profile,
             super::data::PilotIdentityDomain::Evaluator,
             FIELD_HOST_PROFILE,
-            issues,
         ),
-        _ => issues.push(issue(
+        _ => vec![issue(
             super::data::PilotIssueCode::AmbiguousHostProfile,
             FIELD_HOST_PROFILE,
-        )),
+        )],
     }
 }
 
 fn validate_expected_cohorts(
     draft: &super::data::PilotBindingDraft<'_>,
-    issues: &mut Vec<super::data::PilotIssue>,
-) {
+) -> Vec<super::data::PilotIssue> {
+    let mut issues = Vec::with_capacity(super::data::MAX_PILOT_ISSUES);
     if draft.adapter_cohort_identity != draft.expected_adapter_cohort_identity {
         issues.push(issue(
             super::data::PilotIssueCode::CohortMismatch,
@@ -501,20 +515,23 @@ fn validate_expected_cohorts(
             FIELD_RESOURCE_PROFILE,
         ));
     }
-    if let [host] = draft.host_profile_identities {
-        if host != draft.expected_host_profile_identity {
+    if let [profile] = draft.host_profile_identities {
+        if profile != draft.expected_host_profile_identity {
             issues.push(issue(
                 super::data::PilotIssueCode::CohortMismatch,
                 FIELD_HOST_PROFILE,
             ));
         }
     }
+    assert!(issues.len() <= super::data::MAX_PILOT_ISSUES);
+    assert!(issues.iter().all(|issue| !issue.field.is_empty()));
+    issues
 }
 
 fn validate_claim_boundary(
     draft: &super::data::PilotBindingDraft<'_>,
-    issues: &mut Vec<super::data::PilotIssue>,
-) {
+) -> Vec<super::data::PilotIssue> {
+    let mut issues = Vec::with_capacity(super::data::MAX_PILOT_ISSUES);
     if !draft.semantic_claims.is_empty() {
         issues.push(issue(
             super::data::PilotIssueCode::AuthorityOverclaim,
@@ -529,26 +546,33 @@ fn validate_claim_boundary(
             ));
         }
     }
-    let sensitive = draft.sensitive;
-    if sensitive.prompt.is_some()
-        || sensitive.policy_body.is_some()
-        || sensitive.tool_payload.is_some()
-        || sensitive.credential.is_some()
-        || sensitive.endpoint.is_some()
-        || sensitive.environment_value.is_some()
-        || sensitive.host_path.is_some()
-    {
+    if has_sensitive_fields(draft.sensitive) {
         issues.push(issue(
             super::data::PilotIssueCode::UnsafeField,
             FIELD_SENSITIVE,
         ));
     }
+    assert!(issues.len() <= super::data::MAX_PILOT_ISSUES);
+    assert!(issues.iter().all(|issue| !issue.field.is_empty()));
+    issues
 }
 
-fn validate_dispatch_binding(
-    draft: &super::data::PilotDispatchDraft<'_>,
-) -> Vec<super::data::PilotIssue> {
-    let mut issues = Vec::new();
+fn has_sensitive_fields(sensitive: super::data::PilotSensitiveDraft<'_>) -> bool {
+    [
+        sensitive.prompt.is_some(),
+        sensitive.policy_body.is_some(),
+        sensitive.tool_payload.is_some(),
+        sensitive.credential.is_some(),
+        sensitive.endpoint.is_some(),
+        sensitive.environment_value.is_some(),
+        sensitive.host_path.is_some(),
+    ]
+    .into_iter()
+    .any(|is_present| is_present)
+}
+
+fn validate_dispatch(draft: &super::data::PilotDispatchDraft<'_>) -> Vec<super::data::PilotIssue> {
+    let mut issues = Vec::with_capacity(super::data::MAX_PILOT_ISSUES);
     let binding = draft.binding;
     let commit = draft.commit;
     let sealed_unit = draft.sealed_unit;
@@ -571,12 +595,11 @@ fn validate_dispatch_binding(
             FIELD_SEQUENCE,
         ));
     }
-    validate_identity_domain(
+    issues.extend(validate_identity_domain(
         operation,
         super::data::PilotIdentityDomain::EffectOperation,
         FIELD_EFFECT_OPERATION,
-        &mut issues,
-    );
+    ));
     if !binding.effect_operation_identities().contains(operation) {
         issues.push(issue(
             super::data::PilotIssueCode::UndeclaredOperation,
@@ -588,7 +611,7 @@ fn validate_dispatch_binding(
     {
         issues.push(issue(super::data::PilotIssueCode::MissingSeal, FIELD_SEAL));
     }
-    let exact_seal = sealed_unit.authority_profile_identity()
+    let is_exact_seal = sealed_unit.authority_profile_identity()
         == binding.host_profile_identity().hex()
         && sealed_unit.adapter_cohort_identity() == binding.adapter_cohort_identity().hex()
         && sealed_unit.resource_profile_identity() == binding.resource_profile_identity().hex()
@@ -596,17 +619,19 @@ fn validate_dispatch_binding(
             .operation_identities()
             .iter()
             .any(|identity| identity == operation.hex());
-    if !exact_seal {
+    if !is_exact_seal {
         issues.push(issue(super::data::PilotIssueCode::WidenedSeal, FIELD_SEAL));
     }
-    validate_current_enforcement(draft.enforcement, &mut issues);
+    issues.extend(validate_current_enforcement(draft.enforcement));
+    assert!(issues.len() <= super::data::MAX_PILOT_ISSUES);
+    assert!(issues.iter().all(|issue| !issue.field.is_empty()));
     issues
 }
 
 fn validate_current_enforcement(
     observations: &[super::data::PilotEnforcementObservation],
-    issues: &mut Vec<super::data::PilotIssue>,
-) {
+) -> Vec<super::data::PilotIssue> {
+    let mut issues = Vec::with_capacity(super::data::MAX_PILOT_ISSUES);
     for class in super::data::PilotEnforcementClass::ALL {
         let matching = observations
             .iter()
@@ -620,6 +645,7 @@ fn validate_current_enforcement(
             )),
         }
     }
+    issues
 }
 
 fn binding_projection_hash(
@@ -645,15 +671,18 @@ fn binding_projection_hash(
     for non_claim in non_claims {
         hash_part(&mut hasher, non_claim);
     }
-    hasher.finalize().to_hex().to_string()
+    let projection_hash = hasher.finalize().to_hex().to_string();
+    assert_eq!(projection_hash.len(), super::data::HASH_HEX_CHARS);
+    assert!(is_valid_hash(&projection_hash));
+    projection_hash
 }
 
 fn validate_identity_domain(
     identity: &super::data::PilotIdentity,
     expected: super::data::PilotIdentityDomain,
     field: &'static str,
-    issues: &mut Vec<super::data::PilotIssue>,
-) {
+) -> Vec<super::data::PilotIssue> {
+    let mut issues = Vec::with_capacity(super::data::MAX_PILOT_ISSUES);
     if !is_valid_hash(identity.hex()) {
         issues.push(issue(super::data::PilotIssueCode::InvalidIdentity, field));
     }
@@ -663,6 +692,7 @@ fn validate_identity_domain(
             field,
         ));
     }
+    issues
 }
 
 fn hash_identity(hasher: &mut blake3::Hasher, identity: &super::data::PilotIdentity) {
