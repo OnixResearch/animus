@@ -10,6 +10,14 @@ readonly GENERATOR_SOURCE=scripts/cairn/generate-current-head-release-evidence-i
 readonly TARGET_DIR=target/cairn/release-evidence
 readonly POSITIVE_INDEX=current-head-positive.lines
 readonly PACKAGED_DOGFOOD_INDEX=current-head-packaged-dogfood.lines
+readonly REAL_CHECK_INDEX=current-head-bounded-real-check.lines
+readonly REAL_CHECK_MISSING_INDEX=current-head-bounded-real-check-missing.lines
+readonly REAL_CHECK_STALE_INDEX=current-head-bounded-real-check-stale.lines
+readonly REAL_CHECK_INVALID_INDEX=current-head-bounded-real-check-invalid.lines
+readonly REAL_CHECK_RECEIPT=bounded-real-check-receipt.md
+readonly REAL_CHECK_STALE_RECEIPT=bounded-real-check-stale-receipt.md
+readonly REAL_CHECK_INVALID_RECEIPT=bounded-real-check-invalid-receipt.md
+readonly REAL_CHECK_MALFORMED_RECEIPT=bounded-real-check-malformed-receipt.md
 readonly DIRTY_INDEX=current-head-dirty.lines
 readonly MISSING_INDEX=current-head-missing.lines
 readonly STALE_INDEX=current-head-stale.lines
@@ -17,8 +25,17 @@ readonly ACTUAL_DRAFT=current-head-draft.lines
 readonly ISSUE_DIRTY=RELEASE_EVIDENCE_DIRTY_HEAD
 readonly ISSUE_MISSING=RELEASE_EVIDENCE_MISSING_MODE
 readonly ISSUE_STALE=RELEASE_EVIDENCE_STALE_RECEIPT
+readonly ISSUE_REAL_CHECK_MISSING=RELEASE_EVIDENCE_MISSING_REAL_CHECK_RECEIPT
+readonly ISSUE_REAL_CHECK_INVALID=RELEASE_EVIDENCE_INVALID_REAL_CHECK_RECEIPT
 readonly CLAIM_CURRENT_HEAD=--claim-current-head
 readonly CLAIM_PACKAGED_DOGFOOD=packaged-headless-dogfood
+readonly CLAIM_BOUNDED_REAL_CHECK=bounded-real-check-completion
+readonly REAL_CHECK_SCHEMA=animus.real-check-completion-host-smoke-receipt.v1
+readonly REAL_CHECK_RAIL=real-check-completion-host-smoke
+readonly REAL_CHECK_MODE=live
+readonly REAL_CHECK_SELECTED_IDS=nickel-config,cairn-validate
+readonly REAL_CHECK_CAIRN_BINDING=pinned-cairn-core
+readonly SYNTHETIC_SOURCE_BLAKE3=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
 readonly PACKAGED_CHECK=packaged-headless-dogfood-smoke=pass
 readonly FOCUSED_CHECK=focused-rails=pass
 readonly WORKSPACE_CHECK=workspace-tests=pass
@@ -75,6 +92,44 @@ all_pass_args() {
     --check "${PACKAGED_CHECK}"
 }
 
+write_real_check_receipt() {
+  path=$1
+  head=$2
+  selected_ids=$3
+  cat > "${path}" <<EOF
+schema: ${REAL_CHECK_SCHEMA}
+rail: ${REAL_CHECK_RAIL}
+mode: ${REAL_CHECK_MODE}
+status: pass
+head: ${head}
+head_dirty: false
+source_blake3: ${SYNTHETIC_SOURCE_BLAKE3}
+selected_check_ids: ${selected_ids}
+cairn_binding: ${REAL_CHECK_CAIRN_BINDING}
+claims: exact-registry-argv,pinned-cairn-core
+non_claims: release-readiness,production-readiness
+EOF
+}
+
+expect_generator_failure() {
+  expected=$1
+  receipt_path=$2
+  output_path=${tmp_dir}/generator-failure.out
+  if run_generator \
+    --dirty false \
+    --out "${tmp_dir}/unexpected-generated-index.lines" \
+    --claim "${CLAIM_BOUNDED_REAL_CHECK}" \
+    --real-check-receipt "${receipt_path}" > "${output_path}" 2>&1; then
+    printf 'error: malformed receipt unexpectedly generated an index: %s\n' "${receipt_path}" >&2
+    exit "${FAILURE}"
+  fi
+  if ! grep -F "${expected}" "${output_path}" >/dev/null 2>&1; then
+    printf 'error: malformed receipt did not report %s\n' "${expected}" >&2
+    cat "${output_path}" >&2
+    exit "${FAILURE}"
+  fi
+}
+
 expect_failure() {
   expected=$1
   index_path=$2
@@ -105,6 +160,57 @@ run_generator \
   --check "${PACKAGED_CHECK}"
 "${checker}" --index "${tmp_dir}/${PACKAGED_DOGFOOD_INDEX}" >/dev/null
 printf '%s\n' 'generated packaged dogfood claim ok'
+
+# r[verify agent_harness_runtime.real_check_evidence_index.verification.fixtures]
+# r[verify agent_harness_runtime.real_check_evidence_index.validation.pass]
+write_real_check_receipt \
+  "${tmp_dir}/${REAL_CHECK_RECEIPT}" \
+  "${SYNTHETIC_COMMIT}" \
+  "${REAL_CHECK_SELECTED_IDS}"
+run_generator \
+  --dirty false \
+  --out "${tmp_dir}/${REAL_CHECK_INDEX}" \
+  --claim "${CLAIM_BOUNDED_REAL_CHECK}" \
+  --real-check-receipt "${tmp_dir}/${REAL_CHECK_RECEIPT}"
+"${checker}" --index "${tmp_dir}/${REAL_CHECK_INDEX}" >/dev/null
+printf '%s\n' 'generated bounded real-check claim ok'
+
+run_generator \
+  --dirty false \
+  --out "${tmp_dir}/${REAL_CHECK_MISSING_INDEX}" \
+  --claim "${CLAIM_BOUNDED_REAL_CHECK}"
+expect_failure "${ISSUE_REAL_CHECK_MISSING}" "${tmp_dir}/${REAL_CHECK_MISSING_INDEX}"
+
+write_real_check_receipt \
+  "${tmp_dir}/${REAL_CHECK_STALE_RECEIPT}" \
+  fedcba9876543210 \
+  "${REAL_CHECK_SELECTED_IDS}"
+run_generator \
+  --dirty false \
+  --out "${tmp_dir}/${REAL_CHECK_STALE_INDEX}" \
+  --claim "${CLAIM_BOUNDED_REAL_CHECK}" \
+  --real-check-receipt "${tmp_dir}/${REAL_CHECK_STALE_RECEIPT}"
+expect_failure "${ISSUE_STALE}" "${tmp_dir}/${REAL_CHECK_STALE_INDEX}"
+
+write_real_check_receipt \
+  "${tmp_dir}/${REAL_CHECK_INVALID_RECEIPT}" \
+  "${SYNTHETIC_COMMIT}" \
+  nickel-config
+run_generator \
+  --dirty false \
+  --out "${tmp_dir}/${REAL_CHECK_INVALID_INDEX}" \
+  --claim "${CLAIM_BOUNDED_REAL_CHECK}" \
+  --real-check-receipt "${tmp_dir}/${REAL_CHECK_INVALID_RECEIPT}"
+expect_failure "${ISSUE_REAL_CHECK_INVALID}" "${tmp_dir}/${REAL_CHECK_INVALID_INDEX}"
+
+write_real_check_receipt \
+  "${tmp_dir}/${REAL_CHECK_MALFORMED_RECEIPT}" \
+  "${SYNTHETIC_COMMIT}" \
+  "${REAL_CHECK_SELECTED_IDS}"
+printf '%s\n' 'secret_output: forbidden' >> "${tmp_dir}/${REAL_CHECK_MALFORMED_RECEIPT}"
+expect_generator_failure \
+  'unknown real-check receipt field' \
+  "${tmp_dir}/${REAL_CHECK_MALFORMED_RECEIPT}"
 
 run_generator \
   --dirty true \

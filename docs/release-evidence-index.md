@@ -23,9 +23,12 @@ The Nickel source `cairn/release-evidence-index-schema.ncl` defines the fixture-
 - `check` records with mode, pure/optional class, status, and receipt/head match;
 - `claim` records for evidence surfaces the index asserts;
 - `non_claim` records for omitted optional surfaces;
-- `missing_mode` records for checks that are intentionally absent.
+- `missing_mode` records for checks that are intentionally absent;
+- one optional `real_check_receipt` record with the receipt schema, rail, live status, clean head, source BLAKE3, selected check ids, and pinned Cairn binding.
 
-The required pure modes for a `current-head-pure-evidence` claim are focused rails, workspace tests, Clippy, flake checks, Nickel drift checks, Cairn validation, and Cairn gates. The separate `packaged-headless-dogfood` claim requires only a clean head and one passing, head-matched `packaged-headless-dogfood-smoke` receipt. It does not imply full current-head proof. VCS collection is shell-owned so reusable validation logic consumes supplied metadata instead of reading Git/Jujutsu state.
+The required pure modes for a `current-head-pure-evidence` claim are focused rails, workspace tests, Clippy, flake checks, Nickel drift checks, Cairn validation, and Cairn gates. The separate `packaged-headless-dogfood` claim requires only a clean head and one passing, head-matched `packaged-headless-dogfood-smoke` receipt.
+
+The separate `bounded-real-check-completion` claim requires one exact live receipt for the clean indexed head. The receipt must name `nickel-config,cairn-validate`, `pinned-cairn-core`, and a canonical 64-character BLAKE3 source identity. Neither bounded claim implies full current-head proof or release readiness. VCS collection is shell-owned so reusable validation logic consumes supplied metadata instead of reading Git/Jujutsu state.
 
 ## Current-head generator
 
@@ -59,6 +62,20 @@ scripts/cairn/generate-current-head-release-evidence-index \
 
 This command records supplied status. It does not run the packaged smoke.
 
+After the real-check smoke passes on a clean head, generate its separate bounded claim:
+
+```sh
+scripts/cairn/check-real-check-completion-host-smoke --root . --live
+scripts/cairn/generate-current-head-release-evidence-index \
+  --out target/cairn/release-evidence/bounded-real-check.lines \
+  --claim bounded-real-check-completion \
+  --real-check-receipt target/cairn/focused-rails/real-check-completion-host-smoke.md
+scripts/cairn/check-release-evidence-index --root . \
+  --index target/cairn/release-evidence/bounded-real-check.lines
+```
+
+The generator reads only the explicit receipt. It does not run the smoke or infer release readiness.
+
 ## Current-head evidence rule
 
 Current-head claims are valid only when:
@@ -66,6 +83,7 @@ Current-head claims are valid only when:
 - the worktree was clean when evidence was collected;
 - every required pure mode is present and passing;
 - every selected receipt matches the recorded commit/head;
+- a real-check claim has exact live, pass, source, selected-check, and pinned-Cairn metadata;
 - missing modes are named as missing instead of being implied;
 - optional checks are either present as passing optional evidence or listed as non-claims.
 
@@ -91,6 +109,6 @@ scripts/cairn/check-current-head-release-evidence-index --root .
 nix build .#checks.x86_64-linux.current-head-release-evidence-index --no-link -L
 ```
 
-The first rail validates Nickel sample fixtures for positive current-head evidence, stale receipt rejection, dirty-head rejection, missing-mode rejection, optional-surface overclaim rejection, and packaged-dogfood receipt binding. The second rail validates generated full-pure and packaged-dogfood claims, plus dirty, missing, and stale synthetic indexes. It also writes an actual-head draft under `target/cairn/release-evidence/` when a Git worktree is available.
+The first rail validates Nickel sample fixtures for positive current-head evidence, stale receipt rejection, dirty-head rejection, missing-mode rejection, optional-surface overclaim rejection, packaged-dogfood binding, and exact real-check receipt binding. The second rail validates generated full-pure, packaged-dogfood, and bounded real-check claims. It also rejects missing, stale, wrong-check, and unsafe receipt data, then writes an actual-head draft when a Git worktree is available.
 
 `scripts/cairn/check-dogfood-readiness --root .` composes the first rail with claim-hygiene validation. This single command rejects missing, stale, duplicate, or dirty packaged-dogfood receipts.

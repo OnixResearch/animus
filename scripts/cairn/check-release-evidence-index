@@ -11,14 +11,32 @@ readonly EXPECTED_OK=OK
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+index_path=
 
-if [ "${1:-}" = "--root" ]; then
-  if [ -z "${2:-}" ]; then
-    printf '%s\n' 'error: --root requires a path' >&2
-    exit "${FAILURE}"
-  fi
-  repo_root=$(CDPATH= cd -- "$2" && pwd)
-fi
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --root)
+      if [ -z "${2:-}" ]; then
+        printf '%s\n' 'error: --root requires a path' >&2
+        exit "${FAILURE}"
+      fi
+      repo_root=$(CDPATH= cd -- "$2" && pwd)
+      shift 2
+      ;;
+    --index)
+      if [ -z "${2:-}" ]; then
+        printf '%s\n' 'error: --index requires a path' >&2
+        exit "${FAILURE}"
+      fi
+      index_path=$2
+      shift 2
+      ;;
+    *)
+      printf 'error: unknown argument: %s\n' "$1" >&2
+      exit "${FAILURE}"
+      ;;
+  esac
+done
 
 if ! command -v rustc >/dev/null 2>&1; then
   printf '%s\n' 'error: rustc is required. Run inside `nix develop`.' >&2
@@ -36,6 +54,14 @@ trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
 
 checker=${tmp_dir}/check-release-evidence-index
 rustc --edition=2021 "${rust_source}" -o "${checker}"
+
+if [ -n "${index_path}" ]; then
+  case "${index_path}" in
+    /*) ;;
+    *) index_path=${repo_root}/${index_path} ;;
+  esac
+  exec "${checker}" --index "${index_path}"
+fi
 
 schema_source=${repo_root}/${SCHEMA_RELATIVE_PATH}
 sample_lines=${tmp_dir}/sample.lines

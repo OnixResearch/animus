@@ -24,12 +24,23 @@ const SURFACE_VALUE_INDEX: usize = 1;
 const MISSING_MODE_FIELD_COUNT: usize = 3;
 const MISSING_MODE_VALUE_INDEX: usize = 1;
 const MISSING_MODE_REASON_INDEX: usize = 2;
+const REAL_CHECK_RECEIPT_FIELD_COUNT: usize = 10;
+const REAL_CHECK_SCHEMA_INDEX: usize = 1;
+const REAL_CHECK_RAIL_INDEX: usize = 2;
+const REAL_CHECK_MODE_INDEX: usize = 3;
+const REAL_CHECK_STATUS_INDEX: usize = 4;
+const REAL_CHECK_HEAD_INDEX: usize = 5;
+const REAL_CHECK_HEAD_DIRTY_INDEX: usize = 6;
+const REAL_CHECK_SOURCE_BLAKE3_INDEX: usize = 7;
+const REAL_CHECK_SELECTED_IDS_INDEX: usize = 8;
+const REAL_CHECK_CAIRN_BINDING_INDEX: usize = 9;
 
 const KIND_HEAD: &str = "head";
 const KIND_CHECK: &str = "check";
 const KIND_CLAIM: &str = "claim";
 const KIND_NON_CLAIM: &str = "non_claim";
 const KIND_MISSING_MODE: &str = "missing_mode";
+const KIND_REAL_CHECK_RECEIPT: &str = "real_check_receipt";
 
 const CLASS_PURE: &str = "pure";
 const CLASS_OPTIONAL: &str = "optional";
@@ -40,6 +51,13 @@ const STATUS_MISSING: &str = "missing";
 
 const CLAIM_CURRENT_HEAD_PURE_EVIDENCE: &str = "current-head-pure-evidence";
 const CLAIM_PACKAGED_HEADLESS_DOGFOOD: &str = "packaged-headless-dogfood";
+const CLAIM_BOUNDED_REAL_CHECK_COMPLETION: &str = "bounded-real-check-completion";
+const REAL_CHECK_RECEIPT_SCHEMA: &str = "animus.real-check-completion-host-smoke-receipt.v1";
+const REAL_CHECK_RAIL: &str = "real-check-completion-host-smoke";
+const REAL_CHECK_MODE_LIVE: &str = "live";
+const REAL_CHECK_SELECTED_IDS: &str = "nickel-config,cairn-validate";
+const REAL_CHECK_CAIRN_BINDING: &str = "pinned-cairn-core";
+const BLAKE3_HEX_LENGTH: usize = 64;
 const SURFACE_LIVE_PROVIDERS: &str = "live-providers";
 const SURFACE_TUI_DAEMON_DOGFOOD: &str = "tui-daemon-dogfood";
 const SURFACE_VM_CHECKS: &str = "vm-checks";
@@ -82,6 +100,7 @@ const KNOWN_STATUSES: &[&str] = &[STATUS_PASS, STATUS_FAIL, STATUS_SKIPPED, STAT
 const KNOWN_CLAIMS: &[&str] = &[
     CLAIM_CURRENT_HEAD_PURE_EVIDENCE,
     CLAIM_PACKAGED_HEADLESS_DOGFOOD,
+    CLAIM_BOUNDED_REAL_CHECK_COMPLETION,
     SURFACE_LIVE_PROVIDERS,
     SURFACE_TUI_DAEMON_DOGFOOD,
     SURFACE_VM_CHECKS,
@@ -107,6 +126,9 @@ const ISSUE_MISSING_MODE: &str = "RELEASE_EVIDENCE_MISSING_MODE";
 const ISSUE_OVERCLAIM: &str = "RELEASE_EVIDENCE_OVERCLAIM";
 const ISSUE_MISSING_DOGFOOD_RECEIPT: &str = "RELEASE_EVIDENCE_MISSING_DOGFOOD_RECEIPT";
 const ISSUE_CONFLICTING_CLAIM: &str = "RELEASE_EVIDENCE_CONFLICTING_CLAIM";
+const ISSUE_DUPLICATE_REAL_CHECK_RECEIPT: &str = "RELEASE_EVIDENCE_DUPLICATE_REAL_CHECK_RECEIPT";
+const ISSUE_MISSING_REAL_CHECK_RECEIPT: &str = "RELEASE_EVIDENCE_MISSING_REAL_CHECK_RECEIPT";
+const ISSUE_INVALID_REAL_CHECK_RECEIPT: &str = "RELEASE_EVIDENCE_INVALID_REAL_CHECK_RECEIPT";
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct Config {
@@ -129,6 +151,19 @@ struct CheckRecord {
     head_match: bool,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct RealCheckReceiptRecord {
+    schema: String,
+    rail: String,
+    mode: String,
+    status: String,
+    head: String,
+    head_dirty: bool,
+    source_blake3: String,
+    selected_check_ids: String,
+    cairn_binding: String,
+}
+
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 struct EvidenceIndex {
     head: Option<HeadRecord>,
@@ -136,6 +171,7 @@ struct EvidenceIndex {
     claims: BTreeSet<String>,
     non_claims: BTreeSet<String>,
     missing_modes: BTreeMap<String, String>,
+    real_check_receipt: Option<RealCheckReceiptRecord>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
@@ -212,10 +248,13 @@ fn parse_index(text: &str) -> (EvidenceIndex, Vec<Issue>) {
                 parse_surface_record(&fields, line, &mut index.non_claims, &mut issues)
             }
             KIND_MISSING_MODE => parse_missing_mode(&fields, line, &mut index, &mut issues),
+            KIND_REAL_CHECK_RECEIPT => {
+                parse_real_check_receipt(&fields, line, &mut index, &mut issues)
+            }
             _ => issues.push(issue(
                 ISSUE_MALFORMED_RECORD,
                 line,
-                "record kind must be head, check, claim, non_claim, or missing_mode",
+                "record kind must be head, check, claim, non_claim, missing_mode, or real_check_receipt",
             )),
         }
     }
@@ -368,6 +407,50 @@ fn parse_missing_mode(
     );
 }
 
+// r[impl agent_harness_runtime.real_check_evidence_index.claim]
+fn parse_real_check_receipt(
+    fields: &[&str],
+    line: &str,
+    index: &mut EvidenceIndex,
+    issues: &mut Vec<Issue>,
+) {
+    if fields.len() != REAL_CHECK_RECEIPT_FIELD_COUNT {
+        issues.push(issue(
+            ISSUE_MALFORMED_RECORD,
+            line,
+            "real-check receipt record must have nine metadata fields",
+        ));
+        return;
+    }
+    if index.real_check_receipt.is_some() {
+        issues.push(issue(
+            ISSUE_DUPLICATE_REAL_CHECK_RECEIPT,
+            REAL_CHECK_RAIL,
+            "index must contain at most one real-check receipt record",
+        ));
+        return;
+    }
+    let Some(head_dirty) = parse_bool(
+        fields[REAL_CHECK_HEAD_DIRTY_INDEX],
+        line,
+        "real-check head_dirty",
+        issues,
+    ) else {
+        return;
+    };
+    index.real_check_receipt = Some(RealCheckReceiptRecord {
+        schema: fields[REAL_CHECK_SCHEMA_INDEX].to_string(),
+        rail: fields[REAL_CHECK_RAIL_INDEX].to_string(),
+        mode: fields[REAL_CHECK_MODE_INDEX].to_string(),
+        status: fields[REAL_CHECK_STATUS_INDEX].to_string(),
+        head: fields[REAL_CHECK_HEAD_INDEX].to_string(),
+        head_dirty,
+        source_blake3: fields[REAL_CHECK_SOURCE_BLAKE3_INDEX].to_string(),
+        selected_check_ids: fields[REAL_CHECK_SELECTED_IDS_INDEX].to_string(),
+        cairn_binding: fields[REAL_CHECK_CAIRN_BINDING_INDEX].to_string(),
+    });
+}
+
 fn validate_index(index: &EvidenceIndex) -> Vec<Issue> {
     let mut issues = Vec::new();
     let checks_by_mode = checks_by_mode(&index.checks);
@@ -395,6 +478,7 @@ fn validate_index(index: &EvidenceIndex) -> Vec<Issue> {
         validate_required_pure_modes(index, &checks_by_mode, &mut issues);
     }
     validate_packaged_dogfood_claim(index, &checks_by_mode, &mut issues);
+    validate_real_check_claim(index, &mut issues);
     validate_optional_claims(index, &checks_by_mode, &mut issues);
 
     issues
@@ -487,6 +571,64 @@ fn validate_packaged_dogfood_claim(
     }
 }
 
+// r[impl agent_harness_runtime.real_check_evidence_index.validation]
+fn validate_real_check_claim(index: &EvidenceIndex, issues: &mut Vec<Issue>) {
+    let has_claim = index.claims.contains(CLAIM_BOUNDED_REAL_CHECK_COMPLETION);
+    let has_non_claim = index
+        .non_claims
+        .contains(CLAIM_BOUNDED_REAL_CHECK_COMPLETION);
+
+    if has_claim && has_non_claim {
+        issues.push(issue(
+            ISSUE_CONFLICTING_CLAIM,
+            CLAIM_BOUNDED_REAL_CHECK_COMPLETION,
+            "surface cannot be both a claim and a non-claim",
+        ));
+    }
+
+    let Some(receipt) = index.real_check_receipt.as_ref() else {
+        if has_claim {
+            issues.push(issue(
+                ISSUE_MISSING_REAL_CHECK_RECEIPT,
+                CLAIM_BOUNDED_REAL_CHECK_COMPLETION,
+                "claim requires one typed real-check receipt record",
+            ));
+        }
+        return;
+    };
+
+    let exact_metadata = receipt.schema == REAL_CHECK_RECEIPT_SCHEMA
+        && receipt.rail == REAL_CHECK_RAIL
+        && receipt.mode == REAL_CHECK_MODE_LIVE
+        && receipt.status == STATUS_PASS
+        && valid_blake3_hex(&receipt.source_blake3)
+        && receipt.selected_check_ids == REAL_CHECK_SELECTED_IDS
+        && receipt.cairn_binding == REAL_CHECK_CAIRN_BINDING;
+    if !exact_metadata {
+        issues.push(issue(
+            ISSUE_INVALID_REAL_CHECK_RECEIPT,
+            REAL_CHECK_RAIL,
+            "receipt schema, rail, live pass status, source BLAKE3, selected checks, and Cairn binding must match",
+        ));
+    }
+    if receipt.head_dirty {
+        issues.push(issue(
+            ISSUE_DIRTY_HEAD,
+            &receipt.head,
+            "dirty real-check receipt cannot support a current-head claim",
+        ));
+    }
+    if let Some(head) = index.head.as_ref() {
+        if receipt.head != head.commit {
+            issues.push(issue(
+                ISSUE_STALE_RECEIPT,
+                REAL_CHECK_RAIL,
+                "real-check receipt head does not match the indexed head",
+            ));
+        }
+    }
+}
+
 fn validate_optional_claims(
     index: &EvidenceIndex,
     checks_by_mode: &BTreeMap<String, &CheckRecord>,
@@ -539,6 +681,7 @@ fn checks_by_mode(checks: &[CheckRecord]) -> BTreeMap<String, &CheckRecord> {
 fn requires_clean_head(claims: &BTreeSet<String>) -> bool {
     claims.contains(CLAIM_CURRENT_HEAD_PURE_EVIDENCE)
         || claims.contains(CLAIM_PACKAGED_HEADLESS_DOGFOOD)
+        || claims.contains(CLAIM_BOUNDED_REAL_CHECK_COMPLETION)
         || claims.contains(SURFACE_LIVE_PROVIDERS)
         || claims.contains(SURFACE_PRODUCTION_READINESS)
 }
@@ -574,6 +717,13 @@ fn is_known_mode(mode: &str) -> bool {
 
 fn is_pure_mode(mode: &str) -> bool {
     contains(REQUIRED_PURE_MODES, mode) || contains(ADDITIONAL_PURE_MODES, mode)
+}
+
+fn valid_blake3_hex(value: &str) -> bool {
+    value.len() == BLAKE3_HEX_LENGTH
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
 }
 
 fn contains(values: &[&str], needle: &str) -> bool {

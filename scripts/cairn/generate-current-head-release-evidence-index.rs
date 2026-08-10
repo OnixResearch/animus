@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fs;
 use std::path::PathBuf;
@@ -16,6 +16,7 @@ const ARG_CLAIM_CURRENT_HEAD: &str = "--claim-current-head";
 const ARG_CLAIM: &str = "--claim";
 const ARG_NON_CLAIM: &str = "--non-claim";
 const ARG_NO_DEFAULT_NON_CLAIMS: &str = "--no-default-non-claims";
+const ARG_REAL_CHECK_RECEIPT: &str = "--real-check-receipt";
 const VCS_GIT: &str = "git";
 const DETACHED_BRANCH: &str = "DETACHED";
 const STATUS_PASS: &str = "pass";
@@ -42,6 +43,8 @@ const MODE_PACKAGED_HEADLESS_DOGFOOD_SMOKE: &str = "packaged-headless-dogfood-sm
 
 const CLAIM_CURRENT_HEAD_PURE_EVIDENCE: &str = "current-head-pure-evidence";
 const CLAIM_PACKAGED_HEADLESS_DOGFOOD: &str = "packaged-headless-dogfood";
+const CLAIM_BOUNDED_REAL_CHECK_COMPLETION: &str = "bounded-real-check-completion";
+const REAL_CHECK_KIND: &str = "real_check_receipt";
 const SURFACE_LIVE_PROVIDERS: &str = "live-providers";
 const SURFACE_TUI_DAEMON_DOGFOOD: &str = "tui-daemon-dogfood";
 const SURFACE_VM_CHECKS: &str = "vm-checks";
@@ -70,6 +73,7 @@ const OPTIONAL_SURFACES: &[&str] = &[
 const CLAIM_SURFACES: &[&str] = &[
     CLAIM_CURRENT_HEAD_PURE_EVIDENCE,
     CLAIM_PACKAGED_HEADLESS_DOGFOOD,
+    CLAIM_BOUNDED_REAL_CHECK_COMPLETION,
     SURFACE_LIVE_PROVIDERS,
     SURFACE_TUI_DAEMON_DOGFOOD,
     SURFACE_VM_CHECKS,
@@ -78,6 +82,30 @@ const CLAIM_SURFACES: &[&str] = &[
     SURFACE_PRODUCTION_READINESS,
 ];
 const STATUSES: &[&str] = &[STATUS_PASS, STATUS_FAIL, STATUS_SKIPPED, STATUS_MISSING];
+const REAL_CHECK_RECEIPT_KEYS: &[&str] = &[
+    "schema",
+    "rail",
+    "mode",
+    "status",
+    "head",
+    "head_dirty",
+    "source_blake3",
+    "selected_check_ids",
+    "cairn_binding",
+    "claims",
+    "non_claims",
+];
+const REAL_CHECK_REQUIRED_KEYS: &[&str] = &[
+    "schema",
+    "rail",
+    "mode",
+    "status",
+    "head",
+    "head_dirty",
+    "source_blake3",
+    "selected_check_ids",
+    "cairn_binding",
+];
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct HeadInput {
@@ -101,12 +129,26 @@ struct MissingModeInput {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+struct RealCheckReceiptInput {
+    schema: String,
+    rail: String,
+    mode: String,
+    status: String,
+    head: String,
+    head_dirty: bool,
+    source_blake3: String,
+    selected_check_ids: String,
+    cairn_binding: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 struct RenderInput {
     head: HeadInput,
     checks: Vec<CheckInput>,
     missing_modes: Vec<MissingModeInput>,
     claims: BTreeSet<String>,
     non_claims: BTreeSet<String>,
+    real_check_receipt: Option<RealCheckReceiptInput>,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -121,6 +163,7 @@ struct Config {
     claims: BTreeSet<String>,
     non_claims: BTreeSet<String>,
     default_non_claims: bool,
+    real_check_receipt: Option<PathBuf>,
 }
 
 fn main() {
@@ -189,6 +232,12 @@ fn parse_args(mut args: impl Iterator<Item = String>) -> Result<Config, String> 
                     )?)?);
             }
             ARG_NO_DEFAULT_NON_CLAIMS => config.default_non_claims = false,
+            ARG_REAL_CHECK_RECEIPT => {
+                config.real_check_receipt = Some(PathBuf::from(required_value(
+                    &mut args,
+                    ARG_REAL_CHECK_RECEIPT,
+                )?));
+            }
             other => return Err(format!("unknown argument: {other}")),
         }
     }
@@ -284,12 +333,19 @@ fn build_render_input(config: &Config) -> Result<RenderInput, String> {
         }
     }
 
+    let real_check_receipt = config
+        .real_check_receipt
+        .as_ref()
+        .map(|path| read_real_check_receipt(path))
+        .transpose()?;
+
     Ok(RenderInput {
         head,
         checks: config.checks.clone(),
         missing_modes: config.missing_modes.clone(),
         claims: config.claims.clone(),
         non_claims,
+        real_check_receipt,
     })
 }
 
@@ -308,6 +364,64 @@ fn collect_git_head() -> Result<HeadInput, String> {
         branch,
         dirty: !status.trim().is_empty(),
     })
+}
+
+// r[impl agent_harness_runtime.real_check_evidence_index.generator]
+fn read_real_check_receipt(path: &PathBuf) -> Result<RealCheckReceiptInput, String> {
+    let text = fs::read_to_string(path)
+        .map_err(|error| format!("failed to read real-check receipt: {error}"))?;
+    parse_real_check_receipt(&text)
+}
+
+fn parse_real_check_receipt(text: &str) -> Result<RealCheckReceiptInput, String> {
+    let mut fields = BTreeMap::new();
+    for line in text.lines() {
+        let (key, value) = line
+            .split_once(": ")
+            .ok_or_else(|| format!("malformed real-check receipt line: {line}"))?;
+        if !contains(REAL_CHECK_RECEIPT_KEYS, key) {
+            return Err(format!("unknown real-check receipt field: {key}"));
+        }
+        if fields.insert(key.to_owned(), value.to_owned()).is_some() {
+            return Err(format!("duplicate real-check receipt field: {key}"));
+        }
+    }
+    for key in REAL_CHECK_REQUIRED_KEYS {
+        if !fields.contains_key(*key) {
+            return Err(format!("missing real-check receipt field: {key}"));
+        }
+    }
+
+    let value = |key: &str| -> Result<String, String> {
+        fields
+            .get(key)
+            .cloned()
+            .ok_or_else(|| format!("missing real-check receipt field: {key}"))
+    };
+    let input = RealCheckReceiptInput {
+        schema: value("schema")?,
+        rail: value("rail")?,
+        mode: value("mode")?,
+        status: value("status")?,
+        head: value("head")?,
+        head_dirty: parse_bool(&value("head_dirty")?)?,
+        source_blake3: value("source_blake3")?,
+        selected_check_ids: value("selected_check_ids")?,
+        cairn_binding: value("cairn_binding")?,
+    };
+    for field in [
+        input.schema.as_str(),
+        input.rail.as_str(),
+        input.mode.as_str(),
+        input.status.as_str(),
+        input.head.as_str(),
+        input.source_blake3.as_str(),
+        input.selected_check_ids.as_str(),
+        input.cairn_binding.as_str(),
+    ] {
+        validate_label(field, "real-check receipt field")?;
+    }
+    Ok(input)
 }
 
 fn git_output(args: &[&str]) -> Result<String, String> {
@@ -347,6 +461,20 @@ fn render_index(input: &RenderInput) -> String {
         lines.push(format!(
             "missing_mode{FIELD_SEPARATOR}{}{FIELD_SEPARATOR}{}",
             missing_mode.mode, missing_mode.reason
+        ));
+    }
+    if let Some(receipt) = input.real_check_receipt.as_ref() {
+        lines.push(format!(
+            "{REAL_CHECK_KIND}{FIELD_SEPARATOR}{}{FIELD_SEPARATOR}{}{FIELD_SEPARATOR}{}{FIELD_SEPARATOR}{}{FIELD_SEPARATOR}{}{FIELD_SEPARATOR}{}{FIELD_SEPARATOR}{}{FIELD_SEPARATOR}{}{FIELD_SEPARATOR}{}",
+            receipt.schema,
+            receipt.rail,
+            receipt.mode,
+            receipt.status,
+            receipt.head,
+            render_bool(receipt.head_dirty),
+            receipt.source_blake3,
+            receipt.selected_check_ids,
+            receipt.cairn_binding
         ));
     }
     for claim in &input.claims {
