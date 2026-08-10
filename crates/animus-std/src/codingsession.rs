@@ -48,7 +48,7 @@ const SMOKE_NON_CLAIMS: &[&str] = &[
     "tui-dogfood",
     "daemon-attach",
     "plugin-runtime",
-    "oauth",
+    "oauth", // Explicit non-claim; no provider account flow is implemented.
     "production-readiness",
 ];
 

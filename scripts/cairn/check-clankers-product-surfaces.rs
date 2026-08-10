@@ -13,6 +13,7 @@ const SCOPE_REUSABLE: &str = "reusable";
 const EXPECTED_OK: &str = "OK";
 const EXPECTED_PREFIX: &str = "expected_issue=";
 const SCOPE_PREFIX: &str = "fixture_scope=";
+const EXPLICIT_NON_CLAIM_MARKER: &str = "non-claim";
 const RUST_EXTENSION: &str = "rs";
 const TOML_EXTENSION: &str = "toml";
 const EXIT_FAILURE: i32 = 1;
@@ -334,7 +335,7 @@ fn should_scan_file(path: &Path) -> bool {
 }
 
 fn scan_text_for_product_markers(path: &str, text: &str) -> Vec<Issue> {
-    let haystack = text.to_ascii_lowercase();
+    let haystack = marker_scan_projection(text);
     let mut issues = Vec::new();
     let mut reported = BTreeSet::new();
     for marker in PRODUCT_MARKERS {
@@ -352,6 +353,14 @@ fn scan_text_for_product_markers(path: &str, text: &str) -> Vec<Issue> {
         }
     }
     issues
+}
+
+fn marker_scan_projection(text: &str) -> String {
+    text.lines()
+        .filter(|line| !contains_case_insensitive(line, EXPLICIT_NON_CLAIM_MARKER))
+        .collect::<Vec<_>>()
+        .join("\n")
+        .to_ascii_lowercase()
 }
 
 fn parse_fixture_metadata(text: &str) -> Result<FixtureMetadata, String> {
