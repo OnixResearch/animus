@@ -25,7 +25,7 @@
 
 ## Diagnostic live evidence
 
-A diagnostic request used the `openrouter` key from `/home/brittonr/.pi/agent/auth.json` through standard input and model `openai/gpt-5.5`.
+A diagnostic request used the `openrouter` key from the Pi authentication store through standard input and model `openai/gpt-5.5`.
 
 The smoke returned `LIVE_OPENROUTER_SMOKE status=passed`, provider `openrouter`, endpoint `openrouter-responses`, status `success`, one response item, and BLAKE3 request and response identities. It omitted the prompt, credential, raw response, and model output.
 
