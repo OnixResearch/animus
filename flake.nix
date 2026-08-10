@@ -324,6 +324,7 @@
                 type == "directory"
                 || baseName == "Cargo.lock"
                 || baseName == "Cargo.toml"
+                || baseName == "manifest.toml"
                 || baseName == "clippy.toml"
                 || baseName == "dylint.toml"
                 || baseName == "flake.nix"
@@ -723,6 +724,11 @@
 
           cargo-runtime = cargoCheck "animus-cargo-runtime" [ ] ''
             cargo check -p animus-runtime --locked
+          '';
+
+          cargo-session-core = cargoCheck "animus-cargo-session-core" [ ] ''
+            cargo check -p animus-session-core --features session-event-replay --locked
+            cargo check -p animus-session-core --target wasm32-unknown-unknown --features session-event-replay --locked
           '';
 
           runtime-kernel-split = cargoCheck "animus-runtime-kernel-split" [ ] ''
@@ -1431,6 +1437,7 @@
             -p animus-core \
             -p animus-router \
             -p animus-runtime \
+            -p animus-session-core \
             -p animus-std \
             -p animus-tui
           '';

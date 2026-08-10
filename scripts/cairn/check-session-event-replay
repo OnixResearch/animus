@@ -17,8 +17,12 @@ exported=$(mktemp)
 trap 'rm -f "${exported}"; rm -rf "${tmp_dir}"' EXIT HUP INT TERM
 nickel export --format json --field session_event_replay_policy config/session-event-replay-policy.ncl > "${exported}"
 diff -u config/generated/session-event-replay-policy.json "${exported}"
-cargo test -p animus-runtime --features session-event-replay session_event_replay --locked
-cargo clippy -p animus-runtime --features session-event-replay --all-targets -- -D warnings
+cargo test -p animus-session-core --features session-event-replay session_event_replay --locked
+cargo test -p animus-runtime --features session-event-replay --test sessioncorefacade --locked
+cargo clippy -p animus-session-core --features session-event-replay --all-targets --no-deps -- -D warnings
+cargo clippy -p animus-runtime --features session-event-replay --all-targets --no-deps -- -D warnings
+cargo check -p animus-session-core --no-default-features --features session-event-replay --locked
+cargo check -p animus-session-core --features session-event-replay --target wasm32-unknown-unknown --locked
 cargo check -p animus-runtime --no-default-features --features session-event-replay --locked
 cargo check -p animus-runtime --features session-event-replay --target wasm32-unknown-unknown --locked
 cargo check -p animus --features session-event-replay --locked

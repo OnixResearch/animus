@@ -27,15 +27,6 @@ pub use crate::batch::{
     render_plan_order_records,
 };
 pub use crate::boundary::{evaluate_sandbox_escalation, sandbox_escalation_event};
-pub use crate::branching::{
-    SessionBranchCheckpointStatus, SessionBranchContinuationTarget, SessionBranchDiagnostic,
-    SessionBranchDiagnosticKind, SessionBranchError, SessionBranchErrorKind,
-    SessionBranchOperation, SessionBranchPlan, SessionBranchPlanStatus, SessionBranchPlannerInput,
-    SessionBranchPolicy, SessionBranchPolicyAdmission, SessionBranchPolicyDraft,
-    SessionBranchReceipt, SessionBranchRequest, SessionBranchRequestDraft, SessionCopyDescriptor,
-    SessionCopyDescriptorClass, SessionCopyDescriptorDraft, SessionLedgerEntry,
-    SessionLedgerEntryDraft, plan_session_branch, validate_session_branch_receipt_text,
-};
 pub use crate::capmap::{
     RuntimeCapabilityFamily, RuntimeCapabilityFamilyMapError, RuntimeCapabilityFamilyRecord,
     runtime_capability_family_map, validate_runtime_capability_family_map,
@@ -281,12 +272,6 @@ pub use crate::researchspec::{
     validate_research_baseline, validate_research_hypothesis, validate_research_run,
     validate_research_study_contract,
 };
-pub use crate::runstate::{
-    AgentControlCheckpointDecision, AgentControlCheckpointTransition,
-    AgentControlCommandDisposition, AgentControlCommandTransition, AgentControlReductionError,
-    AgentControlState, AgentControlTerminalTransition, reduce_agent_control_checkpoint,
-    reduce_agent_control_command, reduce_agent_control_terminal,
-};
 pub use crate::runtime_dag::{
     RuntimeDagBlockedNode, RuntimeDagBounds, RuntimeDagEdge, RuntimeDagGraph, RuntimeDagIssueKind,
     RuntimeDagNode, RuntimeDagReceipt, RuntimeDagReceiptLeak, RuntimeDagRedactionStatus,
@@ -374,6 +359,21 @@ pub use crate::zerostack_midturn::{
     artifactize_zerostack_tool_output, blake3_zerostack_midturn_fingerprint,
     calculate_zerostack_prompt_pressure, plan_zerostack_midturn_compaction,
     validate_zerostack_midturn_summary,
+};
+pub use animus_session_core::{
+    AgentControlCheckpointDecision, AgentControlCheckpointTransition,
+    AgentControlCommandDisposition, AgentControlCommandTransition, AgentControlReductionError,
+    AgentControlState, AgentControlTerminalTransition, reduce_agent_control_checkpoint,
+    reduce_agent_control_command, reduce_agent_control_terminal,
+};
+pub use animus_session_core::{
+    SessionBranchCheckpointStatus, SessionBranchContinuationTarget, SessionBranchDiagnostic,
+    SessionBranchDiagnosticKind, SessionBranchError, SessionBranchErrorKind,
+    SessionBranchOperation, SessionBranchPlan, SessionBranchPlanStatus, SessionBranchPlannerInput,
+    SessionBranchPolicy, SessionBranchPolicyAdmission, SessionBranchPolicyDraft,
+    SessionBranchReceipt, SessionBranchRequest, SessionBranchRequestDraft, SessionCopyDescriptor,
+    SessionCopyDescriptorClass, SessionCopyDescriptorDraft, SessionLedgerEntry,
+    SessionLedgerEntryDraft, plan_session_branch, validate_session_branch_receipt_text,
 };
 
 /// Pure status-selection result.

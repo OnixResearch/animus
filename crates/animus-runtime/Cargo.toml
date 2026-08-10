@@ -30,7 +30,7 @@ compat = ["all-families", "steel"]
 autonomous-gates = []
 persistent-goals = []
 schedule-reliability = []
-session-event-replay = []
+session-event-replay = ["animus-session-core/session-event-replay"]
 execution-backend-planner = []
 native-evaluation = ["dep:animus-eval-core"]
 harbor-eval = ["native-evaluation", "animus-adapters/evaluation", "animus-adapters/harbor-atif", "dep:animus-adapter-atif"]
@@ -57,6 +57,7 @@ animus-adapter-atif = { path = "../animus-adapter-atif", version = "0.1.0", opti
 animus-adapters = { path = "../animus-adapters", version = "0.1.0" }
 animus-core = { path = "../animus-core", version = "0.1.0" }
 animus-eval-core = { path = "../animus-eval-core", version = "0.1.0", optional = true }
+animus-session-core = { path = "../animus-session-core", version = "0.1.0" }
 animus-steel = { path = "../animus-steel", version = "0.1.0", optional = true }
 blake3 = { version = "1.8.5", default-features = false }
 serde = { version = "1.0.228", features = ["derive"], optional = true }

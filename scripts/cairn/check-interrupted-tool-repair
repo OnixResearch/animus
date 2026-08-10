@@ -6,7 +6,7 @@ set -eu
 readonly FAILURE=1
 readonly RECEIPT_SCHEMA='animus.focused-rail-receipt.v1'
 readonly RAIL_NAME='interrupted-tool-repair'
-readonly RUNTIME_SOURCE='crates/animus-runtime/src/interrupted_tool_repair'
+readonly RUNTIME_SOURCE='crates/animus-session-core/src/interrupted_tool_repair'
 readonly RUNTIME_ROOT='crates/animus-runtime/src/lib.rs'
 readonly CONTRACT_DOC='docs/interrupted-tool-call-repair.md'
 
@@ -39,7 +39,7 @@ do
   fi
 done
 
-if ! grep -F 'pub mod interrupted_tool_repair {' "${RUNTIME_ROOT}" >/dev/null; then
+if ! grep -F 'pub use animus_session_core::interrupted_tool_repair;' "${RUNTIME_ROOT}" >/dev/null; then
   printf '%s\n' 'error: interrupted-tool repair public module is missing' >&2
   exit "${FAILURE}"
 fi
@@ -55,7 +55,8 @@ then
   exit "${FAILURE}"
 fi
 
-cargo test -p animus-runtime --locked session_recovery
+cargo test -p animus-session-core --locked session_recovery
+cargo test -p animus-runtime --test sessioncorefacade --locked
 cargo test -p animus-runtime --locked pi_compaction
 cargo test -p animus-runtime --locked session_persistence
 cargo test -p animus-runtime --locked composition_conformance

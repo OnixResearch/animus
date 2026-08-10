@@ -25,12 +25,14 @@ for command in cargo b3sum grep; do
 done
 
 cargo test -p animus-adapters control --locked
-cargo test -p animus-runtime control --locked
-cargo test -p animus-runtime active_turn_recovery --locked
+cargo test -p animus-session-core runstate::tests --locked
+cargo test -p animus-session-core active_turn_recovery --locked
+cargo test -p animus-runtime --test sessioncorefacade --locked
 cargo test -p animus-std-control --locked
 cargo test -p animus-std --features coding-session-host agent_control --locked
 cargo check -p animus --features agent-control --locked
 cargo check -p animus-adapters --target wasm32-unknown-unknown --locked
+cargo check -p animus-session-core --target wasm32-unknown-unknown --locked
 
 grep -F 'pub trait AgentControlWait' crates/animus-adapters/src/control.rs >/dev/null
 grep -F 'Condvar' crates/animus-std-control/src/lib.rs >/dev/null
@@ -42,10 +44,10 @@ grep -F 'animus-std-control::AgentControlHub' cairn/runtime-facade-inventory.ncl
 source_identity=$(
   b3sum \
     crates/animus-adapters/src/control.rs \
-    crates/animus-runtime/src/control.rs \
-    crates/animus-runtime/src/active_turn_recovery/core.rs \
-    crates/animus-runtime/src/active_turn_recovery/data.rs \
-    crates/animus-runtime/src/active_turn_recovery/tests.rs \
+    crates/animus-session-core/src/control.rs \
+    crates/animus-session-core/src/active_turn_recovery/core.rs \
+    crates/animus-session-core/src/active_turn_recovery/data.rs \
+    crates/animus-session-core/src/active_turn_recovery/tests.rs \
     crates/animus-runtime/src/shell/mod.rs \
     crates/animus-runtime/src/shell/runner.rs \
     crates/animus-runtime/src/shell/tests/control.rs \

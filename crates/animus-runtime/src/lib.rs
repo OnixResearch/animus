@@ -43,10 +43,10 @@ pub mod persistent_goals;
 #[path = "schedulereliability/mod.rs"]
 pub mod schedule_reliability;
 
+// r[agent_harness_runtime.session_core_crate.compatibility]
 /// Pure bounded reconnect replay over admitted session facts.
 #[cfg(feature = "session-event-replay")]
-#[path = "sessioneventreplay.rs"]
-pub mod session_event_replay;
+pub use animus_session_core::session_event_replay;
 
 /// Pure weakest-admitted execution backend selection.
 #[cfg(feature = "execution-backend-planner")]
@@ -54,7 +54,7 @@ pub mod session_event_replay;
 pub mod execution_backend_planner;
 
 /// Pure active-turn durability, transaction, recovery, and receipt contracts.
-pub mod active_turn_recovery;
+pub use animus_session_core::active_turn_recovery;
 mod admission;
 #[allow(excessive_file_length)]
 #[path = "aeneasproofcampaign.rs"]
@@ -72,32 +72,22 @@ mod background;
 mod batch;
 mod boundary;
 /// Pure bounded session branch projection, control planning, comparison, and evidence.
-pub mod branch_explorer;
-mod branching;
+pub use animus_session_core::branch_explorer;
 mod capmap;
 mod caps;
 mod checkpoint;
 /// Pure canonical conversation projection and cache reconciliation.
-#[path = "conversationprojection.rs"]
-pub mod conversation_projection;
+pub use animus_session_core::conversation_projection;
 #[path = "codingsession/mod.rs"]
 mod sessionhost;
 /// Pure coding-session lifecycle facade and effect-request state machine.
 pub mod coding_session_host {
     pub use super::sessionhost::*;
 }
-#[path = "authorityprofile/mod.rs"]
-mod sessionauthority;
-/// Pure metadata-only runtime authority profiles, durable bindings, and receipts.
-pub mod session_authority_profile {
-    pub use super::sessionauthority::*;
-}
-#[path = "authorityseal/mod.rs"]
-mod authorityseal;
 /// Pure per-dispatch runtime-authority seal contracts.
-pub mod runtime_authority_seal {
-    pub use super::authorityseal::*;
-}
+pub use animus_session_core::runtime_authority_seal;
+/// Pure metadata-only runtime authority profiles, durable bindings, and receipts.
+pub use animus_session_core::session_authority_profile;
 #[path = "composition/conformance.rs"]
 mod composition_conformance;
 mod context_layering;
@@ -126,14 +116,8 @@ pub use animus_eval_core as native_evaluation;
 pub mod harbor_eval;
 mod headless;
 mod hooks;
-#[path = "control.rs"]
-mod runstate;
-#[path = "interrupted_tool_repair/mod.rs"]
-mod session_recovery;
 /// Pure active-branch diagnosis and append-only interrupted tool-call repair.
-pub mod interrupted_tool_repair {
-    pub use super::session_recovery::*;
-}
+pub use animus_session_core::interrupted_tool_repair;
 pub mod kernel;
 mod mailbox;
 mod modelprofiles;
@@ -163,8 +147,6 @@ pub mod provider_retry {
     pub use super::resilience::*;
 }
 mod quality_records;
-#[path = "sessionexport/mod.rs"]
-mod redactedview;
 /// Pure VCS-neutral rejected-attempt admission, projection, and receipts.
 pub mod rejected_attempt;
 mod researchspec;
@@ -176,9 +158,7 @@ pub mod rlm_kernel;
 mod runtime_dag;
 mod scaffold;
 /// Pure redaction-first session-tree export contracts.
-pub mod session_tree_export {
-    pub use super::redactedview::*;
-}
+pub use animus_session_core::session_tree_export;
 #[path = "sessionstore/mod.rs"]
 mod durablelog;
 #[path = "sessionpersistence.rs"]

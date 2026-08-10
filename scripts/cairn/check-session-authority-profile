@@ -8,8 +8,8 @@ readonly RAIL_NAME='session-authority-profile'
 readonly PROFILE_SOURCE='config/session-authority-profile.ncl'
 readonly GENERATED_PROFILE='config/generated/session-authority-profile.json'
 readonly FIXTURE_ROOT='config/session-authority-profile/fixtures'
-readonly PURE_CORE='crates/animus-runtime/src/authorityprofile'
-readonly RUNTIME_TEST_FILTER='sessionauthority::tests'
+readonly PURE_CORE='crates/animus-session-core/src/authorityprofile'
+readonly CORE_TEST_FILTER='sessionauthority::tests'
 readonly SESSION_TEST_FILTER='sessionhost::tests'
 readonly HOST_TEST_FILTER='coding_session::tests'
 
@@ -62,19 +62,27 @@ if [ "${positive_count}" -eq 0 ] || [ "${negative_count}" -eq 0 ]; then
   exit "${FAILURE}"
 fi
 
-cargo test -p animus-runtime --locked -- --list > "${tmp_dir}/runtime-tests.list"
+cargo test -p animus-session-core --locked -- --list > "${tmp_dir}/core-tests.list"
 for expected_test in \
   'sessionauthority::tests::nickel_profile_matches_rust_canonical_identity' \
-  'sessionauthority::tests::every_component_class_is_reported_as_drift' \
+  'sessionauthority::tests::every_component_class_is_reported_as_drift'
+do
+  grep -F "${expected_test}" "${tmp_dir}/core-tests.list" >/dev/null || {
+    printf 'error: expected authority core test is missing: %s\n' "${expected_test}" >&2
+    exit "${FAILURE}"
+  }
+done
+cargo test -p animus-runtime --locked -- --list > "${tmp_dir}/runtime-tests.list"
+for expected_test in \
   'sessionhost::tests::explicit_authority_rebind_commits_successor_without_provider_dispatch' \
   'sessionhost::tests::resume_blocks_profile_drift_and_legacy_unbound_history_before_effects'
 do
   grep -F "${expected_test}" "${tmp_dir}/runtime-tests.list" >/dev/null || {
-    printf 'error: expected authority test is missing: %s\n' "${expected_test}" >&2
+    printf 'error: expected authority runtime test is missing: %s\n' "${expected_test}" >&2
     exit "${FAILURE}"
   }
 done
-cargo test -p animus-runtime --locked "${RUNTIME_TEST_FILTER}"
+cargo test -p animus-session-core --locked "${CORE_TEST_FILTER}"
 cargo test -p animus-runtime --locked "${SESSION_TEST_FILTER}"
 cargo test -p animus-std --locked --features coding-session-host "${HOST_TEST_FILTER}"
 cargo test -p animus-std --locked --features coding-session-host \
