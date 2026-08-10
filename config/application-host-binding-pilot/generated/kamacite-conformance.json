@@ -41,9 +41,9 @@
     "not release eligibility"
   ],
   "producer": {
-    "fixture_file_blake3": "f8fbfda873094923004b99ac1150eb4e402b49deaa866b0647bd84e758e8a0ef",
-    "revision": "c09991fa299f1f74b04d066bf31382e34108fa82",
-    "source_identity": "1290a95e48b531cc15386490844178a6ed49f25d6c1355e9a29dfea972bfcc62"
+    "fixture_file_blake3": "19576b01b17ba44a6bc96d5641a557403966bf277e9074a5ec8ba743bc4918bc",
+    "revision": "fdd4eff7180c2134a06b99c2bc78335313688e6e",
+    "source_identity": "75e686e149d9624097ee633562c6ae1529d865c51c7762f810f8d4df61f33bc7"
   },
   "schema": "kamacite.animus-application-host-binding-conformance.v1",
   "verdict": "accepted"
