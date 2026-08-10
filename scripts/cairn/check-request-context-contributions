@@ -1,0 +1,92 @@
+#!/usr/bin/env sh
+# r[verify agent_harness_runtime.request_context_contributions.verification.complete]
+# r[verify agent_harness_runtime.request_context_contributions.verification.incomplete]
+set -eu
+
+readonly FAILURE=1
+readonly RAIL_NAME='request-context-contributions'
+readonly RECEIPT_SCHEMA='animus.focused-rail-receipt.v1'
+readonly RUNTIME_SOURCE='crates/animus-runtime/src/requestcontext'
+readonly MODEL_TEST='crates/animus-runtime/src/modelprofiles/tests/positive.rs'
+readonly BOUNDARY_DOC='docs/request-context-contributions.md'
+readonly POSITIVE_FAMILIES='order,mandatory-presence,supersession,deduplication,conflict,budget,lifetime,model-binding,skill-turn,receipt'
+readonly NEGATIVE_FAMILIES='duplicate,missing-mandatory,mandatory-conflict,mandatory-budget,stale-payload,fallback-drift,stale-skill,response-barrier,retention,receipt-leak'
+
+root='.'
+if [ "${1:-}" = '--root' ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  root=$2
+fi
+cd "${root}"
+
+for command in cargo b3sum; do
+  if ! command -v "${command}" >/dev/null 2>&1; then
+    printf 'error: %s is required\n' "${command}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+for marker in \
+  'reduce_required_contributions' \
+  'advance_contribution_lifetime' \
+  'binding_from_model_invocation' \
+  'validate_model_invocation_binding' \
+  'SkillBodyService' \
+  'admit_payload_retention' \
+  'project_contribution_receipt'
+do
+  if ! grep -R -F "${marker}" "${RUNTIME_SOURCE}" "${MODEL_TEST}" >/dev/null; then
+    printf 'error: missing production marker: %s\n' "${marker}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+for marker in \
+  'Producer and authority inventory' \
+  'Autolith commit `8755dc516c9f6c1126b148d3fc426312095de871`' \
+  'no runtime dependency on Autolith' \
+  'conversation, compaction, memory, quality, and receipt sinks' \
+  'positive and negative fixture families' \
+  'production readiness'
+do
+  if ! grep -F "${marker}" "${BOUNDARY_DOC}" >/dev/null; then
+    printf 'error: missing boundary documentation marker: %s\n' "${marker}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+if grep -R -E 'std::fs|std::process|Command::new|std::env|TcpStream|UdpSocket|SystemTime::now|Instant::now' \
+  "${RUNTIME_SOURCE}" --include='*.rs' >/dev/null 2>&1
+then
+  printf '%s\n' 'error: request-context core gained ambient host authority' >&2
+  exit "${FAILURE}"
+fi
+
+cargo test -p animus-runtime request_context --locked
+cargo test -p animus-runtime \
+  modelprofiles::tests::positive::composition_preserves_mandatory_prompt_progressive_skill_and_exact_tool \
+  --locked
+
+source_hash=$(b3sum "${RUNTIME_SOURCE}/core.rs" | cut -d ' ' -f 1)
+receipt_hash=$(b3sum "${RUNTIME_SOURCE}/evidence.rs" | cut -d ' ' -f 1)
+doc_hash=$(b3sum "${BOUNDARY_DOC}" | cut -d ' ' -f 1)
+mkdir -p target/cairn/focused-rails
+receipt_path=target/cairn/focused-rails/${RAIL_NAME}.md
+cat > "${receipt_path}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+core_blake3: ${source_hash}
+receipt_core_blake3: ${receipt_hash}
+doc_blake3: ${doc_hash}
+positive_fixture_families: ${POSITIVE_FAMILIES}
+negative_fixture_families: ${NEGATIVE_FAMILIES}
+claims: pure-deterministic-reduction,mandatory-fail-closed,exact-model-binding,finite-lifetimes,skill-response-barrier,retention-denial,metadata-only-receipts
+non_claims: prompt-correctness,provider-delivery,model-compliance,skill-quality,mcp-server-trust,task-completion,production-readiness,release-eligibility
+EOF
+
+printf '%s\n' 'focused rail request-context-contributions: pass'
+printf 'receipt: %s\n' "${receipt_path}"

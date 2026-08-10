@@ -36,6 +36,8 @@ Required mode returns typed errors for missing, ambiguous, stale, untrusted, or 
 
 ## Pure composition
 
+The [request-context contribution reducer](request-context-contributions.md) runs below this composition path. It binds one selected contribution plan to the exact immutable model plan and provider request. A fallback or profile change requires full recomposition.
+
 `compose_model_invocation_plan` consumes only in-memory validated values. It reuses:
 
 - `ProviderModelCapabilityMatrix` and `ModelCapabilityNegotiationDecision`;

@@ -366,6 +366,7 @@
                 || baseName == "check-plugin-manifest-runtime-neutral"
                 || baseName == "check-preserves-boundary-schemas"
                 || baseName == "check-request-lifecycle"
+                || baseName == "check-request-context-contributions"
                 || baseName == "check-router-policy"
                 || baseName == "check-steel-runtime-policy"
                 || baseName == "check-syndicate-dataspace-isolation"
@@ -1367,6 +1368,10 @@
                 sh scripts/cairn/check-request-lifecycle --root .
                 touch "$out"
               '';
+
+          request-context-contributions = cargoCheck "animus-request-context-contributions" [ pkgs.b3sum ] ''
+            sh scripts/cairn/check-request-context-contributions --root .
+          '';
 
           runtime-facade-inventory =
             pkgs.runCommand "animus-runtime-facade-inventory"

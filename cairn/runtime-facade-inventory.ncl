@@ -2538,6 +2538,7 @@ let entry_values = [
   entry "animus-runtime::interrupted_tool_repair" "animus-runtime" runtime reusable none stable "pure active-branch tool binding diagnosis, append-only repair planning, provider gating, and metadata-only receipts",
   entry "animus-runtime::branch_explorer" "animus-runtime" runtime reusable none stable "pure bounded branch topology annotation selection comparison equivalence port and receipt contracts",
   entry "animus-runtime::conversation_projection" "animus-runtime" runtime reusable none stable "pure snapshot-first conversation projection cursor rebuild heal cache and receipt contracts",
+  entry "animus-runtime::request_context" "animus-runtime" runtime reusable none stable "pure bounded contribution reduction exact model and skill-turn binding finite lifetimes retention denial and metadata-only receipts",
   entry "animus-runtime::active_turn_recovery" "animus-runtime" runtime reusable none stable "pure durable acceptance, checkpoint replacement, steering, recovery, no-rerun, and metadata-only receipt contracts",
   entry "animus-runtime::provider_retry" "animus-runtime" runtime reusable none stable "pure bounded same-plan provider retry classification, planning, timer gating, events, and metadata-only receipts",
   entry "animus-runtime::session_tree_export" "animus-runtime" runtime reusable none stable "pure validated-metadata topology projection deterministic redacted rendering exact write evidence validation and metadata-only receipts",
