@@ -237,72 +237,104 @@ pub fn render_kamacite_binding_json(binding: &super::data::PilotApplicationHostB
 }
 
 /// Render a bounded read-only explanation for an admitted binding.
+///
+/// # Panics
+///
+/// Panics if formatting into an owned [`String`] fails.
 #[must_use]
 pub fn explain_application_host_binding(
     binding: &super::data::PilotApplicationHostBinding,
 ) -> String {
     let mut output = String::new();
-    let _ = writeln!(output, "schema={}", super::data::PILOT_EXPLANATION_SCHEMA);
-    let _ = writeln!(
-        output,
-        "projection_identity={}",
-        binding.binding_identity().hex()
+    assert!(writeln!(output, "schema={}", super::data::PILOT_EXPLANATION_SCHEMA).is_ok());
+    assert!(
+        writeln!(
+            output,
+            "projection_identity={}",
+            binding.binding_identity().hex()
+        )
+        .is_ok()
     );
-    let _ = writeln!(
-        output,
-        "application_identity={}",
-        binding.application_identity().hex()
+    assert!(
+        writeln!(
+            output,
+            "application_identity={}",
+            binding.application_identity().hex()
+        )
+        .is_ok()
     );
-    let _ = writeln!(
-        output,
-        "entrypoint_identity={}",
-        binding.entrypoint_identity().hex()
+    assert!(
+        writeln!(
+            output,
+            "entrypoint_identity={}",
+            binding.entrypoint_identity().hex()
+        )
+        .is_ok()
     );
-    let _ = writeln!(
-        output,
-        "effect_summary_identity={}",
-        binding.effect_summary_identity().hex()
+    assert!(
+        writeln!(
+            output,
+            "effect_summary_identity={}",
+            binding.effect_summary_identity().hex()
+        )
+        .is_ok()
     );
-    let _ = writeln!(
-        output,
-        "effect_classes={}",
-        binding.effect_operation_identities().len()
+    assert!(
+        writeln!(
+            output,
+            "effect_classes={}",
+            binding.effect_operation_identities().len()
+        )
+        .is_ok()
     );
-    let _ = writeln!(
-        output,
-        "host_profile_identity={}",
-        binding.host_profile_identity().hex()
+    assert!(
+        writeln!(
+            output,
+            "host_profile_identity={}",
+            binding.host_profile_identity().hex()
+        )
+        .is_ok()
     );
-    let _ = writeln!(
-        output,
-        "adapter_cohort_identity={}",
-        binding.adapter_cohort_identity().hex()
+    assert!(
+        writeln!(
+            output,
+            "adapter_cohort_identity={}",
+            binding.adapter_cohort_identity().hex()
+        )
+        .is_ok()
     );
-    let _ = writeln!(
-        output,
-        "resource_profile_identity={}",
-        binding.resource_profile_identity().hex()
+    assert!(
+        writeln!(
+            output,
+            "resource_profile_identity={}",
+            binding.resource_profile_identity().hex()
+        )
+        .is_ok()
     );
-    let _ = writeln!(output, "compatibility=exact-frozen-kamacite-cohort");
-    let _ = writeln!(output, "redaction={}", super::data::REDACTION_MARKER);
+    assert!(writeln!(output, "compatibility=exact-frozen-kamacite-cohort").is_ok());
+    assert!(writeln!(output, "redaction={}", super::data::REDACTION_MARKER).is_ok());
     for non_claim in binding.non_claims() {
-        let _ = writeln!(output, "non_claim={non_claim}");
+        assert!(writeln!(output, "non_claim={non_claim}").is_ok());
     }
-    let _ = writeln!(output, "next_check={}", super::data::NEXT_FOCUSED_CHECK);
+    assert!(writeln!(output, "next_check={}", super::data::NEXT_FOCUSED_CHECK).is_ok());
     output
 }
 
 /// Render stable issue codes for a denied binding or dispatch attempt.
+///
+/// # Panics
+///
+/// Panics if formatting into an owned [`String`] fails.
 #[must_use]
 pub fn explain_application_host_binding_error(error: &super::data::PilotError) -> String {
     let mut output = String::new();
-    let _ = writeln!(output, "schema={}", super::data::PILOT_EXPLANATION_SCHEMA);
-    let _ = writeln!(output, "status=denied");
+    assert!(writeln!(output, "schema={}", super::data::PILOT_EXPLANATION_SCHEMA).is_ok());
+    assert!(writeln!(output, "status=denied").is_ok());
     for issue in error.issues() {
-        let _ = writeln!(output, "issue={}", issue.code.as_str());
+        assert!(writeln!(output, "issue={}", issue.code.as_str()).is_ok());
     }
-    let _ = writeln!(output, "redaction={}", super::data::REDACTION_MARKER);
-    let _ = writeln!(output, "next_check={}", super::data::NEXT_FOCUSED_CHECK);
+    assert!(writeln!(output, "redaction={}", super::data::REDACTION_MARKER).is_ok());
+    assert!(writeln!(output, "next_check={}", super::data::NEXT_FOCUSED_CHECK).is_ok());
     output
 }
 
