@@ -79,6 +79,7 @@ This document explains the planned Cairn change order. The source of truth is `c
 | Session restore | `adapt-session-restore-contract` | `adapt-pi-session-tree-ledger`, `adapt-pi-headless-rpc-protocol`, `adapt-host-control-protocol` |
 | Transactional daemon handoff | `add-transactional-daemon-handoff` | `add-durable-pending-input-vault`, `adapt-session-restore-contract`, `adapt-host-control-protocol`, `extract-host-control-protocol` |
 | Revision-gated workspace edit host | `add-revision-gated-workspace-edit-host` | `add-tool-executor-kit`, `add-host-tool-executor-capability-packs`, `adapt-zerostack-hashed-edit-protocol` |
+| Concrete MCP client host | `add-concrete-mcp-client-host` | `add-request-context-and-skill-turn-lifecycle`, `add-tool-executor-kit`, `adapt-claude-code-mcp-bridge` |
 | Remote admission | `adapt-clankers-remote-admission-receipts` | `align-clash-patterns-with-ucan`, `adapt-pi-headless-rpc-protocol`, `adapt-claude-code-mcp-bridge` |
 | Host control | `adapt-host-control-protocol` | `adapt-pi-headless-rpc-protocol`, `add-ratatui-tool-host-surface`, `adapt-openai-codex-jsonl-exec-sdk`, `adapt-claude-code-headless-surfaces`, `adapt-session-restore-contract` |
 | UI/headless | `adapt-pi-runtime-event-lifecycle` | `adapt-pi-headless-rpc-protocol`, `adapt-openai-codex-jsonl-exec-sdk`, `adapt-claude-code-headless-surfaces`, `add-ratatui-tool-host-surface`, `adapt-host-control-protocol` |

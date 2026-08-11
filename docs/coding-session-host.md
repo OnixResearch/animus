@@ -32,6 +32,7 @@ Construction requires explicit provider, tool, persistence, policy, authority-en
 | Runtime observation | `RuntimeEvent`, headless event projection, observability projection, and optional Preserves envelopes | Emit one ordered provider/UI-neutral stream; session envelopes carry validated metadata only. |
 | TUI state | `animus-tui::CodingSessionRenderModel` | Reduce the shared event stream; do not mutate authoritative transcript state. |
 | Compaction | injected summarizer plus existing compaction events | Commit the summary before emitting the compaction boundary. |
+| MCP tools | separate non-default `animus-std-mcp` host plus existing MCP mapping and tool authority contracts | Supply only an already-admitted tool effect. The coding-session host does not discover, start, trust, or restart MCP servers. |
 | Product readiness | dogfood readiness and focused-rail documents | Claim only the bounded fake-backed durable rung and list omitted surfaces. |
 
 Resource discovery, slash commands, provider login, credential lookup, model catalogs, keybindings, themes, rendering, and terminal ownership remain outside the facade.

@@ -85,6 +85,14 @@ The pure core admits exact complete content, visible tagged spans, insertion bou
 
 The host does not discover roots, paths, locks, revisions, policies, or recovery actions. Its writer generation serializes Animus-owned writers only. See [revision-gated workspace edit host](revision-gated-workspace-edit-host.md).
 
+## Optional MCP standard-input client host
+
+`animus-std-mcp` is a separate crate behind the root `mcp-client-host` feature. It is absent from default dependency graphs.
+
+Its pure core validates typed configuration, lifecycle, discovery, authority, request-local instructions, protocol frames, and receipts. Its thin shell starts one caller-authorized executable directly. The shell clears the inherited environment and uses only explicit credential and working-root facts.
+
+The host supports only the MCP `2025-06-18` standard-input cohort. It does not support HTTP, SSE, shell fallback, remote catalogs, or ambient discovery. See [MCP client host](mcp-client-host.md).
+
 ## Functional core and shell
 
 Deterministic config parsing, provider selection, context planning, document/model-evidence ingest planning, observability record validation, and host adapter admission remain pure over explicit values. Filesystem opens, environment reads, process calls, transport calls, credential lookup, durable storage, terminal access, and other effects stay in thin owner shells after a plan is admitted.

@@ -1,0 +1,172 @@
+#!/usr/bin/env sh
+# r[verify agent_harness_runtime.mcp_client_host.boundary.selected]
+# r[verify agent_harness_runtime.mcp_client_host.boundary.ambient]
+# r[verify agent_harness_runtime.mcp_client_host.configuration.valid]
+# r[verify agent_harness_runtime.mcp_client_host.configuration.invalid]
+# r[verify agent_harness_runtime.mcp_client_host.lifecycle.required]
+# r[verify agent_harness_runtime.mcp_client_host.lifecycle.optional]
+# r[verify agent_harness_runtime.mcp_client_host.lifecycle.credential_drift]
+# r[verify agent_harness_runtime.mcp_client_host.lifecycle.cancelled]
+# r[verify agent_harness_runtime.mcp_client_host.discovery.valid]
+# r[verify agent_harness_runtime.mcp_client_host.discovery.invalid]
+# r[verify agent_harness_runtime.mcp_client_host.authority.allowed]
+# r[verify agent_harness_runtime.mcp_client_host.authority.denied]
+# r[verify agent_harness_runtime.mcp_client_host.context.request_local]
+# r[verify agent_harness_runtime.mcp_client_host.context.denied]
+# r[verify agent_harness_runtime.mcp_client_host.evidence.safe]
+# r[verify agent_harness_runtime.mcp_client_host.evidence.rejects]
+# r[verify agent_harness_runtime.mcp_client_host.verification.complete]
+# r[verify agent_harness_runtime.mcp_client_host.verification.incomplete]
+set -eu
+
+readonly FAILURE=1
+readonly RAIL_NAME='concrete-mcp-client-host'
+readonly RECEIPT_SCHEMA='animus.focused-rail.v1'
+readonly CRATE='crates/animus-std-mcp'
+readonly CONFIG='config/mcp-client-host.ncl'
+readonly GENERATED_CONFIG='config/generated/mcp-client-host.json'
+readonly DOC='docs/mcp-client-host.md'
+readonly PROTOCOL_REVISION='b25c0874bf0ba699a58e21ef06f659d839659de3'
+readonly PROTOCOL_SCHEMA_BLAKE3='528797f6970a8f24175daf1f994c742f2fe24f0b8230b9456885452a08132a90'
+readonly PROTOCOL_LICENSE_BLAKE3='fd12707e19e104da035c74958a676b0567b7dc2df01875ae07f058b79e59422f'
+readonly POSITIVE_FAMILIES='typed-config,initialize,complete-discovery,existing-mcp-mapping,current-authority,request-local-instructions,call,clean-teardown,forced-teardown,required-readiness,optional-visibility,packaged-stdio-smoke'
+readonly NEGATIVE_FAMILIES='unsupported-transport,missing-non-claim,zero-bound,overbound-timeout,malformed-frame,wrong-cohort,early-exit,duplicate-tool,schema-drift,partial-catalog,oversized-catalog,stale-plan,stale-generation,missing-approval,denied-capability,child-grant-expansion,mutation-conflict,credential-drift,resolver-failure,pre-cancel,active-cancel,timeout,descendant-survival,receipt-leak,context-leak,feature-leak'
+
+root='.'
+if [ "${1:-}" = '--root' ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  root=$2
+fi
+cd "${root}"
+
+for command in b3sum cargo grep nickel; do
+  if ! command -v "${command}" >/dev/null 2>&1; then
+    printf 'error: %s is required\n' "${command}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+for identity in "${PROTOCOL_REVISION}" "${PROTOCOL_SCHEMA_BLAKE3}" "${PROTOCOL_LICENSE_BLAKE3}"; do
+  if ! grep -F "${identity}" "${CONFIG}" "${DOC}" >/dev/null; then
+    printf 'error: missing reviewed protocol identity: %s\n' "${identity}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+for marker in \
+  'env_clear' \
+  'process_group' \
+  'parse_initialize_response' \
+  'validate_discovery' \
+  'plan_call' \
+  'CredentialDrifted' \
+  'ContributionTrust::Untrusted' \
+  'ReceiptLeakClass'
+do
+  if ! grep -R -F "${marker}" "${CRATE}/src" >/dev/null; then
+    printf 'error: missing MCP host implementation marker: %s\n' "${marker}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+for marker in \
+  'server_trust' \
+  'server_correctness' \
+  'tool_safety' \
+  'sandboxing' \
+  'network_isolation' \
+  'exactly_once_effects' \
+  'mcp_parity' \
+  'production_readiness' \
+  'release_eligibility'
+do
+  if ! grep -F "${marker}" "${CONFIG}" "${CRATE}/src/config.rs" >/dev/null; then
+    printf 'error: missing MCP host non-claim: %s\n' "${marker}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+if grep -R -E 'std::process|Command::new|std::env|TcpStream|UdpSocket|SystemTime::now|Instant::now' \
+  "${CRATE}/src/authority" "${CRATE}/src/config" "${CRATE}/src/context.rs" \
+  "${CRATE}/src/discovery" "${CRATE}/src/evidence.rs" "${CRATE}/src/lifecycle" \
+  "${CRATE}/src/protocol" >/dev/null 2>&1
+then
+  printf '%s\n' 'error: MCP functional core gained ambient host authority' >&2
+  exit "${FAILURE}"
+fi
+
+nickel typecheck "${CONFIG}"
+generated_projection=$(mktemp "${TMPDIR:-/tmp}/animus-mcp-config.XXXXXX")
+trap 'rm -f "${generated_projection}"' EXIT HUP INT TERM
+nickel export --format json --field mcp_client_host "${CONFIG}" > "${generated_projection}"
+diff -u "${GENERATED_CONFIG}" "${generated_projection}"
+for fixture in config/mcp-client-host/fixtures/negative-*.ncl; do
+  if nickel export --format json "${fixture}" >/dev/null 2>&1; then
+    printf 'error: negative Nickel fixture unexpectedly passed: %s\n' "${fixture}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+cargo test -p animus-std-mcp --all-targets --locked
+cargo clippy -p animus-std-mcp --all-targets --locked -- -D warnings
+cargo check -p animus --no-default-features --locked
+cargo check -p animus --no-default-features --features mcp-client-host --locked
+cargo check -p animus-runtime --target wasm32-unknown-unknown --locked
+smoke_target=target/cairn/mcp-client-smoke
+CARGO_TARGET_DIR="${smoke_target}" cargo build -p animus-std-mcp --bins --locked
+"${smoke_target}/debug/animus-mcp-client-smoke"
+
+mkdir -p target/cairn/focused-rails
+default_tree=target/cairn/focused-rails/${RAIL_NAME}-default-tree.txt
+std_tree=target/cairn/focused-rails/${RAIL_NAME}-std-tree.txt
+feature_tree=target/cairn/focused-rails/${RAIL_NAME}-feature-tree.txt
+cargo tree -p animus --locked > "${default_tree}"
+cargo tree -p animus-std --locked > "${std_tree}"
+cargo tree -p animus --no-default-features --features mcp-client-host --locked > "${feature_tree}"
+if grep -F 'animus-std-mcp' "${default_tree}" "${std_tree}" >/dev/null; then
+  printf '%s\n' 'error: MCP host leaked into a default dependency graph' >&2
+  exit "${FAILURE}"
+fi
+if ! grep -F 'animus-std-mcp' "${feature_tree}" >/dev/null; then
+  printf '%s\n' 'error: MCP root feature omitted its host crate' >&2
+  exit "${FAILURE}"
+fi
+rm -f "${default_tree}" "${std_tree}" "${feature_tree}"
+
+source_hash=$(find "${CRATE}/src" -type f -name '*.rs' -print0 \
+  | LC_ALL=C sort -z \
+  | xargs -0 b3sum \
+  | b3sum \
+  | cut -d ' ' -f 1)
+test_hash=$(find "${CRATE}/tests" -type f -name '*.rs' -print0 \
+  | LC_ALL=C sort -z \
+  | xargs -0 b3sum \
+  | b3sum \
+  | cut -d ' ' -f 1)
+config_hash=$(b3sum "${GENERATED_CONFIG}" | cut -d ' ' -f 1)
+doc_hash=$(b3sum "${DOC}" | cut -d ' ' -f 1)
+rail_script_hash=$(b3sum scripts/cairn/check-concrete-mcp-client-host | cut -d ' ' -f 1)
+receipt_path=target/cairn/focused-rails/${RAIL_NAME}.md
+cat > "${receipt_path}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+source_blake3: ${source_hash}
+test_blake3: ${test_hash}
+config_blake3: ${config_hash}
+doc_blake3: ${doc_hash}
+rail_script_blake3: ${rail_script_hash}
+protocol_revision: ${PROTOCOL_REVISION}
+protocol_schema_blake3: ${PROTOCOL_SCHEMA_BLAKE3}
+protocol_license_blake3: ${PROTOCOL_LICENSE_BLAKE3}
+positive_fixture_families: ${POSITIVE_FAMILIES}
+negative_fixture_families: ${NEGATIVE_FAMILIES}
+claims: exact-stdio-cohort,bounded-complete-discovery,current-authority-admission,request-local-untrusted-instructions,owned-teardown,metadata-only-receipts,default-dependency-isolation
+non_claims: server-trust,server-correctness,tool-safety,sandboxing,network-isolation,exactly-once-effects,full-mcp-parity,production-readiness,release-eligibility
+EOF
+
+printf '%s\n' 'focused rail concrete-mcp-client-host: pass'
+printf 'receipt: %s\n' "${receipt_path}"

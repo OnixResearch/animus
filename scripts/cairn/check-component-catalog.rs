@@ -92,6 +92,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "pending-input-vault",
     "daemon-handoff",
     "workspace-edit-host",
+    "mcp-client-host",
     "conversation-view-projection",
     "session-branch-explorer",
     "provider-retry",

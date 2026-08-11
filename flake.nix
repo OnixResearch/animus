@@ -422,6 +422,7 @@
                 || baseName == "check-pending-input-vault"
                 || baseName == "check-transactional-daemon-handoff"
                 || baseName == "check-revision-gated-workspace-edit-host"
+                || baseName == "check-concrete-mcp-client-host"
                 || baseName == "check-conversation-projection"
                 || baseName == "check-session-branch-explorer"
                 || baseName == "check-injected-services"
@@ -1056,6 +1057,14 @@
             pkgs.nickel
           ] ''
             sh scripts/cairn/check-revision-gated-workspace-edit-host --root .
+          '';
+
+          concrete-mcp-client-host = cargoCheck "animus-concrete-mcp-client-host" [
+            pkgs.b3sum
+            pkgs.clippy
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-concrete-mcp-client-host --root .
           '';
 
           conversation-projection = cargoCheck "animus-conversation-projection" [
