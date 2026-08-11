@@ -140,6 +140,12 @@ let change_entries = [
     "add-tui-session-context-status-rail",
     "add-tui-agent-control-and-queue-dashboard",
   ] ["add-tui-conversation-render-model"],
+  change "add-packaged-tui-dogfood-smoke" product_role "ui-headless" [
+    "add-tui-app-shell-and-event-loop",
+    "add-packaged-headless-dogfood-smoke",
+    "agent_harness_runtime.ratatui_tool_host.verification.closeout",
+    "agent_harness_runtime.dogfood_readiness.evidence_ladder",
+  ] ["add-tui-conversation-render-model", "add-tui-app-shell-and-event-loop"],
   change "adopt-latest-rats-image-protocol-adapters" product_role "ui-headless" [
     "add-tui-streaming-markdown-view",
     "add-tui-app-shell-and-event-loop",

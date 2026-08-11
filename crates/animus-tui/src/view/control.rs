@@ -4,9 +4,6 @@
 // All state is projected from accepted DTOs; controls issue typed commands
 // to the runtime/host without holding ambient authority.
 
-#[cfg_attr(animus_octet, allow(non_trait_imports))]
-use animus_adapters::{HostEvent, HostEventKind, HostSelector, HostSemanticStatus, HostTopologySnapshot};
-
 /// Label for the idle status state.
 const IDLE_STATUS_LABEL: &str = "idle";
 /// Label for the busy/heavy-load status.
@@ -78,11 +75,11 @@ pub struct AgentDashboardState {
     /// Active processes.
     processes: Vec<String>,
     /// Current topology snapshot for control resolution.
-    topology: Option<HostTopologySnapshot>,
+    topology: Option<animus_adapters::HostTopologySnapshot>,
     /// Current topology revision to detect stale selectors.
     topology_revision: u64,
     /// Tracked selectors that should be re-resolved on topology changes.
-    tracked_selectors: Vec<HostSelector>,
+    tracked_selectors: Vec<animus_adapters::HostSelector>,
 }
 
 impl AgentDashboardState {

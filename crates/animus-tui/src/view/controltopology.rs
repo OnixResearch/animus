@@ -26,13 +26,13 @@ impl AgentDashboardState {
 
     /// Returns the current topology snapshot, if any.
     #[must_use]
-    pub const fn topology(&self) -> Option<&HostTopologySnapshot> {
+    pub const fn topology(&self) -> Option<&animus_adapters::HostTopologySnapshot> {
         self.topology.as_ref()
     }
 
     /// Returns tracked selectors bound to the current topology.
     #[must_use]
-    pub fn tracked_selectors(&self) -> &[HostSelector] {
+    pub fn tracked_selectors(&self) -> &[animus_adapters::HostSelector] {
         self.tracked_selectors.as_slice()
     }
 
@@ -42,12 +42,13 @@ impl AgentDashboardState {
     /// from the new snapshot when the resource identity still exists.
     /// If a tracked selector's resource has been removed, it remains tracked
     /// but `check_selector_freshness` reports a mismatch on the next control.
-    pub fn apply_topology_snapshot(&mut self, snapshot: HostTopologySnapshot) {
+    pub fn apply_topology_snapshot(&mut self, snapshot: animus_adapters::HostTopologySnapshot) {
         let new_revision = snapshot.revision();
         if new_revision <= self.topology_revision && self.topology.is_some() {
             return;
         }
-        let mut resolved: Vec<HostSelector> = Vec::with_capacity(self.tracked_selectors.len());
+        let mut resolved: Vec<animus_adapters::HostSelector> =
+            Vec::with_capacity(self.tracked_selectors.len());
         for selector in self.tracked_selectors.drain(..) {
             if selector.revision() < new_revision {
                 if let Some(fresh) = find_selector_in_snapshot(&snapshot, &selector) {
@@ -68,15 +69,16 @@ impl AgentDashboardState {
     ///
     /// `AgentStatus` events update the semantic status and control availability.
     /// Other event kinds are acknowledged but don't change dashboard state.
-    pub fn handle_host_event(&mut self, event: &HostEvent) {
+    pub fn handle_host_event(&mut self, event: &animus_adapters::HostEvent) {
         match event.kind() {
-            HostEventKind::AgentStatus => {
+            animus_adapters::HostEventKind::AgentStatus => {
                 if let Some(status) = event.status() {
                     self.status = match status {
-                        HostSemanticStatus::Idle | HostSemanticStatus::Done => AgentStatus::Idle,
-                        HostSemanticStatus::Running => AgentStatus::Busy,
-                        HostSemanticStatus::Waiting => AgentStatus::Waiting,
-                        HostSemanticStatus::Failed => AgentStatus::Error,
+                        animus_adapters::HostSemanticStatus::Idle
+                        | animus_adapters::HostSemanticStatus::Done => AgentStatus::Idle,
+                        animus_adapters::HostSemanticStatus::Running => AgentStatus::Busy,
+                        animus_adapters::HostSemanticStatus::Waiting => AgentStatus::Waiting,
+                        animus_adapters::HostSemanticStatus::Failed => AgentStatus::Error,
                     };
                     match self.status {
                         AgentStatus::Idle | AgentStatus::Error => {
@@ -90,11 +92,11 @@ impl AgentDashboardState {
                     }
                 }
             }
-            HostEventKind::PaneLifecycle
-            | HostEventKind::OutputMatch
-            | HostEventKind::Cancelled
-            | HostEventKind::Timeout
-            | HostEventKind::HostError => {}
+            animus_adapters::HostEventKind::PaneLifecycle
+            | animus_adapters::HostEventKind::OutputMatch
+            | animus_adapters::HostEventKind::Cancelled
+            | animus_adapters::HostEventKind::Timeout
+            | animus_adapters::HostEventKind::HostError => {}
         }
     }
 
@@ -103,7 +105,10 @@ impl AgentDashboardState {
     /// # Errors
     ///
     /// Returns `"topology-mismatch"` when the selector revision is stale.
-    pub fn check_selector_freshness(&self, selector: &HostSelector) -> Result<(), &'static str> {
+    pub fn check_selector_freshness(
+        &self,
+        selector: &animus_adapters::HostSelector,
+    ) -> Result<(), &'static str> {
         if let Some(ref snapshot) = self.topology {
             if selector.revision() < snapshot.revision() {
                 return Err(STALE_SELECTOR_MSG);
@@ -114,7 +119,10 @@ impl AgentDashboardState {
 
     /// Re-resolves a stale selector against the current topology snapshot.
     #[must_use]
-    pub fn resolve_selector(&self, selector: &HostSelector) -> Option<HostSelector> {
+    pub fn resolve_selector(
+        &self,
+        selector: &animus_adapters::HostSelector,
+    ) -> Option<animus_adapters::HostSelector> {
         self.topology.as_ref().and_then(|snapshot| {
             if selector.revision() >= snapshot.revision() {
                 return Some(selector.clone());
@@ -151,9 +159,9 @@ pub fn append_topology_lines(dashboard: &AgentDashboardState, lines: &mut Vec<St
 
 /// Finds a matching selector in a topology snapshot by host + resource identity.
 fn find_selector_in_snapshot(
-    snapshot: &HostTopologySnapshot,
-    original: &HostSelector,
-) -> Option<HostSelector> {
+    snapshot: &animus_adapters::HostTopologySnapshot,
+    original: &animus_adapters::HostSelector,
+) -> Option<animus_adapters::HostSelector> {
     snapshot.selectors().iter().find_map(|candidate| {
         if candidate.host_id() == original.host_id()
             && candidate.resource_id() == original.resource_id()

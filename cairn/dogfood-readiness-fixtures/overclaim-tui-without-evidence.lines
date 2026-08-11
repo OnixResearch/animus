@@ -1,0 +1,15 @@
+# Negative: a TUI claim without the packaged TUI smoke evidence must fail.
+expected_issue=DOGFOOD_CLAIM_MISSING_EVIDENCE
+evidence|deterministic-fixtures
+evidence|fake-backed-integration
+evidence|packaged-headless-smoke
+claim|deterministic-fixture-checks
+claim|fake-backed-dogfood
+claim|packaged-headless-dogfood
+claim|tui-dogfood
+non_claim|live-providers
+non_claim|daemon-attach
+non_claim|plugin-runtime
+non_claim|persistent-session
+non_claim|production-readiness
+non_claim|clankers-parity

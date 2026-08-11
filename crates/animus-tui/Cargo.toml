@@ -12,9 +12,15 @@ workspace = true
 
 [features]
 default = []
+packaged-tui-dogfood-smoke = ["animus-std/dogfood-smoke", "dep:blake3", "dep:ratatui"]
 rats-widgets = ["dep:rats", "dep:rat-keymap"]
 terminal-image = ["dep:blake3", "dep:rat-image"]
 terminal-video = ["terminal-image"]
+
+[[bin]]
+name = "animus-tui-dogfood-smoke"
+path = "src/bin/animus-tui-dogfood-smoke.rs"
+required-features = ["packaged-tui-dogfood-smoke"]
 
 [dependencies]
 animus-adapters = { path = "../animus-adapters", version = "0.1.0" }
@@ -23,4 +29,5 @@ animus-std = { path = "../animus-std", version = "0.1.0" }
 blake3 = { version = "1.8.2", optional = true }
 rat-image = { package = "rat-image", git = "ssh://git@github.com/brittonr/rats.git", rev = "3b498c3d7c248c335d3e7faf12f133a18c87d632", optional = true }
 rat-keymap = { package = "rat-keymap", git = "ssh://git@github.com/brittonr/rats.git", rev = "3b498c3d7c248c335d3e7faf12f133a18c87d632", optional = true }
+ratatui = { version = "0.30.2", default-features = false, optional = true }
 rats = { package = "rat-widgets", git = "ssh://git@github.com/brittonr/rats.git", rev = "3b498c3d7c248c335d3e7faf12f133a18c87d632", default-features = false, optional = true }

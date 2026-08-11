@@ -1,0 +1,118 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+readonly SUCCESS=0
+readonly PROMPT='bounded TUI prompt fixture'
+readonly TOOL_LABEL='fake-readonly-tool'
+readonly HEADER='ANIMUS_TUI_DOGFOOD_SMOKE'
+readonly EVIDENCE_RUNG='evidence_rung=packaged-tui-test-backend'
+readonly UPSTREAM_RUNG='upstream_rung=packaged-headless-smoke'
+readonly BACKEND='backend=ratatui-test-backend'
+readonly LIVE_TERMINAL_NON_CLAIM='surface=live-terminal'
+readonly PRODUCTION_NON_CLAIM='surface=production-readiness'
+readonly TERMINAL_UNAVAILABLE='terminal-unavailable'
+readonly DENIED_CAPABILITY='denied-capability'
+readonly RECEIPT_OVERSIZED='receipt-oversized'
+readonly CLEANUP_FAILURE='cleanup-failure'
+readonly RECEIPT_DIR='target/cairn/focused-rails'
+readonly RECEIPT_NAME='packaged-tui-dogfood-smoke.md'
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+
+if [ "${1:-}" = "--root" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  repo_root=$(CDPATH= cd -- "$2" && pwd)
+fi
+
+cd "${repo_root}"
+
+run_smoke() {
+  cargo run -q -p animus-tui --features packaged-tui-dogfood-smoke \
+    --bin animus-tui-dogfood-smoke --locked -- "$@"
+}
+
+require_contains() {
+  haystack=$1
+  needle=$2
+  label=$3
+  case "${haystack}" in
+    *"${needle}"*) ;;
+    *)
+      printf 'error: missing %s marker: %s\n' "${label}" "${needle}" >&2
+      exit "${FAILURE}"
+      ;;
+  esac
+}
+
+require_omits() {
+  haystack=$1
+  needle=$2
+  label=$3
+  case "${haystack}" in
+    *"${needle}"*)
+      printf 'error: unsafe %s marker leaked: %s\n' "${label}" "${needle}" >&2
+      exit "${FAILURE}"
+      ;;
+    *) ;;
+  esac
+}
+
+expect_failure() {
+  expected=$1
+  shift
+  output=$(run_smoke "$@" 2>&1) && {
+    printf 'error: command unexpectedly passed for %s\n%s\n' "${expected}" "${output}" >&2
+    exit "${FAILURE}"
+  }
+  require_contains "${output}" "${expected}" 'negative-fixture'
+  require_omits "${output}" "${PROMPT}" 'negative-raw-prompt'
+}
+
+cargo test -q -p animus-tui --features packaged-tui-dogfood-smoke tuidogfood::tests --locked
+
+positive_output=$(run_smoke --prompt "${PROMPT}" --tool "${TOOL_LABEL}")
+require_contains "${positive_output}" "${HEADER}" 'header'
+require_contains "${positive_output}" "${EVIDENCE_RUNG}" 'evidence-rung'
+require_contains "${positive_output}" "${UPSTREAM_RUNG}" 'upstream-rung'
+require_contains "${positive_output}" "${BACKEND}" 'backend'
+require_contains "${positive_output}" "${LIVE_TERMINAL_NON_CLAIM}" 'live-terminal-non-claim'
+require_contains "${positive_output}" "${PRODUCTION_NON_CLAIM}" 'production-non-claim'
+require_omits "${positive_output}" "${PROMPT}" 'raw-prompt'
+require_omits "${positive_output}" "${TOOL_LABEL}" 'raw-tool-label'
+require_omits "${positive_output}" 'ANIMUS_DOGFOOD_SMOKE' 'headless-receipt-body'
+require_omits "${positive_output}" 'terminal: app ready' 'rendered-buffer'
+require_omits "${positive_output}" 'RAW_PROMPT' 'unsafe-label'
+
+expect_failure "${TERMINAL_UNAVAILABLE}" --terminal-unavailable
+expect_failure "${DENIED_CAPABILITY}" --prompt "${PROMPT}" --deny-capability
+expect_failure "${RECEIPT_OVERSIZED}" --prompt "${PROMPT}" --oversized-receipt
+expect_failure "${CLEANUP_FAILURE}" --prompt "${PROMPT}" --cleanup-failure
+
+mkdir -p "${RECEIPT_DIR}"
+cat > "${RECEIPT_DIR}/${RECEIPT_NAME}" <<'EOF'
+schema: animus.focused-rail.v1
+rail: packaged-tui-dogfood-smoke
+status: pass
+evidence_rung: packaged-tui-test-backend
+backend: ratatui-test-backend
+positive_fixtures:
+- accepted packaged headless smoke composed before bounded TUI projection
+- fixed Ratatui TestBackend viewport rendered safe AppShellState metadata
+negative_fixtures:
+- terminal unavailable before headless dispatch
+- denied model capability
+- oversized headless receipt
+- failed cleanup observation
+- raw prompt, tool label, headless body, and rendered buffer omission
+non_claims:
+- live terminal, raw mode, input polling, daemon attach, live provider, plugin runtime, production readiness, release readiness, and Clankers parity
+EOF
+
+printf '%s\n' 'packaged TUI dogfood smoke rail: ok'
+printf 'receipt: %s\n' "${repo_root}/${RECEIPT_DIR}/${RECEIPT_NAME}"
+exit "${SUCCESS}"

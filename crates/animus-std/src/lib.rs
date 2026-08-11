@@ -58,6 +58,7 @@ pub mod daemon_handoff_host {
 mod dataspace;
 mod document;
 #[cfg(feature = "dogfood-smoke")]
+#[path = "dogfood/smoke.rs"]
 mod dogfood_smoke;
 #[cfg(feature = "durable-session-store")]
 #[path = "sessionstore.rs"]

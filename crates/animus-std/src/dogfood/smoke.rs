@@ -88,7 +88,9 @@ fn parse_smoke_args(args: &[String]) -> Result<SmokeConfig, String> {
             ARG_TOOL => tool_metadata = Some(cursor.next_value(ARG_TOOL)?),
             ARG_MISSING_MODEL_SERVICE => model_service = DogfoodServiceState::Missing,
             ARG_DENY_CAPABILITY => deny_capability = true,
-            ARG_MALFORMED_MODEL_OUTPUT => model_response_summary = "MALFORMED".to_owned(),
+            ARG_MALFORMED_MODEL_OUTPUT => {
+                "MALFORMED".clone_into(&mut model_response_summary);
+            }
             other => return Err(format_error(ERROR_UNKNOWN_ARGUMENT, other)),
         }
     }
@@ -133,7 +135,8 @@ fn run_smoke(config: &SmokeConfig) -> Result<SmokeReport, String> {
             .map(|_| DEFAULT_TOOL_SUMMARY.to_owned()),
     };
 
-    let (events, receipt) = run_fake_dogfood_shell(&request, &services).map_err(render_issues)?;
+    let (events, receipt) =
+        run_fake_dogfood_shell(&request, &services).map_err(|report| render_issues(&report))?;
     if receipt.evidence_rung != CORE_RUNG_FAKE_BACKED {
         return Err(format_error(
             ERROR_CORE_RUNG,
@@ -170,7 +173,7 @@ fn render_report(report: &SmokeReport) -> String {
     lines.join("\n")
 }
 
-fn render_issues(report: animus_runtime::dogfood_shell::DogfoodValidationReport) -> String {
+fn render_issues(report: &animus_runtime::dogfood_shell::DogfoodValidationReport) -> String {
     let issue_codes = report
         .issues
         .iter()

@@ -8,7 +8,7 @@ mod layout_tests {
     use animus_adapters::{
         HostControlError, HostSelector, HostSelectorDraft,
         HostTopologySnapshot, HostTopologySnapshotDraft,
-        LayoutApplyRequest, LayoutNode, LayoutPaneDraft,
+        LayoutApplyRequest, LayoutAxis, LayoutNode, LayoutPaneDraft,
     };
 
     #[allow(unknown_lints, ambiguous_params)]

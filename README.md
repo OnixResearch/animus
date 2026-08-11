@@ -36,7 +36,7 @@
 - `crates/animus-adapter-daemon` is the optional no-std daemon contract boundary. It owns client, supervisor, worker, and versioned handoff ports without process, endpoint, lease, or storage authority; see [docs/daemon-workers.md](docs/daemon-workers.md) and [docs/transactional-daemon-handoff.md](docs/transactional-daemon-handoff.md).
 - `crates/animus-std-workspace-edit` is the separate non-default `AGPL-3.0-or-later` capability-relative one-file mutation host. It binds exact revision, visibility, text shape, file metadata, writer generation, publication, durability, and metadata-only evidence; see [docs/revision-gated-workspace-edit-host.md](docs/revision-gated-workspace-edit-host.md).
 - `crates/animus-std-mcp` is the separate non-default MCP `2025-06-18` standard-input client host. It uses typed Nickel configuration, complete bounded discovery, current Animus authority gates, untrusted request-local instructions, owned process teardown, and metadata-only receipts; see [docs/mcp-client-host.md](docs/mcp-client-host.md).
-- `crates/animus-tui` is the optional terminal UI host shell. It keeps Rats/Subwayrat/Ratatui-facing dependencies outside reusable core, adapter, Steel, and std runtime contracts; see [docs/ratatui-tool-host-surface.md](docs/ratatui-tool-host-surface.md) for the host bridge, [docs/terminal-image-protocols.md](docs/terminal-image-protocols.md) for bounded static images, and [docs/terminal-video-playback.md](docs/terminal-video-playback.md) for non-default playback over injected decoded frames.
+- `crates/animus-tui` is the optional terminal UI host shell. It keeps terminal dependencies outside reusable contracts. Its non-default packaged smoke composes the accepted headless path with a fixed Ratatui `TestBackend`; see [docs/tui-dogfood-smoke.md](docs/tui-dogfood-smoke.md). See [docs/ratatui-tool-host-surface.md](docs/ratatui-tool-host-surface.md) for the bridge, [docs/terminal-image-protocols.md](docs/terminal-image-protocols.md) for images, and [docs/terminal-video-playback.md](docs/terminal-video-playback.md) for playback.
 - The root `animus` package is a thin compatibility layer that re-exports the workspace crates.
 
 Embedders should depend on the smallest crate set they need: `animus-core` for pure state, `animus-adapters` for port contracts, `animus-preserves-schema` for schema metadata, `animus-preserves-adapter` for adapter-only Preserves text/binary payloads, `animus-preserves` for the broad compatibility facade and runtime-adjacent Preserves families, `animus-steel` for the main scriptable agent-loop fabric, `animus-session-core` for pure no-std session state and evidence contracts, `animus-runtime` for reusable loop orchestration over injected adapters, `animus-std` for the default compatibility host shell, `animus-std-observability` for direct deterministic std sinks, `animus-std-control` for external pause/resume and bounded event subscriptions, `animus-std-workspace-edit` for explicit capability-relative text mutation, `animus-std-mcp` for one explicitly configured MCP standard-input server, `animus-adapter-atif` for exact optional ATIF-v1.7 interchange, `animus-tui` for an optional Subwayrat-backed terminal host shell, or root `animus` for the combined compatibility surface. The root `animus` crate enables the `std` feature by default for compatibility; disable default features to select the no-std facade over `animus-core` and `animus-adapters`. Runtime configuration is parsed once at the shell boundary and stored in typed structs before being passed into the core. Component calls cross typed adapter contracts so model, tool, memory, and host integrations can be swapped without changing core logic.
@@ -224,6 +224,7 @@ scripts/cairn/check-session-branch-explorer --root .
 scripts/cairn/check-clankers-product-surfaces --root .
 scripts/cairn/check-dogfood-readiness --root .
 scripts/cairn/check-packaged-headless-dogfood-smoke --root .
+scripts/cairn/check-packaged-tui-dogfood-smoke --root .
 scripts/cairn/check-clash-ucan-authority --root .
 scripts/cairn/check-plugin-manifest-runtime-neutral --root .
 scripts/cairn/check-request-lifecycle --root .
@@ -257,6 +258,7 @@ nix build .#checks.x86_64-linux.ast-grep-agent-boundary-audits --no-link -L
 nix build .#checks.x86_64-linux.dogfood-readiness --no-link -L
 nix build .#checks.x86_64-linux.real-check-completion-host-smoke --no-link -L
 nix build .#checks.x86_64-linux.packaged-headless-dogfood-smoke --no-link -L
+nix build .#checks.x86_64-linux.packaged-tui-dogfood-smoke --no-link -L
 nix build .#checks.x86_64-linux.clash-ucan-authority --no-link -L
 nix build .#checks.x86_64-linux.neutral-ledger --no-link -L
 nix build .#checks.x86_64-linux.safe-receipts-artifacts --no-link -L

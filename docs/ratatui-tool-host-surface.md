@@ -28,4 +28,4 @@ The rail verifies that the Subwayrat dependencies are SSH-pinned in `animus-tui`
 
 ## Non-claims
 
-This surface does not dogfood a live terminal, start a daemon, implement raw-mode setup, claim production TUI readiness, replace headless/RPC protocols, or allow tools to draw directly to the terminal.
+This surface does not dogfood a live terminal. The separate [packaged TUI smoke](tui-dogfood-smoke.md) proves only a fixed Ratatui `TestBackend` path. Neither surface starts a daemon, implements raw mode, claims production readiness, replaces headless protocols, or lets tools draw directly.

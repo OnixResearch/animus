@@ -25,6 +25,8 @@ mod frontend;
 #[cfg(feature = "terminal-image")]
 mod pixel;
 mod runner;
+#[cfg(feature = "packaged-tui-dogfood-smoke")]
+mod tuidogfood;
 #[cfg(feature = "terminal-video")]
 mod video;
 mod view;
@@ -58,6 +60,8 @@ pub use runner::{
     GuardedToolRun, HostedToolOutcome, ToolHostCommandSource, ToolHostEventSink, run_guarded_tool,
     run_hosted_tool, run_simple_tool,
 };
+#[cfg(feature = "packaged-tui-dogfood-smoke")]
+pub use tuidogfood::run_packaged_tui_dogfood_smoke;
 #[cfg(feature = "terminal-video")]
 pub use video::{
     TerminalVideoAction, TerminalVideoBackendCall, TerminalVideoBackendMode,

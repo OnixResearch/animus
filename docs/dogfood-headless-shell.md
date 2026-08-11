@@ -10,7 +10,7 @@ cargo run -p animus-std --features dogfood-smoke --bin animus-dogfood-smoke -- -
 
 The output is a safe line-oriented receipt projection containing the packaged rung, core fake-backed rung, event count, BLAKE3 prompt/receipt identities, ordered event labels, and omitted-surface non-claims. It does not print the raw prompt, raw model output, raw tool body, provider payloads, credentials, private paths, or unbounded logs.
 
-This evidence proves only the packaged fake-backed request/admission/event/receipt path. It does **not** claim live-provider execution, credential discovery, network dispatch, default product tools, persistence, daemon attach, TUI dogfood, plugin runtime behavior, production readiness, or Clankers parity.
+This evidence proves only the packaged fake-backed request, admission, event, and receipt path. It does not prove the separate packaged TUI rung. It also does not prove live providers, credentials, networks, persistence, daemon attach, plugins, production readiness, or Clankers parity.
 
 Focused validation:
 
@@ -19,4 +19,4 @@ scripts/cairn/check-packaged-headless-dogfood-smoke --root .
 nix build .#checks.x86_64-linux.packaged-headless-dogfood-smoke --no-link -L
 ```
 
-Next validation rungs are optional live-provider checks, optional TUI dogfood, and current-head release evidence indexing; each requires separate receipts and non-claim review.
+The separate packaged TUI rung is documented in [tui-dogfood-smoke.md](tui-dogfood-smoke.md). Live-provider and current-head claims still need separate receipts.

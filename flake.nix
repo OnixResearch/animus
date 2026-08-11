@@ -367,6 +367,7 @@
                 || baseName == "check-current-head-release-evidence-index"
                 || baseName == "check-exec-policy"
                 || baseName == "check-packaged-headless-dogfood-smoke"
+                || baseName == "check-packaged-tui-dogfood-smoke"
                 || baseName == "check-plugin-manifest-runtime-neutral"
                 || baseName == "check-preserves-boundary-schemas"
                 || baseName == "check-request-lifecycle"
@@ -1359,6 +1360,10 @@
 
           packaged-headless-dogfood-smoke = cargoCheck "animus-packaged-headless-dogfood-smoke" [ ] ''
             sh scripts/cairn/check-packaged-headless-dogfood-smoke --root .
+          '';
+
+          packaged-tui-dogfood-smoke = cargoCheck "animus-packaged-tui-dogfood-smoke" [ ] ''
+            sh scripts/cairn/check-packaged-tui-dogfood-smoke --root .
           '';
 
           profile-retry-host-smoke = cargoCheck "animus-profile-retry-host-smoke" [ pkgs.b3sum ] ''

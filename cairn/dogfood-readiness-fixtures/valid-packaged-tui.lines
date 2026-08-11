@@ -1,0 +1,16 @@
+# Positive: packaged TestBackend TUI evidence supports only the bounded TUI claim.
+expected_issue=OK
+evidence|deterministic-fixtures
+evidence|fake-backed-integration
+evidence|packaged-headless-smoke
+evidence|tui-dogfood-smoke
+claim|deterministic-fixture-checks
+claim|fake-backed-dogfood
+claim|packaged-headless-dogfood
+claim|tui-dogfood
+non_claim|live-providers
+non_claim|daemon-attach
+non_claim|plugin-runtime
+non_claim|persistent-session
+non_claim|production-readiness
+non_claim|clankers-parity

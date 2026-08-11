@@ -3,7 +3,8 @@
 mod agent_control_tests {
     use super::*;
     use animus_adapters::{
-        HostSelectorDraft, HostTopologySnapshotDraft,
+        HostEvent, HostSelector, HostSelectorDraft, HostSemanticStatus, HostTopologySnapshot,
+        HostTopologySnapshotDraft,
     };
 
     // under the Octet excessive_file_length threshold.

@@ -2,9 +2,6 @@
 // layout DTOs. Layout types stay in the TUI crate; mismatches fail closed
 // with a typed diagnostic.
 
-#[cfg_attr(animus_octet, allow(non_trait_imports))]
-use animus_adapters::LayoutAxis;
-
 /// Typed layout diagnostic for mismatch/failure cases.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum LayoutDiagnostic {
@@ -97,7 +94,7 @@ pub enum LayoutTree {
         /// Split node identity.
         node_id: String,
         /// Split axis.
-        axis: LayoutAxis,
+        axis: animus_adapters::LayoutAxis,
         /// Child layout trees.
         children: Vec<LayoutTree>,
     },
@@ -264,8 +261,8 @@ fn render_tree_iterative(tree: &LayoutTree, lines: &mut Vec<String>) {
                 children,
             } => {
                 let axis_label = match axis {
-                    LayoutAxis::Horizontal => "horizontal",
-                    LayoutAxis::Vertical => "vertical",
+                    animus_adapters::LayoutAxis::Horizontal => "horizontal",
+                    animus_adapters::LayoutAxis::Vertical => "vertical",
                 };
                 lines.push(format!("{indent}split: {node_id} [{axis_label}]"));
                 for child in children.iter().rev() {

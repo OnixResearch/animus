@@ -485,6 +485,7 @@ dependencies = [
  "rat-image",
  "rat-keymap",
  "rat-widgets",
+ "ratatui",
 ]
 
 [[package]]
