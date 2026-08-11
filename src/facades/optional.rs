@@ -91,6 +91,10 @@ pub use animus_std::daemon_handoff_host as daemon_handoff;
 #[cfg(feature = "workspace-edit-host")]
 pub use animus_std_workspace_edit as workspace_edit;
 
+/// Non-default bounded MCP standard-input client host.
+#[cfg(feature = "mcp-client-host")]
+pub use animus_std_mcp as mcp_client;
+
 /// Re-export of the optional family-scoped messaging contracts.
 #[cfg(feature = "messaging-receipts")]
 pub use animus_adapters::messaging as messaging_receipts;
