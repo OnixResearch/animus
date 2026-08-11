@@ -132,6 +132,7 @@ dependencies = [
  "animus-std-lean-loop",
  "animus-std-openai",
  "animus-std-secretspec",
+ "animus-std-workspace-edit",
  "animus-steel",
  "animus-tui",
  "basalt",
@@ -432,6 +433,18 @@ dependencies = [
  "serde_json",
  "tempfile",
  "zeroize",
+]
+
+[[package]]
+name = "animus-std-workspace-edit"
+version = "0.1.0"
+dependencies = [
+ "animus-adapters",
+ "blake3",
+ "cap-root-core",
+ "cap-std",
+ "durable-file-publication",
+ "tempfile",
 ]
 
 [[package]]
@@ -882,6 +895,10 @@ dependencies = [
  "windows-sys 0.59.0",
  "winx",
 ]
+
+[[package]]
+name = "cap-root-core"
+version = "0.1.0"
 
 [[package]]
 name = "cap-std"
@@ -1437,6 +1454,13 @@ name = "dtoa"
 version = "0.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56899898ce76aaf4a0f24d914c97ea6ed976d42fec6ad33fcbb0a1103e07b2b0"
+
+[[package]]
+name = "durable-file-publication"
+version = "0.1.0"
+dependencies = [
+ "rustix",
+]
 
 [[package]]
 name = "dyn-clone"

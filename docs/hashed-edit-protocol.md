@@ -12,6 +12,10 @@ A request supplies the expected snapshot hash, the current host-reported snapsho
 
 `HashedEditHost` receives only a validated `HashedEditPlan`. The plan contains ordered spans and bounded replacement text, but it performs no filesystem, process, clock, environment, terminal, or persistence work. Hosts may apply the plan atomically where supported and then produce a safe receipt.
 
+## Concrete optional host
+
+The separate [revision-gated workspace edit host](revision-gated-workspace-edit-host.md) composes this reusable snapshot with exact caller visibility, a caller-opened capability root, a resource-scoped writer generation, a second read, one-file publication, and durability classification. It does not change this contract or add filesystem authority to `animus-adapters`.
+
 ## Receipts
 
 `HashedEditReceipt` records the resource class, redaction mode, omitted/relative/hash-only resource identity, before and after snapshot hashes, plan hash, selected span metadata, replacement hashes/counts, safe diagnostics, and receipt hash. Receipts do not embed raw private file bodies, absolute private paths, URLs, credentials, provider payloads, or unbounded tool output by default.

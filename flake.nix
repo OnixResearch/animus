@@ -333,6 +333,9 @@
                 || baseName == "config.toml"
                 || baseName == "secretspec.toml"
                 || baseName == "README.md"
+                || baseName == "LICENSE"
+                || baseName == "LICENSE-APACHE"
+                || baseName == "LICENSE-MIT"
                 || baseName == "check-clankers-product-surfaces"
                 || baseName == "check-dogfood-readiness"
                 || baseName == "check-durable-session-store"
@@ -418,6 +421,7 @@
                 || baseName == "check-active-turn-recovery"
                 || baseName == "check-pending-input-vault"
                 || baseName == "check-transactional-daemon-handoff"
+                || baseName == "check-revision-gated-workspace-edit-host"
                 || baseName == "check-conversation-projection"
                 || baseName == "check-session-branch-explorer"
                 || baseName == "check-injected-services"
@@ -1046,6 +1050,14 @@
             sh scripts/cairn/check-transactional-daemon-handoff --root .
           '';
 
+          revision-gated-workspace-edit-host = cargoCheck "animus-revision-gated-workspace-edit-host" [
+            pkgs.b3sum
+            pkgs.clippy
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-revision-gated-workspace-edit-host --root .
+          '';
+
           conversation-projection = cargoCheck "animus-conversation-projection" [
             pkgs.b3sum
             pkgs.clippy
@@ -1457,6 +1469,7 @@
             -p animus-runtime \
             -p animus-session-core \
             -p animus-std \
+            -p animus-std-workspace-edit \
             -p animus-tui
           '';
         }

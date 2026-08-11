@@ -68,6 +68,8 @@ The [pending-input vault](pending-input-vault.md) combines active and queued dur
 
 The [transactional daemon handoff](transactional-daemon-handoff.md) binds this host's durable session head and composer-draft identity before lease release. A replacement worker must prove those exact values before the old worker can exit. Handoff does not gain transcript, queue, provider, tool, or global-store authority from this host.
 
+The [revision-gated workspace edit host](revision-gated-workspace-edit-host.md) is a separate optional effect owner. This coding-session host does not open workspace roots or publish files. An embedder must pass an admitted edit through its existing tool, authority, approval, mutation, cancellation, deadline, and output gates before it calls the edit host. A successful edit receipt does not prove semantic correctness or authorize a later provider turn.
+
 Child-process tests prove that a committed session reopens after process exit and that an incomplete trailing transaction does not become continuation authority. These tests do not prove filesystem, kernel, device-cache, power-loss, backup, replication, encryption, or production-recovery correctness.
 
 ## Safe evidence

@@ -41,6 +41,12 @@ The non-default `SteelRlmToolAdapter` implements the generic tool port with tool
 
 A host request does not execute inside the adapter. `animus-runtime::rlm_kernel::execute_admitted_host_request` revalidates it and calls one injected `RlmKernelHostExecutor`. Tool-class requests must still route through this executor kit before concrete tool execution.
 
+## Revision-gated workspace mutation
+
+The optional [revision-gated workspace edit host](revision-gated-workspace-edit-host.md) is one possible concrete owner for an already-admitted declared-target mutation. It does not bypass this kit.
+
+The executor must first bind the exact tool, schema, request values, capability, authority, approval, mutation target, cancellation, deadline, and output policy. The edit host then performs its own root, path, visibility, revision, file-metadata, writer-generation, publication, and receipt checks. Neither admission can create the authority required by the other.
+
 ## ACP pass-through boundary
 
 The optional [ACP stdio host](acp-stdio-host.md) never executes a tool directly. It asks an injected admission service for the current policy, permission mode, authorization, capability, sandbox, authority-profile, and executor facts; an optional ACP client decision is then applied as an additional denial-only gate before the coding-session host reaches this executor kit. Tool arguments and outputs are omitted from ACP receipts and metadata updates.
@@ -56,6 +62,7 @@ scripts/cairn/check-tool-catalog --root .
 scripts/cairn/check-composition-conformance --root .
 scripts/cairn/check-adapter-conformance-index --root .
 scripts/cairn/check-component-catalog --root .
+scripts/cairn/check-revision-gated-workspace-edit-host --root .
 ```
 
 Positive fixtures cover read-only and declared-mutation fake execution. Negative fixtures cover substituted argument values, missing or unavailable executors, denied capability, schema and argument mismatch, inactive or untrusted definitions, approval and output policy denial, mutation conflict, cancellation, timeout, fallback attempts, unsafe or oversized output, unsafe references, duplicate catalog identities, and receipt leaks.

@@ -77,6 +77,14 @@ The non-default `durable-session-store` feature adds the persistence-authority b
 
 The non-default `coding-session-host` feature adds `animus_std::coding_session_host`. It composes the pure `animus_runtime::coding_session_host` reducer with explicit provider, tool, persistence, policy, cancellation, timer, summarizer, and event services. `DurableCodingSessionPersistence` adapts only the separately enabled explicit durable local store. The shell never discovers providers, tools, credentials, resources, commands, sessions, stores, or terminal behavior. A prerequisite message commit must succeed before a dependent provider or tool effect. See [coding-session host facade](coding-session-host.md).
 
+## Optional revision-gated workspace edit host
+
+`animus-std-workspace-edit` is a separate `AGPL-3.0-or-later` crate behind the root `workspace-edit-host` feature. It is not a feature of `animus-std` and is absent from default dependency graphs.
+
+The pure core admits exact complete content, visible tagged spans, insertion boundaries, text shape, freshness, publication outcomes, and metadata-only receipts. The thin shell accepts one caller-opened capability root and injected revision, writer, lifecycle, and stage-name services. It uses exact immutable Cap Root and Durable File Publication source cohorts.
+
+The host does not discover roots, paths, locks, revisions, policies, or recovery actions. Its writer generation serializes Animus-owned writers only. See [revision-gated workspace edit host](revision-gated-workspace-edit-host.md).
+
 ## Functional core and shell
 
 Deterministic config parsing, provider selection, context planning, document/model-evidence ingest planning, observability record validation, and host adapter admission remain pure over explicit values. Filesystem opens, environment reads, process calls, transport calls, credential lookup, durable storage, terminal access, and other effects stay in thin owner shells after a plan is admitted.
@@ -111,6 +119,7 @@ scripts/cairn/check-sandlock-host --root .
 scripts/cairn/check-branchfs-host
 scripts/cairn/check-durable-session-store --root .
 scripts/cairn/check-coding-session-host --root .
+scripts/cairn/check-revision-gated-workspace-edit-host --root .
 scripts/cairn/check-agent-guardrail --root .
 scripts/cairn/check-lean4-loop-fabric --root .
 scripts/cairn/check-component-catalog --root .

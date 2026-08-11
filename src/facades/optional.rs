@@ -87,6 +87,10 @@ pub use animus_adapter_daemon as daemon_workers;
 #[cfg(feature = "daemon-handoff")]
 pub use animus_std::daemon_handoff_host as daemon_handoff;
 
+/// Non-default capability-relative workspace edit host.
+#[cfg(feature = "workspace-edit-host")]
+pub use animus_std_workspace_edit as workspace_edit;
+
 /// Re-export of the optional family-scoped messaging contracts.
 #[cfg(feature = "messaging-receipts")]
 pub use animus_adapters::messaging as messaging_receipts;

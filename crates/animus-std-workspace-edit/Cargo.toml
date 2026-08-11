@@ -1,0 +1,21 @@
+[package]
+name = "animus-std-workspace-edit"
+description = "Non-default capability-relative workspace edit host for Animus."
+edition.workspace = true
+license = "AGPL-3.0-or-later"
+readme.workspace = true
+rust-version = "1.88"
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+animus-adapters = { path = "../animus-adapters", version = "0.1.0" }
+blake3 = "1.8.5"
+cap-root-core = { path = "../../vendor/cap-root-core-selected/crates/cap-root-core", version = "=0.1.0" }
+cap-std = "3.4"
+durable-file-publication = { path = "../../vendor/durable-file-publication-selected", version = "=0.1.0" }
+
+[dev-dependencies]
+tempfile = "3.20"

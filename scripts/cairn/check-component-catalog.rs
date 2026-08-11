@@ -91,6 +91,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "active-turn-recovery",
     "pending-input-vault",
     "daemon-handoff",
+    "workspace-edit-host",
     "conversation-view-projection",
     "session-branch-explorer",
     "provider-retry",

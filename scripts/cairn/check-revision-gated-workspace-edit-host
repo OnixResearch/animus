@@ -1,0 +1,216 @@
+#!/usr/bin/env sh
+# r[verify agent_harness_runtime.hashed_edit_host.boundary.selected]
+# r[verify agent_harness_runtime.hashed_edit_host.boundary.ambient]
+# r[verify agent_harness_runtime.hashed_edit_host.snapshot.valid]
+# r[verify agent_harness_runtime.hashed_edit_host.snapshot.invalid]
+# r[verify agent_harness_runtime.hashed_edit_host.visibility.allowed]
+# r[verify agent_harness_runtime.hashed_edit_host.visibility.denied]
+# r[verify agent_harness_runtime.hashed_edit_host.freshness.current]
+# r[verify agent_harness_runtime.hashed_edit_host.freshness.stale]
+# r[verify agent_harness_runtime.hashed_edit_host.publication.complete]
+# r[verify agent_harness_runtime.hashed_edit_host.publication.before]
+# r[verify agent_harness_runtime.hashed_edit_host.publication.after]
+# r[verify agent_harness_runtime.hashed_edit_host.publication.external_race]
+# r[verify agent_harness_runtime.hashed_edit_host.evidence.safe]
+# r[verify agent_harness_runtime.hashed_edit_host.evidence.rejects]
+# r[verify agent_harness_runtime.hashed_edit_host.verification.complete]
+set -eu
+
+readonly FAILURE=1
+readonly RAIL_NAME='revision-gated-workspace-edit-host'
+readonly RECEIPT_SCHEMA='animus.focused-rail.v1'
+readonly CRATE='crates/animus-std-workspace-edit'
+readonly CORE_MODEL_ENTRY="${CRATE}/src/model.rs"
+readonly CORE_MODEL_SOURCE="${CRATE}/src/model"
+readonly CORE_PLANNING_ENTRY="${CRATE}/src/planning.rs"
+readonly CORE_PLANNING_SOURCE="${CRATE}/src/planning"
+readonly HOST_ENTRY="${CRATE}/src/concrete.rs"
+readonly HOST_SOURCE="${CRATE}/src/concrete"
+readonly RECEIPT_ENTRY="${CRATE}/src/evidence.rs"
+readonly RECEIPT_SOURCE="${CRATE}/src/evidence"
+readonly BOUNDARY_DOC='docs/revision-gated-workspace-edit-host.md'
+readonly PROVENANCE='vendor/workspace-edit-mechanisms.ncl'
+readonly CAP_ROOT_REVISION='8991e2572578c16e590c2f1c0915db6c46c5d9cb'
+readonly PUBLICATION_REVISION='c57f01d9d80f27d4893961d75a31bf9c95d1f6c8'
+readonly POSITIVE_FAMILIES='visible-replace,visible-delete,visible-insert,end-insert,lf,crlf,mixed-admitted,final-newline,nested-file,root-level-file,durability-complete,visibility-only,metadata-receipt,root-facade'
+readonly NEGATIVE_FAMILIES='hidden-span,hidden-boundary,malformed-visibility,stale-content,stale-revision,stale-policy,stale-metadata,stale-writer,path-escape,wrong-root,symlink,directory,owner,mode,missing-authority,cancel,timeout,stage,collision,cleanup,rename,parent-sync,generation-overflow,release,leak,overclaim'
+
+root='.'
+if [ "${1:-}" = '--root' ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  root=$2
+fi
+cd "${root}"
+
+for command in cargo b3sum grep nickel; do
+  if ! command -v "${command}" >/dev/null 2>&1; then
+    printf 'error: %s is required\n' "${command}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+check_hash() {
+  path=$1
+  expected=$2
+  actual=$(b3sum "${path}" | cut -d ' ' -f 1)
+  if [ "${actual}" != "${expected}" ]; then
+    printf 'error: immutable source hash drifted: %s\n' "${path}" >&2
+    exit "${FAILURE}"
+  fi
+  if ! grep -F "${expected}" "${PROVENANCE}" >/dev/null; then
+    printf 'error: provenance omitted source hash: %s\n' "${path}" >&2
+    exit "${FAILURE}"
+  fi
+}
+
+source_tree_hash() {
+  find "$@" -type f -name '*.rs' -print0 \
+    | LC_ALL=C sort -z \
+    | xargs -0 b3sum \
+    | b3sum \
+    | cut -d ' ' -f 1
+}
+
+for marker in \
+  'admit_snapshot' \
+  'plan_edit' \
+  'validate_host_gates' \
+  'validate_freshness' \
+  'reduce_publication'
+do
+  if ! grep -R -F "${marker}" "${CORE_PLANNING_ENTRY}" "${CORE_PLANNING_SOURCE}" >/dev/null; then
+    printf 'error: missing pure-core marker: %s\n' "${marker}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+for marker in \
+  'WorkspaceEditHost' \
+  'acquire_writer' \
+  'BeforeSecondRead' \
+  'release_writer' \
+  'publish_capability_relative'
+do
+  if ! grep -R -F "${marker}" "${HOST_ENTRY}" "${HOST_SOURCE}" >/dev/null; then
+    printf 'error: missing host marker: %s\n' "${marker}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+for marker in \
+  'not-universal-writer-exclusion' \
+  'not-semantic-correctness' \
+  'not-root-authorization' \
+  'not-sandboxing' \
+  'not-storage-device-correctness' \
+  'not-production-readiness'
+do
+  if ! grep -R -F "${marker}" "${RECEIPT_ENTRY}" "${RECEIPT_SOURCE}" >/dev/null; then
+    printf 'error: missing receipt non-claim: %s\n' "${marker}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+for marker in \
+  'Every post-acquisition exit attempts lease release' \
+  'A complete content hash does not prove that the caller saw' \
+  'failure after rename never creates a rollback' \
+  'serializes Animus-owned writers only' \
+  'not a production or release certificate'
+do
+  if ! grep -F "${marker}" "${BOUNDARY_DOC}" >/dev/null; then
+    printf 'error: missing boundary documentation marker: %s\n' "${marker}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+if grep -R -E 'std::fs|std::process|Command::new|std::env|TcpStream|UdpSocket|SystemTime::now|Instant::now' \
+  "${CORE_MODEL_ENTRY}" "${CORE_MODEL_SOURCE}" "${CORE_PLANNING_ENTRY}" "${CORE_PLANNING_SOURCE}" \
+  "${RECEIPT_ENTRY}" "${RECEIPT_SOURCE}" >/dev/null 2>&1
+then
+  printf '%s\n' 'error: workspace-edit functional core gained ambient host authority' >&2
+  exit "${FAILURE}"
+fi
+
+if grep -R -E 'std::process|Command::new|std::env|TcpStream|UdpSocket|SystemTime::now|Instant::now' \
+  "${HOST_ENTRY}" "${HOST_SOURCE}" >/dev/null 2>&1
+then
+  printf '%s\n' 'error: workspace-edit shell gained unrelated ambient authority' >&2
+  exit "${FAILURE}"
+fi
+
+if ! grep -F "${CAP_ROOT_REVISION}" "${PROVENANCE}" >/dev/null; then
+  printf '%s\n' 'error: Cap Root revision pin drifted' >&2
+  exit "${FAILURE}"
+fi
+if ! grep -F "${PUBLICATION_REVISION}" "${PROVENANCE}" >/dev/null; then
+  printf '%s\n' 'error: Durable File Publication revision pin drifted' >&2
+  exit "${FAILURE}"
+fi
+
+check_hash vendor/cap-root-core-selected/Cargo.toml d5ad34b0be84392e2e0f8d2cbee793ece6d5d3ebe2ce4aeb7184de9d0a4686b4
+check_hash vendor/cap-root-core-selected/crates/cap-root-core/Cargo.toml 9b4df619e1593b8b156046267bf6c5056dd62909ef699eb802e49b68e213e48f
+check_hash vendor/cap-root-core-selected/crates/cap-root-core/src/lib.rs 60fbdb7eae53dff8c2c0d41bc15aa123cd3a362ec1611eb4bc892fd6be58f3cb
+check_hash vendor/cap-root-core-selected/LICENSE ca0292789c0a0ecba706f4b3f3493007a9951731c1d432c52c4aac1f1abba8ef
+check_hash vendor/durable-file-publication-selected/Cargo.toml 9f0481a101e4f9fb40037ba1769f401e085420e3309371025aa14b824bcb60ce
+check_hash vendor/durable-file-publication-selected/src/lib.rs 4bcb234a0d2ffb1c202a19ae41ef5a6b9529124abb9bbe002c2263049391d129
+check_hash vendor/durable-file-publication-selected/src/core.rs 4d040eb172f0fc518f5fa662c1ffa0e4457319921e39fb7a6c1f76d994665469
+check_hash vendor/durable-file-publication-selected/src/corpus.rs d02379677341b7408b636906c4bee4910ef3835cc81261373194ef84678b27da
+check_hash vendor/durable-file-publication-selected/src/shell.rs 3fcf209f905c47aac62c30d97e7ae0dfb276949d2eebe68b1298c76d5b0bc05e
+check_hash vendor/durable-file-publication-selected/LICENSE 7d9de1981c9bfba7919625c3c5716cb37db08ceda1b344df84253439de45c204
+check_hash vendor/durable-file-publication-selected/LICENSE-APACHE 83cb3a2fcf829b6138e095b083016c34ddcdfa07b68d38782722c14fcf85ace6
+check_hash vendor/durable-file-publication-selected/LICENSE-MIT 4832be0355265c184eb7a2fc7f24e4d22d353bca2a83f630416ea9c54f994262
+
+nickel typecheck "${PROVENANCE}"
+cargo test -p animus-std-workspace-edit --locked
+cargo clippy -p animus-std-workspace-edit --all-targets --locked -- -D warnings
+cargo check -p animus --no-default-features --locked
+cargo check -p animus --no-default-features --features workspace-edit-host --locked
+cargo check -p animus-adapters --target wasm32-unknown-unknown --locked
+
+mkdir -p target/cairn/focused-rails
+default_tree=target/cairn/focused-rails/${RAIL_NAME}-default-tree.txt
+std_tree=target/cairn/focused-rails/${RAIL_NAME}-std-tree.txt
+feature_tree=target/cairn/focused-rails/${RAIL_NAME}-feature-tree.txt
+cargo tree -p animus --locked > "${default_tree}"
+cargo tree -p animus-std --locked > "${std_tree}"
+cargo tree -p animus --no-default-features --features workspace-edit-host --locked > "${feature_tree}"
+if grep -F 'animus-std-workspace-edit' "${default_tree}" "${std_tree}" >/dev/null; then
+  printf '%s\n' 'error: workspace-edit host leaked into a default dependency graph' >&2
+  exit "${FAILURE}"
+fi
+if ! grep -F 'animus-std-workspace-edit' "${feature_tree}" >/dev/null; then
+  printf '%s\n' 'error: workspace-edit root feature omitted its host crate' >&2
+  exit "${FAILURE}"
+fi
+rm -f "${default_tree}" "${std_tree}" "${feature_tree}"
+
+core_hash=$(source_tree_hash \
+  "${CORE_MODEL_ENTRY}" "${CORE_MODEL_SOURCE}" "${CORE_PLANNING_ENTRY}" "${CORE_PLANNING_SOURCE}")
+host_hash=$(source_tree_hash "${HOST_ENTRY}" "${HOST_SOURCE}")
+receipt_hash=$(source_tree_hash "${RECEIPT_ENTRY}" "${RECEIPT_SOURCE}")
+doc_hash=$(b3sum "${BOUNDARY_DOC}" | cut -d ' ' -f 1)
+provenance_hash=$(b3sum "${PROVENANCE}" | cut -d ' ' -f 1)
+receipt_path=target/cairn/focused-rails/${RAIL_NAME}.md
+cat > "${receipt_path}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+core_blake3: ${core_hash}
+host_blake3: ${host_hash}
+receipt_blake3: ${receipt_hash}
+doc_blake3: ${doc_hash}
+provenance_blake3: ${provenance_hash}
+cap_root_revision: ${CAP_ROOT_REVISION}
+publication_revision: ${PUBLICATION_REVISION}
+positive_fixture_families: ${POSITIVE_FAMILIES}
+negative_fixture_families: ${NEGATIVE_FAMILIES}
+claims: capability-relative-one-file-edit,exact-snapshot-and-visibility,second-read-freshness,animus-writer-serialization,publication-durability-separation,metadata-only-receipts,default-dependency-isolation
+non_claims: universal-writer-exclusion,semantic-correctness,root-authorization,sandboxing,storage-device-correctness,vcs-consistency,multi-file-atomicity,production-readiness,release-eligibility
+EOF
+
+printf '%s\n' 'focused rail revision-gated-workspace-edit-host: pass'
+printf 'receipt: %s\n' "${receipt_path}"
