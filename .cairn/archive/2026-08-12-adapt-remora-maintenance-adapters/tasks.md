@@ -29,5 +29,5 @@
 
 ## Phase 6: Closeout
 
-- [ ] [depends:agent_harness_runtime.remora_adapters.verification] D1 Add and run `scripts/cairn/check-remora-adapter-families --root .` plus focused Rust, formatting, Clippy, Wasm, facade, component, Cairn, and Nix checks. r[agent_harness_runtime.remora_adapters.verification]
-- [ ] [depends:agent_harness_runtime.remora_adapters.verification] D2 Review sync and archive plans, make sure that accepted requirements contain every new ID, archive the completed change, and record exact evidence and non-claims. r[agent_harness_runtime.remora_adapters.verification]
+- [x] [depends:agent_harness_runtime.remora_adapters.verification] D1 Add and run `scripts/cairn/check-remora-adapter-families --root .` plus focused Rust, formatting, Clippy, Wasm, facade, component, Cairn, and Nix checks. r[agent_harness_runtime.remora_adapters.verification]
+- [x] [depends:agent_harness_runtime.remora_adapters.verification] D2 Review sync and archive plans, make sure that accepted requirements contain every new ID, archive the completed change, and record exact evidence and non-claims. r[agent_harness_runtime.remora_adapters.verification]
