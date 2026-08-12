@@ -6,9 +6,9 @@ Animus uses native Cairn artifacts as durable lifecycle evidence.
 
 | Path | Meaning |
 | --- | --- |
-| `cairn/specs/` | Accepted requirements baseline. Review this tree to understand current lifecycle commitments. |
-| `cairn/changes/` | Active change packages. Each package should contain `proposal.md`, `design.md`, `tasks.md`, and spec deltas when behavior or contracts change. |
-| `cairn/archive/` | Completed lifecycle history. Archive packages only after accepted specs are synced or manually repaired with evidence. |
+| `.cairn/specs/` | Accepted requirements baseline. Review this tree to understand current lifecycle commitments. |
+| `.cairn/changes/` | Active change packages. Each package should contain `proposal.md`, `design.md`, `tasks.md`, and spec deltas when behavior or contracts change. |
+| `.cairn/archive/` | Completed lifecycle history. Archive packages only after accepted specs are synced or manually repaired with evidence. |
 
 ## When a Cairn change is required
 

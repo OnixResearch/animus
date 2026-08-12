@@ -3,9 +3,9 @@
 set -eu
 
 readonly FAILURE=1
-readonly CATALOG_RELATIVE_PATH=cairn/component-catalog.ncl
+readonly CATALOG_RELATIVE_PATH=.cairn/component-catalog.ncl
 readonly DOCS_RELATIVE_PATH=docs/component-catalog.md
-readonly FIXTURE_DIR=cairn/component-catalog-fixtures
+readonly FIXTURE_DIR=.cairn/component-catalog-fixtures
 readonly COMPONENT_LINES_FIELD=component_lines
 readonly DOCS_FIELD=docs_markdown
 readonly EXPECTED_FIELD=expected_issue

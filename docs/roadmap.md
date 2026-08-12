@@ -1,6 +1,6 @@
 # Animus Cairn roadmap
 
-This document explains the planned Cairn change order. The source of truth is `cairn/roadmap.ncl`; `scripts/cairn/check-roadmap` validates that every active change is classified exactly once, prerequisite references are known, dependency cycles are absent, and product surfaces do not bypass foundational safety contracts. The checker also emits safe DAG explanations: deterministic active-change topological batches, active prerequisite blockers, cycle paths, product-safety marker paths, and a bounded review-projection marker.
+This document explains the planned Cairn change order. The source of truth is `.cairn/roadmap.ncl`; `scripts/cairn/check-roadmap` validates that every active change is classified exactly once, prerequisite references are known, dependency cycles are absent, and product surfaces do not bypass foundational safety contracts. The checker also emits safe DAG explanations: deterministic active-change topological batches, active prerequisite blockers, cycle paths, product-safety marker paths, and a bounded review-projection marker.
 
 ## Roles
 

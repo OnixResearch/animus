@@ -2,7 +2,7 @@
 set -eu
 
 readonly FAILURE=1
-readonly FIXTURE_DIR=cairn/runtime-kernel-split-fixtures
+readonly FIXTURE_DIR=.cairn/runtime-kernel-split-fixtures
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)

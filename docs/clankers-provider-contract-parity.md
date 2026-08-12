@@ -8,7 +8,7 @@ Reference material inspected in the sibling Clankers repo:
 
 - `docs/src/reference/provider-contracts.md`: required shared `CompletionRequest` fields, constructor inventory, shared-field serde parity, provider-native message conversion, stream parser entrypoint tests, and fail-closed provider-prefix checks.
 - `AGENTS.md` provider notes: `extra_params`/`_session_id` drift risks, constructor-count inventory, provider-vs-router shared-field projection, explicit literal fixtures, and raw SSE parser-entrypoint coverage.
-- `cairn/archive/1970-01-01-decouple-current-coupling-hotspots/evidence/provider-router-boundary-rails.md`: evidence pattern for request-shape, provider-native message JSON, and known-prefix fail-closed tests.
+- `.cairn/archive/1970-01-01-decouple-current-coupling-hotspots/evidence/provider-router-boundary-rails.md`: evidence pattern for request-shape, provider-native message JSON, and known-prefix fail-closed tests.
 
 ## Activation rule
 
@@ -23,7 +23,7 @@ Until live provider/router DTOs exist, provider registry work stays shell-owned 
 
 ## Current provider projection conformance rails
 
-The reusable fixture harness lives in `crates/animus-adapters/src/model/provider_conformance.rs` and is indexed by `cairn/provider-projection-conformance-index.ncl`. It covers OpenAI Responses, OpenAI-compatible chat/local HTTP, Anthropic Messages, and deterministic mock families with literal request projection fixtures, lossy projection rejection, provider-native response normalization, response leak sentinels, and streaming parser-entrypoint fixtures.
+The reusable fixture harness lives in `crates/animus-adapters/src/model/provider_conformance.rs` and is indexed by `.cairn/provider-projection-conformance-index.ncl`. It covers OpenAI Responses, OpenAI-compatible chat/local HTTP, Anthropic Messages, and deterministic mock families with literal request projection fixtures, lossy projection rejection, provider-native response normalization, response leak sentinels, and streaming parser-entrypoint fixtures.
 
 Expected request payloads are reviewed literal fixture strings, including ordered roles, text/image content, tool declarations, structured-output intent, reasoning controls, streaming intent, and safe provenance metadata. Response fixtures normalize assistant text, structured payloads, tool calls, refusals, safety blocks, malformed-output diagnostics, usage, and finish reasons into `CanonicalModelResponseEnvelope`. Hidden reasoning, credentials, raw provider payloads, missing finish reasons, malformed usage, impossible response combinations, truncated streams, streams without terminals, and out-of-order terminal events fail closed.
 

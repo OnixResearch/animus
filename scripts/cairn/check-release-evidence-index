@@ -2,8 +2,8 @@
 set -eu
 
 readonly FAILURE=1
-readonly SCHEMA_RELATIVE_PATH=cairn/release-evidence-index-schema.ncl
-readonly FIXTURE_DIR=cairn/release-evidence-index-fixtures
+readonly SCHEMA_RELATIVE_PATH=.cairn/release-evidence-index-schema.ncl
+readonly FIXTURE_DIR=.cairn/release-evidence-index-fixtures
 readonly SAMPLE_FIELD=sample_index_lines
 readonly INDEX_FIELD=index_lines
 readonly EXPECTED_FIELD=expected_issue

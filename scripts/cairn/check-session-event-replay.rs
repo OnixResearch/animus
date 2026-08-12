@@ -10,8 +10,8 @@ const REQUIRED_FILES: [&str; 8] = [
     "config/session-event-replay-policy.ncl",
     "config/generated/session-event-replay-policy.json",
     "docs/session-event-replay.md",
-    "cairn/component-catalog.ncl",
-    "cairn/runtime-facade-inventory.ncl",
+    ".cairn/component-catalog.ncl",
+    ".cairn/runtime-facade-inventory.ncl",
     "fixtures/session-event-replay/positive.ncl",
     "fixtures/session-event-replay/negative.ncl",
 ];
@@ -79,8 +79,8 @@ fn read_inputs(root: &Path) -> Result<Inputs, String> {
         policy: read("config/session-event-replay-policy.ncl")?,
         readme: read("README.md")?,
         docs: read("docs/session-event-replay.md")?,
-        catalog: read("cairn/component-catalog.ncl")?,
-        inventory: read("cairn/runtime-facade-inventory.ncl")?,
+        catalog: read(".cairn/component-catalog.ncl")?,
+        inventory: read(".cairn/runtime-facade-inventory.ncl")?,
     })
 }
 

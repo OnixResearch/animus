@@ -21,8 +21,12 @@
       url = "git+ssh://git@github.com/OnixResearch/basalt.git?rev=e9891e32dcdf655c6e12d0bea2a420f7cdca31c7";
       flake = false;
     };
+    artifact = {
+      url = "git+ssh://git@github.com/OnixResearch/onix-artifact.git?rev=e41340bec587b6d049b5cc518ec7db925dde84be";
+      flake = false;
+    };
     cairn = {
-      url = "git+ssh://git@github.com/OnixResearch/cairn.git?rev=cf5c4a5c10361ca20a13addf14954407d6857028";
+      url = "git+ssh://git@github.com/OnixResearch/cairn.git?rev=695124d459574ba7aeba6097310d237f393c243c";
       flake = false;
     };
     trellis = {
@@ -57,6 +61,7 @@
       host-control,
       rats,
       basalt,
+      artifact,
       cairn,
       trellis,
       ucan,
@@ -513,6 +518,8 @@
                 host-control
               else if args.url == "ssh://git@github.com/OnixResearch/basalt.git" then
                 basalt
+              else if args.url == "ssh://git@github.com/OnixResearch/onix-artifact.git" then
+                artifact
               else if args.url == "ssh://git@github.com/OnixResearch/cairn.git" then
                 cairn
               else if args.url == "ssh://git@github.com/OnixResearch/trellis.git" then
@@ -543,6 +550,13 @@
               deps = importCargoLock {
                 lockFileContents = cargoLockContentsFor (pkgs.lib.hasInfix "/basalt.git");
                 outputHashes."basalt-0.1.0" = "sha256-TtKH39yQ+adQdfu3wvh3n2D5DTaJjQ6rBcIAWD140EE=";
+              };
+            }
+            {
+              name = "artifact";
+              deps = importCargoLock {
+                lockFileContents = cargoLockContentsFor (pkgs.lib.hasInfix "/onix-artifact.git");
+                outputHashes."artifact-auth-core-0.1.0" = "sha256-2cM912L2YXVnVX9LquwhAPKyjPP/z/oFQRe7Qq9bHHE=";
               };
             }
             {

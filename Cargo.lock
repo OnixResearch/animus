@@ -578,6 +578,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f02882884d3e1bc524fb12c79f107f6ad0e1cfd498c536ffb494301740995dfe"
 
 [[package]]
+name = "artifact-auth-core"
+version = "0.1.0"
+source = "git+ssh://git@github.com/OnixResearch/onix-artifact.git?rev=e41340bec587b6d049b5cc518ec7db925dde84be#e41340bec587b6d049b5cc518ec7db925dde84be"
+dependencies = [
+ "blake3",
+]
+
+[[package]]
 name = "asn1-rs"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -884,13 +892,15 @@ checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
 [[package]]
 name = "cairn-core"
 version = "0.1.0"
-source = "git+ssh://git@github.com/OnixResearch/cairn.git?rev=cf5c4a5c10361ca20a13addf14954407d6857028#cf5c4a5c10361ca20a13addf14954407d6857028"
+source = "git+ssh://git@github.com/OnixResearch/cairn.git?rev=695124d459574ba7aeba6097310d237f393c243c#695124d459574ba7aeba6097310d237f393c243c"
 dependencies = [
+ "artifact-auth-core",
  "blake3",
  "iddqd",
  "preserves",
  "serde",
  "serde_json",
+ "thiserror 2.0.18",
 ]
 
 [[package]]
@@ -4331,7 +4341,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.4.3",
+ "getrandom 0.3.4",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",

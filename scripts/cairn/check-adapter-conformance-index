@@ -2,9 +2,9 @@
 set -eu
 
 readonly FAILURE=1
-readonly MANIFEST_RELATIVE_PATH=cairn/adapter-conformance-index.ncl
+readonly MANIFEST_RELATIVE_PATH=.cairn/adapter-conformance-index.ncl
 readonly CONTRACTS_INDEX_RELATIVE_PATH=docs/contracts-index.md
-readonly FIXTURE_DIR=cairn/adapter-conformance-index-fixtures
+readonly FIXTURE_DIR=.cairn/adapter-conformance-index-fixtures
 readonly FAMILY_FIELD=family_lines
 readonly CASE_FIELD=case_lines
 readonly EXPECTED_FIELD=expected_issue

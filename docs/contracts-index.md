@@ -9,7 +9,7 @@ scripts/cairn/check-adapter-conformance-index --root .
 nix build .#checks.x86_64-linux.adapter-conformance-index --no-link -L
 ```
 
-The high-level component map is generated from `cairn/component-catalog.ncl` into [component-catalog.md](component-catalog.md). Use that catalog to choose the smallest reusable contract, host-injection surface, shell adapter, optional bridge, runtime prelude, or feature facade before consulting the family details below.
+The high-level component map is generated from `.cairn/component-catalog.ncl` into [component-catalog.md](component-catalog.md). Use that catalog to choose the smallest reusable contract, host-injection surface, shell adapter, optional bridge, runtime prelude, or feature facade before consulting the family details below.
 
 ## Maintained families
 
@@ -68,7 +68,7 @@ The high-level component map is generated from `cairn/component-catalog.ncl` int
 
 ## Conformance matrix
 
-Every maintained family declares all required matrix cases in `cairn/adapter-conformance-index.ncl`. Provider projection subcases are recorded separately in `cairn/provider-projection-conformance-index.ncl` so provider/API-style coverage can distinguish covered, unsupported, and not-applicable cases with explicit reasons. A case is either `covered` with a positive or negative evidence label, `unsupported` with a safe reason in the provider projection index, or `not-applicable` with a safe reason. Missing negative coverage without a reason fails the rail.
+Every maintained family declares all required matrix cases in `.cairn/adapter-conformance-index.ncl`. Provider projection subcases are recorded separately in `.cairn/provider-projection-conformance-index.ncl` so provider/API-style coverage can distinguish covered, unsupported, and not-applicable cases with explicit reasons. A case is either `covered` with a positive or negative evidence label, `unsupported` with a safe reason in the provider projection index, or `not-applicable` with a safe reason. Missing negative coverage without a reason fails the rail.
 
 | Case | Required expectation |
 | --- | --- |

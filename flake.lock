@@ -1,5 +1,22 @@
 {
   "nodes": {
+    "artifact": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1785024816,
+        "narHash": "sha256-2cM912L2YXVnVX9LquwhAPKyjPP/z/oFQRe7Qq9bHHE=",
+        "ref": "refs/heads/main",
+        "rev": "e41340bec587b6d049b5cc518ec7db925dde84be",
+        "revCount": 13,
+        "type": "git",
+        "url": "ssh://git@github.com/OnixResearch/onix-artifact.git"
+      },
+      "original": {
+        "rev": "e41340bec587b6d049b5cc518ec7db925dde84be",
+        "type": "git",
+        "url": "ssh://git@github.com/OnixResearch/onix-artifact.git"
+      }
+    },
     "basalt": {
       "flake": false,
       "locked": {
@@ -37,16 +54,16 @@
     "cairn": {
       "flake": false,
       "locked": {
-        "lastModified": 1784081486,
-        "narHash": "sha256-tsvkXn/jxcRi9HWSAiV/3GdB/LbxMrNBkLJvRQ+2Mvo=",
+        "lastModified": 1786223974,
+        "narHash": "sha256-OKzh+0SPDKBS8Jr6icvTxuAmTZ79v6Lm6wmgQ6vaY/o=",
         "ref": "refs/heads/main",
-        "rev": "cf5c4a5c10361ca20a13addf14954407d6857028",
-        "revCount": 271,
+        "rev": "695124d459574ba7aeba6097310d237f393c243c",
+        "revCount": 395,
         "type": "git",
         "url": "ssh://git@github.com/OnixResearch/cairn.git"
       },
       "original": {
-        "rev": "cf5c4a5c10361ca20a13addf14954407d6857028",
+        "rev": "695124d459574ba7aeba6097310d237f393c243c",
         "type": "git",
         "url": "ssh://git@github.com/OnixResearch/cairn.git"
       }
@@ -572,6 +589,7 @@
     },
     "root": {
       "inputs": {
+        "artifact": "artifact",
         "basalt": "basalt",
         "bounded-exec": "bounded-exec",
         "cairn": "cairn",

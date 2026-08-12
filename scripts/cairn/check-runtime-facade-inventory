@@ -2,8 +2,8 @@
 set -eu
 
 readonly FAILURE=1
-readonly INVENTORY_RELATIVE_PATH=cairn/runtime-facade-inventory.ncl
-readonly FIXTURE_DIR=cairn/runtime-facade-inventory-fixtures
+readonly INVENTORY_RELATIVE_PATH=.cairn/runtime-facade-inventory.ncl
+readonly FIXTURE_DIR=.cairn/runtime-facade-inventory-fixtures
 readonly INVENTORY_FIELD=inventory_lines
 readonly PUBLIC_EXPORTS_FIELD=public_export_lines
 readonly EXPECTED_FIELD=expected_issue

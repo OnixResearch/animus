@@ -17,8 +17,8 @@ Animus is structured around a functional-core / imperative-shell (FCIS) split. T
 - The root `animus` package is a thin compatibility layer. It must not accumulate non-trivial business logic.
 - `docs/request-lifecycle.md` is the maintained ownership map for runtime input, core state, Steel decisions, adapter dispatch, status decisions, reports, receipts, and future ledger seams.
 - `docs/status-authority.md` owns semantic agent status precedence: host integrations provide typed observations, while reusable runtime selection remains pure and presentation metadata stays visual-only.
-- `docs/runtime-facade-inventory.md` and `cairn/runtime-facade-inventory.ncl` classify runtime-facing public exports as reusable contracts, host-injection surfaces, or shell adapters.
-- `docs/component-catalog.md` and `cairn/component-catalog.ncl` map component ids to owners, feature gates, authority posture, dependency links, capability families, and focused checks.
+- `docs/runtime-facade-inventory.md` and `.cairn/runtime-facade-inventory.ncl` classify runtime-facing public exports as reusable contracts, host-injection surfaces, or shell adapters.
+- `docs/component-catalog.md` and `.cairn/component-catalog.ncl` map component ids to owners, feature gates, authority posture, dependency links, capability families, and focused checks.
 - Shell-owned runtime inputs must not leak into exported core state types. Component implementations must be reached through adapter contracts rather than direct cross-crate coupling. Serialized boundary payloads and Steel loop decisions must revalidate through adapter DTO constructors after decoding/evaluation. Multimodal image inputs use `animus-adapters` DTOs for safe labels, media type, byte count, BLAKE3 identity, source trust, provider capability gates, injected image-service handles, provider-native fixtures, and safe image receipts; raw image bytes, base64/data URLs, private paths, credentials, provider payloads, and image loading/transcoding authority remain host/provider-owned.
 
 ## Autonomous-gate boundary

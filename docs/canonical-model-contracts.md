@@ -18,7 +18,7 @@ Requests also carry tool declarations, response-format intent, output controls, 
 
 ## Provider projection conformance
 
-Claimed provider/API-style projections use `ProviderProjectionFamily`, `ProviderProjectionSupport`, `project_model_provider_request_fixture`, `normalize_model_provider_response_fixture`, `assert_model_provider_stream_fixture`, and `validate_model_provider_projection_index`. The conformance index is `cairn/provider-projection-conformance-index.ncl`. Literal fixtures prove canonical roles, content parts, tool declarations, structured-output intent, reasoning controls, stream options, and safe provenance survive provider-family projection without generating expected payloads from the builder under test.
+Claimed provider/API-style projections use `ProviderProjectionFamily`, `ProviderProjectionSupport`, `project_model_provider_request_fixture`, `normalize_model_provider_response_fixture`, `assert_model_provider_stream_fixture`, and `validate_model_provider_projection_index`. The conformance index is `.cairn/provider-projection-conformance-index.ncl`. Literal fixtures prove canonical roles, content parts, tool declarations, structured-output intent, reasoning controls, stream options, and safe provenance survive provider-family projection without generating expected payloads from the builder under test.
 
 ## Verification
 

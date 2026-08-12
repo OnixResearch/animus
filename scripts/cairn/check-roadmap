@@ -31,9 +31,9 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 
-roadmap_source=${repo_root}/cairn/roadmap.ncl
-fixture_dir=${repo_root}/cairn/roadmap-fixtures
-positive_fixture_dir=${repo_root}/cairn/roadmap-positive-fixtures
+roadmap_source=${repo_root}/.cairn/roadmap.ncl
+fixture_dir=${repo_root}/.cairn/roadmap-fixtures
+positive_fixture_dir=${repo_root}/.cairn/roadmap-positive-fixtures
 rust_source=${script_dir}/check-roadmap.rs
 
 if ! command -v nickel >/dev/null 2>&1; then

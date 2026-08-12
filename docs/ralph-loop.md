@@ -16,8 +16,8 @@ The script calls the model with compact Ralph instructions and the runtime input
 Animus does not use a root `specs/` directory or root `IMPLEMENTATION_PLAN.md` as its durable Ralph state. The native Cairn lifecycle owns that role:
 
 - `AGENTS.md` is the compact operational guide loaded by agents.
-- `cairn/specs/agent-harness-runtime/spec.md` is the accepted requirement surface.
-- `cairn/changes/<slug>/proposal.md`, `design.md`, `specs/**/spec.md`, and `tasks.md` are the active planning and implementation state.
+- `.cairn/specs/agent-harness-runtime/spec.md` is the accepted requirement surface.
+- `.cairn/changes/<slug>/proposal.md`, `design.md`, `specs/**/spec.md`, and `tasks.md` are the active planning and implementation state.
 - `scripts/ralph-drain-cairns.scm` emits bounded prompts for one Animus lifecycle; its explicit `--run` mode is an operator-owned process effect.
 - `../ralph-drain-stack.scm` is the workspace-local temporary Pi-hosted supervisor for selected sibling native Cairn repositories; it is not packaged by Animus, plan mode is effect-free, and run mode is explicit.
 

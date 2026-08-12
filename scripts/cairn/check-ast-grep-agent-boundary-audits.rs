@@ -210,7 +210,7 @@ fn validate_tool_identity(config: &Config) -> ValidationResult {
 }
 
 fn validate_profile_source(config: &Config) -> ValidationResult {
-    let source = read_required(config, "cairn/ast-grep-agent-boundary-audits.ncl")?;
+    let source = read_required(config, ".cairn/ast-grep-agent-boundary-audits.ncl")?;
     let mut errors = Vec::new();
 
     for profile in PROFILES {
@@ -235,7 +235,7 @@ fn validate_profile_source(config: &Config) -> ValidationResult {
     }
     require_contains(
         &source,
-        "BLAKE3 over cairn/ast-grep-agent-boundary-rules/*.yml",
+        "BLAKE3 over .cairn/ast-grep-agent-boundary-rules/*.yml",
         "AST_GREP_AUDIT_MISSING_BUNDLE_SCHEMA",
         &mut errors,
     );
@@ -252,7 +252,7 @@ fn validate_profile_source(config: &Config) -> ValidationResult {
 fn validate_rule_files(config: &Config) -> ValidationResult {
     let mut errors = Vec::new();
     for rule in RULES {
-        let relative = format!("cairn/ast-grep-agent-boundary-rules/{}.yml", rule.id);
+        let relative = format!(".cairn/ast-grep-agent-boundary-rules/{}.yml", rule.id);
         match read_required(config, &relative) {
             Ok(text) => {
                 require_contains(
@@ -291,7 +291,7 @@ fn validate_fixtures(config: &Config) -> ValidationResult {
     let mut errors = Vec::new();
     let positive = match read_required(
         config,
-        "cairn/ast-grep-agent-boundary-fixtures/positive-boundary-violations.rs",
+        ".cairn/ast-grep-agent-boundary-fixtures/positive-boundary-violations.rs",
     ) {
         Ok(text) => text,
         Err(error) => return Err(error),
@@ -305,7 +305,7 @@ fn validate_fixtures(config: &Config) -> ValidationResult {
             &mut errors,
         );
         let negative_path = format!(
-            "cairn/ast-grep-agent-boundary-fixtures/{}",
+            ".cairn/ast-grep-agent-boundary-fixtures/{}",
             rule.negative_fixture
         );
         match read_required(config, &negative_path) {

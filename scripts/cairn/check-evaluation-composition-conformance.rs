@@ -61,8 +61,8 @@ fn validate_repository(root: &Path) -> Result<(), String> {
     validate_fixture_inventory(&positive, &negative)?;
     for path in [
         "docs/evaluation-composition-conformance.md",
-        "cairn/component-catalog.ncl",
-        "cairn/runtime-facade-inventory.ncl",
+        ".cairn/component-catalog.ncl",
+        ".cairn/runtime-facade-inventory.ncl",
         "docs/contracts-index.md",
         "docs/focused-verification-rails.md",
         "docs/request-lifecycle.md",

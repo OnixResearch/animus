@@ -319,7 +319,7 @@ fn parse_args(mut args: impl Iterator<Item = String>) -> Result<Config, String> 
         }
     }
 
-    let catalog = catalog.unwrap_or_else(|| root.join("cairn/component-catalog.ncl.lines"));
+    let catalog = catalog.unwrap_or_else(|| root.join(".cairn/component-catalog.ncl.lines"));
     Ok(Config {
         root,
         catalog,
@@ -596,7 +596,7 @@ fn detect_cycle<'a>(
 fn render_docs(entries: &[ComponentEntry]) -> String {
     let mut text = String::new();
     text.push_str("# Component catalog\n\n");
-    text.push_str("This projection is generated from `cairn/component-catalog.ncl`. Do not edit catalog rows by hand; update the Nickel source and run `scripts/cairn/check-component-catalog --root .`.\n\n");
+    text.push_str("This projection is generated from `.cairn/component-catalog.ncl`. Do not edit catalog rows by hand; update the Nickel source and run `scripts/cairn/check-component-catalog --root .`.\n\n");
     text.push_str("The catalog names Lego-style Animus components, the smallest public import surface, authority posture, dependency links, capability family, and focused validation rail. It is metadata evidence only: it does not claim provider, filesystem, process, network, terminal, credential, persistence, production, or live-service readiness unless a row explicitly classifies that authority as shell-owned or injected.\n\n");
     text.push_str("| Component | Class | Owner | Feature gate | Authority | Family | Focused checks | Smallest import |\n");
     text.push_str("| --- | --- | --- | --- | --- | --- | --- | --- |\n");

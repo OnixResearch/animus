@@ -14,8 +14,8 @@ const TOOL_SMOKE_SOURCE: &str = "crates/animus-std/src/codebasetool/smoke.rs";
 const KIT_SOURCE: &str = "crates/animus-runtime/src/toolexecutorkit.rs";
 const SMOKE_SOURCE: &str = "crates/animus-std/src/bin/animus-codebase-tool-smoke.rs";
 const TOOL_DOC: &str = "docs/read-only-codebase-tool-host.md";
-const COMPONENT_CATALOG: &str = "cairn/component-catalog.ncl";
-const FACADE_INVENTORY: &str = "cairn/runtime-facade-inventory.ncl";
+const COMPONENT_CATALOG: &str = ".cairn/component-catalog.ncl";
+const FACADE_INVENTORY: &str = ".cairn/runtime-facade-inventory.ncl";
 const TREE_SITTER_DEPENDENCY: &str = "tree-sitter v";
 const REQUIRED_TOOL_MARKERS: &[&str] = &[
     "CODEBASE_QUERY_TOOL_NAME",

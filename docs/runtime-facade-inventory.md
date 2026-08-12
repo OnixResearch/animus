@@ -2,9 +2,9 @@
 
 Animus keeps a maintained inventory of runtime-facing public exports so embedders can distinguish default-safe reusable contracts from host-owned injection seams and shell-only adapters. This adapts Clankers' runtime-facade inventory discipline without adopting Clankers runtime crates, daemon/TUI/product shells, provider router, plugin runtime, auth flows, process manager, or desktop storage.
 
-The source of truth is `cairn/runtime-facade-inventory.ncl`. The focused rail is `scripts/cairn/check-runtime-facade-inventory --root .`.
+The source of truth is `.cairn/runtime-facade-inventory.ncl`. The focused rail is `scripts/cairn/check-runtime-facade-inventory --root .`.
 
-The high-level component catalog lives in `cairn/component-catalog.ncl` and projects to [component-catalog.md](component-catalog.md). Use the catalog for block-level owner, authority, dependency, feature-gate, and focused-check selection; use this inventory for runtime-facing public export classification.
+The high-level component catalog lives in `.cairn/component-catalog.ncl` and projects to [component-catalog.md](component-catalog.md). Use the catalog for block-level owner, authority, dependency, feature-gate, and focused-check selection; use this inventory for runtime-facing public export classification.
 
 Each inventory record carries composition metadata: `feature_gate`, `required_authority`, `depends_on`, `composes_with`, and `capability_family`. The checker validates controlled feature/authority/family labels, known dependency targets, known composition links, reusable-to-shell dependency direction, and safe evidence fields.
 

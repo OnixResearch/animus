@@ -9,7 +9,7 @@ const EXPECTED_SCHEMA: &str = "animus.continual-harness.v1";
 const EXPECTED_LICENSE: &str = "MIT";
 const REQUIRED_FILE_COUNT: usize = 7;
 const ARCHIVED_TASKS_PATH: &str =
-    "cairn/archive/2026-08-07-adapt-prime-agent-continual-harness/tasks.md";
+    ".cairn/archive/2026-08-07-adapt-prime-agent-continual-harness/tasks.md";
 const REQUIRED_MARKERS: [&str; 8] = [
     "#![no_std]",
     "plan_promotion",

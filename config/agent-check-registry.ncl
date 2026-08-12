@@ -8,7 +8,7 @@ let registry_schema_label = "animus.agent-check-registry.v1" in
 let cairn_schema_label = "cairn.agent-completion.v2" in
 let repository_identity = "onixresearch/animus" in
 let registry_identity = "animus-agent-checks" in
-let pinned_cairn_policy_hash = "b8f81a80716eb7427dacdcd4dac9c01c1599d2bee79cdeb0a6e444525377da59" in
+let pinned_cairn_policy_hash = "2c0b44345b9d2e2b3eff5fa7db7a14b9681c6bfcf7a4bb651f13bcadc1f91757" in
 let maximum_check_count = 64 in
 let maximum_argv_count = 32 in
 let maximum_reference_count = 32 in
@@ -239,8 +239,8 @@ let registry_value = {
       expected_artifacts = ["cairn"],
       reproduction = { argv = ["nix", "run", ".#cairn", "--", "validate", "--root", "."], working_root = safe_working_root },
       documentation_refs = ["docs/request-lifecycle.md"],
-      positive_contract = "cairn/specs/agent-harness-runtime/spec.md",
-      negative_contract = "cairn/specs/agent-harness-runtime/spec.md",
+      positive_contract = ".cairn/specs/agent-harness-runtime/spec.md",
+      negative_contract = ".cairn/specs/agent-harness-runtime/spec.md",
     },
     {
       check_id = "authoritative-completion-rail",

@@ -325,7 +325,7 @@ fn selector_keeps_unavailable_capability_and_tier_as_blockers() {
     let capability = select_required_agent_checks(AgentCheckSelectionRequest {
         registry: &registry(),
         changed_artifacts: &[ChangedArtifactDraft {
-            path: "cairn/specs/agent-harness-runtime/spec.md",
+            path: ".cairn/specs/agent-harness-runtime/spec.md",
             surface: "lifecycle",
             content_hash: HASH_A,
         }],

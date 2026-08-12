@@ -74,11 +74,11 @@ if cargo run -q -p animus-std --features coding-session-host \
 fi
 grep -F 'issue=missing_store_root' "${negative_output}" >/dev/null
 
-grep -F 'animus-runtime::coding_session_host' cairn/runtime-facade-inventory.ncl >/dev/null
-grep -F 'animus-std::coding_session_host' cairn/runtime-facade-inventory.ncl >/dev/null
-grep -F 'animus::coding_session_host' cairn/runtime-facade-inventory.ncl >/dev/null
-grep -F 'runtime.coding-session-core' cairn/component-catalog.ncl >/dev/null
-grep -F 'std.coding-session-host' cairn/component-catalog.ncl >/dev/null
+grep -F 'animus-runtime::coding_session_host' .cairn/runtime-facade-inventory.ncl >/dev/null
+grep -F 'animus-std::coding_session_host' .cairn/runtime-facade-inventory.ncl >/dev/null
+grep -F 'animus::coding_session_host' .cairn/runtime-facade-inventory.ncl >/dev/null
+grep -F 'runtime.coding-session-core' .cairn/component-catalog.ncl >/dev/null
+grep -F 'std.coding-session-host' .cairn/component-catalog.ncl >/dev/null
 grep -F 'It does **not** prove live-provider behavior, concrete product tools, TUI dogfood' docs/coding-session-host.md >/dev/null
 
 source_identity=$(
@@ -95,8 +95,8 @@ source_identity=$(
     crates/animus-std/src/bin/animus-coding-session-smoke.rs \
     crates/animus-tui/src/frontend.rs \
     docs/coding-session-host.md \
-    cairn/component-catalog.ncl \
-    cairn/runtime-facade-inventory.ncl \
+    .cairn/component-catalog.ncl \
+    .cairn/runtime-facade-inventory.ncl \
     flake.nix \
     scripts/cairn/check-coding-session-host \
     | b3sum \

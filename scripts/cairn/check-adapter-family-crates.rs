@@ -187,9 +187,9 @@ fn validate_facade(config: &Config) -> ValidationResult {
 }
 
 fn validate_metadata(config: &Config) -> ValidationResult {
-    let component = read_required(config, "cairn/component-catalog.ncl")?;
+    let component = read_required(config, ".cairn/component-catalog.ncl")?;
     let contracts = read_required(config, "docs/contracts-index.md")?;
-    let conformance = read_required(config, "cairn/adapter-conformance-index.ncl")?;
+    let conformance = read_required(config, ".cairn/adapter-conformance-index.ncl")?;
     let docs = read_required(config, "docs/adapter-family-crates.md")?;
     let readme = read_required(config, "README.md")?;
     let mut errors = Vec::new();
@@ -218,31 +218,31 @@ fn validate_fixtures(config: &Config) -> ValidationResult {
     let mut errors = Vec::new();
     check_fixture(
         config,
-        "cairn/adapter-family-crates-fixtures/valid-family-split.txt",
+        ".cairn/adapter-family-crates-fixtures/valid-family-split.txt",
         None,
         &mut errors,
     );
     check_fixture(
         config,
-        "cairn/adapter-family-crates-fixtures/negative-missing-facade-export.txt",
+        ".cairn/adapter-family-crates-fixtures/negative-missing-facade-export.txt",
         Some("ADAPTER_FAMILY_FIXTURE_MISSING_FACADE"),
         &mut errors,
     );
     check_fixture(
         config,
-        "cairn/adapter-family-crates-fixtures/negative-dependency-cycle.txt",
+        ".cairn/adapter-family-crates-fixtures/negative-dependency-cycle.txt",
         Some("ADAPTER_FAMILY_FIXTURE_DEPENDENCY_CYCLE"),
         &mut errors,
     );
     check_fixture(
         config,
-        "cairn/adapter-family-crates-fixtures/negative-authority-leak.txt",
+        ".cairn/adapter-family-crates-fixtures/negative-authority-leak.txt",
         Some("ADAPTER_FAMILY_FIXTURE_AUTHORITY_LEAK"),
         &mut errors,
     );
     check_fixture(
         config,
-        "cairn/adapter-family-crates-fixtures/negative-unsafe-receipt.txt",
+        ".cairn/adapter-family-crates-fixtures/negative-unsafe-receipt.txt",
         Some("ADAPTER_FAMILY_FIXTURE_UNSAFE_RECEIPT"),
         &mut errors,
     );

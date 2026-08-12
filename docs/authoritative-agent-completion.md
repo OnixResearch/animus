@@ -4,7 +4,7 @@ Animus treats completion text, queue emptiness, process exit, task counts, and a
 
 ## Pinned authority
 
-The repository pins Cairn revision `cf5c4a5c10361ca20a13addf14954407d6857028`, schema `cairn.agent-completion.v2`, and generated-policy identity `b8f81a80716eb7427dacdcd4dac9c01c1599d2bee79cdeb0a6e444525377da59`. Animus validates these values but does not redefine Cairn's pass-only contract.
+The repository pins Cairn revision `695124d459574ba7aeba6097310d237f393c243c`, schema `cairn.agent-completion.v2`, and generated-policy identity `2c0b44345b9d2e2b3eff5fa7db7a14b9681c6bfcf7a4bb651f13bcadc1f91757`. Animus validates these values but does not redefine Cairn's pass-only contract.
 
 `config/agent-check-registry.ncl` owns the bounded check registry. `config/generated/agent-check-registry.json` is the checked runtime input. The generated registry records exact argv vectors, working roots, prerequisites, trigger classes, costs, timeouts, evidence classes, and conservative fallback checks. Runtime code never interprets shell strings or discovers commands from the environment.
 
@@ -44,7 +44,7 @@ nix run --option builders '' --option secret-key-files '' .#cairn -- \
   --subject-hash cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 ```
 
-The checked positive receipt has completion identity `ea388ca71bc87663d36127a0dbcc2f1d5bcb60fea62921094f23bdc72946109b`. The stale-subject fixture fails with `verification_contract.subject_stale`. Both are bounded conformance fixtures; production hosts must construct evidence for the current real subject and may not replay these synthetic hashes.
+The checked positive receipt has completion identity `9fa48494366ad68ea31b23ef704d204a26620a6f70f36848fac1829a2475ef6d`. The stale-subject fixture fails with `verification_contract.subject_stale`. Both are bounded conformance fixtures; production hosts must construct evidence for the current real subject and may not replay these synthetic hashes.
 
 Run the integrated rail with:
 

@@ -34,7 +34,7 @@ animus-runtime = { path = "../animus-runtime", version = "0.1.0", default-featur
 animus-std = { path = "../animus-std", version = "0.1.0", default-features = false, features = ["authoritative-completion-smoke"] }
 blake3 = "1.8.5"
 bounded-exec = { git = "ssh://git@github.com/OnixResearch/bounded-exec.git", rev = "29dac88ecded94457572db3fdfaaaab95fa91525" }
-cairn_core = { package = "cairn-core", git = "ssh://git@github.com/OnixResearch/cairn.git", rev = "cf5c4a5c10361ca20a13addf14954407d6857028" }
+cairn_core = { package = "cairn-core", git = "ssh://git@github.com/OnixResearch/cairn.git", rev = "695124d459574ba7aeba6097310d237f393c243c" }
 serde_json = "1.0.149"
 
 [dev-dependencies]

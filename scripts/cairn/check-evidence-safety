@@ -2,7 +2,7 @@
 set -eu
 
 readonly FAILURE=1
-readonly FIXTURE_DIR=cairn/evidence-safety-fixtures
+readonly FIXTURE_DIR=.cairn/evidence-safety-fixtures
 readonly ISSUE_RAW_PROMPT=EVIDENCE_RAW_PROMPT
 readonly ISSUE_CREDENTIAL=EVIDENCE_CREDENTIAL
 readonly ISSUE_PROVIDER_PAYLOAD=EVIDENCE_PROVIDER_PAYLOAD
@@ -81,7 +81,7 @@ if [ -d "${repo_root}/${FIXTURE_DIR}" ]; then
   done
 fi
 
-find "${repo_root}/cairn/changes" "${repo_root}/cairn/archive" -name evidence.md -type f 2>/dev/null | sort | while IFS= read -r evidence_file; do
+find "${repo_root}/.cairn/changes" "${repo_root}/.cairn/archive" -name evidence.md -type f 2>/dev/null | sort | while IFS= read -r evidence_file; do
   if issue=$(scan_file "${evidence_file}"); then
     printf 'error: %s in %s\n' "${issue}" "$(relative_path "${evidence_file}")" >&2
     exit "${FAILURE}"

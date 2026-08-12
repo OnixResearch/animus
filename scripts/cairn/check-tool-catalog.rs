@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 const ARG_ROOT: &str = "--root";
 const ARCHITECTURE_NOTE: &str = "docs/tool-catalog-capability-packs.md";
 const SCHEMA_SOURCE: &str = "policy/tool-catalog/catalog.ncl";
-const FIXTURE_DIR: &str = "cairn/tool-catalog-fixtures";
+const FIXTURE_DIR: &str = ".cairn/tool-catalog-fixtures";
 const FIXTURE_EXTENSION: &str = "catalog";
 const EXPECTED_PREFIX: &str = "expected_issue=";
 const DESCRIPTOR_SEPARATOR: &str = "---";

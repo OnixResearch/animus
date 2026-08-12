@@ -29,7 +29,7 @@ Large or historically mechanical adapter areas are inventoried before refactor w
 - Memory adapter family: `front::memory` owns `agent_harness_runtime.memory_*` and generic memory conformance requirements. Public exports continue through `pub use memory::*` from `front/mod.rs` and through `pub use front::*` from `lib.rs`.
 - Tool gateway family: `front::tool_gateway` owns `agent_harness_runtime.clankers_tool_gateway.*` delivery request, policy, outbox, retry, and receipt requirements. Public exports continue through `pub use tool_gateway::*` from `front/mod.rs` and through `pub use front::*` from `lib.rs`.
 - Review family: `review` owns review report parsing, metrics, corrective memory, and done-review lifecycle DTOs. Public exports continue through the existing `pub use review::{...}` list in `lib.rs`.
-- Conformance evidence stays linked from `cairn/adapter-conformance-index.ncl` and `docs/contracts-index.md`; this map names source owners, not a replacement conformance index.
+- Conformance evidence stays linked from `.cairn/adapter-conformance-index.ncl` and `docs/contracts-index.md`; this map names source owners, not a replacement conformance index.
 
 ## Compatibility aliases and migrations
 

@@ -1,6 +1,6 @@
 # Component catalog
 
-This projection is generated from `cairn/component-catalog.ncl`. Do not edit catalog rows by hand; update the Nickel source and run `scripts/cairn/check-component-catalog --root .`.
+This projection is generated from `.cairn/component-catalog.ncl`. Do not edit catalog rows by hand; update the Nickel source and run `scripts/cairn/check-component-catalog --root .`.
 
 The catalog names Lego-style Animus components, the smallest public import surface, authority posture, dependency links, capability family, and focused validation rail. It is metadata evidence only: it does not claim provider, filesystem, process, network, terminal, credential, persistence, production, or live-service readiness unless a row explicitly classifies that authority as shell-owned or injected.
 

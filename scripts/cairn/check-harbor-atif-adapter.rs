@@ -219,8 +219,8 @@ fn validate_repository(root: &Path) -> Result<(), String> {
         "docs/request-lifecycle.md",
         "docs/safety-contract.md",
         "docs/focused-verification-rails.md",
-        "cairn/component-catalog.ncl",
-        "cairn/runtime-facade-inventory.ncl",
+        ".cairn/component-catalog.ncl",
+        ".cairn/runtime-facade-inventory.ncl",
         "README.md",
     ] {
         if read(root, path)?.trim().is_empty() {

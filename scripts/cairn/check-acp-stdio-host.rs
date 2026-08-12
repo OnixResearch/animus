@@ -79,8 +79,8 @@ const SOURCE_IDENTITY_PATHS: &[&str] = &[
     "crates/animus-acp-stdio-host/src/transport.rs",
     "crates/animus-std/src/codingsession.rs",
     CONTRACT_DOC,
-    "cairn/component-catalog.ncl",
-    "cairn/runtime-facade-inventory.ncl",
+    ".cairn/component-catalog.ncl",
+    ".cairn/runtime-facade-inventory.ncl",
     "scripts/cairn/check-acp-stdio-host",
     "scripts/cairn/check-acp-stdio-host.rs",
     "flake.nix",
@@ -182,8 +182,8 @@ fn validate_contract(root: &Path) -> Result<(), String> {
         )?;
     }
     require(
-        read(root, "cairn/component-catalog.ncl")?.contains("std.acp-stdio-host")
-            && read(root, "cairn/runtime-facade-inventory.ncl")?
+        read(root, ".cairn/component-catalog.ncl")?.contains("std.acp-stdio-host")
+            && read(root, ".cairn/runtime-facade-inventory.ncl")?
                 .contains("animus::acp_stdio_host"),
         "ACP component or facade inventory entry is missing",
     )

@@ -24,8 +24,8 @@
       "dependencies": [
         {
           "path": "policy/contracts/primitives.ncl",
-          "identity": "b3:102e0de517da26582d662cfdc87acb45733099fd62b1d805d6e01eaa077744e0",
-          "bytes": 4543
+          "identity": "b3:1243df459c92eee04cef8186c9bf7aab20a60d0115966a902ae563e3ebd496c9",
+          "bytes": 4544
         }
       ],
       "import_paths": [
@@ -55,5 +55,5 @@
       "non_claim": "Nickel export success proves only exact declared input and output identities under the recorded evaluator descriptor; it does not prove deployability, product-policy conformance, evaluator equivalence, build success, or release eligibility"
     }
   ],
-  "manifest_identity": "b3:2207992c25ba1ef99cd9c735ada50d81e1a5fc2f13279f4e26031f980b29dd24"
+  "manifest_identity": "b3:35d4ef77920d3d746f3faefc096e6db16a73197fe40423a1d1b751bf646cc180"
 }

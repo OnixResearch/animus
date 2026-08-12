@@ -116,11 +116,11 @@ fn validate_repository(root: &Path) -> Result<(), String> {
     )?;
     for (path, marker) in [
         (
-            "cairn/component-catalog.ncl",
+            ".cairn/component-catalog.ncl",
             "adapters.native-evaluation-services",
         ),
         (
-            "cairn/runtime-facade-inventory.ncl",
+            ".cairn/runtime-facade-inventory.ncl",
             "evaluation_adapters_record \"animus-adapters::evaluation\"",
         ),
         (

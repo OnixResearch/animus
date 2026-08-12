@@ -91,7 +91,7 @@
    "Usage: steel scripts/ralph-drain-cairns.scm [options]"
    ""
    "Options:"
-   "  --root PATH        Animus repo root containing cairn/changes (default: .)"
+   "  --root PATH        Animus repo root containing .cairn/changes (default: .)"
    "  --limit N          Number of changes to include; 0 means all (default: 1)"
    "  --change NAME      Include one named change; repeat for multiple changes"
    "  --agent COMMAND    Pi command used by --run (default: pi -p)"
@@ -228,7 +228,7 @@
    (string-append "Use the repo-pinned Cairn command from the Animus root: `" (Config-cairn-command config) " ... --root " (Config-root config) "`; do not swap in a newer sibling Cairn binary unless the change requires it.")
    "Read `AGENTS.md`, `README.md`, `docs/safety-contract.md`, `docs/request-lifecycle.md`, `docs/runtime-facade-inventory.md`, and relevant change specs before editing."
    "Run `scripts/cairn/check-roadmap --root .` and avoid draining changes blocked by active prerequisites unless the dependency is completed in the same batch."
-   "Treat `cairn/changes/<slug>/tasks.md` as the durable implementation plan for Ralph work; do not create root `specs/` or `IMPLEMENTATION_PLAN.md` unless an accepted change adopts them."
+   "Treat `.cairn/changes/<slug>/tasks.md` as the durable implementation plan for Ralph work; do not create root `specs/` or `IMPLEMENTATION_PLAN.md` unless an accepted change adopts them."
    "Use task acceptance criteria to choose the smallest focused backpressure check before marking work done; record blockers instead of weakening claims."
    "Keep runtime logic split into pure functional cores and thin imperative shells; reusable crates must not gain ambient filesystem, process, network, credential, clock, terminal, or persistence authority."
    "For focused rails, keep positive and negative fixtures together and wire deterministic, credential-free rails into named Nix checks when stable."
@@ -376,15 +376,15 @@
       (error (string-append "self-test failed: " label))))
 
 (define (run-self-test)
-  (let* ([first-change (Change "alpha" "/tmp/repo/cairn/changes/alpha")]
-         [second-change (Change "beta" "/tmp/repo/cairn/changes/beta")]
+  (let* ([first-change (Change "alpha" "/tmp/repo/.cairn/changes/alpha")]
+         [second-change (Change "beta" "/tmp/repo/.cairn/changes/beta")]
          [sample-config (Config "/tmp/repo" 1 default-agent-command default-cairn-command #true #true #false '() #false #false)]
          [filtered-config (Config "/tmp/repo" all-rounds-limit default-agent-command default-cairn-command #true #true #false '("beta") #false #false)]
          [sample-plan (plan-lines sample-config (list first-change second-change) (list first-change))]
          [sample-prompt (ralph-prompt sample-config first-change)])
     (check "prefix positive" (string-prefix? "--root=" "--root=/tmp/repo"))
     (check "prefix negative" (not (string-prefix? "--root=" "--roo=/tmp/repo")))
-    (check "basename positive" (string=? (basename "/tmp/repo/cairn/changes/alpha") "alpha"))
+    (check "basename positive" (string=? (basename "/tmp/repo/.cairn/changes/alpha") "alpha"))
     (check "split agent command" (equal? (split-words "pi -p --model sonnet:high") (list "pi" "-p" "--model" "sonnet:high")))
     (check "limit parse positive" (= (parse-limit-value (number->string sample-limit-value)) sample-limit-value))
     (check "limit parse negative" (not (parse-limit-value "nope")))
@@ -394,7 +394,7 @@
     (check "plan names repo pinned cairn command" (member (string-append "Cairn command: `" default-cairn-command "`") sample-plan))
     (check "prompt includes Animus guidance" (string-prefix? "Goal: drain Cairn change" sample-prompt))
     (check "prompt names evidence safety" (member "- For Cairn evidence, prefer safe tracked evidence in the change/archive package; run `scripts/cairn/check-evidence-safety --root .` when adding `evidence.md`." (ralph-prompt-lines sample-config first-change)))
-    (check "prompt names Cairn task plan" (member "- Treat `cairn/changes/<slug>/tasks.md` as the durable implementation plan for Ralph work; do not create root `specs/` or `IMPLEMENTATION_PLAN.md` unless an accepted change adopts them." (ralph-prompt-lines sample-config first-change)))
+    (check "prompt names Cairn task plan" (member "- Treat `.cairn/changes/<slug>/tasks.md` as the durable implementation plan for Ralph work; do not create root `specs/` or `IMPLEMENTATION_PLAN.md` unless an accepted change adopts them." (ralph-prompt-lines sample-config first-change)))
     (check "external command success" (= (external-command-status "." "true" '()) 0))
     (check "external command failure" (= (external-command-status "." "sh" (list "-c" (string-append "exit " (number->string failing-status-probe)))) failing-status-probe))
     (say "self-test complete")))

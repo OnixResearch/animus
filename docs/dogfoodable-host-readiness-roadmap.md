@@ -90,7 +90,7 @@ The order is:
 6. non-default headless/CLI dogfood shell;
 7. optional TUI, daemon/attach, plugin/MCP, live-provider, persistence, and release-evidence surfaces.
 
-`cairn/roadmap.ncl` remains the machine-checked sequencing source. Planned future changes may be present there before they are active, but every active change must be classified exactly once and product-surface entries must retain a transitive path through foundational and runtime safety prerequisites.
+`.cairn/roadmap.ncl` remains the machine-checked sequencing source. Planned future changes may be present there before they are active, but every active change must be classified exactly once and product-surface entries must retain a transitive path through foundational and runtime safety prerequisites.
 
 ## Evidence ladder
 
@@ -124,4 +124,4 @@ scripts/cairn/check-dogfood-readiness --root .
 nix build .#checks.x86_64-linux.dogfood-readiness --no-link -L
 ```
 
-It validates this roadmap and the claim-hygiene fixtures under `cairn/dogfood-readiness-fixtures/`. Then it validates positive and negative release-index bindings, including missing, stale, duplicate, conflicting, and dirty packaged-smoke evidence.
+It validates this roadmap and the claim-hygiene fixtures under `.cairn/dogfood-readiness-fixtures/`. Then it validates positive and negative release-index bindings, including missing, stale, duplicate, conflicting, and dirty packaged-smoke evidence.

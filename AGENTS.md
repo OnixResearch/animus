@@ -4,9 +4,9 @@
 
 - Work from the Animus repo root. This checkout is git-only, so use `git` here unless `.jj/` is introduced later.
 - Read this file, `README.md`, and the docs for the touched surface before editing.
-- Use native Cairn lifecycle as the spec and plan surface. Accepted requirements live in `cairn/specs/agent-harness-runtime/spec.md`; active work lives in `cairn/changes/<slug>/`.
-- Treat `cairn/changes/<slug>/tasks.md` as the implementation plan for Ralph-style work. Do not create root `specs/` or `IMPLEMENTATION_PLAN.md` unless a future accepted change explicitly adopts them.
-- If Cairn validation reports an active change that normal file listings hide, inspect `cairn/changes` with ignored/untracked files included before assuming the lifecycle is clean.
+- Use native Cairn lifecycle as the spec and plan surface. Accepted requirements live in `.cairn/specs/agent-harness-runtime/spec.md`; active work lives in `.cairn/changes/<slug>/`.
+- Treat `.cairn/changes/<slug>/tasks.md` as the implementation plan for Ralph-style work. Do not create root `specs/` or `IMPLEMENTATION_PLAN.md` unless a future accepted change explicitly adopts them.
+- If Cairn validation reports an active change that normal file listings hide, inspect `.cairn/changes` with ignored/untracked files included before assuming the lifecycle is clean.
 
 ## Implementation constraints
 

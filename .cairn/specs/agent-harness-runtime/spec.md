@@ -1779,14 +1779,14 @@ r[agent_harness_runtime.cairn_policy.closeout.evidence]
 
 ### Requirement: Lifecycle layout
 
-r[agent_harness_runtime.cairn_dogfood.lifecycle_layout] Animus MUST treat `cairn/specs/` as the accepted requirements baseline, `cairn/changes/` as active change deltas, and `cairn/archive/` as completed lifecycle history once changes are accepted and archived.
+r[agent_harness_runtime.cairn_dogfood.lifecycle_layout] Animus MUST treat `.cairn/specs/` as the accepted requirements baseline, `.cairn/changes/` as active change deltas, and `.cairn/archive/` as completed lifecycle history once changes are accepted and archived.
 
 #### Scenario: Accepted spec is source of current requirements
 
 r[agent_harness_runtime.cairn_dogfood.lifecycle_layout.accepted_baseline]
 - GIVEN a requirement has been accepted and synced
 - WHEN maintainers inspect current lifecycle requirements
-- THEN the requirement appears under `cairn/specs/`
+- THEN the requirement appears under `.cairn/specs/`
 - AND the completed change package is archived rather than left as active planning state.
 
 ### Requirement: Change threshold guidance
@@ -12908,7 +12908,7 @@ Animus MUST provide an opt-in Steel Scheme supervisor that can coordinate bounde
 
 - GIVEN an operator supplies a workspace root containing independent child repositories
 - WHEN the supervisor builds a stack drain plan
-- THEN it MUST select only direct child repositories with native `cairn/changes` lifecycle roots
+- THEN it MUST select only direct child repositories with native `.cairn/changes` lifecycle roots
 - AND explicit repository filters MUST preserve operator ordering and reject unknown repositories.
 
 #### Scenario: Plan mode performs no agent or lifecycle effects [r[agent_harness_runtime.ralph_stack_drain.pi_supervisor.plan_only]]

@@ -142,11 +142,11 @@ fn validate_repository(root: &Path) -> Result<(), String> {
             "animus.native-evaluation-host.v1",
         ),
         (
-            "cairn/component-catalog.ncl",
+            ".cairn/component-catalog.ncl",
             "std.native-evaluation-host",
         ),
         (
-            "cairn/runtime-facade-inventory.ncl",
+            ".cairn/runtime-facade-inventory.ncl",
             "evaluation_host_record \"animus::evaluation_host\"",
         ),
         ("docs/contracts-index.md", "family:native-evaluation-host"),

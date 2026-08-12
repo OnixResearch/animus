@@ -34,7 +34,7 @@
       }
     ],
     "final_subject_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
-    "input_hash": "44963caa32a3465f4515c167cd5317905598b8629b274dbfb5b315411c05f8e2",
+    "input_hash": "19a5085eb76a1d5788fe41e3ba6362db66cb60a14cfe269647738ae85a7e17c6",
     "non_claims": [
       "completion validation does not prove check-oracle soundness",
       "completion validation does not prove honest command execution beyond supplied evidence",
@@ -43,25 +43,31 @@
       "completion validation does not prove release eligibility outside the selected contract"
     ],
     "non_passing_checks": [],
-    "passed_checks": ["clippy", "tests"],
-    "policy_hash": "b8f81a80716eb7427dacdcd4dac9c01c1599d2bee79cdeb0a6e444525377da59",
-    "receipt_hash": "32c394696a05b0fbda22bb99adb560e75d62e11bf5967994cf8046613648c02e",
+    "passed_checks": [
+      "clippy",
+      "tests"
+    ],
+    "policy_hash": "2c0b44345b9d2e2b3eff5fa7db7a14b9681c6bfcf7a4bb651f13bcadc1f91757",
+    "receipt_hash": "b3c03513c6f2032aa4a601aa0ca12f740b5cfb59467d38b0360677cddf81984e",
     "registry_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "registry_id": "animus-agent-checks",
     "repository_id": "onixresearch/animus",
-    "required_checks": ["clippy", "tests"],
+    "required_checks": [
+      "clippy",
+      "tests"
+    ],
     "schema": "cairn.agent-completion.v2",
     "selection_hash": "b9da53c190687f8ff0bf2a465d6823056328363c7aa4b73f97ee0a10ff158581",
     "valid": false,
     "verdict": "FAIL"
   },
-  "completion_receipt_hash": "32c394696a05b0fbda22bb99adb560e75d62e11bf5967994cf8046613648c02e",
+  "completion_receipt_hash": "b3c03513c6f2032aa4a601aa0ca12f740b5cfb59467d38b0360677cddf81984e",
   "contract_path": "fixtures/authoritative-completion/cairn-contract.json",
-  "current_policy_hash": "b8f81a80716eb7427dacdcd4dac9c01c1599d2bee79cdeb0a6e444525377da59",
+  "current_policy_hash": "2c0b44345b9d2e2b3eff5fa7db7a14b9681c6bfcf7a4bb651f13bcadc1f91757",
   "current_subject_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
   "input_kind": "path",
   "max_content_bytes": 65536,
-  "receipt_hash": "0bd1bf94177cc96c4db1ea125073005b74265f39dc8486bf37aefd3675871385",
+  "receipt_hash": "a5a9e13fa66e8c76d75fee0d4e818a6ae05dca3baf14454507e275c7fa36da7d",
   "results_path": "fixtures/authoritative-completion/cairn-results.json",
   "valid": false,
   "verdict": "FAIL"

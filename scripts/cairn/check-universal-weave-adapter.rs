@@ -177,7 +177,7 @@ fn validate_workspace_wiring(config: &Config) -> ValidationResult {
 
 fn validate_registration(config: &Config) -> ValidationResult {
     let mut errors = Vec::new();
-    match read_required(config, "cairn/component-catalog.ncl") {
+    match read_required(config, ".cairn/component-catalog.ncl") {
         Ok(catalog) => {
             require_contains(&catalog, CRATE_NAME, "WEAVE_ADAPTER_CATALOG_MISSING", &mut errors)
         }

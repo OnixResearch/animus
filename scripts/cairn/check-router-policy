@@ -4,8 +4,8 @@ set -eu
 readonly FAILURE=1
 readonly POLICY_RELATIVE_PATH=policy/model-router/recipe-policy.ncl
 readonly GENERATED_POLICY_RELATIVE_PATH=policy/model-router/generated/router-recipe-policy.json
-readonly INDEX_RELATIVE_PATH=cairn/router-conformance-index.ncl
-readonly FIXTURE_DIR=cairn/router-conformance-index-fixtures
+readonly INDEX_RELATIVE_PATH=.cairn/router-conformance-index.ncl
+readonly FIXTURE_DIR=.cairn/router-conformance-index-fixtures
 readonly POLICY_LINES_FIELD=family_policy_lines
 readonly FIXTURE_LINES_FIELD=fixture_lines
 readonly POLICY_JSON_FIELD=router_recipe_policy

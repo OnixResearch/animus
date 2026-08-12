@@ -17,7 +17,7 @@ Out of scope:
 
 ## Schema model
 
-The Nickel source `cairn/release-evidence-index-schema.ncl` defines the fixture-facing line format:
+The Nickel source `.cairn/release-evidence-index-schema.ncl` defines the fixture-facing line format:
 
 - a `head` record with VCS kind, commit, branch, and dirty status;
 - `check` records with mode, pure/optional class, status, and receipt/head match;

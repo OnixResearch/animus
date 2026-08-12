@@ -19,11 +19,11 @@ const HOST_DOC: &str = "docs/live-openai-provider-host.md";
 const ROADMAP_DOC: &str = "docs/dogfoodable-host-readiness-roadmap.md";
 const RELEASE_CHECKER: &str = "scripts/cairn/check-release-evidence-index.rs";
 const CURRENT_HEAD_FIXTURE: &str =
-    "cairn/release-evidence-index-fixtures/valid-current-head-live-provider.ncl";
+    ".cairn/release-evidence-index-fixtures/valid-current-head-live-provider.ncl";
 const STALE_FIXTURE: &str =
-    "cairn/release-evidence-index-fixtures/stale-live-provider.ncl";
+    ".cairn/release-evidence-index-fixtures/stale-live-provider.ncl";
 const DIRTY_FIXTURE: &str =
-    "cairn/release-evidence-index-fixtures/dirty-live-provider.ncl";
+    ".cairn/release-evidence-index-fixtures/dirty-live-provider.ncl";
 const OPENAI_MODEL_ID: &str = "gpt-5-mini";
 const OPENROUTER_MODEL_ID: &str = "deepseek/deepseek-v4-flash-0731";
 const SUBSTITUTED_OPENROUTER_MODEL_ID: &str = "openai/gpt-5.5";

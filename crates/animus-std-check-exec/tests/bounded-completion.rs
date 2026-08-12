@@ -13,7 +13,7 @@ use animus_std_check_exec::{
 use serde_json::json;
 use tempfile::TempDir;
 
-const POLICY_HASH: &str = "b8f81a80716eb7427dacdcd4dac9c01c1599d2bee79cdeb0a6e444525377da59";
+const POLICY_HASH: &str = "2c0b44345b9d2e2b3eff5fa7db7a14b9681c6bfcf7a4bb651f13bcadc1f91757";
 const CHECK_ID: &str = "fixture-check";
 const PRIVATE_OUTPUT: &str = "private-fixture-output";
 const SUBJECT: &str = "private real-check completion subject";

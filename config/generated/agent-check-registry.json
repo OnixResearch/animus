@@ -1,5 +1,5 @@
 {
-  "cairn_policy_hash": "b8f81a80716eb7427dacdcd4dac9c01c1599d2bee79cdeb0a6e444525377da59",
+  "cairn_policy_hash": "2c0b44345b9d2e2b3eff5fa7db7a14b9681c6bfcf7a4bb651f13bcadc1f91757",
   "checks": [
     {
       "affected_crates": [],
@@ -265,9 +265,9 @@
       "expected_artifacts": [
         "cairn"
       ],
-      "negative_contract": "cairn/specs/agent-harness-runtime/spec.md",
+      "negative_contract": ".cairn/specs/agent-harness-runtime/spec.md",
       "output_budget_class": "medium",
-      "positive_contract": "cairn/specs/agent-harness-runtime/spec.md",
+      "positive_contract": ".cairn/specs/agent-harness-runtime/spec.md",
       "prerequisites": [
         "nickel-config"
       ],

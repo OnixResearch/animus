@@ -2,7 +2,7 @@
 set -eu
 
 readonly FAILURE=1
-readonly FIXTURE_DIR=cairn/adapter-maintainability-fixtures
+readonly FIXTURE_DIR=.cairn/adapter-maintainability-fixtures
 readonly EXPECTED_FILE=expected_issue.txt
 readonly EXPECTED_OK=OK
 

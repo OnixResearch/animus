@@ -38,8 +38,8 @@ grep -F 'pub trait AgentControlWait' crates/animus-adapters/src/control.rs >/dev
 grep -F 'Condvar' crates/animus-std-control/src/lib.rs >/dev/null
 grep -F 'Lagged' crates/animus-std-control/src/lib.rs >/dev/null
 grep -F 'This feature does not prove transport delivery' docs/agent-control-pubsub.md >/dev/null
-grep -F 'std.agent-control-host' cairn/component-catalog.ncl >/dev/null
-grep -F 'animus-std-control::AgentControlHub' cairn/runtime-facade-inventory.ncl >/dev/null
+grep -F 'std.agent-control-host' .cairn/component-catalog.ncl >/dev/null
+grep -F 'animus-std-control::AgentControlHub' .cairn/runtime-facade-inventory.ncl >/dev/null
 
 source_identity=$(
   b3sum \
@@ -56,8 +56,8 @@ source_identity=$(
     crates/animus-std/src/codingsession/tests.rs \
     docs/agent-control-pubsub.md \
     docs/active-turn-recovery.md \
-    cairn/component-catalog.ncl \
-    cairn/runtime-facade-inventory.ncl \
+    .cairn/component-catalog.ncl \
+    .cairn/runtime-facade-inventory.ncl \
     scripts/cairn/check-agent-control \
     | b3sum \
     | awk '{print $1}'
