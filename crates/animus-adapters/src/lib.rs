@@ -74,6 +74,16 @@ pub mod continual {
 pub mod daemon_workers {
     pub use animus_adapter_daemon::*;
 }
+/// Non-default compatibility facade for forge-neutral change-request contracts.
+#[cfg(feature = "change-request")]
+pub mod change_request {
+    pub use animus_adapter_change_request::*;
+}
+/// Non-default compatibility facade for dependency-maintenance contracts.
+#[cfg(feature = "maintenance")]
+pub mod maintenance {
+    pub use animus_adapter_maintenance::*;
+}
 /// Non-default compatibility facade for native evaluation adapter contracts.
 #[cfg(feature = "evaluation")]
 pub mod evaluation {

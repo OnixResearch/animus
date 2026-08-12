@@ -132,6 +132,8 @@ const ALLOWED_FEATURES: &[&str] = &[
     "secretspec-host-resolution",
     "native-evaluation",
     "evaluation-adapters",
+    "change-request-adapters",
+    "maintenance-adapters",
     "evaluation-host",
     "evaluation-conformance",
     "terminal-image",
@@ -193,6 +195,8 @@ const ALLOWED_FAMILIES: &[&str] = &[
     "messaging",
     "goal-state",
     "schedule",
+    "review",
+    "maintenance",
 ];
 
 const UNSAFE_FIELD_MARKERS: &[&str] = &[

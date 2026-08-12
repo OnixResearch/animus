@@ -406,6 +406,8 @@
                 || baseName == "check-native-evaluation-core.rs"
                 || baseName == "check-evaluation-adapter-family"
                 || baseName == "check-evaluation-adapter-family.rs"
+                || baseName == "check-remora-adapter-families"
+                || baseName == "check-remora-adapter-families.rs"
                 || baseName == "check-std-evaluation-host"
                 || baseName == "check-std-evaluation-host.rs"
                 || baseName == "check-live-openai-provider-host.rs"
@@ -880,6 +882,10 @@
 
           evaluation-adapter-family = cargoCheck "animus-evaluation-adapter-family" [ pkgs.b3sum pkgs.clippy pkgs.nickel ] ''
             sh scripts/cairn/check-evaluation-adapter-family --root .
+          '';
+
+          remora-adapter-families = cargoCheck "animus-remora-adapter-families" [ pkgs.b3sum pkgs.clippy pkgs.nickel pkgs.rustfmt ] ''
+            sh scripts/cairn/check-remora-adapter-families --root .
           '';
 
           std-evaluation-host = cargoCheck "animus-std-evaluation-host" [ pkgs.b3sum pkgs.clippy pkgs.nickel ] ''
