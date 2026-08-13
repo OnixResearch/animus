@@ -99,6 +99,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "rejected-attempt-context",
     "branchfs-host",
     "coding-session-host",
+    "child-session-host",
     "codebase-graph-host",
     "codebase-tool-host",
     "acp-stdio-host",

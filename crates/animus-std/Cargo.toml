@@ -17,6 +17,7 @@ agent-role-profiles = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 authoritative-completion = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 authoritative-completion-smoke = ["authoritative-completion", "multi-role-smoke"]
 branchfs-host = []
+child-session-host = ["coding-session-host", "dep:animus-adapter-rlm-kernel"]
 coding-session-host = ["durable-session-store", "runtime-authority-seal"]
 conversation-view-projection = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 execution-backend-planner = ["dep:animus-runtime", "animus-runtime/execution-backend-planner"]
@@ -97,6 +98,7 @@ path = "tests/durable-session-restart.rs"
 required-features = ["durable-session-store"]
 
 [dependencies]
+animus-adapter-rlm-kernel = { path = "../animus-adapter-rlm-kernel", version = "0.1.0", optional = true }
 animus-adapters = { path = "../animus-adapters", version = "0.1.0" }
 animus-core = { path = "../animus-core", version = "0.1.0" }
 animus-eval-core = { path = "../animus-eval-core", version = "0.1.0", optional = true }

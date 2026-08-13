@@ -114,6 +114,13 @@ execution-backend-planner = ["runtime", "std", "animus-runtime/execution-backend
 agent-role-profiles = ["std", "animus-std/agent-role-profiles"]
 acp-stdio-host = ["std", "coding-session-host", "dep:animus-acp-stdio-host"]
 branchfs-host = ["std", "animus-std/branchfs-host"]
+child-session-host = [
+  "std",
+  "runtime",
+  "coding-session-host",
+  "dep:animus-adapter-rlm-kernel",
+  "animus-std/child-session-host",
+]
 coding-session-host = ["std", "runtime", "animus-std/coding-session-host"]
 conversation-view-projection = ["std", "runtime", "animus-std/conversation-view-projection"]
 session-branch-explorer = ["std", "runtime", "tui", "animus-std/session-branch-explorer"]

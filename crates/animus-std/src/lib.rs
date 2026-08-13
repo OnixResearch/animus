@@ -28,12 +28,20 @@ mod authoritativecompletion;
 #[cfg(feature = "branchfs-host")]
 #[path = "branchfshost.rs"]
 pub mod branchfs_host;
+#[cfg(feature = "child-session-host")]
+#[path = "childsession.rs"]
+mod child_session;
 /// Non-default read-only codebase graph tool executor and packaged smoke.
 #[cfg(feature = "codebase-tool-host")]
 #[path = "codebasetool/mod.rs"]
 pub mod codebase_tool;
 #[cfg(feature = "codebase-graph-host")]
 mod codegraph;
+/// Non-default concrete child-session host over explicit normal-session factories.
+#[cfg(feature = "child-session-host")]
+pub mod child_session_host {
+    pub use super::child_session::*;
+}
 #[cfg(feature = "coding-session-host")]
 #[path = "codingsession.rs"]
 mod coding_session;

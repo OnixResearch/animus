@@ -346,6 +346,7 @@
                 || baseName == "check-durable-session-store"
                 || baseName == "check-coding-session-host"
                 || baseName == "check-coding-session-queue-cas"
+                || baseName == "check-concrete-child-session-service"
                 || baseName == "check-agent-control"
                 || baseName == "check-codebase-graph"
                 || baseName == "check-mesh-provider"
@@ -1186,6 +1187,13 @@
             pkgs.b3sum
           ] ''
             sh scripts/cairn/check-coding-session-host --root .
+          '';
+
+          concrete-child-session-service = cargoCheck "animus-concrete-child-session-service" [
+            pkgs.b3sum
+            pkgs.clippy
+          ] ''
+            sh scripts/cairn/check-concrete-child-session-service --root .
           '';
 
           coding-session-queue-cas = cargoCheck "animus-coding-session-queue-cas" [

@@ -1,0 +1,95 @@
+#!/usr/bin/env sh
+# r[verify agent_harness_runtime.child_session_service.verification]
+set -eu
+
+readonly FAILURE=1
+readonly RAIL_NAME='concrete-child-session-service'
+readonly RECEIPT_SCHEMA='animus.focused-rail-receipt.v1'
+readonly RUNTIME_SOURCE='crates/animus-runtime/src/childsession.rs'
+readonly SUBAGENT_SOURCE='crates/animus-runtime/src/subagents.rs'
+readonly STD_SOURCE='crates/animus-std/src/childsession.rs'
+readonly STD_TESTS='crates/animus-std/src/childsession/tests.rs'
+readonly DOC_SOURCE='docs/concrete-child-session-service.md'
+readonly RUNTIME_PACKAGE='animus-runtime'
+readonly STD_PACKAGE='animus-std'
+
+root='.'
+if [ "${1:-}" = '--root' ]; then
+  root=${2:-.}
+fi
+cd "${root}"
+readonly DEFAULT_CARGO_TARGET_DIR="${PWD}/target/concrete-child-session-service-cargo"
+export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-${DEFAULT_CARGO_TARGET_DIR}}
+
+for tool in cargo grep b3sum; do
+  if ! command -v "${tool}" >/dev/null 2>&1; then
+    printf 'error: %s is required for the concrete child-session rail\n' "${tool}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+cargo test -p "${RUNTIME_PACKAGE}" child_session_service --locked
+cargo test -p "${RUNTIME_PACKAGE}" subagents --locked
+cargo test -p "${STD_PACKAGE}" --features child-session-host child_session --locked
+cargo test -p animus --features child-session-host --locked
+cargo clippy -p "${RUNTIME_PACKAGE}" --all-targets --locked -- -D warnings
+cargo clippy -p "${STD_PACKAGE}" --all-targets --features child-session-host --locked -- -D warnings
+cargo clippy -p animus --all-targets --features child-session-host --locked -- -D warnings
+cargo check -p "${RUNTIME_PACKAGE}" --no-default-features --locked
+cargo check -p animus --no-default-features --locked
+
+if grep -R -E 'static[[:space:]]+mut|OnceLock|LazyLock|thread_local!' \
+  "${RUNTIME_SOURCE}" "${STD_SOURCE}" >/dev/null 2>&1; then
+  printf '%s\n' 'error: the concrete child-session service gained a global registry' >&2
+  exit "${FAILURE}"
+fi
+if grep -R -E 'std::env|var_os|home_dir|Command::new|TcpStream|UdpSocket' \
+  "${RUNTIME_SOURCE}" "${STD_SOURCE}" >/dev/null 2>&1; then
+  printf '%s\n' 'error: the concrete child-session service gained ambient discovery' >&2
+  exit "${FAILURE}"
+fi
+grep -F 'pub trait ChildSessionFactory' "${STD_SOURCE}" >/dev/null
+grep -F 'pub struct ConcreteChildSessionService' "${STD_SOURCE}" >/dev/null
+grep -F 'pub struct NormalCodingSessionController' "${STD_SOURCE}" >/dev/null
+grep -F 'pub fn admit_concrete_child_session' "${RUNTIME_SOURCE}" >/dev/null
+grep -F 'pub fn project_rlm_child_session_result' "${STD_SOURCE}" >/dev/null
+grep -F 'SubagentHandle::generation_bound' "${STD_SOURCE}" >/dev/null
+grep -F 'factory.service_identity() != record.factory_service_identity' "${STD_SOURCE}" >/dev/null
+grep -F 'controller.session_head() != record.session_head' "${STD_SOURCE}" >/dev/null
+grep -F 'normal_controller_runs_the_existing_coding_session_host' "${STD_TESTS}" >/dev/null
+grep -F 'missing_services_bounds_and_private_transcript_markers_fail_closed' "${STD_TESTS}" >/dev/null
+grep -F 'restart_reopens_only_matching_non_terminal_records_without_restarting_prompt' "${STD_TESTS}" >/dev/null
+grep -F 'runtime.child-session-service-core' .cairn/component-catalog.ncl >/dev/null
+grep -F 'std.concrete-child-session-host' .cairn/component-catalog.ncl >/dev/null
+grep -F 'animus-runtime::child_session_service' .cairn/runtime-facade-inventory.ncl >/dev/null
+grep -F 'animus-std::child_session_host' .cairn/runtime-facade-inventory.ncl >/dev/null
+grep -F 'automatic delegation, remote workers' "${DOC_SOURCE}" >/dev/null
+
+mkdir -p target/cairn/focused-rails
+receipt_path="target/cairn/focused-rails/${RAIL_NAME}.md"
+source_hash=$(
+  b3sum \
+    "${RUNTIME_SOURCE}" \
+    "${SUBAGENT_SOURCE}" \
+    "${STD_SOURCE}" \
+    "${STD_TESTS}" \
+    "${DOC_SOURCE}" \
+    .cairn/component-catalog.ncl \
+    .cairn/runtime-facade-inventory.ncl \
+    Cargo.toml \
+    crates/animus-std/Cargo.toml \
+    scripts/cairn/check-concrete-child-session-service \
+  | b3sum \
+  | cut -d ' ' -f 1
+)
+cat > "${receipt_path}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+source_set_blake3: ${source_hash}
+claims: explicit-normal-session-factory,service-local-generation-registry,monotonic-authority-admission,current-authority-fence,metadata-only-lifecycle-persistence,bounded-typed-results,coding-session-recovery,rlm-result-projection
+non_claims: automatic-delegation,remote-workers,process-isolation,sandboxing,child-correctness,task-success,exactly-once-cancellation,exactly-once-effects,production-readiness
+EOF
+
+printf '%s\n' 'focused rail concrete-child-session-service: pass'
+printf 'receipt: %s\n' "${receipt_path}"

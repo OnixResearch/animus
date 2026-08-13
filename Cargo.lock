@@ -344,6 +344,7 @@ dependencies = [
 name = "animus-std"
 version = "0.1.0"
 dependencies = [
+ "animus-adapter-rlm-kernel",
  "animus-adapters",
  "animus-core",
  "animus-eval-core",

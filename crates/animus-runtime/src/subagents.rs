@@ -507,6 +507,16 @@ pub fn subagent_capability_receipt_label(
     }
 }
 
+/// Returns the ordered, domain-separated BLAKE3 identity of a capability set.
+#[must_use]
+pub fn subagent_capability_set_identity(capabilities: &[TypedSubagentCapability]) -> String {
+    let labels = capabilities
+        .iter()
+        .map(TypedSubagentCapability::stable_label)
+        .collect::<Vec<_>>();
+    hash_parts(SAFE_HASH_DOMAIN_CAPABILITY, labels.as_slice())
+}
+
 /// Shared subagent context item class.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub enum SubagentContextItemKind {
@@ -897,12 +907,7 @@ pub fn validate_subagent_child_run(
 /// Converts a validated child run into an admitted coordinator DTO.
 #[must_use]
 pub fn admit_subagent_child_run(child: &SubagentChildRun) -> SubagentAdmission {
-    let capability_labels = child
-        .capabilities
-        .iter()
-        .map(TypedSubagentCapability::stable_label)
-        .collect::<Vec<_>>();
-    let capability_identity = hash_parts(SAFE_HASH_DOMAIN_CAPABILITY, &capability_labels);
+    let capability_identity = subagent_capability_set_identity(child.capabilities.as_slice());
     let admission_parts = [
         child.parent_id.as_str(),
         child.child_id.as_str(),
@@ -919,7 +924,6 @@ pub fn admit_subagent_child_run(child: &SubagentChildRun) -> SubagentAdmission {
             child.context_packet.packet_hash.as_str(),
         ],
     );
-    debug_assert_eq!(capability_labels.len(), child.capabilities.len());
     debug_assert!(!child.context_packet.packet_hash.is_empty());
     SubagentAdmission {
         child_id: child.child_id.clone(),
@@ -976,15 +980,35 @@ impl SubagentRunStatus {
     }
 }
 
+/// Generation-bound values for one concrete subagent handle.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct SubagentHandleBinding<'a> {
+    /// Safe parent identity.
+    pub parent_id: &'a str,
+    /// Safe child identity.
+    pub child_id: &'a str,
+    /// Positive registry generation.
+    pub generation: u64,
+    /// Current parent-authority identity.
+    pub authority_identity: &'a str,
+}
+
 /// Opaque service handle for a child run.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SubagentHandle {
     /// Safe host-issued handle label.
     pub handle_id: String,
+    parent_id: Option<String>,
+    child_id: Option<String>,
+    generation: Option<u64>,
+    authority_identity: Option<String>,
 }
 
 impl SubagentHandle {
-    /// Validates and builds a safe subagent handle.
+    /// Validates and builds a legacy unbound subagent handle.
+    ///
+    /// Concrete child-session hosts reject this compatibility shape because it
+    /// has no parent, child, generation, or authority fence.
     ///
     /// # Errors
     ///
@@ -992,7 +1016,62 @@ impl SubagentHandle {
     pub fn new(handle_id: impl AsRef<str>) -> Result<Self, SubagentDiagnostic> {
         Ok(Self {
             handle_id: validate_label!(FIELD_SERVICE, handle_id.as_ref())?,
+            parent_id: None,
+            child_id: None,
+            generation: None,
+            authority_identity: None,
         })
+    }
+
+    /// Builds a parent-, child-, generation-, and authority-bound handle.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SubagentDiagnostic`] for unsafe labels, a zero generation, or
+    /// a malformed authority identity.
+    pub fn generation_bound(
+        handle_id: impl AsRef<str>,
+        binding: SubagentHandleBinding<'_>,
+    ) -> Result<Self, SubagentDiagnostic> {
+        if binding.generation == 0 {
+            return Err(SubagentDiagnostic::new(
+                SubagentDiagnosticKind::StaleHandle,
+                FIELD_SERVICE,
+                "generation-bound handles require a positive generation",
+            ));
+        }
+        validate_hash(binding.authority_identity)?;
+        Ok(Self {
+            handle_id: validate_label!(FIELD_SERVICE, handle_id.as_ref())?,
+            parent_id: Some(validate_label!(FIELD_SERVICE, binding.parent_id)?),
+            child_id: Some(validate_label!(FIELD_SERVICE, binding.child_id)?),
+            generation: Some(binding.generation),
+            authority_identity: Some(binding.authority_identity.to_owned()),
+        })
+    }
+
+    /// Returns the bound parent identity when present.
+    #[must_use]
+    pub fn parent_id(&self) -> Option<&str> {
+        self.parent_id.as_deref()
+    }
+
+    /// Returns the bound child identity when present.
+    #[must_use]
+    pub fn child_id(&self) -> Option<&str> {
+        self.child_id.as_deref()
+    }
+
+    /// Returns the bound registry generation when present.
+    #[must_use]
+    pub const fn generation(&self) -> Option<u64> {
+        self.generation
+    }
+
+    /// Returns the bound current-authority identity when present.
+    #[must_use]
+    pub fn authority_identity(&self) -> Option<&str> {
+        self.authority_identity.as_deref()
     }
 }
 
