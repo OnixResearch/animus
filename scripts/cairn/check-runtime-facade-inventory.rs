@@ -143,11 +143,14 @@ const ALLOWED_FEATURES: &[&str] = &[
     "secretspec-host-resolution",
     "native-evaluation",
     "evaluation-adapters",
+    "change-request-adapters",
+    "maintenance-adapters",
     "evaluation-host",
     "evaluation-conformance",
     "harbor-atif",
     "basalt-authority-adapter",
     "native-evaluation-profile",
+    "packaged-tui-dogfood-smoke",
 ];
 
 const ALLOWED_AUTHORITIES: &[&str] = &[
@@ -198,6 +201,9 @@ const ALLOWED_FAMILIES: &[&str] = &[
     "execution-backend",
     "credentials",
     "evaluation",
+    "review",
+    "maintenance",
+    "tui",
 ];
 
 const AMBIENT_AUTHORITY_MARKERS: &[&str] = &[

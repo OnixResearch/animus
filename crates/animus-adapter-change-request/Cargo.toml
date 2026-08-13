@@ -1,0 +1,14 @@
+[package]
+name = "animus-adapter-change-request"
+description = "no_std forge-neutral change-request and code-review contracts for Animus."
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+blake3 = { version = "1.8.5", default-features = false }

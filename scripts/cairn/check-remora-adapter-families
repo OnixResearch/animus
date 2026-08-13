@@ -1,0 +1,88 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+readonly ROOT_FLAG=--root
+readonly DEFAULT_ROOT=.
+readonly CHECKER_SOURCE=scripts/cairn/check-remora-adapter-families.rs
+readonly CHECKER_TARGET=target/cairn/check-remora-adapter-families
+readonly RECEIPT=target/cairn/focused-rails/remora-adapter-families.md
+readonly PROHIBITED_DEPENDENCIES='(^|[-_])(tokio|reqwest|hyper|serde|git2|gix|octocrab|sqlx|rusqlite|cron)([-_]|$)'
+readonly SOURCE_COHORT_MATERIAL='animus.remora-adapter-families.source.v1:git@github.com:OnixResearch/remora.git:e3c857c857f4aa170d8a5b6286aad5855db541be:crates/remora-core/src/domain.rs,crates/remora-core/src/effect.rs,crates/remora-core/src/planning.rs,crates/remora-core/src/review.rs'
+readonly SOURCE_COHORT_HASH='a084a8a06727b1fae59377d34754f224065351e550caadf4e12c0bbcdcc26e42'
+
+root=${DEFAULT_ROOT}
+if [ "${1:-}" = "${ROOT_FLAG}" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  root=$2
+fi
+cd "${root}"
+
+if ! command -v b3sum >/dev/null 2>&1; then
+  printf '%s\n' 'error: b3sum is required for the source-cohort identity check' >&2
+  exit "${FAILURE}"
+fi
+computed_source_hash=$(printf '%s' "${SOURCE_COHORT_MATERIAL}" | b3sum | awk '{print $1}')
+if [ "${computed_source_hash}" != "${SOURCE_COHORT_HASH}" ]; then
+  printf '%s\n' 'error: Remora adapter source-cohort identity drifted' >&2
+  exit "${FAILURE}"
+fi
+
+mkdir -p "$(dirname "${CHECKER_TARGET}")" "$(dirname "${RECEIPT}")"
+rustc --edition=2021 --test "${CHECKER_SOURCE}" -o "${CHECKER_TARGET}-tests"
+"${CHECKER_TARGET}-tests"
+rustc --edition=2021 "${CHECKER_SOURCE}" -o "${CHECKER_TARGET}"
+"${CHECKER_TARGET}" .
+
+cargo fmt --all --check
+cargo test -p animus-adapter-change-request -p animus-adapter-maintenance --locked
+cargo clippy -p animus-adapter-change-request -p animus-adapter-maintenance --all-targets -- -D warnings
+cargo test -p animus-adapters --no-default-features --features maintenance --locked
+cargo clippy -p animus-adapters --no-default-features --features maintenance --all-targets -- -D warnings
+cargo check -p animus-adapter-change-request --target wasm32-unknown-unknown --locked
+cargo check -p animus-adapter-maintenance --target wasm32-unknown-unknown --locked
+cargo check -p animus-adapters --no-default-features --features maintenance --target wasm32-unknown-unknown --locked
+cargo check -p animus --no-default-features --features maintenance-adapters --target wasm32-unknown-unknown --locked
+sh scripts/cairn/check-component-catalog --root .
+sh scripts/cairn/check-runtime-facade-inventory --root .
+
+if cargo tree -p animus-adapter-change-request --edges normal --format '{lib}' | grep -Eiq "${PROHIBITED_DEPENDENCIES}"; then
+  printf '%s\n' 'error: host authority dependency leaked into animus-adapter-change-request' >&2
+  exit "${FAILURE}"
+fi
+if cargo tree -p animus-adapter-maintenance --edges normal --format '{lib}' | grep -Eiq "${PROHIBITED_DEPENDENCIES}"; then
+  printf '%s\n' 'error: host authority dependency leaked into animus-adapter-maintenance' >&2
+  exit "${FAILURE}"
+fi
+if cargo tree -p animus-adapter-change-request --edges normal --format '{lib}' | grep -Fq 'animus_adapter_maintenance'; then
+  printf '%s\n' 'error: dependency-maintenance contracts leaked into change-request contracts' >&2
+  exit "${FAILURE}"
+fi
+if cargo tree -p animus --edges normal --format '{lib}' | grep -Eq 'animus_adapter_(change_request|maintenance)'; then
+  printf '%s\n' 'error: Remora-derived adapters leaked into the default root facade' >&2
+  exit "${FAILURE}"
+fi
+if cargo tree -p animus-adapters --edges normal --format '{lib}' | grep -Eq 'animus_adapter_(change_request|maintenance)'; then
+  printf '%s\n' 'error: Remora-derived adapters leaked into the default adapter facade' >&2
+  exit "${FAILURE}"
+fi
+
+cat >"${RECEIPT}" <<'EOF'
+# Remora-derived adapter families focused rail
+
+- verdict: PASS
+- source: exact Remora repository, revision, declared license, owner grant, and BLAKE3 cohort
+- families: separate change-request and dependency-maintenance no-std crates
+- ports: nine separate least-authority service boundaries
+- planning: compatible grouping, security and major isolation, diff-side anchors, and CI triage
+- binding: exact request, observation, subject, implementation, and correlation identities
+- receipts: metadata only with explicit content-leak and overclaim rejection
+- isolation: default, no-default, Wasm, facade, catalog, and dependency checks passed
+- non-claims: no registry, advisory, manifest, workspace, validation, VCS, forge, scheduler, process, credential, persistence, merge, production, or release claim
+EOF
+
+printf '%s\n' 'focused rail remora-adapter-families: pass'
+printf 'receipt: %s\n' "${RECEIPT}"

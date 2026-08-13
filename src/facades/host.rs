@@ -82,6 +82,14 @@ pub mod codebase_graph {
 #[cfg(feature = "native-evaluation")]
 pub use animus_eval_core as native_evaluation;
 
+/// Non-default authority-free change-request adapter contracts.
+#[cfg(feature = "change-request-adapters")]
+pub use animus_adapter_change_request as change_request_adapters;
+
+/// Non-default authority-free dependency-maintenance adapter contracts.
+#[cfg(feature = "maintenance-adapters")]
+pub use animus_adapter_maintenance as maintenance_adapters;
+
 /// Non-default authority-free native evaluation adapter contracts.
 #[cfg(feature = "evaluation-adapters")]
 pub use animus_adapter_eval as evaluation_adapters;

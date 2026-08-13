@@ -1,0 +1,15 @@
+[package]
+name = "animus-adapter-maintenance"
+description = "no_std dependency-maintenance planning and service-port contracts for Animus."
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+animus-adapter-change-request = { path = "../animus-adapter-change-request", version = "0.1.0" }
+blake3 = { version = "1.8.5", default-features = false }

@@ -46,6 +46,8 @@ let root = "src/lib.rs" in
 let core = "crates/animus-core/src/lib.rs" in
 let adapters = "crates/animus-adapters/src/lib.rs" in
 let evaluation_adapters = "crates/animus-adapter-eval/src/lib.rs" in
+let change_request_adapters = "crates/animus-adapter-change-request/src/lib.rs" in
+let maintenance_adapters = "crates/animus-adapter-maintenance/src/lib.rs" in
 let preserves = "crates/animus-preserves/src/lib.rs" in
 let runtime = "crates/animus-runtime/src/lib.rs" in
 let session_core = "crates/animus-session-core/src/lib.rs" in
@@ -93,6 +95,8 @@ let execution_backend_feature = "execution-backend-planner" in
 let execution_backend_family = "execution-backend" in
 let native_evaluation_feature = "native-evaluation" in
 let evaluation_adapters_feature = "evaluation-adapters" in
+let change_request_adapters_feature = "change-request-adapters" in
+let maintenance_adapters_feature = "maintenance-adapters" in
 let evaluation_host_feature = "evaluation-host" in
 let evaluation_conformance_feature = "evaluation-conformance" in
 let harbor_atif_feature = "harbor-atif" in
@@ -102,6 +106,8 @@ let trajectory_transcript_feature = "trajectory-transcript-adapter" in
 let secretspec_host_feature = "secretspec-host-resolution" in
 let native_evaluation_profile_feature = "native-evaluation-profile" in
 let native_evaluation_family = "evaluation" in
+let change_request_family = "review" in
+let maintenance_family = "maintenance" in
 let agent_guardrail_feature = "agent-guardrail" in
 let agent_guardrail_family = "policy" in
 let syndicate_record = fun export_path_value owning_crate_value source_value class_value side_effect_value review_note_value => {
@@ -327,6 +333,36 @@ let evaluation_adapters_record = fun export_path_value owning_crate_value source
   depends_on = ["animus::native_evaluation"],
   composes_with = ["animus-adapters::harbor", "animus-runtime::harbor_eval", "animus-runtime::agent_roles"],
   capability_family = native_evaluation_family,
+}
+in
+let change_request_adapters_record = fun export_path_value owning_crate_value source_value review_note_value => {
+  export_path = export_path_value,
+  owning_crate = owning_crate_value,
+  source = source_value,
+  class = reusable,
+  side_effect = none,
+  stability = optional_stability,
+  review_note = review_note_value,
+  feature_gate = change_request_adapters_feature,
+  required_authority = none,
+  depends_on = [],
+  composes_with = ["orchestration", "quality", "schedule"],
+  capability_family = change_request_family,
+}
+in
+let maintenance_adapters_record = fun export_path_value owning_crate_value source_value review_note_value => {
+  export_path = export_path_value,
+  owning_crate = owning_crate_value,
+  source = source_value,
+  class = reusable,
+  side_effect = none,
+  stability = optional_stability,
+  review_note = review_note_value,
+  feature_gate = maintenance_adapters_feature,
+  required_authority = none,
+  depends_on = ["animus::change_request_adapters"],
+  composes_with = ["orchestration", "quality", "schedule"],
+  capability_family = maintenance_family,
 }
 in
 let evaluation_host_record = fun export_path_value owning_crate_value source_value review_note_value => {
@@ -1549,6 +1585,20 @@ let entry_values = [
     composes_with = [],
     capability_family = "headless",
   },
+  {
+    export_path = "animus-tui::run_packaged_tui_dogfood_smoke",
+    owning_crate = "animus-tui",
+    source = tui,
+    class = shell,
+    side_effect = shell_owned,
+    stability = optional_stability,
+    review_note = "feature-gated packaged TUI dogfood smoke runner",
+    feature_gate = "packaged-tui-dogfood-smoke",
+    required_authority = shell_owned,
+    depends_on = ["animus-std::run_packaged_headless_dogfood_smoke"],
+    composes_with = [],
+    capability_family = "tui",
+  },
   entry "animus-std::SyndicateAdapterError" "animus-std" std_shell shell shell_owned optional_stability "feature-gated Syndicate host dataspace adapter error",
   entry "animus-std::SyndicateHostDataspaceAdapter" "animus-std" std_shell shell shell_owned optional_stability "feature-gated host-owned dataspace adapter shell",
   entry "animus-std::SyndicateObservationDraft" "animus-std" std_shell reusable none optional_stability "borrowed redacted dataspace projection draft",
@@ -2623,6 +2673,10 @@ let entry_values = [
   harbor_atif_record "animus::harbor_atif" "animus" root "non-default root re-export of ATIF-v1.7 contracts",
   evaluation_adapters_record "animus-adapters::evaluation" "animus-adapters" adapters "non-default compatibility re-export of native evaluation adapter contracts",
   evaluation_adapters_record "animus::evaluation_adapters" "animus" root "non-default root re-export of native evaluation adapter contracts",
+  change_request_adapters_record "animus-adapters::change_request" "animus-adapters" adapters "non-default compatibility re-export of pure forge-neutral change-request contracts",
+  change_request_adapters_record "animus::change_request_adapters" "animus" root "non-default root re-export of pure forge-neutral change-request contracts",
+  maintenance_adapters_record "animus-adapters::maintenance" "animus-adapters" adapters "non-default compatibility re-export of pure dependency-maintenance contracts",
+  maintenance_adapters_record "animus::maintenance_adapters" "animus" root "non-default root re-export of pure dependency-maintenance contracts",
   evaluation_host_record "animus::evaluation_host" "animus" root "non-default explicit standard-library native evaluation host; callers supply all service authority",
   basalt_authority_record "animus::basalt_authority" "animus" root "non-default live Basalt raw-holder authority gate; callers supply all verification, local-gate, commit, and effect authority; AGPL-3.0-or-later review required",
   pijul_vcs_record "animus-adapters::pijul" "animus-adapters" adapters injection injected "implementation-free Pijul request, bounded executor, loaded-output, and service ports",
@@ -3030,7 +3084,6 @@ let entry_values = [
   entry "animus-tui::run_guarded_tool" "animus-tui" tui shell shell_owned optional_stability "auto-classified public export for composition inventory",
   entry "animus-tui::run_hosted_tool" "animus-tui" tui shell shell_owned optional_stability "auto-classified public export for composition inventory",
   entry "animus-tui::run_simple_tool" "animus-tui" tui shell shell_owned optional_stability "auto-classified public export for composition inventory",
-  entry "animus-tui::run_packaged_tui_dogfood_smoke" "animus-tui" tui shell shell_owned optional_stability "feature-gated packaged TUI dogfood smoke runner",
   entry "animus-tui::ToolApprovalPanel" "animus-tui" tui shell shell_owned optional_stability "auto-classified public export for composition inventory",
   entry "animus-tui::ToolCommandChoice" "animus-tui" tui shell shell_owned optional_stability "auto-classified public export for composition inventory",
   entry "animus-tui::ToolCorrelationId" "animus-tui" tui shell shell_owned optional_stability "auto-classified public export for composition inventory",
