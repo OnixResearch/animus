@@ -45,7 +45,12 @@ policy = []
 provenance = []
 quality = []
 research = []
-rlm-kernel = ["dep:animus-adapter-rlm-kernel"]
+rlm-kernel = [
+  "dep:animus-adapter-rlm-kernel",
+  "dep:animus-steel",
+  "animus-steel/rlm-kernel",
+  "steel",
+]
 scaffold = []
 status = []
 worker-team = []

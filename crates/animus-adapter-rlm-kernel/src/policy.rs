@@ -50,6 +50,18 @@ pub struct ResourceBounds {
     pub max_child_wall_time_ms: u64,
     /// Maximum model-visible child result characters.
     pub max_child_result_chars: u32,
+    /// Maximum admitted host calls in one bridged cell.
+    pub max_host_calls_per_cell: u32,
+    /// Maximum characters in one bridged host result.
+    pub max_host_result_chars: u32,
+    /// Maximum cumulative host-result characters in one bridged cell.
+    pub max_cumulative_host_result_chars: u32,
+    /// Maximum nested bridge depth.
+    pub max_bridge_nesting: u32,
+    /// Maximum cumulative deterministic evaluator fuel for one bridged cell.
+    pub max_bridge_evaluation_fuel: u64,
+    /// Maximum elapsed wall time for one bridged cell.
+    pub max_bridge_wall_time_ms: u64,
 }
 
 impl ResourceBounds {
@@ -77,6 +89,24 @@ impl ResourceBounds {
                 "max_child_result_chars",
                 u64::from(self.max_child_result_chars),
             ),
+            (
+                "max_host_calls_per_cell",
+                u64::from(self.max_host_calls_per_cell),
+            ),
+            (
+                "max_host_result_chars",
+                u64::from(self.max_host_result_chars),
+            ),
+            (
+                "max_cumulative_host_result_chars",
+                u64::from(self.max_cumulative_host_result_chars),
+            ),
+            ("max_bridge_nesting", u64::from(self.max_bridge_nesting)),
+            (
+                "max_bridge_evaluation_fuel",
+                self.max_bridge_evaluation_fuel,
+            ),
+            ("max_bridge_wall_time_ms", self.max_bridge_wall_time_ms),
         ];
         for (field, value) in bounds {
             crate::ensure_positive(field, value)?;
@@ -298,7 +328,7 @@ struct IdentityInputs<'a> {
 fn policy_identity(inputs: &IdentityInputs<'_>) -> String {
     let bounds = inputs.bounds;
     let bounds_text = alloc::format!(
-        "{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}",
+        "{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}",
         bounds.max_source_chars,
         bounds.max_environment_chars,
         bounds.max_bindings,
@@ -312,6 +342,12 @@ fn policy_identity(inputs: &IdentityInputs<'_>) -> String {
         bounds.max_child_tokens,
         bounds.max_child_wall_time_ms,
         bounds.max_child_result_chars,
+        bounds.max_host_calls_per_cell,
+        bounds.max_host_result_chars,
+        bounds.max_cumulative_host_result_chars,
+        bounds.max_bridge_nesting,
+        bounds.max_bridge_evaluation_fuel,
+        bounds.max_bridge_wall_time_ms,
     );
     let operation_text = inputs
         .operations

@@ -363,6 +363,7 @@
                 || baseName == "check-runtime-authority-seal"
                 || baseName == "check-rejected-attempt-context"
                 || baseName == "check-rlm-kernel"
+                || baseName == "check-steel-host-bridge"
                 || baseName == "check-adapter-conformance-index"
                 || baseName == "check-adapter-family-crates"
                 || baseName == "check-ast-grep-agent-boundary-audits"
@@ -929,6 +930,14 @@
             pkgs.nickel
           ] ''
             sh scripts/cairn/check-rlm-kernel --root .
+          '';
+
+          steel-host-bridge = cargoCheck "animus-steel-host-bridge" [
+            pkgs.b3sum
+            pkgs.diffutils
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-steel-host-bridge --root .
           '';
 
           nickel-policy-contracts = cargoCheck "animus-nickel-policy-contracts" [

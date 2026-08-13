@@ -1583,6 +1583,7 @@ let entry_values = [
   rlm_kernel_record "animus-steel::SteelRlmKernel" "animus-steel" steel injection injected "persistent transactional model-facing Steel evaluator" injected,
   rlm_kernel_record "animus-steel::SteelRlmToolAdapter" "animus-steel" steel injection injected "persistent Steel REPL implementation of the generic tool port" injected,
   rlm_kernel_record "animus-steel::SteelRlmEvaluation" "animus-steel" steel reusable none "typed bounded value or host-request evaluation outcome" none,
+  rlm_kernel_record "animus-steel::SteelRlmBridgeStep" "animus-steel" steel reusable none "typed staged replay value or host-request bridge step" none,
   rlm_kernel_record "animus-steel::SteelRlmError" "animus-steel" steel reusable none "bounded model-facing Steel diagnostic" none,
 
   entry "animus-adapters::AcpDescriptor" "animus-adapters" adapters reusable none stable "auto-classified public export for composition inventory",
@@ -3029,6 +3030,7 @@ let entry_values = [
   entry "animus-tui::run_guarded_tool" "animus-tui" tui shell shell_owned optional_stability "auto-classified public export for composition inventory",
   entry "animus-tui::run_hosted_tool" "animus-tui" tui shell shell_owned optional_stability "auto-classified public export for composition inventory",
   entry "animus-tui::run_simple_tool" "animus-tui" tui shell shell_owned optional_stability "auto-classified public export for composition inventory",
+  entry "animus-tui::run_packaged_tui_dogfood_smoke" "animus-tui" tui shell shell_owned optional_stability "feature-gated packaged TUI dogfood smoke runner",
   entry "animus-tui::ToolApprovalPanel" "animus-tui" tui shell shell_owned optional_stability "auto-classified public export for composition inventory",
   entry "animus-tui::ToolCommandChoice" "animus-tui" tui shell shell_owned optional_stability "auto-classified public export for composition inventory",
   entry "animus-tui::ToolCorrelationId" "animus-tui" tui shell shell_owned optional_stability "auto-classified public export for composition inventory",

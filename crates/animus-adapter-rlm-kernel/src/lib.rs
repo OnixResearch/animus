@@ -18,12 +18,17 @@ extern crate alloc;
 
 use alloc::string::ToString;
 
+mod bridge;
 mod child;
 mod environment;
 mod policy;
 mod receipt;
 mod request;
 
+pub use bridge::{
+    BridgeCallObservation, BridgeCellIdentity, BridgeCompletedCall, BridgeCorrelation,
+    BridgeFailureClass, BridgePendingCall, BridgeRunState, BridgeState, host_request_identity,
+};
 pub use child::{ChildResult, ChildSpawnRequest, Lineage, admit_child_spawn};
 pub use environment::{
     CompactionCause, CompactionRequest, ContextBinding, DefinitionCommit, EnvironmentState,
@@ -121,6 +126,14 @@ pub enum Error {
     ProhibitedClaim,
     /// A receipt contradicts its status or preservation facts.
     InconsistentReceipt,
+    /// A bridge transition does not apply to the current state.
+    BridgeStateConflict,
+    /// A bridge result does not match the pending call.
+    BridgeCorrelationMismatch,
+    /// Cancellation stopped a bridge run.
+    BridgeCancelled,
+    /// The bridge wall-time bound expired.
+    BridgeTimedOut,
 }
 
 impl core::fmt::Display for Error {
@@ -177,6 +190,12 @@ impl core::fmt::Display for Error {
             }
             Self::ProhibitedClaim => formatter.write_str("receipt contains a prohibited claim"),
             Self::InconsistentReceipt => formatter.write_str("receipt facts are inconsistent"),
+            Self::BridgeStateConflict => formatter.write_str("bridge state rejects the transition"),
+            Self::BridgeCorrelationMismatch => {
+                formatter.write_str("bridge result correlation does not match the pending call")
+            }
+            Self::BridgeCancelled => formatter.write_str("bridge run was cancelled"),
+            Self::BridgeTimedOut => formatter.write_str("bridge wall-time bound expired"),
         }
     }
 }

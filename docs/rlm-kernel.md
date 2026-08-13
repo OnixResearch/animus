@@ -42,9 +42,11 @@ Model-written Steel has no direct effect channel. It returns typed request value
 (animus-kernel-clear)
 ```
 
-Rust parses and revalidates each request. The optional runtime then calls one injected `RlmKernelHostExecutor`.
+Rust parses and revalidates each request. The marker-only API returns the admitted request without an effect.
 
-The executor owns all concrete effects. File access, commands, tools, context stores, child lifecycle, clocks, credentials, and persistence remain outside the kernel.
+The resumable API uses `execute_bridged_cell`. It returns correlated host results to the same staged cell through deterministic replay.
+
+The injected `RlmKernelHostExecutor` owns concrete effects. File access, commands, tools, context, child lifecycle, clocks, credentials, and persistence stay outside the kernel.
 
 ## Bounds
 
@@ -58,6 +60,9 @@ The policy names these finite bounds:
 - structural recursion depth
 - planned allocation bytes
 - host request characters
+- host calls per bridged cell
+- individual and cumulative host-result characters
+- bridge nesting, evaluator fuel, and wall time
 - child depth and fan-out
 - child tokens and wall time
 - child result characters
@@ -72,10 +77,11 @@ Receipts reject variable values, code bodies, child transcripts, credentials, an
 
 ## Verification
 
-Run the focused rail:
+Run the focused rails:
 
 ```sh
 scripts/cairn/check-rlm-kernel --root .
+scripts/cairn/check-steel-host-bridge --root .
 ```
 
 Run the relevant Rust checks:

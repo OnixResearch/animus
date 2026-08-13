@@ -8,7 +8,7 @@
 - `crates/animus-adapters` is the `#![no_std]` component boundary crate. It defines implementation-free adapter contracts and DTOs for swappable harness components such as models and tools.
 - `crates/animus-preserves-schema` owns authority-free schema identities and family catalog metadata; `crates/animus-preserves-adapter` is the minimal adapter-only text/binary bridge with no runtime dependency; `crates/animus-preserves` remains the compatibility facade and owns runtime, dataspace, provenance/session, and policy-visible family modules.
 - `crates/animus-steel` is the canonical Steel Scheme loop fabric. It lets embedders script the agent turn loop while Rust revalidates every selected model/tool/response action at adapter boundaries.
-- `crates/animus-adapter-rlm-kernel` is the no-std contract core for the optional model-facing persistent Steel environment. `animus-steel::SteelRlmToolAdapter` exposes it through the normal tool port, and `animus-runtime::rlm_kernel` keeps host effects injected.
+- `crates/animus-adapter-rlm-kernel` owns the no-std contracts for the optional model-facing Steel environment. `animus-steel::SteelRlmToolAdapter` exposes the environment through the normal tool port. `animus-runtime::rlm_kernel` keeps host effects injected. The resumable bridge returns correlated results to one staged cell. Rust retains admission and execution authority. See [docs/resumable-steel-host-bridge.md](docs/resumable-steel-host-bridge.md).
 - `crates/animus-session-core` is the `#![no_std]` pure session-state family. It owns control reducers, authority profiles and seals, branch planning and exploration, conversation projection, active-turn recovery, interrupted-tool repair, event replay, redacted export, and their BLAKE3 evidence contracts. Provider, filesystem, process, network, credential, clock, terminal, persistence, Steel, policy-loading, and host-shell authority stay outside this crate.
 - `crates/animus-runtime` is the reusable agent-loop runtime. It preserves the established session API paths as explicit `animus-session-core` re-exports. It drives typed Steel/fabric decisions through injected model and tool adapters, emits ordered runtime events/reports, and provides exact per-model prompt/skill/memory/tool composition, capability-bound semantic role composition and separation, a coherent metadata-only tool catalog, pure admission, injected executor, bounded output, and safe receipt kits while keeping provider, filesystem, process, network, UI, and persistence authority outside the runtime core.
 - The optional `schedule-reliability` runtime feature adds pure schedule ownership, claim-before-delivery, missed-tick coalescing, restart recovery, and metadata-only receipts. Hosts retain clocks, timers, durable storage, prompt queues, and delivery; see [docs/schedule-reliability.md](docs/schedule-reliability.md).
@@ -74,6 +74,8 @@ See [docs/portfolio-search.md](docs/portfolio-search.md) for the pure bounded po
 See [docs/interrupted-tool-call-repair.md](docs/interrupted-tool-call-repair.md) for exact active-branch tool binding, evidence-bound synthetic failures, append-only repair planning, durable provider gating, idempotence, and metadata-only receipts.
 
 See [docs/rlm-kernel.md](docs/rlm-kernel.md) for the optional `steel_repl` tool adapter, persistent model-facing Steel environment, typed host requests, bounded `rlm(...)`, compaction survival, and non-claims.
+
+See [docs/resumable-steel-host-bridge.md](docs/resumable-steel-host-bridge.md) for correlated host results, staged replay, final-only commit, partial-effect observations, and current runtime admission.
 
 See [docs/provider-retry-execution.md](docs/provider-retry-execution.md) for typed provider-failure classification, bounded same-plan retry, semantic-stream replay denial, injected cancellable timers, provider-neutral progress, and metadata-only receipts.
 
@@ -230,6 +232,7 @@ scripts/cairn/check-plugin-manifest-runtime-neutral --root .
 scripts/cairn/check-request-lifecycle --root .
 scripts/cairn/check-steel-runtime-policy --root .
 scripts/cairn/check-rlm-kernel --root .
+scripts/cairn/check-steel-host-bridge --root .
 scripts/cairn/check-neutral-ledger --root .
 scripts/cairn/check-harbor-atif-adapter --root .
 scripts/cairn/check-injected-services --root .

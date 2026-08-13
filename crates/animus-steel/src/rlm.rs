@@ -3,14 +3,42 @@ use std::time::Duration;
 use animus_adapters::ComponentAdapter;
 
 const RLM_PRELUDE: &str = r#"
-(define (animus-host-read target) (list 'animus-host-request "file_read" target))
-(define (animus-host-edit target replacement) (list 'animus-host-request "file_edit" target replacement))
-(define (animus-host-shell command) (list 'animus-host-request "shell" command))
-(define (animus-host-tool name payload) (list 'animus-host-request "tool" name payload))
-(define (animus-context-read key) (list 'animus-host-request "context_read" key))
-(define (animus-kernel-clear) (list 'animus-host-request "kernel_clear"))
+(define *animus-bridge-mode* 'marker)
+(define *animus-bridge-results* '())
+(define *animus-bridge-index* 0)
+(define *animus-bridge-seen-requests* '())
+(define *animus-bridge-root* #f)
+(define (animus-bridge-dispatch request)
+  (if (eq? *animus-bridge-mode* 'marker)
+      request
+      (begin
+        (set! *animus-bridge-seen-requests* (cons request *animus-bridge-seen-requests*))
+        (if (< *animus-bridge-index* (length *animus-bridge-results*))
+            (let ([result (list-ref *animus-bridge-results* *animus-bridge-index*)])
+              (set! *animus-bridge-index* (+ *animus-bridge-index* 1))
+              result)
+            (if *animus-bridge-root*
+                (*animus-bridge-root* (list 'animus-bridge-pending request))
+                (error "bridge replay has no correlated result"))))))
+(define (animus-bridge-run thunk)
+  (call/cc
+    (lambda (root)
+      (set! *animus-bridge-root* root)
+      (list 'animus-bridge-completed (thunk)))))
+(define (animus-bridge-marker-mode!)
+  (set! *animus-bridge-mode* 'marker)
+  (set! *animus-bridge-results* '())
+  (set! *animus-bridge-index* 0)
+  (set! *animus-bridge-seen-requests* '())
+  (set! *animus-bridge-root* #f))
+(define (animus-host-read target) (animus-bridge-dispatch (list 'animus-host-request "file_read" target)))
+(define (animus-host-edit target replacement) (animus-bridge-dispatch (list 'animus-host-request "file_edit" target replacement)))
+(define (animus-host-shell command) (animus-bridge-dispatch (list 'animus-host-request "shell" command)))
+(define (animus-host-tool name payload) (animus-bridge-dispatch (list 'animus-host-request "tool" name payload)))
+(define (animus-context-read key) (animus-bridge-dispatch (list 'animus-host-request "context_read" key)))
+(define (animus-kernel-clear) (animus-bridge-dispatch (list 'animus-host-request "kernel_clear")))
 (define (rlm profile context depth fan-out token-budget wall-time-ms result-char-budget)
-  (list 'animus-host-request "subagent" profile context depth fan-out token-budget wall-time-ms result-char-budget))
+  (animus-bridge-dispatch (list 'animus-host-request "subagent" profile context depth fan-out token-budget wall-time-ms result-char-budget)))
 "#;
 const HOST_REQUEST_TAG: &str = "animus-host-request";
 const FILE_READ_TAG: &str = "file_read";
@@ -43,6 +71,11 @@ const MAX_VISIBLE_VALUE_CHARS: u32 = 32_768;
 const CODE_ARGUMENT: &str = "code";
 const SAFE_RESULT_PREFIX: &str = "value:";
 const HOST_REQUEST_RESULT_PREFIX: &str = "host_request:";
+const BRIDGE_PENDING_TAG: &str = "animus-bridge-pending";
+const BRIDGE_COMPLETED_TAG: &str = "animus-bridge-completed";
+const BRIDGE_TAG_INDEX: usize = 0;
+const BRIDGE_PAYLOAD_INDEX: usize = 1;
+const BRIDGE_STEP_ARITY: usize = 2;
 
 /// Error from model-facing Steel evaluation or tool adaptation.
 #[derive(Debug)]
@@ -69,6 +102,11 @@ pub enum SteelRlmError {
         /// Bounded output diagnostic.
         message: String,
     },
+    /// The staged bridge protocol returned an invalid state or replay sequence.
+    BridgeProtocol {
+        /// Bounded protocol diagnostic.
+        message: String,
+    },
 }
 
 impl core::fmt::Display for SteelRlmError {
@@ -84,6 +122,9 @@ impl core::fmt::Display for SteelRlmError {
             }
             Self::ToolOutput { message } => {
                 write!(formatter, "Steel tool output failed: {message}")
+            }
+            Self::BridgeProtocol { message } => {
+                write!(formatter, "Steel bridge protocol failed: {message}")
             }
         }
     }
@@ -138,11 +179,53 @@ impl SteelRlmEvaluation {
     }
 }
 
+/// One staged result from deterministic bridge replay.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum SteelRlmBridgeStep {
+    /// The staged cell waits for one admitted host request.
+    HostRequest {
+        /// Typed request. No effect has occurred.
+        request: animus_adapter_rlm_kernel::HostRequest,
+        /// Pure request admission under the current policy.
+        admission: animus_adapter_rlm_kernel::HostRequestAdmission,
+        /// Deterministic evaluator fuel consumed by this attempt.
+        evaluation_fuel: u64,
+    },
+    /// The staged cell reached a final value and can commit.
+    Completed {
+        /// Bounded final value text.
+        value: String,
+        /// Deterministic evaluator fuel consumed by this attempt.
+        evaluation_fuel: u64,
+    },
+}
+
+impl SteelRlmBridgeStep {
+    /// Returns deterministic evaluator fuel for this attempt.
+    #[must_use]
+    pub const fn evaluation_fuel(&self) -> u64 {
+        match self {
+            Self::HostRequest {
+                evaluation_fuel, ..
+            }
+            | Self::Completed {
+                evaluation_fuel, ..
+            } => *evaluation_fuel,
+        }
+    }
+}
+
+#[derive(Clone)]
+struct CommittedCell {
+    source: String,
+    bridge_calls: Vec<animus_adapter_rlm_kernel::BridgeCompletedCall>,
+}
+
 /// Persistent transactional model-facing Steel environment.
 pub struct SteelRlmKernel {
     policy: animus_adapter_rlm_kernel::RlmKernelPolicy,
     environment: animus_adapter_rlm_kernel::EnvironmentState,
-    committed_sources: Vec<String>,
+    committed_cells: Vec<CommittedCell>,
     engine: steel::steel_vm::engine::Engine,
 }
 
@@ -153,11 +236,11 @@ impl SteelRlmKernel {
     ///
     /// Returns [`SteelRlmError`] when the restricted Steel prelude fails.
     pub fn new(policy: animus_adapter_rlm_kernel::RlmKernelPolicy) -> Result<Self, SteelRlmError> {
-        let engine = build_engine(&[], &[])?;
+        let engine = build_engine(&[], &[], &policy)?;
         Ok(Self {
             policy,
             environment: animus_adapter_rlm_kernel::EnvironmentState::default(),
-            committed_sources: Vec::new(),
+            committed_cells: Vec::new(),
             engine,
         })
     }
@@ -191,7 +274,8 @@ impl SteelRlmKernel {
         )?;
         let candidate_engine = build_engine(
             candidate_environment.bindings(),
-            self.committed_sources.as_slice(),
+            self.committed_cells.as_slice(),
+            &self.policy,
         )?;
         self.environment = candidate_environment;
         self.engine = candidate_engine;
@@ -217,7 +301,8 @@ impl SteelRlmKernel {
         )?;
         let mut candidate = build_engine(
             self.environment.bindings(),
-            self.committed_sources.as_slice(),
+            self.committed_cells.as_slice(),
+            &self.policy,
         )?;
         let values = evaluate_with_timeout(&mut candidate, source)?;
         let last = values.last().cloned().unwrap_or(steel::SteelVal::Void);
@@ -238,9 +323,89 @@ impl SteelRlmKernel {
             SteelRlmEvaluation::Value { value, receipt }
         };
         self.environment = candidate_environment;
-        self.committed_sources.push(String::from(source));
+        self.committed_cells.push(CommittedCell {
+            source: String::from(source),
+            bridge_calls: Vec::new(),
+        });
         self.engine = candidate;
         Ok(result)
+    }
+
+    /// Evaluates one staged bridge attempt with exact prior host results.
+    ///
+    /// This method does not mutate committed kernel state. Each attempt starts
+    /// from the same committed state and replays prior private results in order.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SteelRlmError`] for policy, Steel, protocol, or replay drift.
+    pub fn evaluate_bridge_step(
+        &self,
+        source: &str,
+        completed_calls: &[animus_adapter_rlm_kernel::BridgeCompletedCall],
+    ) -> Result<SteelRlmBridgeStep, SteelRlmError> {
+        let metrics = structural_metrics(source);
+        let plan = animus_adapter_rlm_kernel::plan_evaluation(
+            &self.environment,
+            &animus_adapter_rlm_kernel::EvaluationRequest { source, metrics },
+            &self.policy,
+        )?;
+        let mut candidate = build_engine(
+            self.environment.bindings(),
+            self.committed_cells.as_slice(),
+            &self.policy,
+        )?;
+        configure_bridge_replay(&mut candidate, completed_calls)?;
+        let wrapped_source = format!("(animus-bridge-run (lambda () {source}))");
+        let values = evaluate_with_timeout(&mut candidate, wrapped_source.as_str())?;
+        let last = values.last().cloned().unwrap_or(steel::SteelVal::Void);
+        parse_bridge_step(last, &self.policy, plan.metrics().fuel)
+    }
+
+    /// Commits a completed bridged cell after exact deterministic replay.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SteelRlmError`] without changing committed state when replay,
+    /// correlation, policy, or final-value validation fails.
+    pub fn commit_bridged(
+        &mut self,
+        source: &str,
+        completed_calls: &[animus_adapter_rlm_kernel::BridgeCompletedCall],
+    ) -> Result<SteelRlmEvaluation, SteelRlmError> {
+        let metrics = structural_metrics(source);
+        let plan = animus_adapter_rlm_kernel::plan_evaluation(
+            &self.environment,
+            &animus_adapter_rlm_kernel::EvaluationRequest { source, metrics },
+            &self.policy,
+        )?;
+        let mut candidate = build_engine(
+            self.environment.bindings(),
+            self.committed_cells.as_slice(),
+            &self.policy,
+        )?;
+        let values = replay_bridged_source(&mut candidate, source, completed_calls, &self.policy)?;
+        let last = values.last().cloned().unwrap_or(steel::SteelVal::Void);
+        let value = bounded_value_text(&last)?;
+        let candidate_environment =
+            animus_adapter_rlm_kernel::commit_evaluation(&self.environment, &plan, &self.policy)?;
+        let operation_classes = completed_calls
+            .iter()
+            .map(animus_adapter_rlm_kernel::BridgeCompletedCall::operation)
+            .collect::<Vec<_>>();
+        let receipt = bridge_evaluation_receipt(
+            &self.policy,
+            &plan,
+            operation_classes.as_slice(),
+            completed_calls,
+        )?;
+        self.environment = candidate_environment;
+        self.committed_cells.push(CommittedCell {
+            source: String::from(source),
+            bridge_calls: completed_calls.to_vec(),
+        });
+        self.engine = candidate;
+        Ok(SteelRlmEvaluation::Value { value, receipt })
     }
 
     /// Plans prompt compaction while preserving the persistent environment.
@@ -273,7 +438,7 @@ impl SteelRlmKernel {
                 clear_kernel: true,
             },
         )?;
-        let engine = build_engine(&[], &[])?;
+        let engine = build_engine(&[], &[], &self.policy)?;
         let counts = [
             animus_adapter_rlm_kernel::ReceiptCount::new(
                 "cleared_bindings",
@@ -303,7 +468,7 @@ impl SteelRlmKernel {
             },
         )?;
         self.environment = animus_adapter_rlm_kernel::EnvironmentState::default();
-        self.committed_sources.clear();
+        self.committed_cells.clear();
         self.engine = engine;
         Ok(receipt)
     }
@@ -379,7 +544,8 @@ impl ComponentAdapter<animus_adapters::ToolRequest, animus_adapters::ToolRespons
 
 fn build_engine(
     bindings: &[animus_adapter_rlm_kernel::ContextBinding],
-    committed_sources: &[String],
+    committed_cells: &[CommittedCell],
+    policy: &animus_adapter_rlm_kernel::RlmKernelPolicy,
 ) -> Result<steel::steel_vm::engine::Engine, SteelRlmError> {
     let mut engine = steel::steel_vm::engine::Engine::new_sandboxed();
     run_program(&mut engine, RLM_PRELUDE)?;
@@ -391,10 +557,127 @@ fn build_engine(
         );
         run_program(&mut engine, program.as_str())?;
     }
-    for source in committed_sources {
-        run_program(&mut engine, source.as_str())?;
+    for cell in committed_cells {
+        if cell.bridge_calls.is_empty() {
+            run_program(&mut engine, cell.source.as_str())?;
+        } else {
+            replay_bridged_source(
+                &mut engine,
+                cell.source.as_str(),
+                cell.bridge_calls.as_slice(),
+                policy,
+            )?;
+        }
     }
     Ok(engine)
+}
+
+fn configure_bridge_replay(
+    engine: &mut steel::steel_vm::engine::Engine,
+    completed_calls: &[animus_adapter_rlm_kernel::BridgeCompletedCall],
+) -> Result<(), SteelRlmError> {
+    let results = completed_calls
+        .iter()
+        .map(|call| crate::quoting::scheme_string(call.result_value()))
+        .collect::<Vec<_>>()
+        .join(" ");
+    let program = format!(
+        "(set! *animus-bridge-mode* 'bridge) \
+         (set! *animus-bridge-results* (list {results})) \
+         (set! *animus-bridge-index* 0) \
+         (set! *animus-bridge-seen-requests* '()) \
+         (set! *animus-bridge-root* #f)"
+    );
+    run_program(engine, program.as_str())?;
+    Ok(())
+}
+
+fn replay_bridged_source(
+    engine: &mut steel::steel_vm::engine::Engine,
+    source: &str,
+    completed_calls: &[animus_adapter_rlm_kernel::BridgeCompletedCall],
+    policy: &animus_adapter_rlm_kernel::RlmKernelPolicy,
+) -> Result<Vec<steel::SteelVal>, SteelRlmError> {
+    configure_bridge_replay(engine, completed_calls)?;
+    let values = run_program(engine, source)?;
+    verify_bridge_replay(engine, completed_calls, policy)?;
+    run_program(engine, "(animus-bridge-marker-mode!)")?;
+    Ok(values)
+}
+
+fn verify_bridge_replay(
+    engine: &mut steel::steel_vm::engine::Engine,
+    completed_calls: &[animus_adapter_rlm_kernel::BridgeCompletedCall],
+    policy: &animus_adapter_rlm_kernel::RlmKernelPolicy,
+) -> Result<(), SteelRlmError> {
+    let values = run_program(engine, "(reverse *animus-bridge-seen-requests*)")?;
+    let last = values.last().cloned().unwrap_or(steel::SteelVal::Void);
+    let steel::SteelVal::ListV(requests) = last else {
+        return Err(bridge_protocol_error(
+            "bridge replay request log is not a list",
+        ));
+    };
+    if requests.len() != completed_calls.len() {
+        return Err(bridge_protocol_error("bridge replay call count changed"));
+    }
+    for (request_value, completed) in requests.iter().cloned().zip(completed_calls) {
+        let Some((request, _admission)) = parse_host_request(request_value, policy)? else {
+            return Err(bridge_protocol_error("bridge replay request is not typed"));
+        };
+        if animus_adapter_rlm_kernel::host_request_identity(&request)
+            != completed.request_identity()
+        {
+            return Err(bridge_protocol_error(
+                "bridge replay request identity changed",
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn parse_bridge_step(
+    value: steel::SteelVal,
+    policy: &animus_adapter_rlm_kernel::RlmKernelPolicy,
+    evaluation_fuel: u64,
+) -> Result<SteelRlmBridgeStep, SteelRlmError> {
+    let steel::SteelVal::ListV(list) = value else {
+        return Err(bridge_protocol_error("bridge step is not a tagged list"));
+    };
+    let items = list.iter().cloned().collect::<Vec<_>>();
+    if items.len() != BRIDGE_STEP_ARITY {
+        return Err(bridge_protocol_error("bridge step has invalid arity"));
+    }
+    let tag = match items.get(BRIDGE_TAG_INDEX) {
+        Some(steel::SteelVal::SymbolV(tag)) => tag.as_str(),
+        _other => return Err(bridge_protocol_error("bridge step tag is invalid")),
+    };
+    let payload = items
+        .get(BRIDGE_PAYLOAD_INDEX)
+        .cloned()
+        .ok_or_else(|| bridge_protocol_error("bridge step payload is missing"))?;
+    match tag {
+        BRIDGE_PENDING_TAG => {
+            let Some((request, admission)) = parse_host_request(payload, policy)? else {
+                return Err(bridge_protocol_error("pending bridge request is not typed"));
+            };
+            Ok(SteelRlmBridgeStep::HostRequest {
+                request,
+                admission,
+                evaluation_fuel,
+            })
+        }
+        BRIDGE_COMPLETED_TAG => Ok(SteelRlmBridgeStep::Completed {
+            value: bounded_value_text(&payload)?,
+            evaluation_fuel,
+        }),
+        _other => Err(bridge_protocol_error("bridge step tag is unsupported")),
+    }
+}
+
+fn bridge_protocol_error(message: &str) -> SteelRlmError {
+    SteelRlmError::BridgeProtocol {
+        message: String::from(message),
+    }
 }
 
 fn run_program(
@@ -642,6 +925,54 @@ fn evaluation_receipt(
     )?)
 }
 
+fn bridge_evaluation_receipt(
+    policy: &animus_adapter_rlm_kernel::RlmKernelPolicy,
+    plan: &animus_adapter_rlm_kernel::EvaluationPlan,
+    operations: &[animus_adapter_rlm_kernel::HostOperationClass],
+    completed_calls: &[animus_adapter_rlm_kernel::BridgeCompletedCall],
+) -> Result<animus_adapter_rlm_kernel::Receipt, SteelRlmError> {
+    let cumulative_result_chars = completed_calls.iter().fold(0u64, |total, call| {
+        total.saturating_add(u64::from(call.result_chars()))
+    });
+    let counts = [
+        animus_adapter_rlm_kernel::ReceiptCount::new(
+            "source_chars",
+            u64::from(plan.source_chars()),
+        )?,
+        animus_adapter_rlm_kernel::ReceiptCount::new(
+            "host_calls",
+            u64::try_from(completed_calls.len()).unwrap_or(u64::MAX),
+        )?,
+        animus_adapter_rlm_kernel::ReceiptCount::new("host_result_chars", cumulative_result_chars)?,
+    ];
+    let mut artifact_hashes = Vec::with_capacity(completed_calls.len().saturating_add(1));
+    artifact_hashes.push(plan.source_hash());
+    artifact_hashes.extend(
+        completed_calls
+            .iter()
+            .map(animus_adapter_rlm_kernel::BridgeCompletedCall::result_identity),
+    );
+    let non_claims = string_refs(policy.non_claims());
+    Ok(animus_adapter_rlm_kernel::Receipt::from_draft(
+        &animus_adapter_rlm_kernel::ReceiptDraft {
+            status: animus_adapter_rlm_kernel::RlmKernelStatus::Completed,
+            policy_identity: policy.identity(),
+            operation_classes: operations,
+            counts: &counts,
+            child_lineage_hashes: &[],
+            artifact_hashes: artifact_hashes.as_slice(),
+            kernel_state_preserved: false,
+            non_claims: non_claims.as_slice(),
+            variable_value: None,
+            code_body: None,
+            child_transcript: None,
+            credential: None,
+            raw_path: None,
+            claims: &["bounded_bridge_processing"],
+        },
+    )?)
+}
+
 fn string_refs(values: &[String]) -> Vec<&str> {
     values.iter().map(String::as_str).collect()
 }
@@ -688,6 +1019,12 @@ mod tests {
     const CHILD_TOKEN_LIMIT: u64 = 16_000;
     const CHILD_WALL_TIME_LIMIT_MS: u64 = 60_000;
     const CHILD_RESULT_CHAR_LIMIT: u32 = 8_192;
+    const HOST_CALL_LIMIT: u32 = 4;
+    const HOST_RESULT_CHAR_LIMIT: u32 = 32_768;
+    const CUMULATIVE_HOST_RESULT_CHAR_LIMIT: u32 = 65_536;
+    const BRIDGE_NESTING_LIMIT: u32 = 4;
+    const BRIDGE_FUEL_LIMIT: u64 = 500_000;
+    const BRIDGE_WALL_TIME_LIMIT_MS: u64 = 120_000;
     const TOOL_VISIBLE_BUDGET: u32 = 512;
     const CHILD_PROFILE: &str = "focused-child";
     const CORRELATION_ID: &str = "steel-cell-1";
@@ -839,6 +1176,12 @@ mod tests {
                     max_child_tokens: CHILD_TOKEN_LIMIT,
                     max_child_wall_time_ms: CHILD_WALL_TIME_LIMIT_MS,
                     max_child_result_chars: CHILD_RESULT_CHAR_LIMIT,
+                    max_host_calls_per_cell: HOST_CALL_LIMIT,
+                    max_host_result_chars: HOST_RESULT_CHAR_LIMIT,
+                    max_cumulative_host_result_chars: CUMULATIVE_HOST_RESULT_CHAR_LIMIT,
+                    max_bridge_nesting: BRIDGE_NESTING_LIMIT,
+                    max_bridge_evaluation_fuel: BRIDGE_FUEL_LIMIT,
+                    max_bridge_wall_time_ms: BRIDGE_WALL_TIME_LIMIT_MS,
                 },
                 admitted_operations: operations,
                 admitted_child_profiles: &[CHILD_PROFILE],

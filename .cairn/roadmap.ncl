@@ -726,6 +726,71 @@ let change_entries = [
     "agent_harness_runtime.validation",
     "agent_harness_runtime.clankers_safe_receipts.closeout",
   ] [],
+  change "add-resumable-steel-host-bridge" core_role "runtime-loop" [
+    "agent_harness_runtime.rlm_kernel.host_requests.admitted",
+    "agent_harness_runtime.tool_executor_kit.admission",
+    "agent_harness_runtime.coding_session_host.durable_boundaries",
+  ] ["add-durable-steel-kernel-restore", "compose-rlm-host-effect-executor", "add-steel-native-skill-modules", "add-live-steel-agent-shell"],
+  change "add-durable-steel-kernel-restore" core_role "session-ledger" [
+    "add-resumable-steel-host-bridge",
+    "agent_harness_runtime.durable_session_store.private_journal",
+    "agent_harness_runtime.active_turn_recovery.recovery",
+  ] ["add-steel-native-skill-modules", "add-live-steel-agent-shell", "add-local-daemon-supervisor-host"],
+  change "add-tool-capable-openai-provider-host" host_role "concrete-adapters" [
+    "agent_harness_runtime.live_openai_provider_host.boundary",
+    "agent_harness_runtime.provider_streaming.parser_entrypoint",
+    "agent_harness_runtime.model_capability_matrix.negotiation",
+    "agent_harness_runtime.provider_projection_conformance.harness",
+  ] ["add-live-steel-agent-shell"],
+  change "compose-rlm-host-effect-executor" host_role "concrete-adapters" [
+    "add-resumable-steel-host-bridge",
+    "agent_harness_runtime.rlm_kernel.host_requests.admitted",
+    "agent_harness_runtime.tool_executor_kit.admission",
+    "agent_harness_runtime.subagent_coordinator.service",
+  ] ["add-concrete-child-session-service", "add-live-steel-agent-shell"],
+  change "add-concrete-child-session-service" host_role "ui-headless" [
+    "agent_harness_runtime.subagent_coordinator.service",
+    "agent_harness_runtime.subagent_typed_capabilities.intersection",
+    "agent_harness_runtime.subagent_context_packets.identity",
+    "agent_harness_runtime.subagent_lineage_ledger.record",
+    "agent_harness_runtime.coding_session_host.facade",
+  ] ["compose-rlm-host-effect-executor", "add-live-steel-agent-shell"],
+  change "add-steel-native-skill-modules" core_role "policy-guidance" [
+    "add-resumable-steel-host-bridge",
+    "add-durable-steel-kernel-restore",
+    "agent_harness_runtime.hermes_skill_manifest.descriptor",
+    "agent_harness_runtime.skill_source_lifecycle.frozen",
+  ] ["add-live-steel-agent-shell"],
+  change "add-coding-session-queue-cas" core_role "event-hooks" [
+    "agent_harness_runtime.coding_session_host.queues",
+    "agent_harness_runtime.coding_session_host.functional_core",
+    "agent_harness_runtime.pi_headless_protocol.queueing",
+  ] ["add-live-steel-agent-shell", "add-local-daemon-supervisor-host", "add-live-terminal-agent-host"],
+  change "add-live-steel-agent-shell" product_role "ui-headless" [
+    "add-resumable-steel-host-bridge",
+    "add-durable-steel-kernel-restore",
+    "add-tool-capable-openai-provider-host",
+    "compose-rlm-host-effect-executor",
+    "add-concrete-child-session-service",
+    "add-steel-native-skill-modules",
+    "add-coding-session-queue-cas",
+    "agent_harness_runtime.coding_session_host.conformance",
+    "agent_harness_runtime.cairn_policy.closeout",
+    "agent_harness_runtime.clankers_safe_receipts.closeout",
+  ] ["add-local-daemon-supervisor-host", "add-live-terminal-agent-host"],
+  change "add-local-daemon-supervisor-host" product_role "ui-headless" [
+    "add-live-steel-agent-shell",
+    "agent_harness_runtime.daemon_workers.supervisor",
+    "agent_harness_runtime.daemon_workers.detach",
+    "agent_harness_runtime.session_restore.restore_matrix",
+  ] ["add-live-terminal-agent-host"],
+  change "add-live-terminal-agent-host" product_role "ui-headless" [
+    "add-live-steel-agent-shell",
+    "add-local-daemon-supervisor-host",
+    "add-coding-session-queue-cas",
+    "agent_harness_runtime.ratatui_tool_host.bridge",
+    "agent_harness_runtime.model_streaming.runtime_events",
+  ] [],
 ]
 in
 
@@ -826,6 +891,16 @@ let overlap_entries = [
   overlap "concrete-mcp-client-host" "add-concrete-mcp-client-host" ["add-request-context-and-skill-turn-lifecycle", "add-tool-executor-kit"],
   overlap "revision-gated-workspace-edit-host" "add-revision-gated-workspace-edit-host" ["add-tool-executor-kit", "add-host-tool-executor-capability-packs"],
   overlap "transactional-daemon-handoff" "add-transactional-daemon-handoff" ["add-durable-pending-input-vault", "add-coding-session-host-facade", "extract-host-control-protocol"],
+  overlap "resumable-steel-host-calls" "add-resumable-steel-host-bridge" ["add-durable-steel-kernel-restore", "compose-rlm-host-effect-executor", "add-live-steel-agent-shell"],
+  overlap "durable-steel-kernel-state" "add-durable-steel-kernel-restore" ["add-resumable-steel-host-bridge", "add-steel-native-skill-modules", "add-live-steel-agent-shell"],
+  overlap "openai-provider-steel-tool-loop" "add-tool-capable-openai-provider-host" ["add-resumable-steel-host-bridge", "add-live-steel-agent-shell"],
+  overlap "rlm-host-effect-dispatch" "compose-rlm-host-effect-executor" ["add-resumable-steel-host-bridge", "add-concrete-child-session-service", "add-live-steel-agent-shell"],
+  overlap "concrete-child-session-execution" "add-concrete-child-session-service" ["compose-rlm-host-effect-executor", "add-live-steel-agent-shell"],
+  overlap "steel-programmatic-skills" "add-steel-native-skill-modules" ["add-durable-steel-kernel-restore", "add-live-steel-agent-shell"],
+  overlap "coding-session-queue-concurrency" "add-coding-session-queue-cas" ["add-live-steel-agent-shell", "add-local-daemon-supervisor-host", "add-live-terminal-agent-host"],
+  overlap "live-steel-agent-composition" "add-live-steel-agent-shell" ["add-tool-capable-openai-provider-host", "compose-rlm-host-effect-executor", "add-concrete-child-session-service", "add-local-daemon-supervisor-host", "add-live-terminal-agent-host"],
+  overlap "local-supervisor-worker-product-shell" "add-local-daemon-supervisor-host" ["add-live-steel-agent-shell", "add-live-terminal-agent-host", "add-transactional-daemon-handoff"],
+  overlap "live-terminal-client-shell" "add-live-terminal-agent-host" ["add-live-steel-agent-shell", "add-local-daemon-supervisor-host", "add-packaged-tui-dogfood-smoke"],
 ]
 in
 

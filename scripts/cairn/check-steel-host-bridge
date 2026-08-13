@@ -1,0 +1,84 @@
+#!/usr/bin/env sh
+# r[verify agent_harness_runtime.steel_host_bridge.verification]
+set -eu
+
+readonly FAILURE=1
+readonly RAIL_NAME='steel-host-bridge'
+readonly RECEIPT_SCHEMA='animus.focused-rail-receipt.v1'
+readonly POLICY_SOURCE='config/rlm-kernel-profile.ncl'
+readonly GENERATED_POLICY='config/generated/rlm-kernel-profile.json'
+readonly CONTRACT_SOURCE='crates/animus-adapter-rlm-kernel/src'
+readonly STEEL_SOURCE='crates/animus-steel/src/rlm.rs'
+readonly RUNTIME_SOURCE='crates/animus-runtime/src/rlmkernel.rs'
+readonly ADAPTER_PACKAGE='animus-adapter-rlm-kernel'
+readonly STEEL_PACKAGE='animus-steel'
+readonly RUNTIME_PACKAGE='animus-runtime'
+
+root='.'
+if [ "${1:-}" = '--root' ]; then
+  root=${2:-.}
+fi
+cd "${root}"
+readonly DEFAULT_CARGO_TARGET_DIR="${PWD}/target/steel-host-bridge-cargo"
+export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-${DEFAULT_CARGO_TARGET_DIR}}
+
+for tool in nickel cargo diff grep b3sum; do
+  if ! command -v "${tool}" >/dev/null 2>&1; then
+    printf 'error: %s is required for the Steel host bridge rail\n' "${tool}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/animus-steel-host-bridge.XXXXXX")
+trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
+
+nickel typecheck "${POLICY_SOURCE}"
+nickel export --format json --field rlm_kernel_policy "${POLICY_SOURCE}" > "${tmp_dir}/policy.json"
+diff -u "${GENERATED_POLICY}" "${tmp_dir}/policy.json"
+
+cargo test -p "${ADAPTER_PACKAGE}" --locked
+cargo check -p "${ADAPTER_PACKAGE}" --target wasm32-unknown-unknown --locked
+cargo test -p "${STEEL_PACKAGE}" --features rlm-kernel rlm --locked
+cargo test -p "${RUNTIME_PACKAGE}" --features rlm-kernel rlm_kernel --locked
+cargo check -p "${RUNTIME_PACKAGE}" --no-default-features --locked
+cargo check -p animus --features rlm-kernel --locked
+cargo check -p animus --no-default-features --target wasm32-unknown-unknown --locked
+
+if grep -R -E 'std::fs|std::process|Command::new|std::env|TcpStream|UdpSocket|SystemTime::now|Instant::now' \
+  "${CONTRACT_SOURCE}" --include='*.rs' >/dev/null 2>&1; then
+  printf '%s\n' 'error: the no-std bridge contract gained ambient host authority' >&2
+  exit "${FAILURE}"
+fi
+if grep -R -E 'variable_value: Some|code_body: Some|child_transcript: Some|credential: Some|raw_path: Some' \
+  "${STEEL_SOURCE}" "${RUNTIME_SOURCE}" >/dev/null 2>&1; then
+  printf '%s\n' 'error: the bridge receipt path retains prohibited payload content' >&2
+  exit "${FAILURE}"
+fi
+
+grep -F 'pub struct BridgeRunState' "${CONTRACT_SOURCE}/bridge.rs" >/dev/null
+grep -F 'pub fn execute_bridged_cell' "${RUNTIME_SOURCE}" >/dev/null
+grep -F 'RlmBridgeCheckpoint::Admission' "${RUNTIME_SOURCE}" >/dev/null
+grep -F 'RlmBridgeCheckpoint::Execution' "${RUNTIME_SOURCE}" >/dev/null
+grep -F 'RlmBridgeCheckpoint::Resumption' "${RUNTIME_SOURCE}" >/dev/null
+grep -F 'pub fn evaluate_bridge_step' "${STEEL_SOURCE}" >/dev/null
+grep -F 'pub fn commit_bridged' "${STEEL_SOURCE}" >/dev/null
+grep -F 'bridge replay request identity changed' "${STEEL_SOURCE}" >/dev/null
+
+mkdir -p target/cairn/focused-rails
+receipt_path="target/cairn/focused-rails/${RAIL_NAME}.md"
+policy_hash=$(b3sum "${POLICY_SOURCE}" | cut -d ' ' -f 1)
+generated_hash=$(b3sum "${GENERATED_POLICY}" | cut -d ' ' -f 1)
+source_hash=$(b3sum "${CONTRACT_SOURCE}"/*.rs "${STEEL_SOURCE}" "${RUNTIME_SOURCE}" | b3sum | cut -d ' ' -f 1)
+cat > "${receipt_path}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+policy_source_blake3: ${policy_hash}
+generated_policy_blake3: ${generated_hash}
+source_set_blake3: ${source_hash}
+claims: bounded-correlated-host-results,staged-cell-commit,current-admission,partial-effect-observations,metadata-only-receipts
+non_claims: durable-mid-cell-restore,effect-rollback,exactly-once-execution,security-sandboxing,task-correctness,production-readiness
+EOF
+
+printf '%s\n' 'focused rail steel-host-bridge: pass'
+printf 'receipt: %s\n' "${receipt_path}"
