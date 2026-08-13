@@ -2,69 +2,88 @@
 
 `animus-std-openai` is a non-default host for reviewed OpenAI-compatible Responses HTTPS endpoints. It requires explicit network and credential authority.
 
-The root feature is `openai-provider-host`. New embedders can depend on `animus-std-openai` directly and enable `reqwest-client`.
+The root text-only feature is `openai-provider-host`. The tool-capable feature is `openai-tool-provider-host`. Direct users can enable `reqwest-client` or `tool-streaming` on `animus-std-openai`.
 
-## Supported cohorts
+## Endpoint cohorts
 
-The host admits two exact endpoint pairs. OpenRouter documents its cohort in the [Responses API overview](https://openrouter.ai/docs/api/reference/responses/overview).
+The host admits two exact endpoint pairs:
 
 - `openai-responses` with `https://api.openai.com/v1/responses`; and
 - `openrouter-responses` with `https://openrouter.ai/api/v1/responses`.
 
 Crossed pairs and arbitrary URLs fail before credential use or network contact.
 
-Both cohorts support:
+The text-only cohort supports non-streaming text and refusal responses. It supports system, developer, user, and assistant messages. It also supports bounded usage, reasoning effort, output-token controls, temperature controls, and safe metadata.
 
-- text-only system, developer, user, and assistant messages;
-- non-streaming responses;
-- optional reasoning effort;
-- optional output-token and temperature controls;
-- safe metadata; and
-- completed text or refusal responses with bounded usage data.
+The text-only cohort rejects images, tools, structured output, stop sequences, and streaming.
 
-The host rejects images, tools, tool correlation, structured output, stop sequences, streaming, endpoint substitution, and unsupported response items before data loss can occur.
+## Tool-capable cohort
 
-Provider-qualified model identities, such as `deepseek/deepseek-v4-flash-0731`, are admitted only as model identifiers. The slash does not become valid in provider or credential identifiers.
+The separate `tool-streaming` cohort supports one exact function:
+
+- name: `steel_repl`;
+- schema label: `animus.steel-repl.v1`; and
+- schema shape: a strict JSON object with one required string field named `code`.
+
+These identities come from `animus-adapter-rlm-kernel`. The provider adapter does not execute the function. An authority-scoped shell must admit and execute the returned tool request.
+
+The cohort supports these canonical roles:
+
+- `user` for the initial request; and
+- `tool` for one correlated continuation result.
+
+The selected model must declare `steel_repl`, the exact schema label, and all required stream channels. The registry validator rejects tool support without these facts.
+
+The host emits `parallel_tool_calls: false`. Tool choice can be `auto`, `required`, or the exact declared function. The host rejects all other tools and schema labels before contact.
+
+The host preserves one continuation with:
+
+- the Animus model-call identity;
+- the provider response identity;
+- the provider output-item identity;
+- the provider function-call identity;
+- the exact tool name; and
+- the BLAKE3 identity of the completed arguments.
+
+The continuation request uses `previous_response_id` and one matching `function_call_output`. It does not replay or invent provider-native state.
+
+## Streaming cohort and provenance
+
+`OpenAiResponsesSseParser` is the one production parser for literal fixtures, fake transports, and live HTTPS streams. It parses bounded JSON SSE records from the reviewed OpenAI Responses event cohort.
+
+The reviewed event definitions came from the OpenAI OpenAPI document and the matching `openai-python` event classes. The checked fixtures use the reviewed field names and event lifecycle:
+
+- `response.created` and `response.in_progress`;
+- `response.output_item.added` and `response.output_item.done`;
+- `response.content_part.added` and `response.content_part.done`;
+- `response.output_text.delta` and `response.output_text.done`;
+- `response.reasoning_summary_part.added` and `response.reasoning_summary_part.done`;
+- `response.reasoning_summary_text.delta` and `response.reasoning_summary_text.done`;
+- `response.function_call_arguments.delta` and `response.function_call_arguments.done`;
+- `response.completed`, `response.failed`, and `response.incomplete`; and
+- `error`.
+
+The parser binds every accepted event to one response and output-item lifecycle. It also checks sequence numbers, tool-call identities, completed arguments, terminal state, and configured bounds.
+
+Only `response.reasoning_summary_text.delta` can produce a reasoning frame. That frame is redacted by default. Hidden reasoning events fail closed.
+
+Visible output becomes canonical content frames. Function arguments become redacted tool-call frames. Usage and terminal events become redacted canonical frames. Provider response identities remain host-local.
+
+The parser projects its accepted frames into the existing runtime retry stream state. Any accepted semantic frame blocks unsafe replay under the current retry policy.
 
 ## Authority and execution
 
-`build_openai_request_body` and `normalize_openai_response` are pure over explicit plans and bytes. They do not read the environment or contact a network.
+`build_openai_request_body`, `build_tool_capable_openai_request_body`, `normalize_openai_response`, and the SSE parser are deterministic over explicit inputs. They do not read the environment or contact a network.
 
-`ReqwestOpenAiHost` performs one HTTPS POST. It uses an explicit `OpenAiHostConfig`, `OpenAiApiKey`, and `CancellationState`.
+`ReqwestOpenAiHost` owns HTTPS transport. It uses explicit configuration, credentials, dispatch plans, cancellation, and byte bounds. The client disables redirects, ambient proxies, discovery, fallback, and hidden retry.
 
-The client disables redirects and ambient proxy configuration. It does not discover providers, models, endpoints, or credentials. It does not retry or fall back.
+The streaming transport is behind an injected reader seam. Deterministic tests use the same request admission and parser loop as the live client.
 
-The response reader stops after the configured byte limit plus one byte. Status and parse errors contain no provider body or API key.
-
-## Example
-
-```rust
-use std::time::Duration;
-use animus_std_openai::{
-    CancellationState, OpenAiApiKey, OpenAiHostConfig, ReqwestOpenAiHost,
-    OFFICIAL_OPENAI_RESPONSES_ENDPOINT_IDENTITY, OFFICIAL_OPENAI_RESPONSES_URL,
-};
-
-const REQUEST_TIMEOUT_SECONDS: u64 = 60;
-const RESPONSE_LIMIT_BYTES: u64 = 262_144;
-
-let config = OpenAiHostConfig::new(
-    OFFICIAL_OPENAI_RESPONSES_ENDPOINT_IDENTITY,
-    OFFICIAL_OPENAI_RESPONSES_URL,
-    Duration::from_secs(REQUEST_TIMEOUT_SECONDS),
-    RESPONSE_LIMIT_BYTES,
-)?;
-let host = ReqwestOpenAiHost::new(config)?;
-let key = OpenAiApiKey::new("env:ANIMUS_OPENAI_LIVE_API_KEY", api_key_value)?;
-let outcome = host.execute(&dispatch_plan, &key, CancellationState::Active)?;
-# Ok::<(), Box<dyn std::error::Error>>(())
-```
-
-The caller must construct `dispatch_plan` through `animus_std::plan_provider_dispatch`. The plan binds the selected provider, model, endpoint identity, request, credential source, deadline, cancellation label, and receipt policy.
+The response reader checks cancellation between reads. A cancellation before provider response creation produces a canonical cancelled outcome without a provider response identity.
 
 ## Packaged live smokes
 
-Run a packaged smoke only from the clean revision that will own the evidence.
+The existing packaged smokes remain text-only. Run one only from the clean revision that will own the evidence.
 
 For the official OpenAI endpoint:
 
@@ -88,41 +107,25 @@ cargo run -q -p animus-std-openai \
   --credential-stdin < /run/credentials/openrouter-api-key
 ```
 
-Each binary reads a bounded API key from standard input. Neither binary reads credential or model environment variables. The OpenRouter binary rejects every model except `deepseek/deepseek-v4-flash-0731`.
-
-Each binary prints provider, endpoint, status, counts, and BLAKE3 identities. It omits the prompt, API key, model output, and raw response.
-
-After a successful run, generate a current-head index:
-
-```sh
-scripts/cairn/generate-current-head-release-evidence-index \
-  --check live-providers=pass \
-  --claim live-providers \
-  --out target/cairn/release-evidence/live-openai.lines
-scripts/cairn/check-release-evidence-index \
-  --index target/cairn/release-evidence/live-openai.lines
-```
-
-The validator rejects a live-provider claim from a dirty head or a stale optional receipt.
+The binaries read a bounded API key from standard input. Their evidence omits prompts, credentials, model output, tool arguments, tool output, and raw responses.
 
 ## Validation
 
-Run the deterministic focused rails:
+Run these deterministic rails:
 
 ```sh
+scripts/config/check-provider-registry
 scripts/cairn/check-live-openai-provider-host --root .
 scripts/cairn/check-packaged-live-openai-smoke --root .
 scripts/cairn/check-packaged-live-openrouter-smoke --root .
 ```
 
-The ignored integration test remains available for compatibility with explicit environment-based test execution.
-
-Do not store the API key in source, command history, receipts, or test output.
+The focused host rail runs tool-streaming tests and Clippy. The literal fixtures cover an initial call, one `steel_repl` result, and a prior-response continuation.
 
 ## Evidence and non-claims
 
-Deterministic tests prove request admission, exact JSON projection, fake transport execution, bounded response parsing, cancellation, safe errors, and dependency isolation.
+Deterministic tests prove bounded admission and parsing for the checked fixture cohort. They prove exact tool and continuation correlation through the fake transport seam.
 
-A packaged binary does not prove live behavior until an operator runs it with explicit credentials. Without that result, live availability remains a non-claim.
+Without a separately run current-head live smoke, live availability remains a non-claim.
 
-This host does not prove OpenAI or OpenRouter reliability, routing choice, model quality, billing correctness, remote cancellation, memory erasure, production readiness, streaming, tool use, image input, or structured output.
+This host does not prove provider reliability, model quality, billing correctness, remote cancellation, memory erasure, hidden-reasoning absence, exactly-once tool execution, tool safety, retry safety outside the checked policy, or production readiness. It does not discover providers, choose fallback targets, read ambient credentials, or execute tools.

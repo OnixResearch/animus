@@ -2,9 +2,21 @@ use crate::{
     CancellationState, HostError, OpenAiApiKey, OpenAiHostConfig, TransportErrorClass,
     build_openai_request_body, normalize_openai_response,
 };
+#[cfg(feature = "tool-streaming")]
+use crate::{
+    OpenAiRetryStreamProgress, OpenAiStreamBounds, OpenAiStreamOutcome,
+    build_tool_capable_openai_request_body,
+};
 
 const HTTP_SUCCESS_START: u16 = 200;
 const HTTP_SUCCESS_END_EXCLUSIVE: u16 = 300;
+
+/// Pollable cancellation service for one provider stream.
+#[cfg(feature = "tool-streaming")]
+pub trait StreamingCancellation {
+    /// Returns true when the caller cancelled the exact in-flight model call.
+    fn is_cancelled(&self) -> bool;
+}
 
 pub(crate) struct WireRequest<'a> {
     pub(crate) endpoint_url: &'a str,
@@ -23,6 +35,21 @@ pub(crate) trait Transport {
         request: &WireRequest<'_>,
         api_key: &OpenAiApiKey,
     ) -> Result<WireResponse, TransportErrorClass>;
+}
+
+#[cfg(feature = "tool-streaming")]
+pub(crate) struct StreamingWireResponse {
+    pub(crate) status: u16,
+    pub(crate) body: Box<dyn std::io::Read>,
+}
+
+#[cfg(feature = "tool-streaming")]
+pub(crate) trait StreamingTransport {
+    fn open_stream(
+        &self,
+        request: &WireRequest<'_>,
+        api_key: &OpenAiApiKey,
+    ) -> Result<StreamingWireResponse, TransportErrorClass>;
 }
 
 #[derive(Clone, Copy)]
@@ -62,6 +89,68 @@ pub(crate) fn execute_with_transport<T: Transport>(
         response.body.as_slice(),
         input.config.max_response_bytes(),
     )
+}
+
+/// Borrowed authority and correlation input for one tool stream.
+#[cfg(feature = "tool-streaming")]
+pub struct OpenAiToolStreamRequest<'a> {
+    /// Admitted provider dispatch plan.
+    pub plan: &'a animus_std::ProviderDispatchPlan,
+    /// Tool cohort and continuation correlation.
+    pub dispatch: crate::OpenAiToolDispatch,
+    /// Explicit credential bound to the plan.
+    pub api_key: &'a OpenAiApiKey,
+    /// Pollable cancellation for the exact call.
+    pub cancellation: &'a dyn StreamingCancellation,
+}
+
+#[cfg(feature = "tool-streaming")]
+pub(crate) struct StreamingExecutionRequest<'a> {
+    pub(crate) config: &'a OpenAiHostConfig,
+    pub(crate) plan: &'a animus_std::ProviderDispatchPlan,
+    pub(crate) dispatch: crate::OpenAiToolDispatch,
+    pub(crate) api_key: &'a OpenAiApiKey,
+    pub(crate) cancellation: &'a dyn StreamingCancellation,
+}
+
+#[cfg(feature = "tool-streaming")]
+pub(crate) fn execute_tool_stream_with_transport<T: StreamingTransport>(
+    transport: &T,
+    input: StreamingExecutionRequest<'_>,
+) -> Result<OpenAiStreamOutcome, HostError> {
+    if input.cancellation.is_cancelled() {
+        return Err(HostError::Cancelled);
+    }
+    if input.api_key.source_label() != input.plan.credential_source_label() {
+        return Err(HostError::CredentialBindingMismatch);
+    }
+    let body = build_tool_capable_openai_request_body(input.config, input.plan, &input.dispatch)?;
+    let request = WireRequest {
+        endpoint_url: input.config.endpoint_url(),
+        body,
+        max_response_bytes: input.config.max_response_bytes(),
+    };
+    let mut response = transport
+        .open_stream(&request, input.api_key)
+        .map_err(|class| HostError::Transport { class })?;
+    if !(HTTP_SUCCESS_START..HTTP_SUCCESS_END_EXCLUSIVE).contains(&response.status) {
+        return Err(HostError::HttpStatus {
+            status: response.status,
+        });
+    }
+    let mut parser = crate::OpenAiResponsesSseParser::new(
+        input.dispatch,
+        OpenAiStreamBounds::reviewed(usize::try_from(input.config.max_response_bytes()).map_err(
+            |_error| HostError::ResponseTooLarge {
+                limit: input.config.max_response_bytes(),
+            },
+        )?),
+    )
+    .map_err(|source| HostError::Stream { source })?;
+    stream_reader_into_parser(response.body.as_mut(), &mut parser, input.cancellation)?;
+    parser
+        .finish()
+        .map_err(|source| HostError::Stream { source })
 }
 
 /// One explicit blocking HTTPS client for the admitted `OpenAI` Responses endpoint.
@@ -115,6 +204,31 @@ impl ReqwestOpenAiHost {
         )
     }
 
+    /// Sends one admitted streaming tool request through the production parser.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`HostError`] for admission, cancellation, transport, status, bound, or stream failures.
+    #[cfg(feature = "tool-streaming")]
+    pub fn execute_tool_stream(
+        &self,
+        request: OpenAiToolStreamRequest<'_>,
+    ) -> Result<OpenAiStreamOutcome, HostError> {
+        // r[impl agent_harness_runtime.tool_capable_openai_host.authority]
+        let outcome = execute_tool_stream_with_transport(
+            self,
+            StreamingExecutionRequest {
+                config: &self.config,
+                plan: request.plan,
+                dispatch: request.dispatch,
+                api_key: request.api_key,
+                cancellation: request.cancellation,
+            },
+        )?;
+        let _progress: OpenAiRetryStreamProgress = outcome.retry_progress();
+        Ok(outcome)
+    }
+
     /// Returns the admitted host configuration.
     #[must_use]
     pub const fn config(&self) -> &OpenAiHostConfig {
@@ -151,6 +265,58 @@ impl Transport for ReqwestOpenAiHost {
             .read_to_end(&mut body)
             .map_err(|_error| TransportErrorClass::ResponseRead)?;
         Ok(WireResponse { status, body })
+    }
+}
+
+#[cfg(feature = "tool-streaming")]
+impl StreamingTransport for ReqwestOpenAiHost {
+    fn open_stream(
+        &self,
+        request: &WireRequest<'_>,
+        api_key: &OpenAiApiKey,
+    ) -> Result<StreamingWireResponse, TransportErrorClass> {
+        let response = self
+            .client
+            .post(request.endpoint_url)
+            .bearer_auth(api_key.expose_value())
+            .header(reqwest::header::ACCEPT, "text/event-stream")
+            .header(reqwest::header::CONTENT_TYPE, "application/json")
+            .body(request.body.clone())
+            .send()
+            .map_err(|error| classify_reqwest_error(&error))?;
+        Ok(StreamingWireResponse {
+            status: response.status().as_u16(),
+            body: Box::new(response),
+        })
+    }
+}
+
+#[cfg(feature = "tool-streaming")]
+fn stream_reader_into_parser(
+    reader: &mut dyn std::io::Read,
+    parser: &mut crate::OpenAiResponsesSseParser,
+    cancellation: &dyn StreamingCancellation,
+) -> Result<(), HostError> {
+    const STREAM_READ_BUFFER_BYTES: usize = 8_192;
+    let mut buffer = [0_u8; STREAM_READ_BUFFER_BYTES];
+    loop {
+        if cancellation.is_cancelled() {
+            parser
+                .cancel()
+                .map_err(|source| HostError::Stream { source })?;
+            return Ok(());
+        }
+        let read = reader
+            .read(&mut buffer)
+            .map_err(|_error| HostError::Transport {
+                class: TransportErrorClass::ResponseRead,
+            })?;
+        if read == 0 {
+            return Ok(());
+        }
+        parser
+            .push_chunk(&buffer[..read])
+            .map_err(|source| HostError::Stream { source })?;
     }
 }
 

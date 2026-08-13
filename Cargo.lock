@@ -451,7 +451,9 @@ name = "animus-std-openai"
 version = "0.1.0"
 dependencies = [
  "animus-adapters",
+ "animus-runtime",
  "animus-std",
+ "blake3",
  "reqwest",
  "serde",
  "serde_json",

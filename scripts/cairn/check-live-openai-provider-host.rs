@@ -10,9 +10,13 @@ const ROOT_MANIFEST: &str = "Cargo.toml";
 const HOST_MANIFEST: &str = "crates/animus-std-openai/Cargo.toml";
 const HOST_SOURCE: &str = "crates/animus-std-openai/src";
 const LIVE_TEST: &str = "crates/animus-std-openai/tests/live-openai.rs";
+const TOOL_TEST: &str = "crates/animus-std-openai/src/tests/tool_streaming.rs";
+const TOOL_FIXTURE: &str = "crates/animus-std-openai/tests/fixtures/openai-responses-tool-call.sse";
+const FINAL_FIXTURE: &str = "crates/animus-std-openai/tests/fixtures/openai-responses-final.sse";
 const HOST_DOC: &str = "docs/live-openai-provider-host.md";
 const COMPONENT_CATALOG: &str = ".cairn/component-catalog.ncl";
 const FACADE_INVENTORY: &str = ".cairn/runtime-facade-inventory.ncl";
+const CONFORMANCE_INDEX: &str = ".cairn/adapter-conformance-index.ncl";
 const DEFAULT_MEMBERS_START: &str = "default-members = [";
 const SECTION_END: &str = "]";
 const REQWEST_DEPENDENCY: &str = "reqwest v0.12.28";
@@ -27,6 +31,15 @@ const REQUIRED_SOURCE_MARKERS: &[&str] = &[
     ".checked_add(1)",
     "ResponseTooLarge",
     "CredentialBindingMismatch",
+    "OpenAiResponsesSseParser",
+    "build_tool_capable_openai_request_body",
+    "STEEL_REPL_TOOL_NAME",
+    "STEEL_REPL_TOOL_SCHEMA",
+    "previous_response_id",
+    "FUNCTION_CALL_OUTPUT_TYPE",
+    "parallel_tool_calls",
+    "OpenAiToolStreamRequest",
+    "observe_provider_retry_stream",
 ];
 const FORBIDDEN_REUSABLE_MARKERS: &[&str] = &["reqwest::", "ReqwestOpenAiHost"];
 const REUSABLE_SOURCE_ROOTS: &[&str] = &[
@@ -80,12 +93,17 @@ fn validate_contract(root: &Path) -> Result<(), String> {
     let host_manifest = read(root, HOST_MANIFEST)?;
     let source = read_tree(root.join(HOST_SOURCE).as_path())?;
     let live_test = read(root, LIVE_TEST)?;
+    let tool_test = read(root, TOOL_TEST)?;
+    let tool_fixture = read(root, TOOL_FIXTURE)?;
+    let final_fixture = read(root, FINAL_FIXTURE)?;
     let docs = read(root, HOST_DOC)?;
 
     require(
         root_manifest.contains("openai-provider-host = [")
+            && root_manifest.contains("openai-tool-provider-host = [")
             && root_manifest.contains("dep:animus-std-openai")
-            && root_manifest.contains("animus-std-openai/reqwest-client"),
+            && root_manifest.contains("animus-std-openai/reqwest-client")
+            && root_manifest.contains("animus-std-openai/tool-streaming"),
         "root OpenAI host feature is not explicit and optional",
     )?;
     let default_members = section(&root_manifest, DEFAULT_MEMBERS_START, SECTION_END)?;
@@ -96,6 +114,8 @@ fn validate_contract(root: &Path) -> Result<(), String> {
     require(
         host_manifest.contains("default = []")
             && host_manifest.contains("reqwest-client = [\"dep:reqwest\"]")
+            && host_manifest.contains("tool-streaming = [")
+            && host_manifest.contains("animus-std/provider-retry")
             && host_manifest.contains("default-features = false"),
         "OpenAI host dependency gate is incomplete",
     )?;
@@ -112,13 +132,38 @@ fn validate_contract(root: &Path) -> Result<(), String> {
         "ignored explicit live smoke is missing",
     )?;
     require(
-        docs.contains("Without that result, live availability remains a non-claim")
-            && docs.contains("does not retry or fall back"),
-        "live evidence non-claims are incomplete",
+        tool_test.contains("literal_tool_stream_and_continuation_share_the_production_parser")
+            && tool_test.contains("unsupported_tools_and_lossy_schemas_fail_before_contact")
+            && tool_test.contains("malformed_reasoning_correlation_bounds_and_cancellation_fail_safely"),
+        "tool-streaming positive or negative tests are incomplete",
+    )?;
+    require(
+        tool_test.contains("explicit_live_openai_tool_stream_smoke")
+            && tool_test.contains("ANIMUS_OPENAI_TOOL_LIVE_API_KEY")
+            && tool_test.contains("render_openai_tool_stream_evidence"),
+        "separately opt-in tool-capable live smoke is incomplete",
+    )?;
+    require(
+        tool_fixture.contains("response.function_call_arguments.delta")
+            && tool_fixture.contains("response.reasoning_summary_text.delta")
+            && tool_fixture.contains("response.completed")
+            && final_fixture.contains("response.output_text.delta")
+            && final_fixture.contains("response.completed"),
+        "literal OpenAI Responses SSE fixtures are incomplete",
+    )?;
+    require(
+        docs.contains("Without a separately run current-head live smoke, live availability remains a non-claim")
+            && docs.contains("does not discover providers")
+            && docs.contains("does not prove provider reliability")
+            && docs.contains("OpenAI OpenAPI document")
+            && docs.contains("openai-python"),
+        "live evidence, provenance, or non-claims are incomplete",
     )?;
     require(
         read(root, COMPONENT_CATALOG)?.contains("std.live-openai-provider-host")
-            && read(root, FACADE_INVENTORY)?.contains("animus::openai_provider_host"),
+            && read(root, FACADE_INVENTORY)?.contains("animus::openai_provider_host")
+            && read(root, FACADE_INVENTORY)?.contains("animus::openai_tool_provider_host")
+            && read(root, CONFORMANCE_INDEX)?.contains("openai-tool-provider-host"),
         "OpenAI component or facade metadata is missing",
     )?;
     for reusable_root in REUSABLE_SOURCE_ROOTS {
@@ -157,7 +202,7 @@ fn validate_dependency_isolation(root: &Path) -> Result<(), String> {
             "-p",
             "animus",
             "--features",
-            "openai-provider-host",
+            "openai-tool-provider-host",
             "--locked",
         ],
     )?;
@@ -178,7 +223,7 @@ fn run_checks(root: &Path) -> Result<(), String> {
                 "-p",
                 "animus-std-openai",
                 "--features",
-                "reqwest-client",
+                "tool-streaming",
                 "--locked",
             ],
         },
@@ -190,7 +235,8 @@ fn run_checks(root: &Path) -> Result<(), String> {
                 "animus-std-openai",
                 "--all-targets",
                 "--features",
-                "reqwest-client",
+                "tool-streaming",
+                "--locked",
                 "--",
                 "-D",
                 "warnings",
@@ -203,7 +249,7 @@ fn run_checks(root: &Path) -> Result<(), String> {
                 "-p",
                 "animus",
                 "--features",
-                "openai-provider-host",
+                "openai-tool-provider-host",
                 "--locked",
             ],
         },

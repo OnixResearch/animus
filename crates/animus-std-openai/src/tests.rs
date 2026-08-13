@@ -39,6 +39,9 @@ const EXPECTED_CALLS_ONE: usize = 1;
 const EXPECTED_CALLS_ZERO: usize = 0;
 const FIRST_ITEM_INDEX: usize = 0;
 
+#[cfg(feature = "tool-streaming")]
+mod tool_streaming;
+
 const BASE_PROJECTION: &[&str] = &[
     "family:openai_responses",
     "role:user",

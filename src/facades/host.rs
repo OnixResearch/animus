@@ -178,6 +178,10 @@ pub use animus_std::{
     parse_active_turn_recovery_policy_json,
 };
 
-/// Non-default live OpenAI Responses host with explicit network and credential authority.
+/// Non-default live `OpenAI` Responses host with explicit network and credential authority.
 #[cfg(feature = "openai-provider-host")]
 pub use animus_std_openai as openai_provider_host;
+
+/// Non-default tool-capable `OpenAI` Responses SSE host for the exact `steel_repl` cohort.
+#[cfg(feature = "openai-tool-provider-host")]
+pub use animus_std_openai as openai_tool_provider_host;

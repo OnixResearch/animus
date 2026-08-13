@@ -98,6 +98,27 @@ pub enum HostError {
         /// Safe response failure reason.
         reason: &'static str,
     },
+    /// Exact tool-cohort metadata was invalid.
+    InvalidToolCohort {
+        /// Safe metadata failure reason.
+        reason: &'static str,
+    },
+    /// A reviewed JSON tool schema was invalid.
+    InvalidToolSchema {
+        /// Safe schema failure reason.
+        reason: &'static str,
+    },
+    /// Provider continuation identities or committed tool-result facts did not match.
+    Correlation {
+        /// Safe correlation failure reason.
+        reason: &'static str,
+    },
+    /// The production Responses SSE parser rejected the stream.
+    #[cfg(feature = "tool-streaming")]
+    Stream {
+        /// Safe parser failure.
+        source: crate::OpenAiStreamError,
+    },
     /// Existing canonical provider normalization rejected the projection.
     CanonicalNormalization {
         /// Safe provider dispatch error.
@@ -110,7 +131,10 @@ impl fmt::Display for HostError {
         match self {
             Self::InvalidConfiguration { reason }
             | Self::InvalidCredential { reason }
-            | Self::MalformedResponse { reason } => formatter.write_str(reason),
+            | Self::MalformedResponse { reason }
+            | Self::InvalidToolCohort { reason }
+            | Self::InvalidToolSchema { reason }
+            | Self::Correlation { reason } => formatter.write_str(reason),
             Self::CredentialBindingMismatch => {
                 formatter.write_str("credential source does not match provider dispatch plan")
             }
@@ -126,6 +150,8 @@ impl fmt::Display for HostError {
             Self::ResponseTooLarge { limit } => {
                 write!(formatter, "OpenAI response exceeded {limit} bytes")
             }
+            #[cfg(feature = "tool-streaming")]
+            Self::Stream { source } => write!(formatter, "OpenAI stream failed: {source}"),
             Self::CanonicalNormalization { source } => {
                 write!(formatter, "OpenAI response normalization failed: {source}")
             }

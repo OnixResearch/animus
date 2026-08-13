@@ -13,10 +13,13 @@ workspace = true
 [features]
 default = []
 reqwest-client = ["dep:reqwest"]
+tool-streaming = ["dep:animus-runtime", "animus-std/provider-retry", "reqwest-client"]
 
 [dependencies]
 animus-adapters = { path = "../animus-adapters", version = "0.1.0" }
+animus-runtime = { path = "../animus-runtime", version = "0.1.0", default-features = false, optional = true }
 animus-std = { path = "../animus-std", version = "0.1.0", default-features = false }
+blake3 = "1.8.3"
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls"], optional = true }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"

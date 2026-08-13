@@ -338,6 +338,10 @@
                 || baseName == "config.toml"
                 || baseName == "secretspec.toml"
                 || baseName == "README.md"
+                || (
+                  pkgs.lib.hasInfix "/crates/animus-std-openai/tests/fixtures/" pathText
+                  && pkgs.lib.hasSuffix ".sse" baseName
+                )
                 || baseName == "LICENSE"
                 || baseName == "LICENSE-APACHE"
                 || baseName == "LICENSE-MIT"

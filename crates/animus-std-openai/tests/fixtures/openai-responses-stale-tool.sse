@@ -1,0 +1,8 @@
+event: response.created
+data: {"type":"response.created","sequence_number":0,"response":{"id":"resp_stale_fixture","status":"in_progress"}}
+
+event: response.output_item.added
+data: {"type":"response.output_item.added","sequence_number":1,"output_index":0,"item":{"id":"function_fixture","type":"function_call","call_id":"call_fixture","name":"steel_repl","arguments":""}}
+
+event: response.function_call_arguments.delta
+data: {"type":"response.function_call_arguments.delta","sequence_number":2,"item_id":"other_function","output_index":0,"delta":"{\"code\":\"(+ 1 2)\"}"}
