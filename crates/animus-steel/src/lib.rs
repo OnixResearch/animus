@@ -69,7 +69,11 @@ pub type SteelPolicyReceiptRedaction = policy::ReceiptRedaction;
 pub use policy::DEFAULT_RUNTIME_HOST_ACTIONS;
 #[cfg(feature = "rlm-kernel")]
 pub use rlm::{
-    SteelRlmBridgeStep, SteelRlmError, SteelRlmEvaluation, SteelRlmKernel, SteelRlmToolAdapter,
+    STEEL_KERNEL_BRIDGE_SCHEMA, STEEL_KERNEL_COHORT, STEEL_KERNEL_EMPTY_HEAD,
+    STEEL_KERNEL_JOURNAL_SCHEMA, SteelKernelJournalError, SteelKernelPrivateJournal,
+    SteelKernelRecoveryPosture, SteelKernelRestoreAdmission, SteelKernelRestoreReceipt,
+    SteelKernelRestoreSensitiveDraft, SteelKernelRestoreStatus, SteelRlmBridgeStep, SteelRlmError,
+    SteelRlmEvaluation, SteelRlmKernel, SteelRlmToolAdapter, project_steel_kernel_restore_receipt,
 };
 
 /// Returns the canonical BLAKE3 hash for a Steel script body.

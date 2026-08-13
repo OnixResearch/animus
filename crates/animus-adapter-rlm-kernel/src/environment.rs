@@ -4,11 +4,22 @@ const MAX_BINDING_NAME_CHARS: u32 = 128;
 const EVALUATION_IDENTITY_DOMAIN: &str = "animus.rlm-kernel-evaluation.v1";
 
 /// One named prompt-context value retained across kernel turns.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 pub struct ContextBinding {
     name: String,
     value: String,
     value_hash: String,
+}
+
+impl core::fmt::Debug for ContextBinding {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        formatter
+            .debug_struct("ContextBinding")
+            .field("name", &self.name)
+            .field("value", &"<private>")
+            .field("value_hash", &self.value_hash)
+            .finish()
+    }
 }
 
 impl ContextBinding {

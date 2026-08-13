@@ -27,7 +27,8 @@ mod request;
 
 pub use bridge::{
     BridgeCallObservation, BridgeCellIdentity, BridgeCompletedCall, BridgeCorrelation,
-    BridgeFailureClass, BridgePendingCall, BridgeRunState, BridgeState, host_request_identity,
+    BridgeFailureClass, BridgePendingCall, BridgeReplayCallDraft, BridgeRunState, BridgeState,
+    host_request_identity,
 };
 pub use child::{ChildResult, ChildSpawnRequest, Lineage, admit_child_spawn};
 pub use environment::{

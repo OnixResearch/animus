@@ -74,6 +74,7 @@ let openai_provider_family = "model" in
 let lean_loop_feature = "lean-loop" in
 let lean_loop_family = "loop" in
 let rlm_kernel_feature = "rlm-kernel" in
+let durable_steel_kernel_restore_feature = "durable-steel-kernel-restore" in
 let rlm_kernel_family = "steel" in
 let autonomous_feature = "autonomous-gates" in
 let autonomous_family = "autonomous-gates" in
@@ -197,6 +198,21 @@ let rlm_kernel_record = fun export_path_value owning_crate_value source_value cl
   required_authority = required_authority_value,
   depends_on = [],
   composes_with = ["animus-runtime::tool_executor_kit"],
+  capability_family = rlm_kernel_family,
+}
+in
+let durable_steel_kernel_restore_record = fun export_path_value owning_crate_value source_value class_value side_effect_value review_note_value required_authority_value => {
+  export_path = export_path_value,
+  owning_crate = owning_crate_value,
+  source = source_value,
+  class = class_value,
+  side_effect = side_effect_value,
+  stability = optional_stability,
+  review_note = review_note_value,
+  feature_gate = durable_steel_kernel_restore_feature,
+  required_authority = required_authority_value,
+  depends_on = [],
+  composes_with = ["animus-steel::SteelRlmKernel"],
   capability_family = rlm_kernel_family,
 }
 in
@@ -1636,6 +1652,18 @@ let entry_values = [
   rlm_kernel_record "animus-steel::SteelRlmEvaluation" "animus-steel" steel reusable none "typed bounded value or host-request evaluation outcome" none,
   rlm_kernel_record "animus-steel::SteelRlmBridgeStep" "animus-steel" steel reusable none "typed staged replay value or host-request bridge step" none,
   rlm_kernel_record "animus-steel::SteelRlmError" "animus-steel" steel reusable none "bounded model-facing Steel diagnostic" none,
+  durable_steel_kernel_restore_record "animus-steel::STEEL_KERNEL_BRIDGE_SCHEMA" "animus-steel" steel reusable none "exact durable replay bridge schema" none,
+  durable_steel_kernel_restore_record "animus-steel::STEEL_KERNEL_COHORT" "animus-steel" steel reusable none "exact durable Steel replay cohort" none,
+  durable_steel_kernel_restore_record "animus-steel::STEEL_KERNEL_EMPTY_HEAD" "animus-steel" steel reusable none "empty private journal BLAKE3 chain head" none,
+  durable_steel_kernel_restore_record "animus-steel::STEEL_KERNEL_JOURNAL_SCHEMA" "animus-steel" steel reusable none "versioned private kernel journal schema" none,
+  durable_steel_kernel_restore_record "animus-steel::SteelKernelJournalError" "animus-steel" steel reusable none "bounded private journal and restore failure class" none,
+  durable_steel_kernel_restore_record "animus-steel::SteelKernelPrivateJournal" "animus-steel" steel reusable none "bounded private committed kernel journal value" none,
+  durable_steel_kernel_restore_record "animus-steel::SteelKernelRecoveryPosture" "animus-steel" steel reusable none "clean or interrupted-cell restore posture" none,
+  durable_steel_kernel_restore_record "animus-steel::SteelKernelRestoreAdmission" "animus-steel" steel reusable none "exact session generation head and recovery admission facts" none,
+  durable_steel_kernel_restore_record "animus-steel::SteelKernelRestoreReceipt" "animus-steel" steel reusable none "metadata-only restore receipt" none,
+  durable_steel_kernel_restore_record "animus-steel::SteelKernelRestoreSensitiveDraft" "animus-steel" steel reusable none "candidate sensitive fields for fail-closed receipt validation" none,
+  durable_steel_kernel_restore_record "animus-steel::SteelKernelRestoreStatus" "animus-steel" steel reusable none "bounded restore status" none,
+  durable_steel_kernel_restore_record "animus-steel::project_steel_kernel_restore_receipt" "animus-steel" steel reusable none "fail-closed metadata-only restore receipt projection" none,
 
   entry "animus-adapters::AcpDescriptor" "animus-adapters" adapters reusable none stable "auto-classified public export for composition inventory",
   entry "animus-adapters::AcpDescriptorDraft" "animus-adapters" adapters reusable none stable "auto-classified public export for composition inventory",
@@ -3542,8 +3570,16 @@ let entry_values = [
   entry "animus::prepare_rejected_attempt_context" "animus" root shell shell_owned optional_stability "compatibility reexport of rejected-attempt host preparation",
   entry "animus-runtime::coding_session_host" "animus-runtime" runtime reusable none stable "provider- and frontend-neutral coding-session reducer facade with authority-profile binding and resume admission",
   entry "animus-std::coding_session_host" "animus-std" std_shell shell shell_owned stable "non-default explicit-service coding-session host facade with current authority-enforcement re-probes",
+  durable_steel_kernel_restore_record "animus-std::DurableSteelKernelHostError" "animus-std" std_shell reusable none "bounded durable Steel kernel host error" none,
+  durable_steel_kernel_restore_record "animus-std::DurableSteelKernelHostIssue" "animus-std" std_shell reusable none "typed durable Steel kernel host issue class" none,
+  durable_steel_kernel_restore_record "animus-std::DurableSteelKernelPersistence" "animus-std" std_shell shell shell_owned "capability-scoped durable Steel kernel snapshot commit and restore shell" shell_owned,
+  durable_steel_kernel_restore_record "animus-std::DurableSteelKernelRestoreRequest" "animus-std" std_shell reusable none "explicit current restore and interruption facts" none,
   entry "animus-std::child_session_host" "animus-std" std_shell shell shell_owned stable "non-default per-instance child registry over an explicit normal coding-session factory current-authority checks bounded results and durable recovery",
   entry "animus::child_session_host" "animus" root shell shell_owned stable "root feature facade for the non-default concrete child-session host",
+  durable_steel_kernel_restore_record "animus::DurableSteelKernelHostError" "animus" root reusable none "root reexport of the bounded durable Steel kernel host error" none,
+  durable_steel_kernel_restore_record "animus::DurableSteelKernelHostIssue" "animus" root reusable none "root reexport of the durable Steel kernel issue class" none,
+  durable_steel_kernel_restore_record "animus::DurableSteelKernelPersistence" "animus" root shell shell_owned "root facade for capability-scoped durable Steel kernel persistence" shell_owned,
+  durable_steel_kernel_restore_record "animus::DurableSteelKernelRestoreRequest" "animus" root reusable none "root reexport of explicit durable Steel restore facts" none,
   entry "animus-std::pending_input_vault_host" "animus-std" std_shell shell shell_owned stable "non-default injected pending-entry store transaction cleanup quarantine repair and exact admitted-body shell",
   entry "animus-std::runtime_authority_seal_host" "animus-std" std_shell shell shell_owned optional_stability "non-default injected observation receipt-commit current-recheck effect and cleanup shell for one sealed dispatch",
   entry "animus::coding_session_host" "animus" root shell shell_owned stable "root feature facade for the non-default coding-session host",

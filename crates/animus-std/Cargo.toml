@@ -27,6 +27,13 @@ codebase-tool-host = ["codebase-graph-host", "dep:animus-runtime"]
 daemon-handoff = ["pending-input-vault"]
 dogfood-smoke = ["dep:animus-runtime"]
 durable-session-store = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
+durable-steel-kernel-restore = [
+  "durable-session-store",
+  "dep:animus-adapter-rlm-kernel",
+  "dep:animus-steel",
+  "animus-runtime/rlm-kernel",
+  "animus-steel/rlm-kernel",
+]
 harbor-eval = ["dep:animus-runtime", "animus-runtime/harbor-eval", "animus-adapters/evaluation", "dep:serde_json"]
 native-evaluation-profile = ["dep:animus-eval-core", "dep:serde", "dep:serde_json"]
 mesh-provider = ["dep:serde", "dep:serde_json"]
@@ -104,6 +111,7 @@ animus-core = { path = "../animus-core", version = "0.1.0" }
 animus-eval-core = { path = "../animus-eval-core", version = "0.1.0", optional = true }
 animus-preserves = { path = "../animus-preserves", version = "0.1.0", optional = true }
 animus-runtime = { path = "../animus-runtime", version = "0.1.0", default-features = false, optional = true }
+animus-steel = { path = "../animus-steel", version = "0.1.0", optional = true }
 animus-std-observability = { path = "../animus-std-observability", version = "0.1.0", optional = true }
 blake3 = { version = "1.8.5", default-features = false }
 cap-std = "3.4"
@@ -111,6 +119,9 @@ serde = { version = "1.0.228", features = ["derive"], optional = true }
 serde_json = { version = "1.0.149", optional = true }
 tree-sitter = { version = "0.25.10", optional = true }
 tree-sitter-rust = { version = "0.24.0", optional = true }
+
+[dev-dependencies]
+tempfile = "3.27.0"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 sandlock-core = { git = "https://github.com/multikernel/sandlock.git", rev = "e8c4cc0ef58e3fc145c4d147a61b889b4f291a10", optional = true }

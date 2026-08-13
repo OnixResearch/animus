@@ -2,6 +2,15 @@ use std::time::Duration;
 
 use animus_adapters::ComponentAdapter;
 
+mod journal;
+pub use journal::{
+    STEEL_KERNEL_BRIDGE_SCHEMA, STEEL_KERNEL_COHORT, STEEL_KERNEL_EMPTY_HEAD,
+    STEEL_KERNEL_JOURNAL_SCHEMA, SteelKernelJournalError, SteelKernelPrivateJournal,
+    SteelKernelRecoveryPosture, SteelKernelRestoreAdmission, SteelKernelRestoreReceipt,
+    SteelKernelRestoreSensitiveDraft, SteelKernelRestoreStatus,
+    project_steel_kernel_restore_receipt,
+};
+
 const RLM_PRELUDE: &str = r#"
 (define *animus-bridge-mode* 'marker)
 (define *animus-bridge-results* '())
@@ -219,13 +228,16 @@ impl SteelRlmBridgeStep {
 struct CommittedCell {
     source: String,
     bridge_calls: Vec<animus_adapter_rlm_kernel::BridgeCompletedCall>,
+    final_value_class: String,
 }
 
 /// Persistent transactional model-facing Steel environment.
 pub struct SteelRlmKernel {
     policy: animus_adapter_rlm_kernel::RlmKernelPolicy,
     environment: animus_adapter_rlm_kernel::EnvironmentState,
+    context_commits: Vec<Vec<animus_adapter_rlm_kernel::ContextBinding>>,
     committed_cells: Vec<CommittedCell>,
+    clear_epoch: u64,
     engine: steel::steel_vm::engine::Engine,
 }
 
@@ -240,7 +252,9 @@ impl SteelRlmKernel {
         Ok(Self {
             policy,
             environment: animus_adapter_rlm_kernel::EnvironmentState::default(),
+            context_commits: Vec::new(),
             committed_cells: Vec::new(),
+            clear_epoch: 0,
             engine,
         })
     }
@@ -278,6 +292,7 @@ impl SteelRlmKernel {
             &self.policy,
         )?;
         self.environment = candidate_environment;
+        self.context_commits.push(bindings.to_vec());
         self.engine = candidate_engine;
         Ok(())
     }
@@ -326,6 +341,10 @@ impl SteelRlmKernel {
         self.committed_cells.push(CommittedCell {
             source: String::from(source),
             bridge_calls: Vec::new(),
+            final_value_class: String::from(match &result {
+                SteelRlmEvaluation::Value { .. } => "value",
+                SteelRlmEvaluation::HostRequest { .. } => "host_request",
+            }),
         });
         self.engine = candidate;
         Ok(result)
@@ -403,6 +422,7 @@ impl SteelRlmKernel {
         self.committed_cells.push(CommittedCell {
             source: String::from(source),
             bridge_calls: completed_calls.to_vec(),
+            final_value_class: String::from("value"),
         });
         self.engine = candidate;
         Ok(SteelRlmEvaluation::Value { value, receipt })
@@ -468,7 +488,14 @@ impl SteelRlmKernel {
             },
         )?;
         self.environment = animus_adapter_rlm_kernel::EnvironmentState::default();
+        self.context_commits.clear();
         self.committed_cells.clear();
+        self.clear_epoch =
+            self.clear_epoch
+                .checked_add(1)
+                .ok_or_else(|| SteelRlmError::BridgeProtocol {
+                    message: String::from("kernel clear generation overflow"),
+                })?;
         self.engine = engine;
         Ok(receipt)
     }
@@ -624,8 +651,9 @@ fn verify_bridge_replay(
         let Some((request, _admission)) = parse_host_request(request_value, policy)? else {
             return Err(bridge_protocol_error("bridge replay request is not typed"));
         };
-        if animus_adapter_rlm_kernel::host_request_identity(&request)
-            != completed.request_identity()
+        if request.operation_class() != completed.operation()
+            || animus_adapter_rlm_kernel::host_request_identity(&request)
+                != completed.request_identity()
         {
             return Err(bridge_protocol_error(
                 "bridge replay request identity changed",

@@ -110,6 +110,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "sandlock-host",
     "session-tree-export",
     "durable-session-store",
+    "durable-steel-kernel-restore",
     "iroh-host",
     "syndicate-host",
     "iroh-syndicate-host",

@@ -61,6 +61,13 @@ pub use animus_std::{
 #[cfg(feature = "child-session-host")]
 pub use animus_std::child_session_host;
 
+/// Re-export of the non-default durable Steel kernel restore host.
+#[cfg(feature = "durable-steel-kernel-restore")]
+pub use animus_std::{
+    DurableSteelKernelHostError, DurableSteelKernelHostIssue, DurableSteelKernelPersistence,
+    DurableSteelKernelRestoreRequest,
+};
+
 /// Re-export of the non-default durable coding-session host facade.
 #[cfg(feature = "coding-session-host")]
 pub use animus_std::coding_session_host;

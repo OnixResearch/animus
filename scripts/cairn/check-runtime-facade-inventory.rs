@@ -117,6 +117,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "headless",
     "lean-loop",
     "rlm-kernel",
+    "durable-steel-kernel-restore",
     "loop",
     "policy",
     "provenance",

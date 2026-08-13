@@ -1,0 +1,97 @@
+#!/usr/bin/env sh
+# r[verify agent_harness_runtime.steel_kernel_restore.verification]
+set -eu
+
+readonly FAILURE=1
+readonly RAIL_NAME='durable-steel-kernel-restore'
+readonly RECEIPT_SCHEMA='animus.focused-rail-receipt.v1'
+readonly CONTRACT_SOURCE='crates/animus-adapter-rlm-kernel/src'
+readonly STEEL_SOURCE='crates/animus-steel/src/rlm.rs'
+readonly JOURNAL_SOURCE='crates/animus-steel/src/rlm/journal.rs'
+readonly RUNTIME_SOURCE='crates/animus-runtime/src/rlmkernel.rs'
+readonly STORE_SOURCE='crates/animus-runtime/src/sessionstore'
+readonly HOST_SOURCE='crates/animus-std/src/steelkernel.rs'
+readonly TEST_SOURCE='crates/animus-std/src/steelkernel/tests.rs'
+readonly DOC_SOURCE='docs/durable-steel-kernel-restore.md'
+readonly COMPONENT_CATALOG='.cairn/component-catalog.ncl'
+readonly FACADE_INVENTORY='.cairn/runtime-facade-inventory.ncl'
+readonly FLAKE_SOURCE='flake.nix'
+
+root='.'
+if [ "${1:-}" = '--root' ]; then
+  root=${2:-.}
+fi
+cd "${root}"
+readonly DEFAULT_CARGO_TARGET_DIR="${PWD}/target/durable-steel-kernel-restore-cargo"
+export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-${DEFAULT_CARGO_TARGET_DIR}}
+
+for tool in cargo grep b3sum; do
+  if ! command -v "${tool}" >/dev/null 2>&1; then
+    printf 'error: %s is required for the durable Steel kernel restore rail\n' "${tool}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+cargo test -p animus-adapter-rlm-kernel --locked
+cargo check -p animus-adapter-rlm-kernel --target wasm32-unknown-unknown --locked
+cargo test -p animus-steel --features rlm-kernel rlm --locked
+cargo test -p animus-std --features durable-steel-kernel-restore durable_steel_kernel --locked
+cargo clippy -p animus-steel --features rlm-kernel --all-targets --locked -- -D warnings
+cargo clippy -p animus-std --features durable-steel-kernel-restore --all-targets --locked -- -D warnings
+cargo check -p animus --features durable-steel-kernel-restore --locked
+cargo check -p animus-runtime --no-default-features --locked
+cargo check -p animus --no-default-features --target wasm32-unknown-unknown --locked
+
+if grep -R -E 'std::fs|std::process|Command::new|std::env|TcpStream|UdpSocket|SystemTime::now|Instant::now' \
+  "${CONTRACT_SOURCE}" "${STORE_SOURCE}" --include='*.rs' >/dev/null 2>&1; then
+  printf '%s\n' 'error: the authority-free restore contracts gained ambient host authority' >&2
+  exit "${FAILURE}"
+fi
+if grep -E '^    (source|result|prompt|credential|private_path|raw_diagnostic): String' \
+  "${JOURNAL_SOURCE}" >/dev/null 2>&1; then
+  printf '%s\n' 'error: the safe restore receipt stores private body fields' >&2
+  exit "${FAILURE}"
+fi
+
+grep -F 'pub const STEEL_KERNEL_JOURNAL_SCHEMA' "${JOURNAL_SOURCE}" >/dev/null
+grep -F 'pub fn private_journal_snapshot' "${JOURNAL_SOURCE}" >/dev/null
+grep -F 'pub fn restore_private_journal' "${JOURNAL_SOURCE}" >/dev/null
+grep -F 'pub fn project_steel_kernel_restore_receipt' "${JOURNAL_SOURCE}" >/dev/null
+grep -F 'BridgeCompletedCall::from_replay_parts' "${JOURNAL_SOURCE}" >/dev/null
+grep -F 'bridge replay request identity changed' "${STEEL_SOURCE}" >/dev/null
+grep -F 'pub struct DurableSteelKernelPersistence' "${HOST_SOURCE}" >/dev/null
+grep -F 'ActiveTurnRecoveryAction::PlanInterruptedToolRepair' "${HOST_SOURCE}" >/dev/null
+grep -F 'restore must not invoke the old executor' "${TEST_SOURCE}" >/dev/null
+grep -F 'No host executor exists' "${DOC_SOURCE}" >/dev/null
+grep -F 'steel.durable-kernel-restore' "${COMPONENT_CATALOG}" >/dev/null
+grep -F 'std.durable-steel-kernel-restore-host' "${COMPONENT_CATALOG}" >/dev/null
+grep -F 'animus-steel::SteelKernelPrivateJournal' "${FACADE_INVENTORY}" >/dev/null
+grep -F 'animus-std::DurableSteelKernelPersistence' "${FACADE_INVENTORY}" >/dev/null
+grep -F 'durable-steel-kernel-restore = cargoCheck' "${FLAKE_SOURCE}" >/dev/null
+
+mkdir -p target/cairn/focused-rails
+receipt_path="target/cairn/focused-rails/${RAIL_NAME}.md"
+source_hash=$(b3sum \
+  "${CONTRACT_SOURCE}"/*.rs \
+  "${STEEL_SOURCE}" \
+  "${JOURNAL_SOURCE}" \
+  "${RUNTIME_SOURCE}" \
+  "${STORE_SOURCE}"/*.rs \
+  "${HOST_SOURCE}" \
+  "${TEST_SOURCE}" \
+  "${DOC_SOURCE}" \
+  "${COMPONENT_CATALOG}" \
+  "${FACADE_INVENTORY}" \
+  "${FLAKE_SOURCE}" \
+  "$0" | b3sum | cut -d ' ' -f 1)
+cat > "${receipt_path}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+source_set_blake3: ${source_hash}
+claims: private-versioned-journal,exact-compatibility-admission,effect-disabled-replay,committed-safe-points,active-turn-interruption-binding,metadata-only-receipts
+non_claims: mid-cell-restore,vm-serialization,effect-rollback,exactly-once-effects,encrypted-storage,power-loss-immunity,cross-version-migration,production-durability,task-correctness,release-readiness
+EOF
+
+printf '%s\n' 'focused rail durable-steel-kernel-restore: pass'
+printf 'receipt: %s\n' "${receipt_path}"

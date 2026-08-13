@@ -228,6 +228,8 @@ pub enum DurableSessionRecordKind {
     BranchMove,
     /// Metadata-only session authority-profile binding.
     AuthorityProfileBinding,
+    /// Private committed Steel kernel safe-point snapshot.
+    SteelKernelState,
 }
 
 impl DurableSessionRecordKind {
@@ -242,6 +244,7 @@ impl DurableSessionRecordKind {
             Self::Repair => 5,
             Self::BranchMove => 6,
             Self::AuthorityProfileBinding => 7,
+            Self::SteelKernelState => 8,
         }
     }
 
@@ -256,6 +259,7 @@ impl DurableSessionRecordKind {
             5 => Some(Self::Repair),
             6 => Some(Self::BranchMove),
             7 => Some(Self::AuthorityProfileBinding),
+            8 => Some(Self::SteelKernelState),
             _other => None,
         }
     }
@@ -271,6 +275,7 @@ impl DurableSessionRecordKind {
             Self::Repair => "repair",
             Self::BranchMove => "branch_move",
             Self::AuthorityProfileBinding => "authority_profile_binding",
+            Self::SteelKernelState => "steel_kernel_state",
         }
     }
 }

@@ -127,6 +127,11 @@ session-branch-explorer = ["std", "runtime", "tui", "animus-std/session-branch-e
 codebase-graph-host = ["std", "animus-std/codebase-graph-host"]
 codebase-tool-host = ["std", "runtime", "animus-std/codebase-tool-host"]
 durable-session-store = ["std", "runtime", "animus-std/durable-session-store"]
+durable-steel-kernel-restore = [
+  "rlm-kernel",
+  "durable-session-store",
+  "animus-std/durable-steel-kernel-restore",
+]
 agent-guardrail = ["dep:animus-std-agent-guardrail"]
 real-check-completion-host = ["std", "dep:animus-std-check-exec"]
 lean-loop = ["runtime", "dep:animus-std-lean-loop"]

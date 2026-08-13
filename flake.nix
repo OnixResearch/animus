@@ -344,6 +344,7 @@
                 || baseName == "check-clankers-product-surfaces"
                 || baseName == "check-dogfood-readiness"
                 || baseName == "check-durable-session-store"
+                || baseName == "check-durable-steel-kernel-restore"
                 || baseName == "check-coding-session-host"
                 || baseName == "check-coding-session-queue-cas"
                 || baseName == "check-concrete-child-session-service"
@@ -1181,6 +1182,13 @@
             pkgs.nickel
           ] ''
             sh scripts/cairn/check-durable-session-store --root .
+          '';
+
+          durable-steel-kernel-restore = cargoCheck "animus-durable-steel-kernel-restore" [
+            pkgs.b3sum
+            pkgs.clippy
+          ] ''
+            sh scripts/cairn/check-durable-steel-kernel-restore --root .
           '';
 
           coding-session-host = cargoCheck "animus-coding-session-host" [

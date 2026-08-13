@@ -203,6 +203,25 @@ impl BridgeCallObservation {
     }
 }
 
+/// Borrowed private durable replay parts for one completed bridge call.
+#[derive(Clone, Copy, Debug)]
+pub struct BridgeReplayCallDraft<'a> {
+    /// Exact bridge cell identity.
+    pub cell: &'a BridgeCellIdentity,
+    /// Zero-based call sequence.
+    pub sequence: u32,
+    /// Domain-separated call identity.
+    pub call_identity: &'a str,
+    /// Typed host operation class.
+    pub operation: crate::HostOperationClass,
+    /// Domain-separated request identity.
+    pub request_identity: &'a str,
+    /// Private bounded result body.
+    pub result_value: &'a str,
+    /// Domain-separated result identity.
+    pub result_identity: &'a str,
+}
+
 /// One completed private bridge result and its safe identities.
 #[derive(Clone, Eq, PartialEq)]
 pub struct BridgeCompletedCall {
@@ -229,6 +248,60 @@ impl core::fmt::Debug for BridgeCompletedCall {
 }
 
 impl BridgeCompletedCall {
+    /// Reconstructs one private completed call from a durable replay record.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::Error`] when correlation, operation, request identity,
+    /// result identity, sequence, or result bounds do not match current policy.
+    pub fn from_replay_parts(
+        draft: BridgeReplayCallDraft<'_>,
+        policy: &crate::RlmKernelPolicy,
+    ) -> Result<Self, crate::Error> {
+        validate_identity("bridge_call_identity", draft.call_identity)?;
+        validate_identity("bridge_request_identity", draft.request_identity)?;
+        validate_identity("bridge_result_identity", draft.result_identity)?;
+        let sequence_text = draft.sequence.to_string();
+        let expected_call_identity = crate::hash_parts(
+            BRIDGE_CALL_IDENTITY_DOMAIN,
+            &[
+                draft.cell.session_identity(),
+                draft.cell.cell_identity(),
+                sequence_text.as_str(),
+                draft.request_identity,
+                policy.identity(),
+            ],
+        );
+        if expected_call_identity != draft.call_identity {
+            return Err(crate::Error::BridgeCorrelationMismatch);
+        }
+        let result_value = crate::required_text(
+            "bridge_host_result",
+            draft.result_value,
+            policy.bounds().max_host_result_chars,
+        )?;
+        let result_chars = crate::usize_to_u32(result_value.chars().count());
+        let expected_result_identity = crate::hash_parts(
+            BRIDGE_RESULT_IDENTITY_DOMAIN,
+            &[draft.call_identity, result_value.as_str()],
+        );
+        if expected_result_identity != draft.result_identity {
+            return Err(crate::Error::BridgeCorrelationMismatch);
+        }
+        Ok(Self {
+            correlation: BridgeCorrelation {
+                cell: draft.cell.clone(),
+                sequence: draft.sequence,
+                call_identity: String::from(draft.call_identity),
+            },
+            operation: draft.operation,
+            request_identity: String::from(draft.request_identity),
+            result_value,
+            result_identity: String::from(draft.result_identity),
+            result_chars,
+        })
+    }
+
     /// Returns the exact correlation.
     #[must_use]
     pub const fn correlation(&self) -> &BridgeCorrelation {

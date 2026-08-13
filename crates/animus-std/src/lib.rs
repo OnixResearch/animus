@@ -68,6 +68,9 @@ mod document;
 #[cfg(feature = "dogfood-smoke")]
 #[path = "dogfood/smoke.rs"]
 mod dogfood_smoke;
+#[cfg(feature = "durable-steel-kernel-restore")]
+#[path = "steelkernel.rs"]
+mod durable_steel_kernel;
 #[cfg(feature = "durable-session-store")]
 #[path = "sessionstore.rs"]
 mod durablefile;
@@ -257,6 +260,11 @@ pub type InMemoryObservabilitySink = observability::InMemorySink;
 /// Root public name for the no-op observability sink.
 #[cfg(feature = "observability-host")]
 pub type NoopObservabilitySink = observability::NoopSink;
+#[cfg(feature = "durable-steel-kernel-restore")]
+pub use durable_steel_kernel::{
+    DurableSteelKernelHostError, DurableSteelKernelHostIssue, DurableSteelKernelPersistence,
+    DurableSteelKernelRestoreRequest,
+};
 #[cfg(feature = "durable-session-store")]
 pub use durablefile::{
     DurableSessionCommitOutcome, DurableSessionHostError, DurableSessionHostIssue,
