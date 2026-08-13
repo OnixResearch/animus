@@ -413,11 +413,14 @@ fn edit_and_remove_follow_up(queued: &CodingSessionTransition) -> CodingSessionT
         },
     )
     .expect("queue follow-up");
+    let edit_precondition =
+        coding_session_queue_precondition(&with_follow_up.state, QUEUE_ITEM_TWO)
+            .expect("current edit precondition");
     let edited = reduce_coding_session_command(
         &with_follow_up.state,
         &CodingSessionCommand::EditQueued {
             item_id: String::from(QUEUE_ITEM_TWO),
-            entry_id: String::from("entry.queued.two.edited"),
+            precondition: edit_precondition,
             input: input("edited bounded follow-up"),
         },
     )
@@ -427,10 +430,13 @@ fn edit_and_remove_follow_up(queued: &CodingSessionTransition) -> CodingSessionT
         EXPECTED_INITIAL_COMMIT_MESSAGE_COUNT
     );
     assert_eq!(edited.state.active_leaf_id(), queued.state.active_leaf_id());
+    let remove_precondition = coding_session_queue_precondition(&edited.state, QUEUE_ITEM_TWO)
+        .expect("current remove precondition");
     let removed = reduce_coding_session_command(
         &edited.state,
         &CodingSessionCommand::RemoveQueued {
             item_id: String::from(QUEUE_ITEM_TWO),
+            precondition: remove_precondition,
         },
     )
     .expect("remove queued follow-up");
@@ -444,6 +450,406 @@ fn edit_and_remove_follow_up(queued: &CodingSessionTransition) -> CodingSessionT
         queued.state.active_leaf_id()
     );
     removed
+}
+
+#[test]
+fn exact_queue_cas_edit_and_remove_advance_once_without_transcript_mutation() {
+    // r[verify agent_harness_runtime.coding_session_queue_cas.commands.exact]
+    // r[verify agent_harness_runtime.coding_session_queue_cas.reducer.success]
+    // r[verify agent_harness_runtime.coding_session_queue_cas.verification]
+    let committed = committed_prompt();
+    let queued = queue_command(
+        &committed.state,
+        QueueCommandDraft {
+            item_id: QUEUE_ITEM,
+            entry_id: QUEUED_ENTRY,
+            body: STEERING_PROMPT,
+            is_steering: true,
+        },
+    );
+    let edit_precondition =
+        coding_session_queue_precondition(&queued.state, QUEUE_ITEM).expect("edit precondition");
+    let edit_command = CodingSessionCommand::EditQueued {
+        item_id: String::from(QUEUE_ITEM),
+        precondition: edit_precondition.clone(),
+        input: input(FOLLOW_UP_PROMPT),
+    };
+    let edited = reduce_coding_session_command(&queued.state, &edit_command).expect("exact edit");
+    assert_eq!(edited.state.messages(), queued.state.messages());
+    assert_eq!(edited.state.run(), queued.state.run());
+    assert_eq!(edited.state.durable_cursor(), queued.state.durable_cursor());
+    assert_eq!(
+        edited.state.queue_generation(),
+        queued
+            .state
+            .queue_generation()
+            .checked_next()
+            .expect("next generation")
+    );
+    assert!(matches!(
+        edited.events.last(),
+        Some(crate::RuntimeEvent::SessionQueueMutationObserved { mutation })
+            if mutation.status == "accepted"
+                && mutation.operation == CodingSessionQueueMutationOperation::Edit
+    ));
+    let edited_precondition =
+        coding_session_queue_precondition(&edited.state, QUEUE_ITEM).expect("edited precondition");
+    assert_eq!(edited_precondition.entry_id(), QUEUED_ENTRY);
+    assert_eq!(
+        edited_precondition.expected_text_identity(),
+        coding_session_queue_text_identity(FOLLOW_UP_PROMPT)
+    );
+    let edit_receipt = project_coding_session_queue_success_receipt(
+        &queued.state,
+        &edited.state,
+        CodingSessionQueueAcceptedMutation {
+            operation: CodingSessionQueueMutationOperation::Edit,
+            item_id: QUEUE_ITEM,
+            precondition: &edit_precondition,
+        },
+        CodingSessionQueueSensitiveDraft::default(),
+    )
+    .expect("safe edit receipt");
+    assert_eq!(edit_receipt.status, "accepted");
+    assert_eq!(edit_receipt.entry_id, QUEUED_ENTRY);
+
+    let remove_precondition = edited_precondition.clone();
+    let removed = reduce_coding_session_command(
+        &edited.state,
+        &CodingSessionCommand::RemoveQueued {
+            item_id: String::from(QUEUE_ITEM),
+            precondition: remove_precondition.clone(),
+        },
+    )
+    .expect("exact removal");
+    assert_eq!(removed.state.messages(), edited.state.messages());
+    assert_eq!(removed.state.run(), edited.state.run());
+    assert_eq!(
+        removed.state.durable_cursor(),
+        edited.state.durable_cursor()
+    );
+    assert_eq!(removed.state.queued_count(), Some(0));
+    assert_eq!(
+        removed.state.queue_generation(),
+        edited
+            .state
+            .queue_generation()
+            .checked_next()
+            .expect("next generation")
+    );
+    let remove_receipt = project_coding_session_queue_success_receipt(
+        &edited.state,
+        &removed.state,
+        CodingSessionQueueAcceptedMutation {
+            operation: CodingSessionQueueMutationOperation::Remove,
+            item_id: QUEUE_ITEM,
+            precondition: &remove_precondition,
+        },
+        CodingSessionQueueSensitiveDraft::default(),
+    )
+    .expect("safe removal receipt");
+    assert_eq!(remove_receipt.status, "accepted");
+    assert_eq!(
+        remove_receipt.generation_after,
+        Some(removed.state.queue_generation())
+    );
+}
+
+#[test]
+fn stale_queue_cas_commands_return_safe_conflicts_without_mutation() {
+    // r[verify agent_harness_runtime.coding_session_queue_cas.conflicts.text]
+    // r[verify agent_harness_runtime.coding_session_queue_cas.verification]
+    let committed = committed_prompt();
+    let first = queue_command(
+        &committed.state,
+        QueueCommandDraft {
+            item_id: QUEUE_ITEM,
+            entry_id: QUEUED_ENTRY,
+            body: STEERING_PROMPT,
+            is_steering: true,
+        },
+    );
+    let second = queue_command(
+        &first.state,
+        QueueCommandDraft {
+            item_id: QUEUE_ITEM_TWO,
+            entry_id: QUEUED_ENTRY_TWO,
+            body: FOLLOW_UP_PROMPT,
+            is_steering: false,
+        },
+    );
+    let current = coding_session_queue_precondition(&second.state, QUEUE_ITEM_TWO)
+        .expect("current precondition");
+    let conflict_cases = [
+        (
+            CodingSessionQueueMutationPrecondition::new(
+                String::from(QUEUED_ENTRY_TWO),
+                CodingSessionQueueGeneration::new(
+                    current.expected_generation().value().saturating_sub(1),
+                ),
+                current.expected_position(),
+                String::from(current.expected_text_identity()),
+            ),
+            CodingSessionQueueConflictKind::StaleGeneration,
+            QUEUE_ITEM_TWO,
+        ),
+        (
+            CodingSessionQueueMutationPrecondition::new(
+                String::from(QUEUED_ENTRY),
+                current.expected_generation(),
+                current.expected_position(),
+                String::from(current.expected_text_identity()),
+            ),
+            CodingSessionQueueConflictKind::WrongEntry,
+            QUEUE_ITEM_TWO,
+        ),
+        (
+            CodingSessionQueueMutationPrecondition::new(
+                String::from(QUEUED_ENTRY_TWO),
+                current.expected_generation(),
+                0,
+                String::from(current.expected_text_identity()),
+            ),
+            CodingSessionQueueConflictKind::MovedPosition,
+            QUEUE_ITEM_TWO,
+        ),
+        (
+            CodingSessionQueueMutationPrecondition::new(
+                String::from(QUEUED_ENTRY_TWO),
+                current.expected_generation(),
+                current.expected_position(),
+                coding_session_queue_text_identity("stale private text"),
+            ),
+            CodingSessionQueueConflictKind::StaleText,
+            QUEUE_ITEM_TWO,
+        ),
+        (
+            current.clone(),
+            CodingSessionQueueConflictKind::MissingItem,
+            "queue.missing",
+        ),
+    ];
+    for (precondition, expected_kind, item_id) in conflict_cases {
+        let before = second.state.clone();
+        let error = reduce_coding_session_command(
+            &second.state,
+            &CodingSessionCommand::RemoveQueued {
+                item_id: String::from(item_id),
+                precondition,
+            },
+        )
+        .expect_err("stale command must conflict");
+        assert_eq!(error.issue(), CodingSessionIssue::QueueConflict);
+        let conflict = error.queue_conflict_snapshot().expect("safe conflict");
+        assert_eq!(conflict.kind, expected_kind);
+        assert_eq!(second.state, before);
+        let rendered = format!("{conflict:?}");
+        assert!(!rendered.contains(STEERING_PROMPT));
+        assert!(!rendered.contains(FOLLOW_UP_PROMPT));
+        let receipt = project_coding_session_queue_conflict_receipt(
+            conflict,
+            CodingSessionQueueSensitiveDraft::default(),
+        )
+        .expect("safe conflict receipt");
+        assert_eq!(receipt.status, "conflict");
+        assert_eq!(receipt.generation_after, None);
+    }
+}
+
+#[test]
+fn duplicate_and_concurrent_injection_queue_commands_fail_closed() {
+    // r[verify agent_harness_runtime.coding_session_queue_cas.verification]
+    let committed = committed_prompt();
+    let queued = queue_command(
+        &committed.state,
+        QueueCommandDraft {
+            item_id: QUEUE_ITEM,
+            entry_id: QUEUED_ENTRY,
+            body: STEERING_PROMPT,
+            is_steering: true,
+        },
+    );
+    let precondition =
+        coding_session_queue_precondition(&queued.state, QUEUE_ITEM).expect("precondition");
+    let command = CodingSessionCommand::EditQueued {
+        item_id: String::from(QUEUE_ITEM),
+        precondition: precondition.clone(),
+        input: input(FOLLOW_UP_PROMPT),
+    };
+    let edited = reduce_coding_session_command(&queued.state, &command).expect("first edit");
+    let duplicate = reduce_coding_session_command(&edited.state, &command)
+        .expect_err("duplicate command must conflict");
+    assert_eq!(
+        duplicate.queue_conflict_snapshot().expect("conflict").kind,
+        CodingSessionQueueConflictKind::StaleGeneration
+    );
+
+    let provider = provider_final(&queued.state, RESPONSE);
+    let injection_staged = commit_pending(&provider.state);
+    let concurrent = reduce_coding_session_command(
+        &injection_staged.state,
+        &CodingSessionCommand::RemoveQueued {
+            item_id: String::from(QUEUE_ITEM),
+            precondition,
+        },
+    )
+    .expect_err("concurrent injection must invalidate precondition");
+    assert_eq!(
+        concurrent.queue_conflict_snapshot().expect("conflict").kind,
+        CodingSessionQueueConflictKind::StaleGeneration
+    );
+}
+
+#[test]
+fn queue_generation_overflow_is_rejected() {
+    // r[verify agent_harness_runtime.coding_session_queue_cas.verification]
+    let committed = committed_prompt();
+    let queued = queue_command(
+        &committed.state,
+        QueueCommandDraft {
+            item_id: QUEUE_ITEM,
+            entry_id: QUEUED_ENTRY,
+            body: STEERING_PROMPT,
+            is_steering: true,
+        },
+    );
+    let mut overflow_state = queued.state.clone();
+    overflow_state.queue_generation = CodingSessionQueueGeneration::new(u64::MAX);
+    let overflow_precondition = coding_session_queue_precondition(&overflow_state, QUEUE_ITEM)
+        .expect("overflow precondition");
+    let overflow = reduce_coding_session_command(
+        &overflow_state,
+        &CodingSessionCommand::RemoveQueued {
+            item_id: String::from(QUEUE_ITEM),
+            precondition: overflow_precondition,
+        },
+    )
+    .expect_err("generation overflow must fail");
+    assert_eq!(overflow.issue(), CodingSessionIssue::BoundExceeded);
+}
+
+#[test]
+fn unsafe_and_unbound_queue_evidence_is_rejected() {
+    // r[verify agent_harness_runtime.coding_session_queue_cas.evidence.leak]
+    // r[verify agent_harness_runtime.coding_session_queue_cas.verification]
+    let committed = committed_prompt();
+    let queued = queue_command(
+        &committed.state,
+        QueueCommandDraft {
+            item_id: QUEUE_ITEM,
+            entry_id: QUEUED_ENTRY,
+            body: STEERING_PROMPT,
+            is_steering: true,
+        },
+    );
+    let precondition =
+        coding_session_queue_precondition(&queued.state, QUEUE_ITEM).expect("precondition");
+    let edited = reduce_coding_session_command(
+        &queued.state,
+        &CodingSessionCommand::EditQueued {
+            item_id: String::from(QUEUE_ITEM),
+            precondition: precondition.clone(),
+            input: input(FOLLOW_UP_PROMPT),
+        },
+    )
+    .expect("edit");
+    let unsafe_error = project_coding_session_queue_success_receipt(
+        &queued.state,
+        &edited.state,
+        CodingSessionQueueAcceptedMutation {
+            operation: CodingSessionQueueMutationOperation::Edit,
+            item_id: QUEUE_ITEM,
+            precondition: &precondition,
+        },
+        CodingSessionQueueSensitiveDraft {
+            expected: Some(STEERING_PROMPT),
+            ..CodingSessionQueueSensitiveDraft::default()
+        },
+    )
+    .expect_err("private evidence must be rejected");
+    assert_eq!(
+        unsafe_error,
+        CodingSessionQueueReceiptError::UnsafePrivateText
+    );
+    assert!(!unsafe_error.to_string().contains(STEERING_PROMPT));
+
+    let mut forged_state = edited.state.clone();
+    forged_state.messages.clear();
+    let forged_receipt = project_coding_session_queue_success_receipt(
+        &queued.state,
+        &forged_state,
+        CodingSessionQueueAcceptedMutation {
+            operation: CodingSessionQueueMutationOperation::Edit,
+            item_id: QUEUE_ITEM,
+            precondition: &precondition,
+        },
+        CodingSessionQueueSensitiveDraft::default(),
+    )
+    .expect_err("unbound queue evidence must fail");
+    assert_eq!(
+        forged_receipt,
+        CodingSessionQueueReceiptError::InvalidIdentity
+    );
+
+    let stale_precondition = CodingSessionQueueMutationPrecondition::new(
+        String::from(QUEUED_ENTRY),
+        queued.state.queue_generation(),
+        0,
+        coding_session_queue_text_identity("stale expected text"),
+    );
+    let conflict_error = reduce_coding_session_command(
+        &queued.state,
+        &CodingSessionCommand::RemoveQueued {
+            item_id: String::from(QUEUE_ITEM),
+            precondition: stale_precondition,
+        },
+    )
+    .expect_err("stale text must conflict");
+    let sensitive_conflict = CodingSessionQueueSensitiveDraft {
+        current: Some(STEERING_PROMPT),
+        replacement: Some(FOLLOW_UP_PROMPT),
+        ..CodingSessionQueueSensitiveDraft::default()
+    };
+    let sensitive_debug = format!("{sensitive_conflict:?}");
+    assert!(!sensitive_debug.contains(STEERING_PROMPT));
+    assert!(!sensitive_debug.contains(FOLLOW_UP_PROMPT));
+    let unsafe_conflict = project_coding_session_queue_conflict_receipt(
+        conflict_error
+            .queue_conflict_snapshot()
+            .expect("conflict snapshot"),
+        sensitive_conflict,
+    )
+    .expect_err("conflict receipt must reject private text");
+    assert_eq!(
+        unsafe_conflict,
+        CodingSessionQueueReceiptError::UnsafePrivateText
+    );
+    let rendered_error = unsafe_conflict.to_string();
+    assert!(!rendered_error.contains(STEERING_PROMPT));
+    assert!(!rendered_error.contains(FOLLOW_UP_PROMPT));
+}
+
+#[test]
+fn queue_safe_snapshot_maps_frontend_metadata_without_private_identity() {
+    // r[verify agent_harness_runtime.coding_session_queue_cas.verification]
+    // r[verify agent_harness_runtime.coding_session_queue_cas.verification.closeout]
+    let committed = committed_prompt();
+    let queued = queue_command(
+        &committed.state,
+        QueueCommandDraft {
+            item_id: QUEUE_ITEM,
+            entry_id: QUEUED_ENTRY,
+            body: STEERING_PROMPT,
+            is_steering: true,
+        },
+    );
+    let snapshot = project_coding_session_queue_safe_snapshot(&queued.state).expect("snapshot");
+    assert_eq!(snapshot.generation, queued.state.queue_generation());
+    assert_eq!(snapshot.entries.len(), 1);
+    assert_eq!(snapshot.entries[0].entry_id, QUEUED_ENTRY);
+    let rendered = format!("{snapshot:?}");
+    assert!(!rendered.contains(STEERING_PROMPT));
+    assert!(!rendered.contains(coding_session_queue_text_identity(STEERING_PROMPT).as_str()));
 }
 
 #[test]

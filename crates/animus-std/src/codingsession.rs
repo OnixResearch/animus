@@ -8,13 +8,16 @@ use animus_runtime::coding_session_host::{
     CodingSessionEffectOutcome, CodingSessionEffectRequest, CodingSessionEffectService,
     CodingSessionError, CodingSessionInput, CodingSessionInputPosture, CodingSessionIssue,
     CodingSessionMessage, CodingSessionMessageKind, CodingSessionProviderReply,
-    CodingSessionProviderRequest, CodingSessionQueueProfile, CodingSessionReceipt,
+    CodingSessionProviderRequest, CodingSessionQueueConflict,
+    CodingSessionQueueMutationPrecondition, CodingSessionQueueProfile, CodingSessionReceipt,
     CodingSessionRecoveryRequest, CodingSessionRecoverySnapshot, CodingSessionRecoveryStatus,
     CodingSessionSensitiveDraft, CodingSessionServiceIssue, CodingSessionServiceSet,
     CodingSessionState, CodingSessionSummarizerRequest, CodingSessionTerminalKind,
     CodingSessionToolRequest, CodingSessionTransition, coding_session_effect_step_bound,
-    decode_coding_session_message, encode_coding_session_message, new_coding_session_state,
-    project_coding_session_receipt, reduce_coding_session_command, reduce_coding_session_outcome,
+    coding_session_queue_precondition, decode_coding_session_message,
+    encode_coding_session_message, new_coding_session_state,
+    project_coding_session_queue_conflict_event, project_coding_session_receipt,
+    reduce_coding_session_command, reduce_coding_session_outcome,
 };
 use animus_runtime::session_authority_profile::{
     SessionAuthorityComponentClass, SessionAuthorityEnforcementDraft,
@@ -67,6 +70,7 @@ pub enum CodingSessionHostIssue {
 pub struct CodingSessionHostError {
     issue: CodingSessionHostIssue,
     reducer_issue: Option<CodingSessionIssue>,
+    queue_conflict: Option<Box<CodingSessionQueueConflict>>,
 }
 
 impl CodingSessionHostError {
@@ -74,6 +78,7 @@ impl CodingSessionHostError {
         Self {
             issue,
             reducer_issue: None,
+            queue_conflict: None,
         }
     }
 
@@ -81,6 +86,7 @@ impl CodingSessionHostError {
         Self {
             issue: CodingSessionHostIssue::ReducerRejected,
             reducer_issue: Some(error.issue()),
+            queue_conflict: error.queue_conflict_snapshot().cloned().map(Box::new),
         }
     }
 
@@ -88,6 +94,7 @@ impl CodingSessionHostError {
         Self {
             issue: CodingSessionHostIssue::SessionBlocked,
             reducer_issue,
+            queue_conflict: None,
         }
     }
 
@@ -99,6 +106,11 @@ impl CodingSessionHostError {
     #[must_use]
     pub const fn reducer_issue(&self) -> Option<CodingSessionIssue> {
         self.reducer_issue
+    }
+
+    #[must_use]
+    pub fn queue_conflict(&self) -> Option<&CodingSessionQueueConflict> {
+        self.queue_conflict.as_deref()
     }
 }
 
@@ -477,22 +489,59 @@ where
     pub fn edit_queued(
         &mut self,
         item_id: &str,
-        entry_id: &str,
+        precondition: CodingSessionQueueMutationPrecondition,
         input: CodingSessionInput,
     ) -> Result<(), CodingSessionHostError> {
         self.submit(&CodingSessionCommand::EditQueued {
             item_id: String::from(item_id),
-            entry_id: String::from(entry_id),
+            precondition,
             input,
         })
     }
 
     /// # Errors
     /// Returns a host error when a queued item cannot be removed and committed safely.
-    pub fn remove_queued(&mut self, item_id: &str) -> Result<(), CodingSessionHostError> {
+    pub fn remove_queued(
+        &mut self,
+        item_id: &str,
+        precondition: CodingSessionQueueMutationPrecondition,
+    ) -> Result<(), CodingSessionHostError> {
         self.submit(&CodingSessionCommand::RemoveQueued {
             item_id: String::from(item_id),
+            precondition,
         })
+    }
+
+    // r[impl agent_harness_runtime.coding_session_queue_cas.compatibility]
+    /// Derives queue edit preconditions for one exclusive local owner.
+    ///
+    /// Ownership-crossing callers must use [`Self::edit_queued`] instead.
+    ///
+    /// # Errors
+    /// Returns a host error when the local snapshot is stale or mutation fails.
+    pub fn edit_queued_exclusive_local(
+        &mut self,
+        item_id: &str,
+        input: CodingSessionInput,
+    ) -> Result<(), CodingSessionHostError> {
+        let precondition = coding_session_queue_precondition(&self.state, item_id)
+            .map_err(|error| CodingSessionHostError::from_reducer(&error))?;
+        self.edit_queued(item_id, precondition, input)
+    }
+
+    /// Derives queue removal preconditions for one exclusive local owner.
+    ///
+    /// Ownership-crossing callers must use [`Self::remove_queued`] instead.
+    ///
+    /// # Errors
+    /// Returns a host error when the local snapshot is stale or mutation fails.
+    pub fn remove_queued_exclusive_local(
+        &mut self,
+        item_id: &str,
+    ) -> Result<(), CodingSessionHostError> {
+        let precondition = coding_session_queue_precondition(&self.state, item_id)
+            .map_err(|error| CodingSessionHostError::from_reducer(&error))?;
+        self.remove_queued(item_id, precondition)
     }
 
     /// # Errors
@@ -506,8 +555,19 @@ where
                 CodingSessionHostIssue::PolicyDenied,
             ));
         }
-        let transition = reduce_coding_session_command(&self.state, command)
-            .map_err(|error| CodingSessionHostError::from_reducer(&error))?;
+        let transition = match reduce_coding_session_command(&self.state, command) {
+            Ok(transition) => transition,
+            Err(error) => {
+                if let Some(conflict) = error.queue_conflict_snapshot() {
+                    let event = RuntimeEvent::SessionQueueMutationObserved {
+                        mutation: project_coding_session_queue_conflict_event(conflict),
+                    };
+                    self.services.events.observe(&event);
+                    self.events.push(event);
+                }
+                return Err(CodingSessionHostError::from_reducer(&error));
+            }
+        };
         self.apply_transition(transition);
         Ok(())
     }

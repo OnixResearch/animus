@@ -163,6 +163,7 @@ fn event_specific_labels(
         | super::RuntimeEvent::Cancelled { .. }
         | super::RuntimeEvent::CompactionRequested { .. }
         | super::RuntimeEvent::SessionStateChanged { .. }
+        | super::RuntimeEvent::SessionQueueMutationObserved { .. }
         | super::RuntimeEvent::SessionCommitObserved { .. }
         | super::RuntimeEvent::SessionRecoveryObserved { .. }
         | super::RuntimeEvent::SessionAuthorityProfileObserved { .. } => std::vec::Vec::new(),
@@ -204,6 +205,7 @@ fn level_for_event(event: &super::RuntimeEvent) -> animus_adapters::LogLevel {
         | super::RuntimeEvent::SandboxEscalation { .. }
         | super::RuntimeEvent::CompactionRequested { .. }
         | super::RuntimeEvent::SessionStateChanged { .. }
+        | super::RuntimeEvent::SessionQueueMutationObserved { .. }
         | super::RuntimeEvent::SessionCommitObserved { .. }
         | super::RuntimeEvent::SessionRecoveryObserved { .. }
         | super::RuntimeEvent::SessionAuthorityProfileObserved { .. }

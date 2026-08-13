@@ -11,6 +11,7 @@ const TEST_USER_ENTRY: &str = "entry.host-user";
 const TEST_QUEUE_ITEM: &str = "queue.host";
 const TEST_QUEUE_ENTRY: &str = "entry.host-queue";
 const TEST_QUEUE_BODY: &str = "steer host toward evidence";
+const TEST_QUEUE_REPLACEMENT: &str = "steer host toward exact queue evidence";
 const TEST_POLICY_HASH: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const TEST_MAX_QUEUE_ITEMS: u32 = 8;
 const EXPECTED_INITIAL_COMMIT_MESSAGES: usize = 2;
@@ -449,6 +450,93 @@ fn host_accepts_explicit_steering_while_provider_effect_is_pending() {
     host.drive_pending().expect("finish queued flow");
     assert_eq!(host.message_snapshot().len(), EXPECTED_QUEUED_MESSAGES);
     assert_eq!(host.state_snapshot().queued_count(), Some(0));
+}
+
+#[test]
+fn ownership_crossing_queue_mutation_requires_explicit_current_preconditions() {
+    // r[verify agent_harness_runtime.coding_session_queue_cas.compatibility.remote]
+    let mut host = memory_host(false).expect("host");
+    host.begin_without_driving(&CodingSessionCommand::Prompt {
+        run_id: String::from(TEST_RUN),
+        entry_id: String::from(TEST_USER_ENTRY),
+        input: input(TEST_PROMPT),
+    })
+    .expect("begin prompt");
+    assert!(host.drive_one_pending().expect("commit user"));
+    host.begin_without_driving(&CodingSessionCommand::Steer {
+        item_id: String::from(TEST_QUEUE_ITEM),
+        entry_id: String::from(TEST_QUEUE_ENTRY),
+        input: input(TEST_QUEUE_BODY),
+    })
+    .expect("queue steering");
+    let precondition = coding_session_queue_precondition(host.state_snapshot(), TEST_QUEUE_ITEM)
+        .expect("explicit precondition");
+    host.begin_without_driving(&CodingSessionCommand::EditQueued {
+        item_id: String::from(TEST_QUEUE_ITEM),
+        precondition: precondition.clone(),
+        input: input(TEST_QUEUE_REPLACEMENT),
+    })
+    .expect("exact edit");
+    let stale = host
+        .begin_without_driving(&CodingSessionCommand::RemoveQueued {
+            item_id: String::from(TEST_QUEUE_ITEM),
+            precondition,
+        })
+        .expect_err("stale explicit command");
+    assert_eq!(
+        stale.reducer_issue(),
+        Some(CodingSessionIssue::QueueConflict)
+    );
+    assert!(stale.queue_conflict().is_some());
+    assert!(matches!(
+        host.event_snapshot().last(),
+        Some(RuntimeEvent::SessionQueueMutationObserved { mutation })
+            if mutation.status == "conflict"
+    ));
+
+    let missing_preconditions =
+        animus_runtime::coding_session_host::CodingSessionQueueMutationPrecondition::new(
+            String::from(TEST_QUEUE_ENTRY),
+            animus_runtime::coding_session_host::CodingSessionQueueGeneration::default(),
+            0,
+            String::new(),
+        );
+    let rejected = host
+        .begin_without_driving(&CodingSessionCommand::RemoveQueued {
+            item_id: String::from(TEST_QUEUE_ITEM),
+            precondition: missing_preconditions,
+        })
+        .expect_err("position-only fallback must be rejected");
+    assert_eq!(
+        rejected.reducer_issue(),
+        Some(CodingSessionIssue::InvalidInput)
+    );
+}
+
+#[test]
+fn exclusive_local_owner_can_derive_queue_preconditions_under_one_host_borrow() {
+    // r[verify agent_harness_runtime.coding_session_queue_cas.compatibility]
+    let mut host = memory_host(false).expect("host");
+    host.begin_without_driving(&CodingSessionCommand::Prompt {
+        run_id: String::from(TEST_RUN),
+        entry_id: String::from(TEST_USER_ENTRY),
+        input: input(TEST_PROMPT),
+    })
+    .expect("begin prompt");
+    assert!(host.drive_one_pending().expect("commit user"));
+    host.begin_without_driving(&CodingSessionCommand::Steer {
+        item_id: String::from(TEST_QUEUE_ITEM),
+        entry_id: String::from(TEST_QUEUE_ENTRY),
+        input: input(TEST_QUEUE_BODY),
+    })
+    .expect("queue steering");
+    host.edit_queued_exclusive_local(TEST_QUEUE_ITEM, input(TEST_QUEUE_REPLACEMENT))
+        .expect("exclusive local edit");
+    assert!(
+        host.message_snapshot()
+            .iter()
+            .any(|message| message.body() == TEST_QUEUE_REPLACEMENT)
+    );
 }
 
 #[test]

@@ -11,7 +11,8 @@ The pure API is `animus_runtime::coding_session_host`. It owns validated session
 The shell API is `animus_std::coding_session_host`, enabled only by the `coding-session-host` feature. `CodingSessionHost` exposes:
 
 - `prompt` and `continue_run`;
-- `steer`, `follow_up`, queued edit, and queued removal;
+- `steer` and `follow_up`;
+- compare-and-swap queued edit and removal with explicit entry, generation, position, and private text-identity preconditions;
 - `cancel`, `resume`, and `compact`;
 - state, committed-message, and ordered-event snapshots;
 - an injected `CodingSessionEventSink` for event subscription;
@@ -24,7 +25,7 @@ Construction requires explicit provider, tool, persistence, policy, authority-en
 | Concern | Existing owner reused by the facade | Facade responsibility |
 | --- | --- | --- |
 | Agent turn and adapter DTOs | `animus-runtime` loop contracts and `animus-adapters` model/tool DTOs | Correlate session effects; do not redefine provider or tool payloads. |
-| Steering and follow-up | `animus-runtime` message-queue reducer | Hold bounded pending bodies and select injection; do not treat pending UI intent as transcript history. |
+| Steering and follow-up | `animus-runtime` message-queue reducer and [queue compare-and-swap](coding-session-queue-cas.md) | Hold bounded pending bodies, require exact mutation preconditions, and select injection; do not treat pending UI intent as transcript history. |
 | Continuation and interrupted tools | continuation and `interrupted_tool_repair` contracts | Block or synthesize one durable repair before continuation; never re-execute a recovered tool call. |
 | Durable framing and recovery | `animus-runtime::durable_session_store` and non-default `animus-std/durable-session-store` | Adapt committed messages to explicit store transactions and consume validated recovery snapshots. |
 | Session authority continuity | [`session_authority_profile`](session-runtime-authority-profile.md) and injected host probes | Commit requested metadata before effects, block drift on resume, and re-probe current enforcement without treating identity equality as authority. |
@@ -49,7 +50,7 @@ The reducer returns next state, ordered events, and at most one explicit effect 
 6. selected queued input before it becomes model-visible;
 7. summary or synthetic repair before its completion event.
 
-One session admits at most one active or cancelling run. An overlapping ordinary prompt, stale run or cancellation identity, stale effect, malformed recovery snapshot, unavailable required service, failed commit, or ambiguous leaf fails closed. Cancellation is a correlated request and observation; it is not proof that an external provider, tool, process, filesystem, or network effect rolled back.
+One session admits at most one active or cancelling run. A stale queue mutation returns a metadata-only conflict without state mutation. An overlapping ordinary prompt, stale run or cancellation identity, stale effect, malformed recovery snapshot, unavailable required service, failed commit, or ambiguous leaf fails closed. Cancellation is a correlated request and observation; it is not proof that an external provider, tool, process, filesystem, or network effect rolled back.
 
 ## External pause and resume
 

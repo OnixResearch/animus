@@ -13,6 +13,9 @@ const FIELD_RECOVERY: &str = "recovery";
 const FIELD_MESSAGE: &str = "message";
 const FIELD_WIRE: &str = "message_wire";
 const QUEUE_SOURCE: &str = "coding-session-host";
+const QUEUE_TEXT_IDENTITY_DOMAIN: &str = "animus.coding-session.queue-text.v1";
+const QUEUE_STATE_IDENTITY_DOMAIN: &str = "animus.coding-session.queue-state.v1";
+const QUEUE_REDACTION_MARKER: &str = "private_queue_text_omitted";
 const PROMPT_ROLE_SEPARATOR: &str = ": ";
 const PROMPT_MESSAGE_SEPARATOR: &str = "\n";
 const GENERATED_ENTRY_PREFIX: &str = "entry.";
@@ -48,8 +51,15 @@ struct QueueAppendDraft<'a> {
 #[derive(Clone, Copy)]
 struct QueueEditDraft<'a> {
     item_id: &'a str,
-    entry_id: &'a str,
+    precondition: &'a super::data::CodingSessionQueueMutationPrecondition,
     input: &'a super::data::CodingSessionInput,
+}
+
+#[derive(Clone, Copy)]
+struct QueueConflictDraft<'a> {
+    item_id: &'a str,
+    entry_id: &'a str,
+    operation: super::data::CodingSessionQueueMutationOperation,
 }
 
 #[derive(Clone, Copy)]
@@ -142,6 +152,7 @@ pub fn new_coding_session_state(
         run: None,
         queue: None,
         queued_bodies: Vec::new(),
+        queue_generation: super::data::CodingSessionQueueGeneration::default(),
         messages: Vec::new(),
         active_leaf_id: None,
         durable_head_hash: String::from(super::data::CODING_SESSION_EMPTY_HEAD_HASH),
@@ -264,19 +275,20 @@ pub fn reduce_coding_session_command(
         ),
         super::data::CodingSessionCommand::EditQueued {
             item_id,
-            entry_id,
+            precondition,
             input,
         } => reduce_queue_edit(
             state,
             QueueEditDraft {
                 item_id,
-                entry_id,
+                precondition,
                 input,
             },
         ),
-        super::data::CodingSessionCommand::RemoveQueued { item_id } => {
-            reduce_queue_remove(state, item_id)
-        }
+        super::data::CodingSessionCommand::RemoveQueued {
+            item_id,
+            precondition,
+        } => reduce_queue_remove(state, item_id, precondition),
         super::data::CodingSessionCommand::Cancel { run_id } => reduce_cancel(state, run_id),
         super::data::CodingSessionCommand::Resume => reduce_resume(state),
         super::data::CodingSessionCommand::Compact { entry_id } => reduce_compact(state, entry_id),
@@ -379,6 +391,12 @@ pub fn reduce_coding_session_frontend_event(
         } => {
             next.lifecycle_status.clone_from(status);
             next.queue_count = *queue_count;
+        }
+        crate::telemetry::RuntimeEvent::SessionQueueMutationObserved { mutation } => {
+            next.queue_generation = mutation.generation;
+            next.queue_identity = Some(mutation.queue_identity.clone());
+            next.queue_mutation_status = Some(String::from(mutation.status));
+            next.queue_conflict = mutation.conflict;
         }
         crate::telemetry::RuntimeEvent::SessionCommitObserved { .. } => {
             next.committed_message_count = next.committed_message_count.saturating_add(1);
@@ -643,8 +661,10 @@ fn reduce_queue_append(
         &state.queue_policy,
     )
     .map_err(|_queue_error| error(super::data::CodingSessionIssue::QueueRejected, FIELD_QUEUE))?;
+    let next_generation = next_queue_generation(state)?;
     let mut next = state.clone();
     next.queue = Some(transition.state);
+    next.queue_generation = next_generation;
     next.queued_bodies
         .push(super::data::CodingSessionQueuedBody {
             item_id: String::from(draft.item_id),
@@ -657,6 +677,247 @@ fn reduce_queue_append(
     finish_transition(next, events, state.pending_effect.clone())
 }
 
+// r[impl agent_harness_runtime.coding_session_queue_cas.commands]
+#[must_use]
+pub fn coding_session_queue_text_identity(text: &str) -> String {
+    hash_parts(QUEUE_TEXT_IDENTITY_DOMAIN, &[text])
+}
+
+/// Returns the current private compare-and-swap precondition for one queue item.
+///
+/// This API exposes a private text identity and is only for an authorized owner
+/// of the current session snapshot.
+///
+/// # Errors
+///
+/// Returns [`super::data::CodingSessionError`] when the item is absent or its
+/// position exceeds the bounded command representation.
+pub fn coding_session_queue_precondition(
+    state: &super::data::CodingSessionState,
+    item_id: &str,
+) -> Result<super::data::CodingSessionQueueMutationPrecondition, super::data::CodingSessionError> {
+    validate_id(item_id)?;
+    let (position, queued) = state
+        .queued_bodies
+        .iter()
+        .enumerate()
+        .find(|(_position, queued)| queued.item_id == item_id)
+        .ok_or_else(|| error(super::data::CodingSessionIssue::QueueRejected, FIELD_QUEUE))?;
+    let position = u32::try_from(position)
+        .map_err(|_overflow| error(super::data::CodingSessionIssue::BoundExceeded, FIELD_QUEUE))?;
+    Ok(super::data::CodingSessionQueueMutationPrecondition::new(
+        queued.entry_id.clone(),
+        state.queue_generation,
+        position,
+        coding_session_queue_text_identity(queued.body.as_str()),
+    ))
+}
+
+/// Projects bounded queue metadata without queued text or private text identities.
+///
+/// # Errors
+///
+/// Returns [`super::data::CodingSessionError`] when an entry position exceeds
+/// the bounded snapshot representation.
+pub fn project_coding_session_queue_safe_snapshot(
+    state: &super::data::CodingSessionState,
+) -> Result<super::data::CodingSessionQueueSafeSnapshot, super::data::CodingSessionError> {
+    let mut entries = Vec::with_capacity(state.queued_bodies.len());
+    for (position, queued) in state.queued_bodies.iter().enumerate() {
+        entries.push(super::data::CodingSessionQueueSafeEntry {
+            item_id: queued.item_id.clone(),
+            entry_id: queued.entry_id.clone(),
+            position: u32::try_from(position).map_err(|_overflow| {
+                error(super::data::CodingSessionIssue::BoundExceeded, FIELD_QUEUE)
+            })?,
+            behavior: queued.behavior,
+        });
+    }
+    Ok(super::data::CodingSessionQueueSafeSnapshot {
+        generation: state.queue_generation,
+        queue_identity: queue_state_identity(state),
+        entries,
+    })
+}
+
+/// Projects metadata-only evidence for an accepted queue mutation.
+///
+/// # Errors
+///
+/// Returns [`super::data::CodingSessionError`] when safe snapshot projection fails.
+pub fn project_coding_session_queue_success_event(
+    state: &super::data::CodingSessionState,
+    operation: super::data::CodingSessionQueueMutationOperation,
+    item_id: &str,
+    precondition: &super::data::CodingSessionQueueMutationPrecondition,
+) -> Result<super::data::CodingSessionQueueMutationEvent, super::data::CodingSessionError> {
+    validate_id(item_id)?;
+    validate_id(precondition.entry_id())?;
+    let snapshot = project_coding_session_queue_safe_snapshot(state)?;
+    Ok(super::data::CodingSessionQueueMutationEvent {
+        operation,
+        status: "accepted",
+        item_id: String::from(item_id),
+        entry_id: String::from(precondition.entry_id()),
+        position: Some(precondition.expected_position()),
+        generation: snapshot.generation,
+        queue_identity: snapshot.queue_identity,
+        conflict: None,
+        redaction_marker: QUEUE_REDACTION_MARKER,
+    })
+}
+
+#[must_use]
+pub fn project_coding_session_queue_conflict_event(
+    conflict: &super::data::CodingSessionQueueConflict,
+) -> super::data::CodingSessionQueueMutationEvent {
+    let position = conflict
+        .snapshot
+        .entries
+        .iter()
+        .find(|entry| entry.item_id == conflict.item_id)
+        .map(|entry| entry.position);
+    super::data::CodingSessionQueueMutationEvent {
+        operation: conflict.operation,
+        status: "conflict",
+        item_id: conflict.item_id.clone(),
+        entry_id: conflict.entry_id.clone(),
+        position,
+        generation: conflict.snapshot.generation,
+        queue_identity: conflict.snapshot.queue_identity.clone(),
+        conflict: Some(conflict.kind),
+        redaction_marker: QUEUE_REDACTION_MARKER,
+    }
+}
+
+fn queue_state_identity(state: &super::data::CodingSessionState) -> String {
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(QUEUE_STATE_IDENTITY_DOMAIN.as_bytes());
+    hasher.update(super::data::HASH_SEPARATOR);
+    hasher.update(&state.queue_generation.value().to_le_bytes());
+    for queued in &state.queued_bodies {
+        for part in [
+            queued.item_id.as_str(),
+            queued.entry_id.as_str(),
+            queued.behavior.as_str(),
+            queued.body_hash.as_str(),
+        ] {
+            hasher.update(super::data::HASH_SEPARATOR);
+            hasher.update(part.as_bytes());
+        }
+    }
+    hasher.finalize().to_hex().to_string()
+}
+
+fn next_queue_generation(
+    state: &super::data::CodingSessionState,
+) -> Result<super::data::CodingSessionQueueGeneration, super::data::CodingSessionError> {
+    state
+        .queue_generation
+        .checked_next()
+        .ok_or_else(|| error(super::data::CodingSessionIssue::BoundExceeded, FIELD_QUEUE))
+}
+
+fn validate_queue_precondition(
+    precondition: &super::data::CodingSessionQueueMutationPrecondition,
+) -> Result<(), super::data::CodingSessionError> {
+    validate_id(precondition.entry_id())?;
+    validate_hash(precondition.expected_text_identity())
+}
+
+// r[impl agent_harness_runtime.coding_session_queue_cas.reducer]
+fn compare_queue_precondition(
+    state: &super::data::CodingSessionState,
+    item_id: &str,
+    precondition: &super::data::CodingSessionQueueMutationPrecondition,
+    operation: super::data::CodingSessionQueueMutationOperation,
+) -> Result<usize, super::data::CodingSessionError> {
+    validate_id(item_id)?;
+    let Some((position, queued)) = state
+        .queued_bodies
+        .iter()
+        .enumerate()
+        .find(|(_position, queued)| queued.item_id == item_id)
+    else {
+        return queue_conflict(
+            state,
+            QueueConflictDraft {
+                item_id,
+                entry_id: precondition.entry_id(),
+                operation,
+            },
+            super::data::CodingSessionQueueConflictKind::MissingItem,
+        );
+    };
+    if state.queue_generation != precondition.expected_generation() {
+        return queue_conflict(
+            state,
+            QueueConflictDraft {
+                item_id,
+                entry_id: precondition.entry_id(),
+                operation,
+            },
+            super::data::CodingSessionQueueConflictKind::StaleGeneration,
+        );
+    }
+    if queued.entry_id != precondition.entry_id() {
+        return queue_conflict(
+            state,
+            QueueConflictDraft {
+                item_id,
+                entry_id: precondition.entry_id(),
+                operation,
+            },
+            super::data::CodingSessionQueueConflictKind::WrongEntry,
+        );
+    }
+    let current_position = u32::try_from(position)
+        .map_err(|_overflow| error(super::data::CodingSessionIssue::BoundExceeded, FIELD_QUEUE))?;
+    if current_position != precondition.expected_position() {
+        return queue_conflict(
+            state,
+            QueueConflictDraft {
+                item_id,
+                entry_id: precondition.entry_id(),
+                operation,
+            },
+            super::data::CodingSessionQueueConflictKind::MovedPosition,
+        );
+    }
+    let current_text_identity = coding_session_queue_text_identity(queued.body.as_str());
+    if current_text_identity != precondition.expected_text_identity() {
+        return queue_conflict(
+            state,
+            QueueConflictDraft {
+                item_id,
+                entry_id: precondition.entry_id(),
+                operation,
+            },
+            super::data::CodingSessionQueueConflictKind::StaleText,
+        );
+    }
+    Ok(position)
+}
+
+// r[impl agent_harness_runtime.coding_session_queue_cas.conflicts]
+fn queue_conflict<T>(
+    state: &super::data::CodingSessionState,
+    draft: QueueConflictDraft<'_>,
+    kind: super::data::CodingSessionQueueConflictKind,
+) -> Result<T, super::data::CodingSessionError> {
+    let snapshot = project_coding_session_queue_safe_snapshot(state)?;
+    Err(super::data::CodingSessionError::queue_conflict(
+        super::data::CodingSessionQueueConflict {
+            operation: draft.operation,
+            item_id: String::from(draft.item_id),
+            entry_id: String::from(draft.entry_id),
+            kind,
+            snapshot,
+            redaction_marker: QUEUE_REDACTION_MARKER,
+        },
+    ))
+}
+
 fn reduce_queue_edit(
     state: &super::data::CodingSessionState,
     draft: QueueEditDraft<'_>,
@@ -664,7 +925,14 @@ fn reduce_queue_edit(
     debug_assert!(state.run.is_some() || state.queue.is_none());
     debug_assert!(state.queue.is_some() || state.queued_bodies.is_empty());
     validate_input(draft.input)?;
-    validate_id(draft.entry_id)?;
+    validate_queue_precondition(draft.precondition)?;
+    let position = compare_queue_precondition(
+        state,
+        draft.item_id,
+        draft.precondition,
+        super::data::CodingSessionQueueMutationOperation::Edit,
+    )?;
+    let next_generation = next_queue_generation(state)?;
     let run = state
         .run
         .as_ref()
@@ -693,23 +961,40 @@ fn reduce_queue_edit(
     let mut next = state.clone();
     let queued = next
         .queued_bodies
-        .iter_mut()
-        .find(|queued| queued.item_id == draft.item_id)
-        .ok_or_else(|| error(super::data::CodingSessionIssue::QueueRejected, FIELD_QUEUE))?;
-    queued.entry_id = String::from(draft.entry_id);
+        .get_mut(position)
+        .ok_or_else(|| error(super::data::CodingSessionIssue::InvalidState, FIELD_QUEUE))?;
     queued.body.clone_from(&draft.input.body);
     queued.body_hash = replacement_hash;
     next.queue = Some(transition.state);
-    let events = vec![session_state_event(&next, "queue_edited")?];
+    next.queue_generation = next_generation;
+    let mutation = project_coding_session_queue_success_event(
+        &next,
+        super::data::CodingSessionQueueMutationOperation::Edit,
+        draft.item_id,
+        draft.precondition,
+    )?;
+    let events = vec![
+        session_state_event(&next, "queue_cas_edited")?,
+        crate::telemetry::RuntimeEvent::SessionQueueMutationObserved { mutation },
+    ];
     finish_transition(next, events, state.pending_effect.clone())
 }
 
 fn reduce_queue_remove(
     state: &super::data::CodingSessionState,
     item_id: &str,
+    precondition: &super::data::CodingSessionQueueMutationPrecondition,
 ) -> Result<super::data::CodingSessionTransition, super::data::CodingSessionError> {
     debug_assert!(state.run.is_some() || state.queue.is_none());
     debug_assert!(state.queue.is_some() || state.queued_bodies.is_empty());
+    validate_queue_precondition(precondition)?;
+    let _position = compare_queue_precondition(
+        state,
+        item_id,
+        precondition,
+        super::data::CodingSessionQueueMutationOperation::Remove,
+    )?;
+    let next_generation = next_queue_generation(state)?;
     let run = state
         .run
         .as_ref()
@@ -730,9 +1015,19 @@ fn reduce_queue_remove(
     .map_err(|_queue_error| error(super::data::CodingSessionIssue::QueueRejected, FIELD_QUEUE))?;
     let mut next = state.clone();
     next.queue = Some(transition.state);
+    next.queue_generation = next_generation;
     next.queued_bodies
         .retain(|queued| queued.item_id != item_id);
-    let events = vec![session_state_event(&next, "queue_removed")?];
+    let mutation = project_coding_session_queue_success_event(
+        &next,
+        super::data::CodingSessionQueueMutationOperation::Remove,
+        item_id,
+        precondition,
+    )?;
+    let events = vec![
+        session_state_event(&next, "queue_cas_removed")?,
+        crate::telemetry::RuntimeEvent::SessionQueueMutationObserved { mutation },
+    ];
     finish_transition(next, events, state.pending_effect.clone())
 }
 
@@ -1586,6 +1881,7 @@ fn stage_next_queued_commit(
         tool_correlation_id: None,
         tool_name: None,
     })?;
+    state.queue_generation = next_queue_generation(&state)?;
     state.queue = Some(transition.state);
     stage_commit(
         state,
@@ -1624,7 +1920,9 @@ fn acknowledge_queued_commit(
         &state.queue_policy,
     )
     .map_err(|_queue_error| error(super::data::CodingSessionIssue::QueueRejected, FIELD_QUEUE))?;
+    let next_generation = next_queue_generation(state)?;
     state.queue = Some(transition.state);
+    state.queue_generation = next_generation;
     state
         .queued_bodies
         .retain(|queued| queued.item_id != item_id);

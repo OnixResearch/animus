@@ -1,0 +1,93 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+readonly RECEIPT_RELATIVE_PATH=target/cairn/focused-rails/coding-session-queue-cas.md
+readonly PRIVATE_TEXT=private-queue-text-must-not-appear
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+
+if [ "${1:-}" = "--root" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  repo_root=$(CDPATH= cd -- "$2" && pwd)
+fi
+
+cd "${repo_root}"
+
+for command in cargo b3sum grep awk; do
+  if ! command -v "${command}" >/dev/null 2>&1; then
+    printf 'error: required command not found: %s\n' "${command}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+cargo test -p animus-runtime sessionhost::tests --locked
+cargo test -p animus-std --features coding-session-host coding_session::tests --locked
+cargo test -p animus-runtime queue_mutation_events_project_safe_frontend_metadata --locked
+cargo test -p animus-tui queue_mutation_frontend_mapping_uses_metadata_only --locked
+cargo test -p animus-preserves coding_session_events --locked
+cargo check -p animus-runtime --target wasm32-unknown-unknown --locked
+
+grep -F 'CodingSessionQueueMutationPrecondition' crates/animus-runtime/src/codingsession/data.rs >/dev/null
+grep -F 'expected_generation' crates/animus-runtime/src/codingsession/data.rs >/dev/null
+grep -F 'expected_text_identity' crates/animus-runtime/src/codingsession/data.rs >/dev/null
+grep -F 'project_coding_session_queue_conflict_receipt' crates/animus-runtime/src/codingsession/receipt.rs >/dev/null
+grep -F 'edit_queued_exclusive_local' crates/animus-std/src/codingsession.rs >/dev/null
+grep -F 'position-only fallback must be rejected' crates/animus-std/src/codingsession/tests.rs >/dev/null
+grep -F '0987c1ba7637cbcb99afe9efe1180b838a0aa958' docs/coding-session-queue-cas.md >/dev/null
+grep -F 'distributed consensus' docs/coding-session-queue-cas.md >/dev/null
+grep -F 'runtime.coding-session-queue-cas' .cairn/component-catalog.ncl >/dev/null
+
+if grep -F "${PRIVATE_TEXT}" target/cairn/focused-rails 2>/dev/null; then
+  printf '%s\n' 'error: focused queue evidence leaked private text' >&2
+  exit "${FAILURE}"
+fi
+
+source_identity=$(
+  b3sum \
+    crates/animus-runtime/src/codingsession/core.rs \
+    crates/animus-runtime/src/codingsession/data.rs \
+    crates/animus-runtime/src/codingsession/receipt.rs \
+    crates/animus-runtime/src/codingsession/tests.rs \
+    crates/animus-runtime/src/headless/protocol/parts/events.rs \
+    crates/animus-runtime/src/headless/tests/protocol/mod.rs \
+    crates/animus-runtime/src/telemetry/dto.rs \
+    crates/animus-preserves/src/message.rs \
+    crates/animus-std/src/codingsession.rs \
+    crates/animus-std/src/codingsession/tests.rs \
+    crates/animus-tui/src/frontend.rs \
+    docs/coding-session-queue-cas.md \
+    .cairn/component-catalog.ncl \
+    scripts/cairn/check-coding-session-queue-cas \
+    | b3sum \
+    | awk '{print $1}'
+)
+
+mkdir -p "$(dirname "${RECEIPT_RELATIVE_PATH}")"
+cat > "${RECEIPT_RELATIVE_PATH}" <<EOF
+# Coding-session queue compare-and-swap focused rail
+
+- status: passed
+- source identity (BLAKE3): ${source_identity}
+- exact edit and removal: passed
+- generation ordering and overflow: passed
+- stale text, generation, entry, and position: rejected
+- duplicate command and concurrent injection: rejected
+- headless and TUI metadata projection: passed
+- Preserves metadata round-trip and unsafe redaction rejection: passed
+- exclusive local-owner wrapper: passed
+- ownership-crossing fallback: rejected
+- private queue text: omitted
+- distributed consensus: not claimed
+- replicated queues: not claimed
+- automatic merge: not claimed
+- exactly-once delivery: not claimed
+- production readiness: not claimed
+EOF
+
+printf 'coding_session_queue_cas_source_b3=%s\n' "${source_identity}"
+printf 'coding_session_queue_cas_receipt=%s\n' "${RECEIPT_RELATIVE_PATH}"

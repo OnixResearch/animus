@@ -203,6 +203,11 @@ pub enum RuntimeEvent {
         /// Bounded pending queue count.
         queue_count: u32,
     },
+    /// A queue compare-and-swap result was observed without private text.
+    SessionQueueMutationObserved {
+        /// Bounded queue mutation metadata.
+        mutation: crate::coding_session_host::CodingSessionQueueMutationEvent,
+    },
     /// A coding-session message crossed its declared durable boundary.
     SessionCommitObserved {
         /// Stable session identity.
@@ -295,6 +300,9 @@ impl RuntimeEvent {
             Self::Cancelled { .. } => super::RuntimeEventKind::Cancelled,
             Self::CompactionRequested { .. } => super::RuntimeEventKind::CompactionRequested,
             Self::SessionStateChanged { .. } => super::RuntimeEventKind::SessionStateChanged,
+            Self::SessionQueueMutationObserved { .. } => {
+                super::RuntimeEventKind::SessionQueueMutationObserved
+            }
             Self::SessionCommitObserved { .. } => super::RuntimeEventKind::SessionCommitObserved,
             Self::SessionRecoveryObserved { .. } => {
                 super::RuntimeEventKind::SessionRecoveryObserved

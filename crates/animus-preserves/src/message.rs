@@ -28,6 +28,12 @@ const RUNTIME_SESSION_RUN_ID_FIELD: &str = "session_run_id";
 const RUNTIME_SESSION_ENTRY_ID_FIELD: &str = "session_entry_id";
 const RUNTIME_SESSION_STATUS_FIELD: &str = "session_status";
 const RUNTIME_SESSION_MESSAGE_KIND_FIELD: &str = "session_message_kind";
+const RUNTIME_QUEUE_OPERATION_FIELD: &str = "queue_operation";
+const RUNTIME_QUEUE_ITEM_ID_FIELD: &str = "queue_item_id";
+const RUNTIME_QUEUE_ENTRY_ID_FIELD: &str = "queue_entry_id";
+const RUNTIME_QUEUE_IDENTITY_FIELD: &str = "queue_identity";
+const RUNTIME_QUEUE_CONFLICT_FIELD: &str = "queue_conflict";
+const RUNTIME_QUEUE_REDACTION: &str = "private_queue_text_omitted";
 const RUNTIME_SESSION_HEAD_HASH_FIELD: &str = "session_head_hash";
 const RUNTIME_SESSION_ACTIVE_LEAF_FIELD: &str = "session_active_leaf_id";
 const RUNTIME_SESSION_BRANCH_ID_FIELD: &str = "session_branch_id";
@@ -41,6 +47,7 @@ const BLAKE3_HEX_BYTES: usize = 64;
 const INVALID_COMPLETION_CANDIDATE_HASH_REASON: &str = "expected lowercase BLAKE3 hex";
 const INVALID_SESSION_LABEL_REASON: &str = "expected bounded ASCII identity label";
 const INVALID_SESSION_HASH_REASON: &str = "expected lowercase BLAKE3 hex";
+const INVALID_QUEUE_MUTATION_REASON: &str = "invalid queue mutation metadata";
 const INVALID_SESSION_AUTHORITY_COMPONENT_REASON: &str =
     "expected unique session authority component class";
 const INVALID_COMPLETION_CANDIDATE_REQUEST_REASON: &str = "expected exact COMPLETE request";
@@ -736,6 +743,27 @@ pub enum Envelope {
         /// Bounded pending queue count.
         queue_count: u32,
     },
+    /// Runtime coding-session queue compare-and-swap payload.
+    RuntimeSessionQueueMutationObserved {
+        /// Safe mutation operation label.
+        operation: String,
+        /// Accepted or conflict status.
+        status: String,
+        /// Stable queue item identity.
+        item_id: String,
+        /// Stable entry identity.
+        entry_id: String,
+        /// Bounded current or expected position.
+        position: Option<u32>,
+        /// Checked queue generation.
+        generation: u64,
+        /// BLAKE3 queue state identity.
+        queue_identity: String,
+        /// Safe conflict class when rejected.
+        conflict: Option<String>,
+        /// Marker proving private queue text was omitted.
+        redaction_marker: String,
+    },
     /// Runtime coding-session durable commit payload.
     RuntimeSessionCommitObserved {
         /// Stable session identity.
@@ -835,6 +863,7 @@ impl Envelope {
             | Self::RuntimeCancelled { .. }
             | Self::RuntimeCompactionRequested { .. }
             | Self::RuntimeSessionStateChanged { .. }
+            | Self::RuntimeSessionQueueMutationObserved { .. }
             | Self::RuntimeSessionCommitObserved { .. }
             | Self::RuntimeSessionRecoveryObserved { .. }
             | Self::RuntimeSessionAuthorityProfileObserved { .. }
@@ -1032,6 +1061,7 @@ fn runtime_event_group(event: &animus_runtime::RuntimeEvent) -> RuntimeEventGrou
         | animus_runtime::RuntimeEvent::LoopDecision { .. }
         | animus_runtime::RuntimeEvent::LifecycleHookOutcome { .. }
         | animus_runtime::RuntimeEvent::SessionStateChanged { .. }
+        | animus_runtime::RuntimeEvent::SessionQueueMutationObserved { .. }
         | animus_runtime::RuntimeEvent::SessionCommitObserved { .. }
         | animus_runtime::RuntimeEvent::SessionRecoveryObserved { .. }
         | animus_runtime::RuntimeEvent::SessionAuthorityProfileObserved { .. } => {
@@ -1074,6 +1104,7 @@ fn runtime_envelope_group(envelope: &Envelope) -> Option<RuntimeEventGroup> {
         | Envelope::RuntimeLoopDecision { .. }
         | Envelope::RuntimeLifecycleHookOutcome { .. }
         | Envelope::RuntimeSessionStateChanged { .. }
+        | Envelope::RuntimeSessionQueueMutationObserved { .. }
         | Envelope::RuntimeSessionCommitObserved { .. }
         | Envelope::RuntimeSessionRecoveryObserved { .. }
         | Envelope::RuntimeSessionAuthorityProfileObserved { .. } => {
@@ -1149,6 +1180,19 @@ fn encode_lifecycle_event(event: &animus_runtime::RuntimeEvent) -> Envelope {
             status: status.clone(),
             queue_count: *queue_count,
         },
+        animus_runtime::RuntimeEvent::SessionQueueMutationObserved { mutation } => {
+            Envelope::RuntimeSessionQueueMutationObserved {
+                operation: String::from(mutation.operation.as_str()),
+                status: String::from(mutation.status),
+                item_id: mutation.item_id.clone(),
+                entry_id: mutation.entry_id.clone(),
+                position: mutation.position,
+                generation: mutation.generation.value(),
+                queue_identity: mutation.queue_identity.clone(),
+                conflict: mutation.conflict.map(|value| String::from(value.as_str())),
+                redaction_marker: String::from(mutation.redaction_marker),
+            }
+        }
         animus_runtime::RuntimeEvent::SessionCommitObserved {
             session_id,
             run_id,
@@ -1481,6 +1525,7 @@ fn decode_lifecycle_event(
             status: status.as_deref(),
         }),
         session @ (Envelope::RuntimeSessionStateChanged { .. }
+        | Envelope::RuntimeSessionQueueMutationObserved { .. }
         | Envelope::RuntimeSessionCommitObserved { .. }
         | Envelope::RuntimeSessionRecoveryObserved { .. }
         | Envelope::RuntimeSessionAuthorityProfileObserved { .. }) => {
@@ -1500,6 +1545,27 @@ fn decode_session_envelope(
             status,
             queue_count,
         } => decode_runtime_session_state(session_id, run_id, status, queue_count),
+        Envelope::RuntimeSessionQueueMutationObserved {
+            operation,
+            status,
+            item_id,
+            entry_id,
+            position,
+            generation,
+            queue_identity,
+            conflict,
+            redaction_marker,
+        } => decode_runtime_session_queue_mutation(SessionQueueMutationEnvelopeParts {
+            operation,
+            status,
+            item_id,
+            entry_id,
+            position,
+            generation,
+            queue_identity,
+            conflict,
+            redaction_marker,
+        }),
         Envelope::RuntimeSessionCommitObserved {
             session_id,
             run_id,
@@ -1857,6 +1923,101 @@ fn decode_runtime_session_state(
         status,
         queue_count,
     })
+}
+
+struct SessionQueueMutationEnvelopeParts {
+    operation: String,
+    status: String,
+    item_id: String,
+    entry_id: String,
+    position: Option<u32>,
+    generation: u64,
+    queue_identity: String,
+    conflict: Option<String>,
+    redaction_marker: String,
+}
+
+fn decode_runtime_session_queue_mutation(
+    parts: SessionQueueMutationEnvelopeParts,
+) -> Result<animus_runtime::RuntimeEvent, crate::CodecError> {
+    validate_runtime_session_label(&parts.item_id, RUNTIME_QUEUE_ITEM_ID_FIELD)?;
+    validate_runtime_session_label(&parts.entry_id, RUNTIME_QUEUE_ENTRY_ID_FIELD)?;
+    validate_runtime_blake3(&parts.queue_identity, RUNTIME_QUEUE_IDENTITY_FIELD)?;
+    if parts.redaction_marker != RUNTIME_QUEUE_REDACTION {
+        return Err(crate::CodecError::InvalidRuntimePayload {
+            field: RUNTIME_REDACTION_FIELD,
+            reason: INVALID_QUEUE_MUTATION_REASON,
+        });
+    }
+    let operation = match parts.operation.as_str() {
+        "edit" => animus_runtime::coding_session_host::CodingSessionQueueMutationOperation::Edit,
+        "remove" => {
+            animus_runtime::coding_session_host::CodingSessionQueueMutationOperation::Remove
+        }
+        _unsupported => {
+            return Err(crate::CodecError::InvalidRuntimePayload {
+                field: RUNTIME_QUEUE_OPERATION_FIELD,
+                reason: INVALID_QUEUE_MUTATION_REASON,
+            });
+        }
+    };
+    let conflict = parts
+        .conflict
+        .as_deref()
+        .map(queue_conflict_from_str)
+        .transpose()?;
+    let status = match parts.status.as_str() {
+        "accepted" if conflict.is_none() => "accepted",
+        "conflict" if conflict.is_some() => "conflict",
+        _invalid => {
+            return Err(crate::CodecError::InvalidRuntimePayload {
+                field: RUNTIME_SESSION_STATUS_FIELD,
+                reason: INVALID_QUEUE_MUTATION_REASON,
+            });
+        }
+    };
+    Ok(animus_runtime::RuntimeEvent::SessionQueueMutationObserved {
+        mutation: animus_runtime::coding_session_host::CodingSessionQueueMutationEvent {
+            operation,
+            status,
+            item_id: parts.item_id,
+            entry_id: parts.entry_id,
+            position: parts.position,
+            generation: animus_runtime::coding_session_host::CodingSessionQueueGeneration::new(
+                parts.generation,
+            ),
+            queue_identity: parts.queue_identity,
+            conflict,
+            redaction_marker: RUNTIME_QUEUE_REDACTION,
+        },
+    })
+}
+
+fn queue_conflict_from_str(
+    value: &str,
+) -> Result<animus_runtime::coding_session_host::CodingSessionQueueConflictKind, crate::CodecError>
+{
+    match value {
+        "missing_item" => {
+            Ok(animus_runtime::coding_session_host::CodingSessionQueueConflictKind::MissingItem)
+        }
+        "wrong_entry" => {
+            Ok(animus_runtime::coding_session_host::CodingSessionQueueConflictKind::WrongEntry)
+        }
+        "moved_position" => {
+            Ok(animus_runtime::coding_session_host::CodingSessionQueueConflictKind::MovedPosition)
+        }
+        "stale_generation" => Ok(
+            animus_runtime::coding_session_host::CodingSessionQueueConflictKind::StaleGeneration,
+        ),
+        "stale_text" => {
+            Ok(animus_runtime::coding_session_host::CodingSessionQueueConflictKind::StaleText)
+        }
+        _unsupported => Err(crate::CodecError::InvalidRuntimePayload {
+            field: RUNTIME_QUEUE_CONFLICT_FIELD,
+            reason: INVALID_QUEUE_MUTATION_REASON,
+        }),
+    }
 }
 
 struct SessionCommitEnvelopeParts {
@@ -2589,6 +2750,8 @@ mod tests {
     const INVALID_SESSION_ID: &str = "../private/session";
     const INVALID_SESSION_HEAD_HASH: &str = "not-a-blake3-hash";
     const SESSION_QUEUE_COUNT: u32 = 1;
+    const SESSION_QUEUE_POSITION: u32 = 0;
+    const SESSION_QUEUE_GENERATION: u64 = 1;
     const SESSION_DURABLE_CURSOR: u64 = 1;
 
     fn steel_policy_denied_event() -> animus_runtime::RuntimeEvent {
@@ -2790,6 +2953,19 @@ mod tests {
                 status: String::from(SESSION_STATUS),
                 queue_count: SESSION_QUEUE_COUNT,
             },
+            animus_runtime::RuntimeEvent::SessionQueueMutationObserved {
+                mutation: animus_runtime::coding_session_host::CodingSessionQueueMutationEvent {
+                    operation: animus_runtime::coding_session_host::CodingSessionQueueMutationOperation::Edit,
+                    status: "conflict",
+                    item_id: String::from("queue.preserves"),
+                    entry_id: String::from(SESSION_ENTRY_ID),
+                    position: Some(SESSION_QUEUE_POSITION),
+                    generation: animus_runtime::coding_session_host::CodingSessionQueueGeneration::new(SESSION_QUEUE_GENERATION),
+                    queue_identity: String::from(SESSION_HEAD_HASH),
+                    conflict: Some(animus_runtime::coding_session_host::CodingSessionQueueConflictKind::StaleText),
+                    redaction_marker: RUNTIME_QUEUE_REDACTION,
+                },
+            },
             animus_runtime::RuntimeEvent::SessionCommitObserved {
                 session_id: String::from(SESSION_ID),
                 run_id: String::from(SESSION_RUN_ID),
@@ -2835,6 +3011,25 @@ mod tests {
             unsafe_identity.try_into_runtime_event(),
             Err(crate::CodecError::InvalidRuntimePayload {
                 field: RUNTIME_SESSION_ID_FIELD,
+                ..
+            })
+        ));
+
+        let invalid_queue_redaction = Envelope::RuntimeSessionQueueMutationObserved {
+            operation: String::from("edit"),
+            status: String::from("conflict"),
+            item_id: String::from("queue.preserves"),
+            entry_id: String::from(SESSION_ENTRY_ID),
+            position: Some(SESSION_QUEUE_POSITION),
+            generation: SESSION_QUEUE_GENERATION,
+            queue_identity: String::from(SESSION_HEAD_HASH),
+            conflict: Some(String::from("stale_text")),
+            redaction_marker: String::from("private text included"),
+        };
+        assert!(matches!(
+            invalid_queue_redaction.try_into_runtime_event(),
+            Err(crate::CodecError::InvalidRuntimePayload {
+                field: RUNTIME_REDACTION_FIELD,
                 ..
             })
         ));

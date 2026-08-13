@@ -12,6 +12,10 @@ const TOOL_VISIBLE_BUDGET: u32 = 64;
 const TOOL_MUTATION_TARGET: &str = "resource:file:README";
 const TOOL_CAPABILITY: &str = "tool.read";
 const TOOL_DENIAL: &str = "policy_denied";
+const QUEUE_ITEM_ID: &str = "queue.one";
+const QUEUE_ENTRY_ID: &str = "entry.queue.one";
+const QUEUE_IDENTITY: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const PRIVATE_QUEUE_TEXT: &str = "private queue text";
 const TOOL_ARGUMENT_COUNT: usize = 1;
 const FIRST_TURN_INDEX: usize = 0;
 const FIRST_EVENT_INDEX: usize = 0;
@@ -78,6 +82,40 @@ fn active_turn_prompt_requires_explicit_steer_or_follow_up_semantics() {
         HeadlessProtocolErrorKind::InvalidState
     );
     assert_eq!(accepted.status(), HeadlessResponseStatus::Accepted);
+}
+
+#[test]
+fn queue_mutation_events_project_safe_frontend_metadata() {
+    // r[verify agent_harness_runtime.coding_session_queue_cas.verification]
+    let events =
+        map_runtime_events_to_headless(&[crate::RuntimeEvent::SessionQueueMutationObserved {
+            mutation: crate::coding_session_host::CodingSessionQueueMutationEvent {
+                operation: crate::coding_session_host::CodingSessionQueueMutationOperation::Edit,
+                status: "conflict",
+                item_id: String::from(QUEUE_ITEM_ID),
+                entry_id: String::from(QUEUE_ENTRY_ID),
+                position: Some(0),
+                generation: crate::coding_session_host::CodingSessionQueueGeneration::new(1),
+                queue_identity: String::from(QUEUE_IDENTITY),
+                conflict: Some(
+                    crate::coding_session_host::CodingSessionQueueConflictKind::StaleText,
+                ),
+                redaction_marker: "private_queue_text_omitted",
+            },
+        }])
+        .expect("queue mutation event should project");
+
+    assert_eq!(events.len(), 1);
+    assert!(
+        events[FIRST_EVENT_INDEX]
+            .summary()
+            .contains("edit conflict generation=1")
+    );
+    assert!(
+        !events[FIRST_EVENT_INDEX]
+            .summary()
+            .contains(PRIVATE_QUEUE_TEXT)
+    );
 }
 
 #[test]

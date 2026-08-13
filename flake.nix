@@ -345,6 +345,7 @@
                 || baseName == "check-dogfood-readiness"
                 || baseName == "check-durable-session-store"
                 || baseName == "check-coding-session-host"
+                || baseName == "check-coding-session-queue-cas"
                 || baseName == "check-agent-control"
                 || baseName == "check-codebase-graph"
                 || baseName == "check-mesh-provider"
@@ -1185,6 +1186,12 @@
             pkgs.b3sum
           ] ''
             sh scripts/cairn/check-coding-session-host --root .
+          '';
+
+          coding-session-queue-cas = cargoCheck "animus-coding-session-queue-cas" [
+            pkgs.b3sum
+          ] ''
+            sh scripts/cairn/check-coding-session-queue-cas --root .
           '';
 
           agent-control = cargoCheck "animus-agent-control" [

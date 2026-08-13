@@ -44,6 +44,8 @@ mod tests {
     const TOOL_CAPABILITY: &str = "tool.read";
     const CANCELLATION_REASON: &str = "correlated cancellation observed";
     const HEAD_HASH: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const QUEUE_IDENTITY: &str = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    const PRIVATE_QUEUE_TEXT: &str = "private queued prompt";
     const FIRST_CURSOR: u64 = 1;
     const FIRST_COMMITTED_MESSAGE_COUNT: u32 = 1;
     const FIRST_QUEUE_COUNT: u32 = 1;
@@ -134,6 +136,45 @@ mod tests {
             approval_posture: animus_adapters::tool::ApprovalPosture::PreApproved.as_str(),
         })
         .expect("frontend tool request")
+    }
+
+    #[test]
+    fn queue_mutation_frontend_mapping_uses_metadata_only() {
+        // r[verify agent_harness_runtime.coding_session_queue_cas.verification]
+        let mut model = CodingSessionRenderModel::new();
+        model.apply_runtime_event(
+            &animus_runtime::RuntimeEvent::SessionQueueMutationObserved {
+                mutation: animus_runtime::coding_session_host::CodingSessionQueueMutationEvent {
+                    operation: animus_runtime::coding_session_host::CodingSessionQueueMutationOperation::Remove,
+                    status: "conflict",
+                    item_id: String::from("queue.frontend"),
+                    entry_id: String::from(ENTRY_ID),
+                    position: Some(0),
+                    generation: animus_runtime::coding_session_host::CodingSessionQueueGeneration::new(1),
+                    queue_identity: String::from(QUEUE_IDENTITY),
+                    conflict: Some(
+                        animus_runtime::coding_session_host::CodingSessionQueueConflictKind::StaleGeneration,
+                    ),
+                    redaction_marker: "private_queue_text_omitted",
+                },
+            },
+        );
+        assert_eq!(model.state().queue_generation.value(), 1);
+        assert_eq!(
+            model.state().queue_identity.as_deref(),
+            Some(QUEUE_IDENTITY)
+        );
+        assert_eq!(
+            model.state().queue_mutation_status.as_deref(),
+            Some("conflict")
+        );
+        assert_eq!(
+            model.state().queue_conflict,
+            Some(
+                animus_runtime::coding_session_host::CodingSessionQueueConflictKind::StaleGeneration
+            )
+        );
+        assert!(!format!("{:?}", model.state()).contains(PRIVATE_QUEUE_TEXT));
     }
 
     #[test]
