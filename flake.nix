@@ -362,6 +362,7 @@
                 || baseName == "check-branchfs-host"
                 || baseName == "check-acp-stdio-host"
                 || baseName == "check-live-openai-provider-host"
+                || baseName == "check-live-steel-agent-shell"
                 || baseName == "check-packaged-live-openai-smoke"
                 || baseName == "check-packaged-live-openrouter-smoke"
                 || baseName == "check-codebase-tool-host"
@@ -1248,6 +1249,13 @@
             pkgs.clippy
           ] ''
             sh scripts/cairn/check-live-openai-provider-host --root .
+          '';
+
+          live-steel-agent-shell = cargoCheck "animus-live-steel-agent-shell" [
+            pkgs.clippy
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-live-steel-agent-shell --root .
           '';
 
           packaged-live-openai-smoke = cargoCheck "animus-packaged-live-openai-smoke" [

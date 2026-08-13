@@ -85,6 +85,10 @@ const PUBLIC_EXPORT_SOURCES: &[(&str, &str)] = &[
         "crates/animus-std-observability/src/lib.rs",
     ),
     ("animus-std-control", "crates/animus-std-control/src/lib.rs"),
+    (
+        "animus-live-steel-agent",
+        "crates/animus-live-steel-agent/src/lib.rs",
+    ),
     ("animus-steel", "crates/animus-steel/src/lib.rs"),
     ("animus-tui", "crates/animus-tui/src/lib.rs"),
 ];
@@ -109,6 +113,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "authoritative-completion-smoke",
     "multi-role-smoke",
     "openai-provider-host",
+    "live-provider",
     "profile-retry-smoke",
     "batch",
     "compaction",

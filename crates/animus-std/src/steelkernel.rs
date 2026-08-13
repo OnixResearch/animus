@@ -103,6 +103,27 @@ where
         self.store.recovery().committed_head_hash()
     }
 
+    /// Returns the latest committed private kernel chain head.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DurableSteelKernelHostError`] when no valid snapshot entry exists.
+    pub fn latest_kernel_head_identity(
+        &self,
+    ) -> Result<&str, DurableSteelKernelHostError> {
+        self.store
+            .recovery()
+            .committed_frames()
+            .iter()
+            .rev()
+            .find(|frame| frame.kind() == DurableSessionRecordKind::SteelKernelState)
+            .and_then(|frame| frame.entry_id().strip_prefix(STEEL_KERNEL_ENTRY_PREFIX))
+            .filter(|identity| !identity.is_empty())
+            .ok_or_else(|| {
+                DurableSteelKernelHostError::new(DurableSteelKernelHostIssue::SnapshotMissing)
+            })
+    }
+
     /// Commits one complete private kernel safe-point snapshot.
     ///
     /// # Errors

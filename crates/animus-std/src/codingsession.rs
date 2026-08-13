@@ -1037,6 +1037,7 @@ impl CodingSessionCancellationService for ObservedCodingSessionCancellation {
 }
 
 #[derive(Clone, Debug)]
+/// Deterministic final-response provider for focused shell and controller checks.
 pub struct FakeCodingSessionProvider {
     pub response: String,
     pub dispatch_count: u32,
@@ -1063,6 +1064,63 @@ impl CodingSessionToolService for DenyUnusedCodingSessionTool {
         _request: &CodingSessionToolRequest,
     ) -> Result<animus_adapters::ToolResponse, CodingSessionServiceIssue> {
         Err(CodingSessionServiceIssue::Denied)
+    }
+}
+
+/// In-memory coding-session persistence for bounded non-durable compositions.
+#[derive(Clone, Debug)]
+pub struct MemoryCodingSessionPersistence {
+    messages: Vec<CodingSessionMessage>,
+    head_hash: String,
+}
+
+impl Default for MemoryCodingSessionPersistence {
+    fn default() -> Self {
+        Self {
+            messages: Vec::new(),
+            head_hash: String::from(
+                animus_runtime::coding_session_host::CODING_SESSION_EMPTY_HEAD_HASH,
+            ),
+        }
+    }
+}
+
+impl CodingSessionPersistenceService for MemoryCodingSessionPersistence {
+    fn commit(
+        &mut self,
+        request: &CodingSessionCommitRequest,
+    ) -> Result<CodingSessionCommitObservation, CodingSessionServiceIssue> {
+        self.messages.extend(request.messages().iter().cloned());
+        let durable_cursor = u64::try_from(self.messages.len())
+            .map_err(|_error| CodingSessionServiceIssue::Malformed)?;
+        self.head_hash = format!("{durable_cursor:064x}");
+        Ok(CodingSessionCommitObservation {
+            new_head_hash: self.head_hash.clone(),
+            active_leaf_id: String::from(request.proposed_active_leaf_id()),
+            durable_cursor,
+            synchronized: true,
+        })
+    }
+
+    fn recover(
+        &mut self,
+        _request: &CodingSessionRecoveryRequest,
+    ) -> Result<CodingSessionRecoverySnapshot, CodingSessionServiceIssue> {
+        Ok(CodingSessionRecoverySnapshot {
+            status: if self.messages.is_empty() {
+                CodingSessionRecoveryStatus::Empty
+            } else {
+                CodingSessionRecoveryStatus::Clean
+            },
+            committed_head_hash: self.head_hash.clone(),
+            active_leaf_id: self
+                .messages
+                .last()
+                .map(|message| message.entry_id().to_owned()),
+            durable_cursor: u64::try_from(self.messages.len())
+                .map_err(|_error| CodingSessionServiceIssue::Malformed)?,
+            messages: self.messages.clone(),
+        })
     }
 }
 

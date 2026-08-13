@@ -279,6 +279,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "animus-live-steel-agent"
+version = "0.1.0"
+dependencies = [
+ "animus-adapter-rlm-kernel",
+ "animus-adapters",
+ "animus-runtime",
+ "animus-std",
+ "animus-std-openai",
+ "animus-std-rlm-host",
+ "animus-steel",
+ "blake3",
+ "cap-std",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
 name = "animus-preserves"
 version = "0.1.0"
 dependencies = [

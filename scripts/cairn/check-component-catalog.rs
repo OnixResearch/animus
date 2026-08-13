@@ -87,6 +87,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "spacewasm-diagnostic",
     "model-runtime-profiles",
     "openai-provider-host",
+    "live-provider",
     "agent-role-profiles",
     "active-turn-recovery",
     "pending-input-vault",

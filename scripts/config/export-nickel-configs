@@ -47,6 +47,7 @@ pijul_vcs_adapter_source_file=${repo_root}/config/pijul-vcs-adapter.ncl
 secret_resolution_policy_source_file=${repo_root}/config/secret-resolution-policy.ncl
 skill_source_lifecycle_policy_source_file=${repo_root}/config/skill-source-lifecycle-policy.ncl
 steel_skill_module_policy_source_file=${repo_root}/config/steel-skill-module-policy.ncl
+live_steel_agent_shell_source_file=${repo_root}/config/live-steel-agent-shell.ncl
 trajectory_transcript_adapter_source_file=${repo_root}/config/trajectory-transcript-adapter.ncl
 mcp_client_host_source_file=${repo_root}/config/mcp-client-host.ncl
 
@@ -103,5 +104,6 @@ nickel export --format json --field pijul_vcs_adapter "${pijul_vcs_adapter_sourc
 nickel export --format json --field secret_resolution_policy "${secret_resolution_policy_source_file}" > "${target_root}/config/generated/secret-resolution-policy.json"
 nickel export --format json "${skill_source_lifecycle_policy_source_file}" > "${target_root}/config/generated/skill-source-lifecycle-policy.json"
 nickel export --format json --field steel_skill_module_policy "${steel_skill_module_policy_source_file}" > "${target_root}/config/generated/steel-skill-module-policy.json"
+nickel export --format json --field live_steel_agent_shell "${live_steel_agent_shell_source_file}" > "${target_root}/config/generated/live-steel-agent-shell.json"
 nickel export --format json "${trajectory_transcript_adapter_source_file}" > "${target_root}/config/generated/trajectory-transcript-adapter.json"
 nickel export --format json --field mcp_client_host "${mcp_client_host_source_file}" > "${target_root}/config/generated/mcp-client-host.json"

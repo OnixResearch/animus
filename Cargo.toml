@@ -15,6 +15,7 @@ members = [
   "crates/animus-core",
   "crates/animus-eval-core",
   "crates/animus-eval-conformance",
+  "crates/animus-live-steel-agent",
   "crates/animus-preserves",
   "crates/animus-preserves-adapter",
   "crates/animus-preserves-schema",
