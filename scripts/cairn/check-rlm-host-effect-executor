@@ -1,0 +1,105 @@
+#!/usr/bin/env sh
+# r[verify agent_harness_runtime.rlm_host_executor.verification]
+set -eu
+
+readonly FAILURE=1
+readonly RAIL_NAME='rlm-host-effect-executor'
+readonly RECEIPT_SCHEMA='animus.focused-rail-receipt.v1'
+readonly CRATE='crates/animus-std-rlm-host'
+readonly DOC='docs/rlm-host-effect-executor.md'
+readonly ROOT_MANIFEST='Cargo.toml'
+readonly COMPONENT_CATALOG='.cairn/component-catalog.ncl'
+readonly FACADE_INVENTORY='.cairn/runtime-facade-inventory.ncl'
+readonly FLAKE_SOURCE='flake.nix'
+
+root='.'
+if [ "${1:-}" = '--root' ]; then
+  root=${2:-.}
+fi
+cd "${root}"
+readonly DEFAULT_CARGO_TARGET_DIR="${PWD}/target/rlm-host-effect-executor-cargo"
+export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-${DEFAULT_CARGO_TARGET_DIR}}
+
+for tool in cargo grep b3sum; do
+  if ! command -v "${tool}" >/dev/null 2>&1; then
+    printf 'error: %s is required for the RLM host executor rail\n' "${tool}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+cargo test -p animus-std-rlm-host --locked
+cargo clippy -p animus-std-rlm-host --all-targets --locked -- -D warnings
+cargo check -p animus --no-default-features --features rlm-host-executor --locked
+cargo check -p animus-runtime --no-default-features --locked
+cargo check -p animus-adapter-rlm-kernel --target wasm32-unknown-unknown --locked
+cargo check -p animus --no-default-features --target wasm32-unknown-unknown --locked
+
+if grep -R -E 'std::process::Command|Command::new|std::env|current_dir\(\)|current_exe\(\)|OnceLock|lazy_static!' \
+  "${CRATE}/src" --include='*.rs' >/dev/null 2>&1; then
+  printf '%s\n' 'error: the RLM host executor gained ambient process, environment, or registry authority' >&2
+  exit "${FAILURE}"
+fi
+if grep -R -E 'canonicalize\(|(^|[^[:alnum:]_])std::fs::(read|write|OpenOptions)' \
+  "${CRATE}/src" --include='*.rs' >/dev/null 2>&1; then
+  printf '%s\n' 'error: the RLM host executor bypasses capability-relative file owners' >&2
+  exit "${FAILURE}"
+fi
+if grep -E '^default = \[[^]]*rlm-host-executor' "${ROOT_MANIFEST}" >/dev/null 2>&1; then
+  printf '%s\n' 'error: the RLM host executor entered the default root feature graph' >&2
+  exit "${FAILURE}"
+fi
+default_members=$(awk '/^default-members = \[/,/^\]/' "${ROOT_MANIFEST}")
+if printf '%s\n' "${default_members}" | grep -F 'animus-std-rlm-host' >/dev/null; then
+  printf '%s\n' 'error: the AGPL RLM host crate entered workspace default-members' >&2
+  exit "${FAILURE}"
+fi
+
+for marker in \
+  'license = "AGPL-3.0-or-later"' \
+  'default = []' \
+  'pub struct RlmHostExecutor' \
+  'pub struct CapabilityPacks' \
+  'pub struct CurrentAuthorityObservation' \
+  'libc::O_NOFOLLOW' \
+  'WorkspaceEditHost::new' \
+  'bounded_exec::run_with_cancellation' \
+  'unsupported_resource_limits' \
+  'EnvironmentMode::Clear' \
+  'ConcreteChildSessionService' \
+  'SteelKernelClearRoute' \
+  'impl core::fmt::Debug for RlmHostResult'; do
+  if ! grep -R -F "${marker}" "${CRATE}" >/dev/null; then
+    printf 'error: missing RLM host executor marker: %s\n' "${marker}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+grep -F 'std.rlm-host-effect-executor' "${COMPONENT_CATALOG}" >/dev/null
+grep -F 'root.rlm-host-effect-executor-facade' "${COMPONENT_CATALOG}" >/dev/null
+grep -F 'animus::rlm_host_executor' "${FACADE_INVENTORY}" >/dev/null
+grep -F 'rlm-host-effect-executor = cargoCheck' "${FLAKE_SOURCE}" >/dev/null
+grep -F 'No route falls back to ambient authority' "${DOC}" >/dev/null
+
+mkdir -p target/cairn/focused-rails
+receipt_path="target/cairn/focused-rails/${RAIL_NAME}.md"
+source_hash=$(b3sum \
+  "${CRATE}/Cargo.toml" \
+  "${CRATE}"/src/*.rs \
+  "${CRATE}"/tests/*.rs \
+  "${DOC}" \
+  "${ROOT_MANIFEST}" \
+  "${COMPONENT_CATALOG}" \
+  "${FACADE_INVENTORY}" \
+  "${FLAKE_SOURCE}" \
+  "$0" | b3sum | cut -d ' ' -f 1)
+cat > "${receipt_path}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+source_set_blake3: ${source_hash}
+claims: explicit-seven-route-composition,current-authority-recheck,capability-relative-no-follow-read,revision-gated-edit,exact-bounded-process,named-tool-and-context,concrete-child-and-kernel-owners,metadata-only-observations,default-license-isolation
+non_claims: sandboxing,hermeticity,command-authenticity,whole-filesystem-race-freedom,tool-correctness,reversible-mutation,child-correctness,task-success,production-readiness,release-eligibility
+EOF
+
+printf '%s\n' 'focused rail rlm-host-effect-executor: pass'
+printf 'receipt: %s\n' "${receipt_path}"

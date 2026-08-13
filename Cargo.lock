@@ -134,6 +134,7 @@ dependencies = [
  "animus-std-lean-loop",
  "animus-std-mcp",
  "animus-std-openai",
+ "animus-std-rlm-host",
  "animus-std-secretspec",
  "animus-std-workspace-edit",
  "animus-steel",
@@ -455,6 +456,24 @@ dependencies = [
  "serde",
  "serde_json",
  "zeroize",
+]
+
+[[package]]
+name = "animus-std-rlm-host"
+version = "0.1.0"
+dependencies = [
+ "animus-adapter-rlm-kernel",
+ "animus-adapters",
+ "animus-runtime",
+ "animus-std",
+ "animus-std-workspace-edit",
+ "animus-steel",
+ "blake3",
+ "bounded-exec",
+ "cap-root-core",
+ "cap-std",
+ "libc",
+ "tempfile",
 ]
 
 [[package]]

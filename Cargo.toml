@@ -31,6 +31,7 @@ members = [
   "crates/animus-std-mcp",
   "crates/animus-std-observability",
   "crates/animus-std-openai",
+  "crates/animus-std-rlm-host",
   "crates/animus-std-secretspec",
   "crates/animus-std-workspace-edit",
   "crates/animus-steel",
@@ -169,6 +170,7 @@ continual-harness = ["dep:animus-adapter-continual"]
 daemon-workers = ["dep:animus-adapter-daemon"]
 daemon-handoff = ["daemon-workers", "runtime", "std", "animus-std/daemon-handoff"]
 workspace-edit-host = ["dep:animus-std-workspace-edit"]
+rlm-host-executor = ["rlm-kernel", "dep:animus-std-rlm-host"]
 mcp-client-host = ["runtime", "dep:animus-std-mcp"]
 messaging-receipts = []
 preserves = ["dep:animus-preserves"]
@@ -212,6 +214,7 @@ animus-std-eval = { path = "crates/animus-std-eval", version = "0.1.0", optional
 animus-std-lean-loop = { path = "crates/animus-std-lean-loop", version = "0.1.0", optional = true }
 animus-std-mcp = { path = "crates/animus-std-mcp", version = "0.1.0", optional = true }
 animus-std-openai = { path = "crates/animus-std-openai", version = "0.1.0", optional = true }
+animus-std-rlm-host = { path = "crates/animus-std-rlm-host", version = "0.1.0", optional = true }
 animus-std-secretspec = { path = "crates/animus-std-secretspec", version = "0.1.0", optional = true }
 animus-std-workspace-edit = { path = "crates/animus-std-workspace-edit", version = "0.1.0", optional = true }
 animus-steel = { path = "crates/animus-steel", version = "0.1.0", optional = true }

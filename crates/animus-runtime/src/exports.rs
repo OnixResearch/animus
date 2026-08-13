@@ -10,12 +10,12 @@ pub use crate::admission::{
     plan_model_dispatch,
 };
 pub use crate::background::{
-    ProcessJobBackend, ProcessJobEnvironmentVariable, ProcessJobMetadataField,
-    ProcessJobNotificationPolicy, ProcessJobProfile, ProcessJobProfileError,
-    ProcessJobProfileErrorKind, ProcessJobProfileIdentity, ProcessJobProfileManifest,
-    ProcessJobProfilePolicy, ProcessJobProfileResolveRequest, ProcessJobProfileSource,
-    ProcessJobProfileSourcePrecedence, ProcessJobResourceLimits, ResolvedProcessJobProfile,
-    StartProcessJobRequest, resolve_process_job_profile,
+    NamedProcessJobProfile, ProcessJobBackend, ProcessJobEnvironmentVariable,
+    ProcessJobMetadataField, ProcessJobNotificationPolicy, ProcessJobProfile,
+    ProcessJobProfileError, ProcessJobProfileErrorKind, ProcessJobProfileIdentity,
+    ProcessJobProfileManifest, ProcessJobProfilePolicy, ProcessJobProfileResolveRequest,
+    ProcessJobProfileSource, ProcessJobProfileSourcePrecedence, ProcessJobResourceLimits,
+    ResolvedProcessJobProfile, StartProcessJobRequest, resolve_process_job_profile,
 };
 pub use crate::batch::{
     BatchConcurrencyPolicy, BatchError, BatchExecutionMode, BatchExecutionService, BatchJob,

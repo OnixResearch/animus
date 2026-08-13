@@ -91,6 +91,10 @@ pub use animus_std::daemon_handoff_host as daemon_handoff;
 #[cfg(feature = "workspace-edit-host")]
 pub use animus_std_workspace_edit as workspace_edit;
 
+/// Non-default authority-scoped RLM host-effect executor.
+#[cfg(feature = "rlm-host-executor")]
+pub use animus_std_rlm_host as rlm_host_executor;
+
 /// Non-default bounded MCP standard-input client host.
 #[cfg(feature = "mcp-client-host")]
 pub use animus_std_mcp as mcp_client;

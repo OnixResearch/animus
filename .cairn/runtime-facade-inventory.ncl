@@ -75,6 +75,7 @@ let lean_loop_feature = "lean-loop" in
 let lean_loop_family = "loop" in
 let rlm_kernel_feature = "rlm-kernel" in
 let durable_steel_kernel_restore_feature = "durable-steel-kernel-restore" in
+let rlm_host_executor_feature = "rlm-host-executor" in
 let rlm_kernel_family = "steel" in
 let autonomous_feature = "autonomous-gates" in
 let autonomous_family = "autonomous-gates" in
@@ -198,6 +199,21 @@ let rlm_kernel_record = fun export_path_value owning_crate_value source_value cl
   required_authority = required_authority_value,
   depends_on = [],
   composes_with = ["animus-runtime::tool_executor_kit"],
+  capability_family = rlm_kernel_family,
+}
+in
+let rlm_host_executor_record = fun export_path_value owning_crate_value source_value review_note_value => {
+  export_path = export_path_value,
+  owning_crate = owning_crate_value,
+  source = source_value,
+  class = shell,
+  side_effect = shell_owned,
+  stability = optional_stability,
+  review_note = review_note_value,
+  feature_gate = rlm_host_executor_feature,
+  required_authority = shell_owned,
+  depends_on = ["animus-runtime::rlm_kernel", "animus-runtime::runtime_authority_seal"],
+  composes_with = ["animus-std::child_session_host", "animus-steel::SteelRlmKernel"],
   capability_family = rlm_kernel_family,
 }
 in
@@ -3568,8 +3584,10 @@ let entry_values = [
   entry "animus::ReviewEvidenceService" "animus" root injection injected optional_stability "compatibility reexport of review services",
   entry "animus::VcsAttemptObservationService" "animus" root injection injected optional_stability "compatibility reexport of VCS services",
   entry "animus::prepare_rejected_attempt_context" "animus" root shell shell_owned optional_stability "compatibility reexport of rejected-attempt host preparation",
+  entry "animus-runtime::NamedProcessJobProfile" "animus-runtime" runtime injection injected stable "named exact process profile entry for injected host execution",
   entry "animus-runtime::coding_session_host" "animus-runtime" runtime reusable none stable "provider- and frontend-neutral coding-session reducer facade with authority-profile binding and resume admission",
   entry "animus-std::coding_session_host" "animus-std" std_shell shell shell_owned stable "non-default explicit-service coding-session host facade with current authority-enforcement re-probes",
+  rlm_host_executor_record "animus::rlm_host_executor" "animus" root "root module facade for the non-default AGPL host executor",
   durable_steel_kernel_restore_record "animus-std::DurableSteelKernelHostError" "animus-std" std_shell reusable none "bounded durable Steel kernel host error" none,
   durable_steel_kernel_restore_record "animus-std::DurableSteelKernelHostIssue" "animus-std" std_shell reusable none "typed durable Steel kernel host issue class" none,
   durable_steel_kernel_restore_record "animus-std::DurableSteelKernelPersistence" "animus-std" std_shell shell shell_owned "capability-scoped durable Steel kernel snapshot commit and restore shell" shell_owned,

@@ -345,6 +345,7 @@
                 || baseName == "check-dogfood-readiness"
                 || baseName == "check-durable-session-store"
                 || baseName == "check-durable-steel-kernel-restore"
+                || baseName == "check-rlm-host-effect-executor"
                 || baseName == "check-coding-session-host"
                 || baseName == "check-coding-session-queue-cas"
                 || baseName == "check-concrete-child-session-service"
@@ -1189,6 +1190,14 @@
             pkgs.clippy
           ] ''
             sh scripts/cairn/check-durable-steel-kernel-restore --root .
+          '';
+
+          rlm-host-effect-executor = cargoCheck "animus-rlm-host-effect-executor" [
+            pkgs.b3sum
+            pkgs.clippy
+          ] ''
+            export ANIMUS_RLM_HOST_PROCESS_FIXTURE=${pkgs.coreutils}/bin/printf
+            sh scripts/cairn/check-rlm-host-effect-executor --root .
           '';
 
           coding-session-host = cargoCheck "animus-coding-session-host" [

@@ -1,0 +1,30 @@
+[package]
+name = "animus-std-rlm-host"
+description = "Optional authority-scoped host-effect executor for Animus RLM requests."
+edition.workspace = true
+license = "AGPL-3.0-or-later"
+readme.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+default = []
+
+[dependencies]
+animus-adapter-rlm-kernel = { path = "../animus-adapter-rlm-kernel", version = "0.1.0" }
+animus-adapters = { path = "../animus-adapters", version = "0.1.0" }
+animus-runtime = { path = "../animus-runtime", version = "0.1.0", default-features = false, features = ["rlm-kernel"] }
+animus-std = { path = "../animus-std", version = "0.1.0", default-features = false, features = ["child-session-host"] }
+animus-std-workspace-edit = { path = "../animus-std-workspace-edit", version = "0.1.0" }
+animus-steel = { path = "../animus-steel", version = "0.1.0", features = ["rlm-kernel"] }
+blake3 = "1.8.5"
+bounded-exec = { git = "ssh://git@github.com/OnixResearch/bounded-exec.git", rev = "29dac88ecded94457572db3fdfaaaab95fa91525" }
+cap-root-core = { path = "../../vendor/cap-root-core-selected/crates/cap-root-core", version = "=0.1.0" }
+cap-std = "3.4"
+libc = "0.2"
+
+[dev-dependencies]
+tempfile = "3.27.0"
