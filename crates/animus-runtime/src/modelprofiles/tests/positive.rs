@@ -59,6 +59,29 @@ fn assert_contribution_binding(plan: &ModelInvocationPlan, alternate_plan: &Mode
 }
 
 #[test]
+fn explicit_disclosure_selects_only_the_matching_skill_module() {
+    // r[verify agent_harness_runtime.steel_skill_modules.lifecycle]
+    let manifest = skill_manifest(animus_adapters::SkillManifestTrustStatus::Trusted);
+    let body = loaded_skill_body(&manifest);
+    let disclosed = ModelSkillPlanEntry::test_fixture(
+        SKILL_NAME,
+        manifest.content_identity().as_str(),
+        Some(body),
+    );
+    let module = skill_module_descriptor(manifest.content_identity().as_str());
+    let authority = animus_adapter_rlm_kernel::SteelSkillModuleAuthority {
+        session: &[],
+        profile: &[],
+        skill: &[],
+        host: &[],
+    };
+    let plan = select_steel_skill_modules(&[disclosed], &[module], authority)
+        .expect("explicit matching disclosure must select the module");
+    assert_eq!(plan.ordered_modules().len(), 1);
+    assert_eq!(plan.ordered_modules()[0].name(), SKILL_NAME);
+}
+
+#[test]
 fn profile_contract_and_identity_validate_deterministically() {
     // r[verify agent_harness_runtime.model_runtime_profiles.contract]
     let first = composition_profile_set(

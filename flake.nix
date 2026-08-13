@@ -372,6 +372,7 @@
                 || baseName == "check-rejected-attempt-context"
                 || baseName == "check-rlm-kernel"
                 || baseName == "check-steel-host-bridge"
+                || baseName == "check-steel-skill-modules"
                 || baseName == "check-adapter-conformance-index"
                 || baseName == "check-adapter-family-crates"
                 || baseName == "check-ast-grep-agent-boundary-audits"
@@ -952,6 +953,13 @@
             pkgs.nickel
           ] ''
             sh scripts/cairn/check-steel-host-bridge --root .
+          '';
+
+          steel-skill-modules = cargoCheck "animus-steel-skill-modules" [
+            pkgs.clippy
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-steel-skill-modules --root .
           '';
 
           nickel-policy-contracts = cargoCheck "animus-nickel-policy-contracts" [

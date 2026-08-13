@@ -75,6 +75,7 @@ let lean_loop_feature = "lean-loop" in
 let lean_loop_family = "loop" in
 let rlm_kernel_feature = "rlm-kernel" in
 let durable_steel_kernel_restore_feature = "durable-steel-kernel-restore" in
+let steel_skill_modules_feature = "steel-skill-modules" in
 let rlm_host_executor_feature = "rlm-host-executor" in
 let rlm_kernel_family = "steel" in
 let autonomous_feature = "autonomous-gates" in
@@ -199,6 +200,21 @@ let rlm_kernel_record = fun export_path_value owning_crate_value source_value cl
   required_authority = required_authority_value,
   depends_on = [],
   composes_with = ["animus-runtime::tool_executor_kit"],
+  capability_family = rlm_kernel_family,
+}
+in
+let steel_skill_module_record = fun export_path_value owning_crate_value source_value class_value side_effect_value review_note_value required_authority_value => {
+  export_path = export_path_value,
+  owning_crate = owning_crate_value,
+  source = source_value,
+  class = class_value,
+  side_effect = side_effect_value,
+  stability = optional_stability,
+  review_note = review_note_value,
+  feature_gate = steel_skill_modules_feature,
+  required_authority = required_authority_value,
+  depends_on = [],
+  composes_with = ["animus-steel::SteelRlmKernel"],
   capability_family = rlm_kernel_family,
 }
 in
@@ -1667,6 +1683,38 @@ let entry_values = [
   rlm_kernel_record "animus-steel::SteelRlmKernel" "animus-steel" steel injection injected "persistent transactional model-facing Steel evaluator" injected,
   rlm_kernel_record "animus-steel::SteelRlmToolAdapter" "animus-steel" steel injection injected "persistent Steel REPL implementation of the generic tool port" injected,
   rlm_kernel_record "animus-steel::SteelRlmEvaluation" "animus-steel" steel reusable none "typed bounded value or host-request evaluation outcome" none,
+  steel_skill_module_record "animus-steel::STEEL_SKILL_MODULE_COHORT" "animus-steel" steel reusable none "exact reviewed Steel source cohort" none,
+  steel_skill_module_record "animus-steel::STEEL_SKILL_MODULE_SCHEMA" "animus-steel" steel reusable none "exact Steel skill-module schema" none,
+  steel_skill_module_record "animus-steel::SteelSkillModuleAuthority" "animus-steel" steel reusable none "session profile skill and host authority ceilings" none,
+  steel_skill_module_record "animus-steel::SteelSkillModuleBounds" "animus-steel" steel reusable none "source and evaluation bounds" none,
+  steel_skill_module_record "animus-steel::SteelSkillModuleDependency" "animus-steel" steel reusable none "exact selected dependency" none,
+  steel_skill_module_record "animus-steel::SteelSkillModuleDependencyDraft" "animus-steel" steel reusable none "borrowed dependency admission fields" none,
+  steel_skill_module_record "animus-steel::SteelSkillModuleDescriptor" "animus-steel" steel reusable none "reviewed private Steel skill-module descriptor" none,
+  steel_skill_module_record "animus-steel::SteelSkillModuleDescriptorDraft" "animus-steel" steel reusable none "borrowed module admission fields" none,
+  steel_skill_module_record "animus-steel::SteelSkillModuleError" "animus-steel" steel reusable none "closed module admission failure" none,
+  steel_skill_module_record "animus-steel::SteelSkillModulePlan" "animus-steel" steel reusable none "deterministic dependency-first selected module plan" none,
+  steel_skill_module_record "animus-steel::SteelSkillModuleReceipt" "animus-steel" steel reusable none "metadata-only module load receipt" none,
+  steel_skill_module_record "animus-steel::SteelSkillModuleTrust" "animus-steel" steel reusable none "closed host trust state" none,
+  steel_skill_module_record "animus-steel::resolve_steel_skill_modules" "animus-steel" steel reusable none "pure module dependency and authority resolver" none,
+  steel_skill_module_record "animus-steel::steel_skill_module_source_identity" "animus-steel" steel reusable none "domain-separated private source identity" none,
+  steel_skill_module_record "animus-runtime::select_steel_skill_modules" "animus-runtime" runtime reusable none "explicit progressive-disclosure module selector" none,
+  steel_skill_module_record "animus::STEEL_SKILL_MODULE_COHORT" "animus" root reusable none "root exact reviewed Steel source cohort" none,
+  steel_skill_module_record "animus::STEEL_SKILL_MODULE_SCHEMA" "animus" root reusable none "root exact Steel skill-module schema" none,
+  steel_skill_module_record "animus::SteelRlmKernel" "animus" root injection injected "root transactional module loader" injected,
+  steel_skill_module_record "animus::SteelSkillModuleAuthority" "animus" root reusable none "root module authority ceilings" none,
+  steel_skill_module_record "animus::SteelSkillModuleBounds" "animus" root reusable none "root module bounds" none,
+  steel_skill_module_record "animus::SteelSkillModuleDependency" "animus" root reusable none "root exact dependency" none,
+  steel_skill_module_record "animus::SteelSkillModuleDependencyDraft" "animus" root reusable none "root borrowed dependency fields" none,
+  steel_skill_module_record "animus::SteelSkillModuleDescriptor" "animus" root reusable none "root reviewed module descriptor" none,
+  steel_skill_module_record "animus::SteelSkillModuleDescriptorDraft" "animus" root reusable none "root borrowed module fields" none,
+  steel_skill_module_record "animus::SteelSkillModuleError" "animus" root reusable none "root module error" none,
+  steel_skill_module_record "animus::SteelSkillModulePlan" "animus" root reusable none "root selected module plan" none,
+  steel_skill_module_record "animus::SteelSkillModuleReceipt" "animus" root reusable none "root metadata receipt" none,
+  steel_skill_module_record "animus::SteelSkillModuleTrust" "animus" root reusable none "root trust state" none,
+  steel_skill_module_record "animus::resolve_steel_skill_modules" "animus" root reusable none "root pure resolver" none,
+  steel_skill_module_record "animus::select_steel_skill_modules" "animus" root reusable none "root explicit selector" none,
+  steel_skill_module_record "animus::steel_skill_module_source_identity" "animus" root reusable none "root source identity helper" none,
+  steel_skill_module_record "animus::steel_skill_modules" "animus" root reusable none "root non-default module facade" none,
   rlm_kernel_record "animus-steel::SteelRlmBridgeStep" "animus-steel" steel reusable none "typed staged replay value or host-request bridge step" none,
   rlm_kernel_record "animus-steel::SteelRlmError" "animus-steel" steel reusable none "bounded model-facing Steel diagnostic" none,
   durable_steel_kernel_restore_record "animus-steel::STEEL_KERNEL_BRIDGE_SCHEMA" "animus-steel" steel reusable none "exact durable replay bridge schema" none,

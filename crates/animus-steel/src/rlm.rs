@@ -111,6 +111,11 @@ pub enum SteelRlmError {
         /// Bounded output diagnostic.
         message: String,
     },
+    /// A selected module plan exceeded the current kernel policy.
+    ModulePolicy {
+        /// Bounded policy diagnostic.
+        message: String,
+    },
     /// The staged bridge protocol returned an invalid state or replay sequence.
     BridgeProtocol {
         /// Bounded protocol diagnostic.
@@ -131,6 +136,9 @@ impl core::fmt::Display for SteelRlmError {
             }
             Self::ToolOutput { message } => {
                 write!(formatter, "Steel tool output failed: {message}")
+            }
+            Self::ModulePolicy { message } => {
+                write!(formatter, "Steel skill module policy denied: {message}")
             }
             Self::BridgeProtocol { message } => {
                 write!(formatter, "Steel bridge protocol failed: {message}")
@@ -237,6 +245,8 @@ pub struct SteelRlmKernel {
     environment: animus_adapter_rlm_kernel::EnvironmentState,
     context_commits: Vec<Vec<animus_adapter_rlm_kernel::ContextBinding>>,
     committed_cells: Vec<CommittedCell>,
+    skill_modules: Vec<animus_adapter_rlm_kernel::SteelSkillModuleDescriptor>,
+    skill_module_set_identity: Option<String>,
     clear_epoch: u64,
     engine: steel::steel_vm::engine::Engine,
 }
@@ -248,12 +258,14 @@ impl SteelRlmKernel {
     ///
     /// Returns [`SteelRlmError`] when the restricted Steel prelude fails.
     pub fn new(policy: animus_adapter_rlm_kernel::RlmKernelPolicy) -> Result<Self, SteelRlmError> {
-        let engine = build_engine(&[], &[], &policy)?;
+        let engine = build_engine(&[], &[], &[], &policy)?;
         Ok(Self {
             policy,
             environment: animus_adapter_rlm_kernel::EnvironmentState::default(),
             context_commits: Vec::new(),
             committed_cells: Vec::new(),
+            skill_modules: Vec::new(),
+            skill_module_set_identity: None,
             clear_epoch: 0,
             engine,
         })
@@ -288,6 +300,7 @@ impl SteelRlmKernel {
         )?;
         let candidate_engine = build_engine(
             candidate_environment.bindings(),
+            self.skill_modules.as_slice(),
             self.committed_cells.as_slice(),
             &self.policy,
         )?;
@@ -295,6 +308,42 @@ impl SteelRlmKernel {
         self.context_commits.push(bindings.to_vec());
         self.engine = candidate_engine;
         Ok(())
+    }
+
+    /// Atomically loads one explicitly selected module plan at a kernel safe point.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SteelRlmError`] without changing committed state when module
+    /// evaluation or export validation fails.
+    pub fn load_skill_modules(
+        &mut self,
+        plan: &animus_adapter_rlm_kernel::SteelSkillModulePlan,
+    ) -> Result<animus_adapter_rlm_kernel::SteelSkillModuleReceipt, SteelRlmError> {
+        // r[impl agent_harness_runtime.steel_skill_modules.admission]
+        // r[impl agent_harness_runtime.steel_skill_modules.lifecycle]
+        if !self.committed_cells.is_empty() {
+            return Err(SteelRlmError::ModulePolicy {
+                message: String::from("module transition requires a cleared committed cell set"),
+            });
+        }
+        validate_skill_module_plan_for_policy(plan, &self.policy)?;
+        let candidate = build_engine(
+            self.environment.bindings(),
+            plan.ordered_modules(),
+            self.committed_cells.as_slice(),
+            &self.policy,
+        )?;
+        self.skill_modules = plan.ordered_modules().to_vec();
+        self.skill_module_set_identity = Some(String::from(plan.module_set_identity()));
+        self.engine = candidate;
+        Ok(animus_adapter_rlm_kernel::SteelSkillModuleReceipt::from_plan(plan))
+    }
+
+    /// Returns the current selected module-set identity.
+    #[must_use]
+    pub fn skill_module_set_identity(&self) -> Option<&str> {
+        self.skill_module_set_identity.as_deref()
     }
 
     /// Evaluates one model-written Steel cell transactionally.
@@ -316,6 +365,7 @@ impl SteelRlmKernel {
         )?;
         let mut candidate = build_engine(
             self.environment.bindings(),
+            self.skill_modules.as_slice(),
             self.committed_cells.as_slice(),
             &self.policy,
         )?;
@@ -371,6 +421,7 @@ impl SteelRlmKernel {
         )?;
         let mut candidate = build_engine(
             self.environment.bindings(),
+            self.skill_modules.as_slice(),
             self.committed_cells.as_slice(),
             &self.policy,
         )?;
@@ -400,6 +451,7 @@ impl SteelRlmKernel {
         )?;
         let mut candidate = build_engine(
             self.environment.bindings(),
+            self.skill_modules.as_slice(),
             self.committed_cells.as_slice(),
             &self.policy,
         )?;
@@ -458,7 +510,7 @@ impl SteelRlmKernel {
                 clear_kernel: true,
             },
         )?;
-        let engine = build_engine(&[], &[], &self.policy)?;
+        let engine = build_engine(&[], &[], &[], &self.policy)?;
         let counts = [
             animus_adapter_rlm_kernel::ReceiptCount::new(
                 "cleared_bindings",
@@ -490,6 +542,8 @@ impl SteelRlmKernel {
         self.environment = animus_adapter_rlm_kernel::EnvironmentState::default();
         self.context_commits.clear();
         self.committed_cells.clear();
+        self.skill_modules.clear();
+        self.skill_module_set_identity = None;
         self.clear_epoch =
             self.clear_epoch
                 .checked_add(1)
@@ -569,11 +623,70 @@ impl ComponentAdapter<animus_adapters::ToolRequest, animus_adapters::ToolRespons
     }
 }
 
+fn validate_skill_module_plan_for_policy(
+    plan: &animus_adapter_rlm_kernel::SteelSkillModulePlan,
+    policy: &animus_adapter_rlm_kernel::RlmKernelPolicy,
+) -> Result<(), SteelRlmError> {
+    let bounds = policy.bounds();
+    if plan.total_source_chars() > u64::from(bounds.max_environment_chars) {
+        return Err(SteelRlmError::ModulePolicy {
+            message: String::from("module source exceeds kernel environment bound"),
+        });
+    }
+    if plan.total_evaluation_fuel() > bounds.max_evaluation_fuel {
+        return Err(SteelRlmError::ModulePolicy {
+            message: String::from("module evaluation fuel exceeds kernel bound"),
+        });
+    }
+    for module in plan.ordered_modules() {
+        let metrics = structural_metrics(module.source());
+        if metrics.fuel > module.bounds().evaluation_fuel
+            || metrics.fuel > bounds.max_evaluation_fuel
+            || metrics.recursion_depth > bounds.max_recursion_depth
+            || metrics.allocation_bytes > bounds.max_allocation_bytes
+        {
+            return Err(SteelRlmError::ModulePolicy {
+                message: String::from("module structural metrics exceed admitted bounds"),
+            });
+        }
+        for capability in module.capability_requests() {
+            let operation = bridge_capability_operation(capability.as_str()).ok_or_else(|| {
+                SteelRlmError::ModulePolicy {
+                    message: String::from("module capability is not an existing bridge operation"),
+                }
+            })?;
+            if !policy.admits_operation(operation) {
+                return Err(SteelRlmError::ModulePolicy {
+                    message: String::from("module capability is outside the kernel policy"),
+                });
+            }
+        }
+    }
+    Ok(())
+}
+
+fn bridge_capability_operation(
+    capability: &str,
+) -> Option<animus_adapter_rlm_kernel::HostOperationClass> {
+    match capability {
+        FILE_READ_TAG => Some(animus_adapter_rlm_kernel::HostOperationClass::FileRead),
+        FILE_EDIT_TAG => Some(animus_adapter_rlm_kernel::HostOperationClass::FileEdit),
+        SHELL_TAG => Some(animus_adapter_rlm_kernel::HostOperationClass::Shell),
+        TOOL_TAG => Some(animus_adapter_rlm_kernel::HostOperationClass::Tool),
+        SUBAGENT_TAG => Some(animus_adapter_rlm_kernel::HostOperationClass::Subagent),
+        CONTEXT_READ_TAG => Some(animus_adapter_rlm_kernel::HostOperationClass::ContextRead),
+        KERNEL_CLEAR_TAG => Some(animus_adapter_rlm_kernel::HostOperationClass::KernelClear),
+        _other => None,
+    }
+}
+
 fn build_engine(
     bindings: &[animus_adapter_rlm_kernel::ContextBinding],
+    skill_modules: &[animus_adapter_rlm_kernel::SteelSkillModuleDescriptor],
     committed_cells: &[CommittedCell],
     policy: &animus_adapter_rlm_kernel::RlmKernelPolicy,
 ) -> Result<steel::steel_vm::engine::Engine, SteelRlmError> {
+    validate_replayed_skill_modules(skill_modules, policy)?;
     let mut engine = steel::steel_vm::engine::Engine::new_sandboxed();
     run_program(&mut engine, RLM_PRELUDE)?;
     for binding in bindings {
@@ -583,6 +696,20 @@ fn build_engine(
             crate::quoting::scheme_string(binding.value())
         );
         run_program(&mut engine, program.as_str())?;
+    }
+    if !skill_modules.is_empty() {
+        let mut module_program = String::new();
+        for module in skill_modules {
+            module_program.push_str(module.source());
+            module_program.push('\n');
+            for export in module.exports() {
+                module_program.push_str(
+                    format!("(if (procedure? {export}) #t (error \"missing skill export\"))\n")
+                        .as_str(),
+                );
+            }
+        }
+        evaluate_module_with_timeout(&mut engine, module_program.as_str())?;
     }
     for cell in committed_cells {
         if cell.bridge_calls.is_empty() {
@@ -597,6 +724,33 @@ fn build_engine(
         }
     }
     Ok(engine)
+}
+
+fn validate_replayed_skill_modules(
+    skill_modules: &[animus_adapter_rlm_kernel::SteelSkillModuleDescriptor],
+    policy: &animus_adapter_rlm_kernel::RlmKernelPolicy,
+) -> Result<(), SteelRlmError> {
+    if skill_modules.is_empty() {
+        return Ok(());
+    }
+    let mut capabilities = skill_modules
+        .iter()
+        .flat_map(animus_adapter_rlm_kernel::SteelSkillModuleDescriptor::capability_requests)
+        .map(String::as_str)
+        .collect::<Vec<_>>();
+    capabilities.sort_unstable();
+    capabilities.dedup();
+    let authority = animus_adapter_rlm_kernel::SteelSkillModuleAuthority {
+        session: capabilities.as_slice(),
+        profile: capabilities.as_slice(),
+        skill: capabilities.as_slice(),
+        host: capabilities.as_slice(),
+    };
+    let plan = animus_adapter_rlm_kernel::resolve_steel_skill_modules(skill_modules, authority)
+        .map_err(|error| SteelRlmError::ModulePolicy {
+            message: format!("module replay validation failed: {error}"),
+        })?;
+    validate_skill_module_plan_for_policy(&plan, policy)
 }
 
 fn configure_bridge_replay(
@@ -717,6 +871,17 @@ fn run_program(
         .map_err(|error| SteelRlmError::Evaluate {
             message: format!("{error}"),
         })
+}
+
+fn evaluate_module_with_timeout(
+    engine: &mut steel::steel_vm::engine::Engine,
+    source: &str,
+) -> Result<Vec<steel::SteelVal>, SteelRlmError> {
+    let handler = steel::steel_vm::interrupt::InterruptHandler::new(
+        engine,
+        Duration::from_millis(EVALUATION_TIMEOUT_MS),
+    );
+    handler.run_with_timeout(|| run_program(engine, source))
 }
 
 fn evaluate_with_timeout(
@@ -1056,6 +1221,234 @@ mod tests {
     const TOOL_VISIBLE_BUDGET: u32 = 512;
     const CHILD_PROFILE: &str = "focused-child";
     const CORRELATION_ID: &str = "steel-cell-1";
+    const MODULE_MANIFEST_IDENTITY: &str =
+        "1111111111111111111111111111111111111111111111111111111111111111";
+    const MODULE_FROZEN_SOURCE_IDENTITY: &str =
+        "2222222222222222222222222222222222222222222222222222222222222222";
+    const MODULE_SOURCE: &str = "(define (skill-helper value) (+ value 2))";
+    const MODULE_SESSION_IDENTITY: &str =
+        "3333333333333333333333333333333333333333333333333333333333333333";
+    const MODULE_KERNEL_GENERATION: u64 = 7;
+
+    #[test]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "one end-to-end atomic load and restore case"
+    )]
+    fn skill_module_load_is_atomic_and_helpers_survive_compaction() {
+        // r[verify agent_harness_runtime.steel_skill_modules.lifecycle.atomic]
+        // r[verify agent_harness_runtime.steel_skill_modules.verification]
+        let source_identity =
+            animus_adapter_rlm_kernel::steel_skill_module_source_identity(MODULE_SOURCE);
+        let module = animus_adapter_rlm_kernel::SteelSkillModuleDescriptor::validate(
+            &animus_adapter_rlm_kernel::SteelSkillModuleDescriptorDraft {
+                schema: animus_adapter_rlm_kernel::STEEL_SKILL_MODULE_SCHEMA,
+                name: "skill-helper",
+                version: "v1",
+                manifest_identity: MODULE_MANIFEST_IDENTITY,
+                frozen_source_identity: MODULE_FROZEN_SOURCE_IDENTITY,
+                source_identity: source_identity.as_str(),
+                source: MODULE_SOURCE,
+                exports: &["skill-helper"],
+                dependencies: &[],
+                capability_requests: &[],
+                trust: animus_adapter_rlm_kernel::SteelSkillModuleTrust::Trusted,
+                bounds: animus_adapter_rlm_kernel::SteelSkillModuleBounds {
+                    source_chars: SOURCE_CHAR_LIMIT,
+                    evaluation_fuel: FUEL_LIMIT,
+                },
+            },
+        )
+        .expect("module descriptor");
+        let authority = animus_adapter_rlm_kernel::SteelSkillModuleAuthority {
+            session: &[],
+            profile: &[],
+            skill: &[],
+            host: &[],
+        };
+        let plan = animus_adapter_rlm_kernel::resolve_steel_skill_modules(&[module], authority)
+            .expect("module plan");
+        let mut kernel = SteelRlmKernel::new(policy()).expect("kernel must initialize");
+        let receipt = kernel
+            .load_skill_modules(&plan)
+            .expect("module must load atomically");
+        assert_eq!(receipt.module_count(), 1);
+        assert_eq!(
+            kernel.skill_module_set_identity(),
+            Some(plan.module_set_identity())
+        );
+        assert!(
+            kernel
+                .plan_compaction()
+                .expect("compaction must preserve kernel")
+                .kernel_state_preserved()
+        );
+        assert!(matches!(
+            kernel.evaluate("(skill-helper 40)"),
+            Ok(SteelRlmEvaluation::Value { value, .. }) if value == "42"
+        ));
+        let snapshot = kernel
+            .private_journal_snapshot(MODULE_SESSION_IDENTITY, MODULE_KERNEL_GENERATION)
+            .expect("module snapshot must serialize");
+        let (mut restored, restore_receipt) = SteelRlmKernel::restore_private_journal(
+            kernel.policy(),
+            SteelKernelRestoreAdmission {
+                session_identity: MODULE_SESSION_IDENTITY,
+                kernel_generation: MODULE_KERNEL_GENERATION,
+                committed_head_identity: snapshot.committed_head_identity(),
+                recovery_posture: SteelKernelRecoveryPosture::Clean,
+            },
+            snapshot.private_bytes(),
+        )
+        .expect("module snapshot must restore without effects");
+        assert_eq!(
+            restored.skill_module_set_identity(),
+            Some(plan.module_set_identity())
+        );
+        assert!(matches!(
+            restored.evaluate("(skill-helper 40)"),
+            Ok(SteelRlmEvaluation::Value { value, .. }) if value == "42"
+        ));
+        assert_eq!(restore_receipt.status(), SteelKernelRestoreStatus::Restored);
+
+        let invalid_source = "(define not-the-export 1)";
+        let invalid_identity =
+            animus_adapter_rlm_kernel::steel_skill_module_source_identity(invalid_source);
+        let invalid = animus_adapter_rlm_kernel::SteelSkillModuleDescriptor::validate(
+            &animus_adapter_rlm_kernel::SteelSkillModuleDescriptorDraft {
+                schema: animus_adapter_rlm_kernel::STEEL_SKILL_MODULE_SCHEMA,
+                name: "broken-skill",
+                version: "v1",
+                manifest_identity: MODULE_MANIFEST_IDENTITY,
+                frozen_source_identity: MODULE_FROZEN_SOURCE_IDENTITY,
+                source_identity: invalid_identity.as_str(),
+                source: invalid_source,
+                exports: &["missing-export"],
+                dependencies: &[],
+                capability_requests: &[],
+                trust: animus_adapter_rlm_kernel::SteelSkillModuleTrust::Trusted,
+                bounds: animus_adapter_rlm_kernel::SteelSkillModuleBounds {
+                    source_chars: SOURCE_CHAR_LIMIT,
+                    evaluation_fuel: FUEL_LIMIT,
+                },
+            },
+        )
+        .expect("invalid export still has a valid descriptor");
+        let invalid_plan =
+            animus_adapter_rlm_kernel::resolve_steel_skill_modules(&[invalid], authority)
+                .expect("invalid export plans before evaluation");
+        assert!(matches!(
+            kernel.load_skill_modules(&invalid_plan),
+            Err(SteelRlmError::ModulePolicy { .. })
+        ));
+        assert_eq!(
+            kernel.skill_module_set_identity(),
+            Some(plan.module_set_identity())
+        );
+        assert!(matches!(
+            kernel.evaluate("(skill-helper 40)"),
+            Ok(SteelRlmEvaluation::Value { value, .. }) if value == "42"
+        ));
+    }
+
+    #[test]
+    fn skill_module_capabilities_and_fuel_must_fit_kernel_policy() {
+        let source = "(define (shell-helper command) (animus-host-shell command))";
+        let source_identity = animus_adapter_rlm_kernel::steel_skill_module_source_identity(source);
+        let module = animus_adapter_rlm_kernel::SteelSkillModuleDescriptor::validate(
+            &animus_adapter_rlm_kernel::SteelSkillModuleDescriptorDraft {
+                schema: animus_adapter_rlm_kernel::STEEL_SKILL_MODULE_SCHEMA,
+                name: "shell-helper",
+                version: "v1",
+                manifest_identity: MODULE_MANIFEST_IDENTITY,
+                frozen_source_identity: MODULE_FROZEN_SOURCE_IDENTITY,
+                source_identity: source_identity.as_str(),
+                source,
+                exports: &["shell-helper"],
+                dependencies: &[],
+                capability_requests: &["shell"],
+                trust: animus_adapter_rlm_kernel::SteelSkillModuleTrust::Trusted,
+                bounds: animus_adapter_rlm_kernel::SteelSkillModuleBounds {
+                    source_chars: SOURCE_CHAR_LIMIT,
+                    evaluation_fuel: FUEL_LIMIT,
+                },
+            },
+        )
+        .expect("module descriptor");
+        let authority = animus_adapter_rlm_kernel::SteelSkillModuleAuthority {
+            session: &["shell"],
+            profile: &["shell"],
+            skill: &["shell"],
+            host: &["shell"],
+        };
+        let plan = animus_adapter_rlm_kernel::resolve_steel_skill_modules(&[module], authority)
+            .expect("module plan");
+        let mut denied_kernel =
+            SteelRlmKernel::new(restricted_policy()).expect("kernel must initialize");
+        denied_kernel
+            .evaluate("(define prior-cell 1)")
+            .expect("prior cell must commit");
+        assert!(matches!(
+            denied_kernel.load_skill_modules(&plan),
+            Err(SteelRlmError::ModulePolicy { .. })
+        ));
+        denied_kernel
+            .clear_explicit()
+            .expect("explicit clear must succeed");
+        assert!(matches!(
+            denied_kernel.load_skill_modules(&plan),
+            Err(SteelRlmError::ModulePolicy { .. })
+        ));
+
+        let operations = [animus_adapter_rlm_kernel::HostOperationClass::Shell];
+        let mut admitted_kernel = SteelRlmKernel::new(policy_with_operations(&operations))
+            .expect("kernel must initialize");
+        admitted_kernel
+            .load_skill_modules(&plan)
+            .expect("matching kernel policy must admit the module");
+        assert!(matches!(
+            admitted_kernel.evaluate("(shell-helper \"cargo test\")"),
+            Ok(SteelRlmEvaluation::HostRequest { admission, .. })
+                if admission.operation() == animus_adapter_rlm_kernel::HostOperationClass::Shell
+        ));
+
+        let fuel_source = "(define (fuel-helper value) value)";
+        let fuel_identity =
+            animus_adapter_rlm_kernel::steel_skill_module_source_identity(fuel_source);
+        let fuel_module = animus_adapter_rlm_kernel::SteelSkillModuleDescriptor::validate(
+            &animus_adapter_rlm_kernel::SteelSkillModuleDescriptorDraft {
+                schema: animus_adapter_rlm_kernel::STEEL_SKILL_MODULE_SCHEMA,
+                name: "fuel-helper",
+                version: "v1",
+                manifest_identity: MODULE_MANIFEST_IDENTITY,
+                frozen_source_identity: MODULE_FROZEN_SOURCE_IDENTITY,
+                source_identity: fuel_identity.as_str(),
+                source: fuel_source,
+                exports: &["fuel-helper"],
+                dependencies: &[],
+                capability_requests: &[],
+                trust: animus_adapter_rlm_kernel::SteelSkillModuleTrust::Trusted,
+                bounds: animus_adapter_rlm_kernel::SteelSkillModuleBounds {
+                    source_chars: SOURCE_CHAR_LIMIT,
+                    evaluation_fuel: 1,
+                },
+            },
+        )
+        .expect("fuel module descriptor");
+        let empty_authority = animus_adapter_rlm_kernel::SteelSkillModuleAuthority {
+            session: &[],
+            profile: &[],
+            skill: &[],
+            host: &[],
+        };
+        let fuel_plan =
+            animus_adapter_rlm_kernel::resolve_steel_skill_modules(&[fuel_module], empty_authority)
+                .expect("fuel module plan");
+        assert!(matches!(
+            admitted_kernel.load_skill_modules(&fuel_plan),
+            Err(SteelRlmError::ModulePolicy { .. })
+        ));
+    }
 
     #[test]
     fn persistent_kernel_and_tool_adapter_keep_state_across_calls() {

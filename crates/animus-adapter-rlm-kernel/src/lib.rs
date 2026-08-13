@@ -24,6 +24,7 @@ mod environment;
 mod policy;
 mod receipt;
 mod request;
+mod skill_module;
 
 pub use bridge::{
     BridgeCallObservation, BridgeCellIdentity, BridgeCompletedCall, BridgeCorrelation,
@@ -42,6 +43,14 @@ pub use policy::{
 };
 pub use receipt::{Receipt, ReceiptCount, ReceiptDraft, ReceiptLeakClass, RlmKernelStatus};
 pub use request::{HostOperationClass, HostRequest, HostRequestAdmission, admit_host_request};
+pub use skill_module::{
+    STEEL_SKILL_MODULE_COHORT, STEEL_SKILL_MODULE_IDENTITY_DOMAIN,
+    STEEL_SKILL_MODULE_RECEIPT_DOMAIN, STEEL_SKILL_MODULE_SCHEMA, SteelSkillModuleAuthority,
+    SteelSkillModuleBounds, SteelSkillModuleDependency, SteelSkillModuleDependencyDraft,
+    SteelSkillModuleDescriptor, SteelSkillModuleDescriptorDraft, SteelSkillModuleError,
+    SteelSkillModulePlan, SteelSkillModuleReceipt, SteelSkillModuleTrust,
+    resolve_steel_skill_modules, steel_skill_module_source_identity,
+};
 
 /// Stable schema for the model-facing Steel tool request.
 pub const STEEL_REPL_TOOL_SCHEMA: &str = "animus.steel-repl.v1";

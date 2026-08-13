@@ -6,6 +6,8 @@
     allow(tigerstyle::non_trait_imports, tigerstyle::path_segment_repetition)
 )]
 
+use std::collections::BTreeSet;
+
 use super::types::{
     MODEL_INVOCATION_PLAN_HASH_DOMAIN, ModelMemoryAccessMode, ModelNamedResourceReference,
     ModelPromptSourceReference, ModelRuntimeProfileError, ModelRuntimeProfileIssue,
@@ -171,6 +173,21 @@ pub struct ModelSkillPlanEntry {
 }
 
 impl ModelSkillPlanEntry {
+    #[cfg(test)]
+    pub(super) fn test_fixture(
+        name: &str,
+        content_identity: &str,
+        selected_body: Option<animus_adapters::SkillLoadedBody>,
+    ) -> Self {
+        Self {
+            name: name.to_string(),
+            description: String::from("test skill"),
+            content_identity: content_identity.to_string(),
+            posture: ModelSkillResourcePosture::Selectable,
+            selected_body,
+        }
+    }
+
     /// Returns the exact skill name.
     #[must_use]
     pub fn name(&self) -> &str {
@@ -200,6 +217,45 @@ impl ModelSkillPlanEntry {
     pub const fn selected_body(&self) -> Option<&animus_adapters::SkillLoadedBody> {
         self.selected_body.as_ref()
     }
+}
+
+/// Selects only explicitly disclosed Steel modules that match the composed skill plan.
+///
+/// # Errors
+///
+/// Returns [`animus_adapter_rlm_kernel::SteelSkillModuleError`] when module
+/// resolution, dependency, bounds, or capability intersection fails.
+pub fn select_steel_skill_modules(
+    skill_plan: &[ModelSkillPlanEntry],
+    candidates: &[animus_adapter_rlm_kernel::SteelSkillModuleDescriptor],
+    authority: animus_adapter_rlm_kernel::SteelSkillModuleAuthority<'_>,
+) -> Result<
+    animus_adapter_rlm_kernel::SteelSkillModulePlan,
+    animus_adapter_rlm_kernel::SteelSkillModuleError,
+> {
+    // r[impl agent_harness_runtime.steel_skill_modules.lifecycle]
+    let selected_names = skill_plan
+        .iter()
+        .filter(|skill| skill.selected_body().is_some())
+        .map(ModelSkillPlanEntry::name)
+        .collect::<BTreeSet<_>>();
+    let selected = candidates
+        .iter()
+        .filter(|module| selected_names.contains(module.name()))
+        .cloned()
+        .collect::<Vec<_>>();
+    let plan =
+        animus_adapter_rlm_kernel::resolve_steel_skill_modules(selected.as_slice(), authority)?;
+    if plan.ordered_modules().iter().any(|module| {
+        !skill_plan.iter().any(|skill| {
+            skill.selected_body().is_some()
+                && skill.name() == module.name()
+                && skill.content_identity() == module.manifest_identity()
+        })
+    }) {
+        return Err(animus_adapter_rlm_kernel::SteelSkillModuleError::UnselectedModule);
+    }
+    Ok(plan)
 }
 
 /// One canonical model-visible tool declaration with an exact executor binding.

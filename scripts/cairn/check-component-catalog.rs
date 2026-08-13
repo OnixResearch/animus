@@ -107,6 +107,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "agent-guardrail",
     "lean-loop",
     "rlm-kernel",
+    "steel-skill-modules",
     "rlm-host-executor",
     "sandlock-host",
     "session-tree-export",

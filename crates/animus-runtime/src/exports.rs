@@ -181,7 +181,7 @@ pub use crate::modelprofiles::{
     NativeToolCallingMode, ProfileBoundModelDispatchPlan, ResolvedModelRuntimeProfile,
     bind_model_dispatch_plan, blake3_model_runtime_profile_identity, compose_model_invocation_plan,
     evaluate_model_invocation_transition, project_model_invocation_receipt,
-    resolve_model_runtime_profile, validate_model_tool_call_binding,
+    resolve_model_runtime_profile, select_steel_skill_modules, validate_model_tool_call_binding,
 };
 pub use crate::orchestration::{
     KanbanBlockRecord, KanbanBoardService, KanbanComment, KanbanCompletion, KanbanContextAssembly,

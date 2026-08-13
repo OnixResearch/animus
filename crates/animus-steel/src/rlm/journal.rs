@@ -17,7 +17,10 @@ const JOURNAL_BODY_HASH_DOMAIN: &str = "animus.steel-kernel-record-body.v1";
 const JOURNAL_RECEIPT_HASH_DOMAIN: &str = "animus.steel-kernel-restore-receipt.v1";
 const SOURCE_HASH_DOMAIN: &str = "animus.steel-kernel-source.v1";
 const MAX_PRIVATE_JOURNAL_BYTES: usize = 1_048_576;
-const MAX_PRIVATE_RECORDS: usize = 258;
+const MAX_CONTEXT_RECORDS: usize = 256;
+const MAX_CLEAR_RECORDS: usize = 1;
+const MAX_MODULE_RECORDS: usize = 1;
+const MAX_PRIVATE_RECORDS: usize = MAX_CONTEXT_RECORDS + MAX_CLEAR_RECORDS + MAX_MODULE_RECORDS;
 const BLAKE3_HEX_CHARS: usize = 64;
 const FIRST_RECORD_SEQUENCE: u32 = 0;
 const NEXT_RECORD_INCREMENT: u32 = 1;
@@ -100,6 +103,8 @@ pub struct SteelKernelRestoreReceipt {
     cell_count: u32,
     binding_count: u32,
     captured_result_count: u32,
+    module_count: u32,
+    module_set_identity: Option<String>,
     redaction_marker: &'static str,
     non_claim: &'static str,
     receipt_identity: String,
@@ -303,6 +308,35 @@ enum RecordBodyWire {
         final_value_class: String,
         captured_calls: Vec<CallWire>,
     },
+    Modules {
+        module_set_identity: String,
+        modules: Vec<SkillModuleWire>,
+    },
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct SkillModuleWire {
+    name: String,
+    version: String,
+    manifest_identity: String,
+    frozen_source_identity: String,
+    source_identity: String,
+    source: String,
+    exports: Vec<String>,
+    dependencies: Vec<SkillDependencyWire>,
+    capability_requests: Vec<String>,
+    source_chars: u32,
+    evaluation_fuel: u64,
+    module_identity: String,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct SkillDependencyWire {
+    name: String,
+    version: String,
+    module_identity: String,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -374,6 +408,21 @@ impl SteelRlmKernel {
                 })
                 .collect();
             bodies.push(RecordBodyWire::Context { bindings });
+        }
+        if !self.skill_modules.is_empty() {
+            let module_set_identity = self
+                .skill_module_set_identity
+                .clone()
+                .ok_or(SteelKernelJournalError::ChainCorrupt)?;
+            let modules = self
+                .skill_modules
+                .iter()
+                .map(module_to_wire)
+                .collect::<Vec<_>>();
+            bodies.push(RecordBodyWire::Modules {
+                module_set_identity,
+                modules,
+            });
         }
         for cell in &self.committed_cells {
             let captured_calls = cell
@@ -484,7 +533,9 @@ fn replay_records(
                 kernel.environment = animus_adapter_rlm_kernel::EnvironmentState::default();
                 kernel.context_commits.clear();
                 kernel.committed_cells.clear();
-                kernel.engine = super::build_engine(&[], &[], &kernel.policy)?;
+                kernel.skill_modules.clear();
+                kernel.skill_module_set_identity = None;
+                kernel.engine = super::build_engine(&[], &[], &[], &kernel.policy)?;
                 kernel.clear_epoch = *clear_epoch;
             }
             RecordBodyWire::Context { bindings } => {
@@ -505,6 +556,10 @@ fn replay_records(
                     .collect::<Result<Vec<_>, _>>()?;
                 kernel.bind_prompt_context(parsed.as_slice())?;
             }
+            RecordBodyWire::Modules {
+                module_set_identity,
+                modules,
+            } => restore_modules(kernel, module_set_identity.as_str(), modules.as_slice())?,
             RecordBodyWire::Cell {
                 source,
                 source_identity: expected_source,
@@ -527,6 +582,123 @@ fn replay_records(
         }
     }
     Ok(())
+}
+
+fn module_to_wire(
+    module: &animus_adapter_rlm_kernel::SteelSkillModuleDescriptor,
+) -> SkillModuleWire {
+    SkillModuleWire {
+        name: String::from(module.name()),
+        version: String::from(module.version()),
+        manifest_identity: String::from(module.manifest_identity()),
+        frozen_source_identity: String::from(module.frozen_source_identity()),
+        source_identity: String::from(module.source_identity()),
+        source: String::from(module.source()),
+        exports: module.exports().to_vec(),
+        dependencies: module
+            .dependencies()
+            .iter()
+            .map(|dependency| SkillDependencyWire {
+                name: String::from(dependency.name()),
+                version: String::from(dependency.version()),
+                module_identity: String::from(dependency.module_identity()),
+            })
+            .collect(),
+        capability_requests: module.capability_requests().to_vec(),
+        source_chars: module.bounds().source_chars,
+        evaluation_fuel: module.bounds().evaluation_fuel,
+        module_identity: String::from(module.module_identity()),
+    }
+}
+
+fn restore_modules(
+    kernel: &mut SteelRlmKernel,
+    expected_module_set_identity: &str,
+    modules: &[SkillModuleWire],
+) -> Result<(), SteelKernelJournalError> {
+    let plan = parse_module_plan(expected_module_set_identity, modules)?;
+    kernel.load_skill_modules(&plan)?;
+    Ok(())
+}
+
+fn validate_modules(
+    expected_module_set_identity: &str,
+    modules: &[SkillModuleWire],
+) -> Result<(), SteelKernelJournalError> {
+    let _plan = parse_module_plan(expected_module_set_identity, modules)?;
+    Ok(())
+}
+
+fn parse_module_plan(
+    expected_module_set_identity: &str,
+    modules: &[SkillModuleWire],
+) -> Result<animus_adapter_rlm_kernel::SteelSkillModulePlan, SteelKernelJournalError> {
+    let mut descriptors = Vec::with_capacity(modules.len());
+    for module in modules {
+        let dependency_drafts = module
+            .dependencies
+            .iter()
+            .map(
+                |dependency| animus_adapter_rlm_kernel::SteelSkillModuleDependencyDraft {
+                    name: dependency.name.as_str(),
+                    version: dependency.version.as_str(),
+                    module_identity: dependency.module_identity.as_str(),
+                },
+            )
+            .collect::<Vec<_>>();
+        let exports = module
+            .exports
+            .iter()
+            .map(String::as_str)
+            .collect::<Vec<_>>();
+        let capabilities = module
+            .capability_requests
+            .iter()
+            .map(String::as_str)
+            .collect::<Vec<_>>();
+        let descriptor = animus_adapter_rlm_kernel::SteelSkillModuleDescriptor::validate(
+            &animus_adapter_rlm_kernel::SteelSkillModuleDescriptorDraft {
+                schema: animus_adapter_rlm_kernel::STEEL_SKILL_MODULE_SCHEMA,
+                name: module.name.as_str(),
+                version: module.version.as_str(),
+                manifest_identity: module.manifest_identity.as_str(),
+                frozen_source_identity: module.frozen_source_identity.as_str(),
+                source_identity: module.source_identity.as_str(),
+                source: module.source.as_str(),
+                exports: exports.as_slice(),
+                dependencies: dependency_drafts.as_slice(),
+                capability_requests: capabilities.as_slice(),
+                trust: animus_adapter_rlm_kernel::SteelSkillModuleTrust::Trusted,
+                bounds: animus_adapter_rlm_kernel::SteelSkillModuleBounds {
+                    source_chars: module.source_chars,
+                    evaluation_fuel: module.evaluation_fuel,
+                },
+            },
+        )
+        .map_err(|_error| SteelKernelJournalError::ChainCorrupt)?;
+        if descriptor.module_identity() != module.module_identity {
+            return Err(SteelKernelJournalError::ChainCorrupt);
+        }
+        descriptors.push(descriptor);
+    }
+    let capabilities = descriptors
+        .iter()
+        .flat_map(animus_adapter_rlm_kernel::SteelSkillModuleDescriptor::capability_requests)
+        .map(String::as_str)
+        .collect::<Vec<_>>();
+    let authority = animus_adapter_rlm_kernel::SteelSkillModuleAuthority {
+        session: capabilities.as_slice(),
+        profile: capabilities.as_slice(),
+        skill: capabilities.as_slice(),
+        host: capabilities.as_slice(),
+    };
+    let plan =
+        animus_adapter_rlm_kernel::resolve_steel_skill_modules(descriptors.as_slice(), authority)
+            .map_err(|_error| SteelKernelJournalError::ChainCorrupt)?;
+    if plan.module_set_identity() != expected_module_set_identity {
+        return Err(SteelKernelJournalError::ChainCorrupt);
+    }
+    Ok(plan)
 }
 
 fn restore_calls(
@@ -672,6 +844,10 @@ fn validate_body(
             }
             Ok(())
         }
+        RecordBodyWire::Modules {
+            module_set_identity,
+            modules,
+        } => validate_modules(module_set_identity.as_str(), modules.as_slice()),
         RecordBodyWire::Cell {
             source,
             source_identity: expected_source,
@@ -800,11 +976,32 @@ fn project_restore_receipt(
             .checked_add(count)
             .ok_or(SteelKernelJournalError::BoundExceeded)
     })?;
+    let (module_count, module_set_identity) = wire.records.iter().try_fold(
+        (0_u32, None),
+        |state, record| -> Result<(u32, Option<String>), SteelKernelJournalError> {
+            match &record.body {
+                RecordBodyWire::Modules {
+                    module_set_identity,
+                    modules,
+                } => {
+                    let count = u32::try_from(modules.len())
+                        .map_err(|_error| SteelKernelJournalError::BoundExceeded)?;
+                    Ok((
+                        state.0.saturating_add(count),
+                        Some(module_set_identity.clone()),
+                    ))
+                }
+                _other => Ok(state),
+            }
+        },
+    )?;
     let generation = wire.kernel_generation.to_string();
     let records = record_count.to_string();
     let cells = cell_count.to_string();
     let bindings = binding_count.to_string();
     let results = captured_result_count.to_string();
+    let modules = module_count.to_string();
+    let module_set = module_set_identity.as_deref().unwrap_or("none");
     let receipt_identity = hash_parts(
         JOURNAL_RECEIPT_HASH_DOMAIN,
         &[
@@ -819,6 +1016,8 @@ fn project_restore_receipt(
             cells.as_str(),
             bindings.as_str(),
             results.as_str(),
+            modules.as_str(),
+            module_set,
             RESTORE_NON_CLAIM,
         ],
     );
@@ -835,6 +1034,8 @@ fn project_restore_receipt(
         cell_count,
         binding_count,
         captured_result_count,
+        module_count,
+        module_set_identity,
         redaction_marker: REDACTION_MARKER,
         non_claim: RESTORE_NON_CLAIM,
         receipt_identity,

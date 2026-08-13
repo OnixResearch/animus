@@ -146,6 +146,20 @@ pub use animus_adapter_rlm_kernel as rlm_kernel_contracts;
 #[cfg(feature = "steel")]
 pub use animus_steel;
 
+/// Non-default reviewed Steel skill-module contract, selection, and loader surface.
+#[cfg(feature = "steel-skill-modules")]
+pub mod steel_skill_modules {
+    pub use animus_adapter_rlm_kernel::{
+        STEEL_SKILL_MODULE_COHORT, STEEL_SKILL_MODULE_SCHEMA, SteelSkillModuleAuthority,
+        SteelSkillModuleBounds, SteelSkillModuleDependency, SteelSkillModuleDependencyDraft,
+        SteelSkillModuleDescriptor, SteelSkillModuleDescriptorDraft, SteelSkillModuleError,
+        SteelSkillModulePlan, SteelSkillModuleReceipt, SteelSkillModuleTrust,
+        resolve_steel_skill_modules, steel_skill_module_source_identity,
+    };
+    pub use animus_runtime::select_steel_skill_modules;
+    pub use animus_steel::SteelRlmKernel;
+}
+
 /// Re-export of the optional terminal UI host shell.
 #[cfg(feature = "tui")]
 pub use animus_tui;

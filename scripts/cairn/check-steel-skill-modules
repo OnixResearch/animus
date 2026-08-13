@@ -1,0 +1,68 @@
+#!/usr/bin/env sh
+# r[verify agent_harness_runtime.steel_skill_modules.verification]
+set -eu
+
+readonly FAILURE=1
+readonly CONTRACT_SOURCE='crates/animus-adapter-rlm-kernel/src/skill_module.rs'
+readonly POLICY_SOURCE='config/steel-skill-module-policy.ncl'
+readonly GENERATED_POLICY='config/generated/steel-skill-module-policy.json'
+readonly POLICY_TEST='crates/animus-adapter-rlm-kernel/tests/skill_module_policy_json.rs'
+readonly STEEL_SOURCE='crates/animus-steel/src/rlm.rs'
+readonly JOURNAL_SOURCE='crates/animus-steel/src/rlm/journal.rs'
+readonly RUNTIME_SOURCE='crates/animus-runtime/src/modelprofiles/composition.rs'
+readonly DOC_SOURCE='docs/steel-skill-modules.md'
+readonly COMPONENT_CATALOG='.cairn/component-catalog.ncl'
+readonly FACADE_INVENTORY='.cairn/runtime-facade-inventory.ncl'
+readonly CONFORMANCE_INDEX='.cairn/adapter-conformance-index.ncl'
+
+root='.'
+if [ "${1:-}" = '--root' ]; then
+  root=${2:-.}
+fi
+cd "${root}"
+readonly DEFAULT_CARGO_TARGET_DIR="${PWD}/target/steel-skill-modules-cargo"
+export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-${DEFAULT_CARGO_TARGET_DIR}}
+
+for tool in cargo grep; do
+  if ! command -v "${tool}" >/dev/null 2>&1; then
+    printf 'error: %s is required for the Steel skill-module rail\n' "${tool}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+cargo test -p animus-adapter-rlm-kernel --locked
+cargo check -p animus-adapter-rlm-kernel --target wasm32-unknown-unknown --locked
+cargo test -p animus-steel --features rlm-kernel skill_module --locked
+cargo test -p animus-runtime --features rlm-kernel modelprofiles --locked
+cargo test -p animus-std --features durable-steel-kernel-restore durable_steel_kernel --locked
+cargo clippy -p animus-adapter-rlm-kernel --all-targets --locked -- -D warnings
+cargo clippy -p animus-steel --all-targets --features rlm-kernel --locked -- -D warnings
+cargo check -p animus --features steel-skill-modules --locked
+cargo check -p animus --no-default-features --target wasm32-unknown-unknown --locked
+
+if grep -E 'std::fs|std::process|Command::new|std::env|TcpStream|UdpSocket|SystemTime::now|Instant::now' \
+  "${CONTRACT_SOURCE}" >/dev/null 2>&1; then
+  printf '%s\n' 'error: the Steel skill-module contract gained ambient host authority' >&2
+  exit "${FAILURE}"
+fi
+
+grep -F 'pub struct SteelSkillModuleDescriptor' "${CONTRACT_SOURCE}" >/dev/null
+grep -F 'pub fn resolve_steel_skill_modules' "${CONTRACT_SOURCE}" >/dev/null
+grep -F '"require",' "${CONTRACT_SOURCE}" >/dev/null
+grep -F 'pub fn load_skill_modules' "${STEEL_SOURCE}" >/dev/null
+grep -F 'RecordBodyWire::Modules' "${JOURNAL_SOURCE}" >/dev/null
+grep -F 'pub fn select_steel_skill_modules' "${RUNTIME_SOURCE}" >/dev/null
+grep -F 'native_modules = false' "${POLICY_SOURCE}" >/dev/null
+grep -F '"native_modules": false' "${GENERATED_POLICY}" >/dev/null
+grep -F 'deny_unknown_fields' "${POLICY_TEST}" >/dev/null
+grep -F 'No automatic activation' "${DOC_SOURCE}" >/dev/null
+grep -F 'adapters.steel-skill-module-contracts' "${COMPONENT_CATALOG}" >/dev/null
+grep -F 'steel.skill-module-loader' "${COMPONENT_CATALOG}" >/dev/null
+grep -F 'animus-steel::SteelSkillModuleDescriptor' "${FACADE_INVENTORY}" >/dev/null
+grep -F 'family "steel-skill-modules"' "${CONFORMANCE_INDEX}" >/dev/null
+sh scripts/cairn/check-adapter-conformance-index --root .
+sh scripts/cairn/check-component-catalog --root .
+sh scripts/cairn/check-runtime-facade-inventory --root .
+
+printf '%s\n' 'focused rail steel-skill-modules: pass'
+printf '%s\n' 'native modules, ambient discovery, and automatic activation: denied'

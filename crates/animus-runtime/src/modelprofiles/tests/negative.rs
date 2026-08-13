@@ -5,6 +5,30 @@ const NO_LABELS: &[&str] = &[];
 const MODEL_ONLY_PROMPTS: &[&str] = &[MODEL_PROMPT];
 
 #[test]
+fn undisclosed_or_identity_drifted_skill_module_is_rejected() {
+    // r[verify agent_harness_runtime.steel_skill_modules.lifecycle]
+    let manifest = skill_manifest(animus_adapters::SkillManifestTrustStatus::Trusted);
+    let module = skill_module_descriptor(manifest.content_identity().as_str());
+    let authority = animus_adapter_rlm_kernel::SteelSkillModuleAuthority {
+        session: &[],
+        profile: &[],
+        skill: &[],
+        host: &[],
+    };
+    assert_eq!(
+        select_steel_skill_modules(&[], core::slice::from_ref(&module), authority),
+        Err(animus_adapter_rlm_kernel::SteelSkillModuleError::BoundExceeded { field: "modules" })
+    );
+
+    let body = loaded_skill_body(&manifest);
+    let drifted = ModelSkillPlanEntry::test_fixture(SKILL_NAME, ALTERNATE_HASH, Some(body));
+    assert_eq!(
+        select_steel_skill_modules(&[drifted], &[module], authority),
+        Err(animus_adapter_rlm_kernel::SteelSkillModuleError::UnselectedModule)
+    );
+}
+
+#[test]
 fn contract_rejects_stale_duplicate_unsafe_and_unadmitted_profiles() {
     // r[verify agent_harness_runtime.model_runtime_profiles.contract.nickel]
     let skills = [ModelSkillReferenceDraft {

@@ -33,6 +33,9 @@ pub(super) const EXECUTOR_BINDING: &str = "executor.inspect";
 pub(super) const BUDGET_ID: &str = "standard-budget";
 pub(super) const EXPECTED_TWO: usize = 2;
 pub(super) const HASH_HEX_LENGTH: usize = 64;
+pub(super) const MODULE_FROZEN_HASH: &str =
+    "1212121212121212121212121212121212121212121212121212121212121212";
+pub(super) const MODULE_SOURCE: &str = "(define (proof-search-helper value) value)";
 pub(super) const PROMPT_BUDGET_UNITS: u32 = 64;
 pub(super) const PROFILE_CONTEXT_UNITS: u32 = 1_024;
 pub(super) const TOOL_CALL_LIMIT: u32 = 8;
@@ -316,6 +319,33 @@ pub(super) fn loaded_skill_body(
     .selected_body()
     .cloned()
     .expect("trusted matching skill body")
+}
+
+pub(super) fn skill_module_descriptor(
+    manifest_identity: &str,
+) -> animus_adapter_rlm_kernel::SteelSkillModuleDescriptor {
+    let source_identity =
+        animus_adapter_rlm_kernel::steel_skill_module_source_identity(MODULE_SOURCE);
+    animus_adapter_rlm_kernel::SteelSkillModuleDescriptor::validate(
+        &animus_adapter_rlm_kernel::SteelSkillModuleDescriptorDraft {
+            schema: animus_adapter_rlm_kernel::STEEL_SKILL_MODULE_SCHEMA,
+            name: SKILL_NAME,
+            version: "v1",
+            manifest_identity,
+            frozen_source_identity: MODULE_FROZEN_HASH,
+            source_identity: source_identity.as_str(),
+            source: MODULE_SOURCE,
+            exports: &["proof-search-helper"],
+            dependencies: &[],
+            capability_requests: &[],
+            trust: animus_adapter_rlm_kernel::SteelSkillModuleTrust::Trusted,
+            bounds: animus_adapter_rlm_kernel::SteelSkillModuleBounds {
+                source_chars: 1_024,
+                evaluation_fuel: 65_536,
+            },
+        },
+    )
+    .expect("skill module descriptor")
 }
 
 pub(super) fn capability_matrix(tool_calls: bool) -> crate::ProviderModelCapabilityMatrix {

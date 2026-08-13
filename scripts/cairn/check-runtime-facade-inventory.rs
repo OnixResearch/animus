@@ -117,6 +117,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "headless",
     "lean-loop",
     "rlm-kernel",
+    "steel-skill-modules",
     "rlm-host-executor",
     "durable-steel-kernel-restore",
     "loop",

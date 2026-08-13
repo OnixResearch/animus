@@ -22,7 +22,7 @@ pub use composition::{
     ModelInvocationAuthority, ModelInvocationCompositionInput, ModelInvocationDiagnostic,
     ModelInvocationOmissionClass, ModelInvocationPlan, ModelResourceCeiling,
     ModelSkillCompositionResource, ModelSkillPlanEntry, ModelToolDeclaration,
-    compose_model_invocation_plan,
+    compose_model_invocation_plan, select_steel_skill_modules,
 };
 pub use receipt::{
     ModelInvocationReceipt, ModelInvocationReceiptLeak, ModelInvocationReceiptSensitiveDraft,

@@ -66,6 +66,14 @@ pub type SteelHostAction = policy::HostAction;
 /// Steel policy receipt redaction mode.
 pub type SteelPolicyReceiptRedaction = policy::ReceiptRedaction;
 
+#[cfg(feature = "rlm-kernel")]
+pub use animus_adapter_rlm_kernel::{
+    STEEL_SKILL_MODULE_COHORT, STEEL_SKILL_MODULE_SCHEMA, SteelSkillModuleAuthority,
+    SteelSkillModuleBounds, SteelSkillModuleDependency, SteelSkillModuleDependencyDraft,
+    SteelSkillModuleDescriptor, SteelSkillModuleDescriptorDraft, SteelSkillModuleError,
+    SteelSkillModulePlan, SteelSkillModuleReceipt, SteelSkillModuleTrust,
+    resolve_steel_skill_modules, steel_skill_module_source_identity,
+};
 pub use policy::DEFAULT_RUNTIME_HOST_ACTIONS;
 #[cfg(feature = "rlm-kernel")]
 pub use rlm::{

@@ -184,6 +184,7 @@ rlm-kernel = [
   "animus-runtime/rlm-kernel",
   "animus-steel/rlm-kernel",
 ]
+steel-skill-modules = ["rlm-kernel", "model-runtime-profiles", "durable-steel-kernel-restore"]
 steel = ["dep:animus-steel"]
 tui = ["std", "dep:animus-tui"]
 terminal-image = ["tui", "animus-tui/terminal-image"]
