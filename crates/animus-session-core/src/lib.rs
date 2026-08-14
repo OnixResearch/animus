@@ -39,6 +39,9 @@ mod prelude;
 pub mod active_turn_recovery;
 /// Pure bounded session branch projection, control planning, comparison, and evidence.
 pub mod branch_explorer;
+#[path = "compositionactivation.rs"]
+/// Pure composition-activation graph validation, preflight, and safe inspection.
+pub mod composition_activation_graph;
 #[path = "conversationprojection.rs"]
 /// Pure canonical conversation projection and cache reconciliation.
 pub mod conversation_projection;

@@ -4,6 +4,7 @@ This document is the maintained ownership map for request processing. It is a re
 
 ## Golden path
 
+0. **Product activation preflight** is owned by `animus-session-core::composition_activation_graph`. Maintained product roots validate selected components, required providers, event routes, features, authorities, generations, and current readiness before credential, store, provider, process, filesystem, network, terminal, or daemon effects. See [composition activation graph](composition-activation-graph.md).
 1. **Typed runtime input** / typed host runtime input is owned by `animus-std::RuntimeConfig` (`crates/animus-std/src/config.rs`). The source-of-truth constructors are `Runtime::from_intent`, `Runtime::from_env_pairs`, and the thin shell `load_runtime`.
 2. **Deterministic core state** is owned by `animus-core::Intent` and `animus-core::AnimusState` (`crates/animus-core/src/lib.rs`). Core validation produces `animus-core::CoreError` and does not read ambient host state.
 3. **Reusable loop input/config** is owned by `animus-runtime::RuntimeInput` and `animus-runtime::RuntimeConfig` (`crates/animus-runtime/src/contract.rs`). Runtime config is explicit data such as max-turn budgets, not ambient process state. Optional **workflow command planning** is owned by `animus-runtime::WorkflowCommandManifest`, `WorkflowCommandRegistry`, `WorkflowInvocationBinding`, and `WorkflowCommandOutputContract`; hosts supply already-loaded manifests and already-parsed arguments.
@@ -234,6 +235,7 @@ scripts/cairn/check-transactional-daemon-handoff --root .
 scripts/cairn/check-revision-gated-workspace-edit-host --root .
 scripts/cairn/check-conversation-projection --root .
 scripts/cairn/check-session-branch-explorer --root .
+scripts/cairn/check-composition-activation-graph --root .
 scripts/cairn/check-request-lifecycle --root .
 scripts/cairn/check-evidence-safety --root .
 scripts/cairn/check-wasm-surface --root .

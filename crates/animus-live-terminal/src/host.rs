@@ -61,6 +61,36 @@ where
     Host: TerminalHostPort,
     Connection: crate::TerminalConnectionPort,
 {
+    let activation = crate::preflight_live_terminal_activation()
+        .map_err(|_error| TerminalHostError::Activation)?;
+    run_attached_terminal_with_activation(request, &activation)
+}
+
+/// Runs one bounded terminal attachment after an explicit activation decision.
+///
+/// No host or connection port is called when activation is blocked.
+///
+/// # Errors
+///
+/// Returns [`TerminalHostError`] for blocked activation, invalid limits, connection failure,
+/// rendering failure, or when the finite iteration bound expires.
+#[allow(
+    clippy::needless_pass_by_value,
+    reason = "the request is the visible composition boundary for borrowed host capabilities"
+)]
+pub fn run_attached_terminal_with_activation<Host, Connection>(
+    request: LiveTerminalRequest<'_, '_, '_, Host, Connection>,
+    activation: &animus_runtime::composition_activation_graph::ActivationDecision,
+) -> Result<(crate::TerminalClientState, crate::TerminalExit), TerminalHostError>
+where
+    Host: TerminalHostPort,
+    Connection: crate::TerminalConnectionPort,
+{
+    let expected_activation = crate::preflight_live_terminal_activation()
+        .map_err(|_error| TerminalHostError::Activation)?;
+    if activation != &expected_activation || !activation.effects_admitted() {
+        return Err(TerminalHostError::Activation);
+    }
     if request.maximum_iterations == 0 {
         return Err(TerminalHostError::Bound);
     }
@@ -137,6 +167,8 @@ fn limits_from_config(config: &crate::ValidatedTerminalConfig) -> crate::Termina
 /// Bounded live-terminal host failure.
 #[derive(Debug)]
 pub enum TerminalHostError {
+    /// The selected composition failed activation preflight.
+    Activation,
     /// A configured loop limit was zero or exceeded.
     Bound,
     /// Pure client reduction failed.

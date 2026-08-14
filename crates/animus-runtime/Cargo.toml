@@ -46,7 +46,6 @@ provenance = []
 quality = []
 research = []
 rlm-kernel = [
-  "dep:animus-adapter-rlm-kernel",
   "dep:animus-steel",
   "animus-steel/rlm-kernel",
   "steel",
@@ -57,7 +56,7 @@ worker-team = []
 steel = ["dep:animus-steel"]
 
 [dependencies]
-animus-adapter-rlm-kernel = { path = "../animus-adapter-rlm-kernel", version = "0.1.0", optional = true }
+animus-adapter-rlm-kernel = { path = "../animus-adapter-rlm-kernel", version = "0.1.0" }
 animus-adapter-atif = { path = "../animus-adapter-atif", version = "0.1.0", optional = true }
 animus-adapters = { path = "../animus-adapters", version = "0.1.0" }
 animus-core = { path = "../animus-core", version = "0.1.0" }

@@ -1,0 +1,92 @@
+#!/usr/bin/env sh
+# r[agent_harness_runtime.composition_activation_graph.verification]
+set -eu
+
+readonly FAILURE=1
+readonly ENABLED=1
+readonly RAIL_NAME=composition-activation-graph
+readonly RECEIPT_SCHEMA=animus.focused-rail.v1
+readonly RECEIPT_DIR=target/cairn/focused-rails
+readonly EXPECTED_CORE_TEST_COUNT=5
+readonly EXPECTED_LIVE_STEEL_PROFILE_TEST_COUNT=2
+readonly EXPECTED_LIVE_TERMINAL_PROFILE_TEST_COUNT=2
+readonly EXPECTED_TERMINAL_HOST_TEST_COUNT=4
+readonly EXPECTED_CATALOG_PORT_COUNT=4
+readonly EXPECTED_CATALOG_EVENT_COUNT=3
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+
+if [ "${1:-}" = "--root" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  repo_root=$(CDPATH= cd -- "$2" && pwd)
+fi
+
+if ! command -v cargo >/dev/null 2>&1; then
+  printf '%s\n' 'error: cargo is required. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+
+if ! command -v b3sum >/dev/null 2>&1; then
+  printf '%s\n' 'error: b3sum is required. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+
+cd "${repo_root}"
+
+if [ "${ANIMUS_ACTIVATION_STATIC_ONLY:-0}" = "${ENABLED}" ]; then
+  sh scripts/cairn/check-component-catalog --root .
+  printf 'Nix static rail %s: pass\n' "${RAIL_NAME}"
+  exit 0
+fi
+
+cargo test -p animus-session-core composition_activation_graph --locked
+cargo check -p animus-session-core --target wasm32-unknown-unknown --locked
+cargo test -p animus-live-steel-agent --all-features activation --locked
+cargo test -p animus-live-terminal --all-features activation --locked
+cargo test -p animus-live-terminal --all-features --test host --locked
+scripts/cairn/check-component-catalog --root .
+
+mkdir -p "${RECEIPT_DIR}"
+tmp_body=$(mktemp "${TMPDIR:-/tmp}/animus-composition-activation.XXXXXX")
+trap 'rm -f "${tmp_body}"' EXIT HUP INT TERM
+
+cat > "${tmp_body}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+core_test_count: ${EXPECTED_CORE_TEST_COUNT}
+live_steel_profile_test_count: ${EXPECTED_LIVE_STEEL_PROFILE_TEST_COUNT}
+live_terminal_profile_test_count: ${EXPECTED_LIVE_TERMINAL_PROFILE_TEST_COUNT}
+terminal_host_test_count: ${EXPECTED_TERMINAL_HOST_TEST_COUNT}
+catalog_port_count: ${EXPECTED_CATALOG_PORT_COUNT}
+catalog_event_count: ${EXPECTED_CATALOG_EVENT_COUNT}
+case_classes:
+- positive
+- negative
+safe_evidence:
+- graph identity, generations, safe component labels, issue classes, counts, and non-claims only
+- no service handles, configuration bodies, endpoints, credentials, private paths, prompts, payloads, or mutation commands
+non_claims:
+- not implementation correctness
+- not runtime liveness or event delivery
+- not effect success, authority, production readiness, or release eligibility
+EOF
+
+receipt_hash=$(b3sum "${tmp_body}" | awk '{print $1}')
+receipt_path=${RECEIPT_DIR}/${RAIL_NAME}.md
+{
+  cat "${tmp_body}"
+  printf 'receipt_hash: BLAKE3:%s\n' "${receipt_hash}"
+} > "${receipt_path}"
+
+if grep -Eq 'RAW_PROMPT:|PROVIDER_PAYLOAD:|UNBOUNDED_OUTPUT:|BEGIN [A-Z ]*PRIVATE KEY|API_KEY=|AWS_SECRET_ACCESS_KEY|sk-|/home/[^[:space:]]+' "${receipt_path}"; then
+  printf 'error: focused rail %s wrote unsafe evidence\n' "${RAIL_NAME}" >&2
+  exit "${FAILURE}"
+fi
+
+printf 'focused rail %s: pass\n' "${RAIL_NAME}"
+printf 'receipt: %s\n' "${receipt_path}"

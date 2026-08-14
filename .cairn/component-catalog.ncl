@@ -12,6 +12,34 @@ let ComponentRecord = {
   public_import | String,
 }
 in
+let PortRecord = {
+  port_id | String,
+  owner_component_id | String,
+  provider_component_ids | Array String,
+  consumer_component_ids | Array String,
+  scope_class | String,
+  multiplicity | String,
+  lifecycle_owner_component_id | String,
+  activation | String,
+  feature_gate | String,
+  required_authority | String,
+  focused_check | String,
+  evidence_labels | Array String,
+}
+in
+let EventRecord = {
+  event_id | String,
+  producer_component_id | String,
+  consumer_component_ids | Array String,
+  delivery | String,
+  durability | String,
+  lifecycle_owner_component_id | String,
+  activation | String,
+  cycle_policy | String,
+  focused_check | String,
+  evidence_labels | Array String,
+}
+in
 let class_reusable = "reusable-contract" in
 let class_host_injection = "host-injection-surface" in
 let class_shell = "shell-adapter" in
@@ -58,17 +86,74 @@ let with_evidence = fun labels record => rebuild record.depends_on record.compos
 let line = fun record =>
   "component|%{record.component_id}|%{record.owner}|%{record.component_class}|%{record.feature_gate}|%{record.required_authority}|%{std.string.join comma record.depends_on}|%{std.string.join comma record.composes_with}|%{record.capability_family}|%{std.string.join comma record.focused_checks}|%{std.string.join comma record.evidence_labels}|%{record.public_import}"
 in
-let docs_header = "# Component catalog\n\nThis projection is generated from `.cairn/component-catalog.ncl`. Do not edit catalog rows by hand; update the Nickel source and run `scripts/cairn/check-component-catalog --root .`.\n\nThe catalog names Lego-style Animus components, the smallest public import surface, authority posture, dependency links, capability family, and focused validation rail. It is metadata evidence only: it does not claim provider, filesystem, process, network, terminal, credential, persistence, production, or live-service readiness unless a row explicitly classifies that authority as shell-owned or injected.\n"
+let port = fun port_id_value owner_value providers_value consumers_value scope_value multiplicity_value lifecycle_owner_value activation_value feature_value authority_value focused_check_value => {
+  port_id = port_id_value,
+  owner_component_id = owner_value,
+  provider_component_ids = providers_value,
+  consumer_component_ids = consumers_value,
+  scope_class = scope_value,
+  multiplicity = multiplicity_value,
+  lifecycle_owner_component_id = lifecycle_owner_value,
+  activation = activation_value,
+  feature_gate = feature_value,
+  required_authority = authority_value,
+  focused_check = focused_check_value,
+  evidence_labels = ["safe-labels", "counts", "blake3-digests"],
+}
+in
+let event = fun event_id_value producer_value consumers_value delivery_value durability_value lifecycle_owner_value activation_value cycle_policy_value focused_check_value => {
+  event_id = event_id_value,
+  producer_component_id = producer_value,
+  consumer_component_ids = consumers_value,
+  delivery = delivery_value,
+  durability = durability_value,
+  lifecycle_owner_component_id = lifecycle_owner_value,
+  activation = activation_value,
+  cycle_policy = cycle_policy_value,
+  focused_check = focused_check_value,
+  evidence_labels = ["safe-labels", "counts", "blake3-digests"],
+}
+in
+let port_line = fun record =>
+  "port|%{record.port_id}|%{record.owner_component_id}|%{std.string.join comma record.provider_component_ids}|%{std.string.join comma record.consumer_component_ids}|%{record.scope_class}|%{record.multiplicity}|%{record.lifecycle_owner_component_id}|%{record.activation}|%{record.feature_gate}|%{record.required_authority}|%{record.focused_check}|%{std.string.join comma record.evidence_labels}"
+in
+let event_line = fun record =>
+  "event|%{record.event_id}|%{record.producer_component_id}|%{std.string.join comma record.consumer_component_ids}|%{record.delivery}|%{record.durability}|%{record.lifecycle_owner_component_id}|%{record.activation}|%{record.cycle_policy}|%{record.focused_check}|%{std.string.join comma record.evidence_labels}"
+in
+let code_list = fun values =>
+  if std.array.length values == 0 then "-"
+  else std.string.join ", " (std.array.map (fun value => "`%{value}`") values)
+in
+let joined_rows = fun renderer values =>
+  if std.array.length values == 0 then ""
+  else std.string.join "\n" (std.array.map renderer values) ++ "\n"
+in
+let docs_header = "# Component catalog\n\nThis projection is generated from `.cairn/component-catalog.ncl`. Do not edit catalog rows by hand; update the Nickel source and run `scripts/cairn/check-component-catalog --root .`.\n\nThe catalog names Lego-style Animus components, application-owned capability seams, event ownership, activation posture, and focused rails. It is metadata evidence only. It does not prove runtime readiness, event delivery, effect success, authority, production readiness, or release eligibility.\n"
 in
 let docs_row = fun record =>
   "| `%{record.component_id}` | `%{record.component_class}` | `%{record.owner}` | `%{record.feature_gate}` | `%{record.required_authority}` | `%{record.capability_family}` | `%{std.string.join doc_break record.focused_checks}` | `%{record.public_import}` |"
 in
-let render_docs = fun records =>
+let dependency_row = fun record =>
+  "| `%{record.component_id}` | %{code_list record.depends_on} | %{code_list record.composes_with} |"
+in
+let port_docs_row = fun record =>
+  "| `%{record.port_id}` | `%{record.owner_component_id}` | %{code_list record.provider_component_ids} | %{code_list record.consumer_component_ids} | `%{record.scope_class}` | `%{record.multiplicity}` | `%{record.lifecycle_owner_component_id}` | `%{record.activation}` | `%{record.feature_gate}` | `%{record.required_authority}` | `%{record.focused_check}` |"
+in
+let event_docs_row = fun record =>
+  "| `%{record.event_id}` | `%{record.producer_component_id}` | %{code_list record.consumer_component_ids} | `%{record.delivery}` | `%{record.durability}` | `%{record.lifecycle_owner_component_id}` | `%{record.activation}` | `%{record.cycle_policy}` | `%{record.focused_check}` |"
+in
+let render_docs = fun records ports events =>
   docs_header
   ++ "\n| Component | Class | Owner | Feature gate | Authority | Family | Focused checks | Smallest import |\n"
   ++ "| --- | --- | --- | --- | --- | --- | --- | --- |\n"
   ++ std.string.join "\n" (std.array.map docs_row records)
-  ++ "\n\n## Validation\n\nRun `scripts/cairn/check-component-catalog --root .` to validate labels, dependency links, cycles, focused checks, safe evidence fields, fixtures, and this projection. The Nix check is `nix build .#checks.x86_64-linux.component-catalog --no-link -L`.\n"
+  ++ "\n\n## Dependency map\n\n| Component | Dependencies | Composition links |\n| --- | --- | --- |\n"
+  ++ std.string.join "\n" (std.array.map dependency_row records)
+  ++ "\n\n## Capability seams\n\n| Port | Owner | Providers | Consumers | Scope | Multiplicity | Lifecycle owner | Activation | Feature | Authority | Focused check |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"
+  ++ joined_rows port_docs_row ports
+  ++ "\n## Event ownership\n\n| Event | Producer | Consumers | Delivery | Durability | Lifecycle owner | Activation | Cycle policy | Focused check |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"
+  ++ joined_rows event_docs_row events
+  ++ "\n## Validation\n\nRun `scripts/cairn/check-component-catalog --root .` to validate components, dependencies, seams, event routes, activation metadata, maintained product-profile binding, safe evidence fields, fixtures, and this projection. The Nix check is `nix build .#checks.x86_64-linux.component-catalog --no-link -L`.\n"
 in
 let component_values = [
   component "core.intent-state" "animus-core" class_reusable feature_always authority_none "core" ["cargo test -p animus-core --locked", "scripts/cairn/check-wasm-surface --root ."] "animus_core::{Intent, AnimusState, CoreError}",
@@ -113,6 +198,7 @@ let component_values = [
   with_deps ["runtime.loop-kernel", "adapters.safe-receipts"] (component "runtime.persistent-goals" "animus-runtime" class_optional_bridge "persistent-goals" authority_none "goal-state" ["cargo test -p animus-runtime --features persistent-goals persistent_goals --locked", "cargo check -p animus-runtime --target wasm32-unknown-unknown --features persistent-goals --locked", "scripts/cairn/check-persistent-goals --root ."] "animus_runtime::persistent_goals::{GoalState, GoalSession, GoalStatus, GoalReceipt}"),
   with_deps ["runtime.loop-kernel", "adapters.safe-receipts"] (component "runtime.schedule-reliability" "animus-runtime" class_optional_bridge "schedule-reliability" authority_none "schedule" ["cargo test -p animus-runtime --features schedule-reliability schedule_reliability --locked", "cargo check -p animus-runtime --target wasm32-unknown-unknown --features schedule-reliability --locked", "scripts/cairn/check-schedule-reliability --root ."] "animus_runtime::schedule_reliability::{ScheduleState, ScheduleTickPlan, ScheduleReceipt}"),
   with_deps ["runtime.loop-kernel", "session.state-core", "adapters.agent-control-port"] (component "runtime.agent-control-core" "animus-runtime" class_reusable "runtime" authority_none "agent-control" ["cargo test -p animus-session-core runstate::tests --locked", "cargo test -p animus-runtime --test sessioncorefacade --locked"] "animus_runtime::{AgentControlState, reduce_agent_control_command}"),
+  with_deps ["session.state-core", "adapters.safe-receipts"] (component "runtime.composition-activation-graph" "animus-session-core" class_reusable "runtime" authority_none "runtime" ["cargo test -p animus-session-core composition_activation_graph --locked", "cargo check -p animus-session-core --target wasm32-unknown-unknown --locked", "scripts/cairn/check-composition-activation-graph --root ."] "animus_runtime::composition_activation_graph"),
   with_deps ["runtime.loop-kernel", "adapters.dto-boundary", "adapters.model-port", "runtime.tool-executor-kit", "router.recipe-selection"] (component "runtime.model-profile-composition" "animus-runtime" class_reusable "runtime" authority_none "model" ["cargo test -p animus-runtime modelprofiles --locked", "scripts/cairn/check-model-runtime-profiles --root ."] "animus_runtime::{ModelRuntimeProfileSet, ModelMemoryAccessMode, ModelInvocationPlan, compose_model_invocation_plan}"),
   with_deps ["runtime.model-profile-composition", "adapters.context-references", "adapters.safe-receipts"] (component "runtime.request-context-contributions" "animus-runtime" class_reusable "runtime" authority_none "context" ["cargo test -p animus-runtime request_context --locked", "scripts/cairn/check-request-context-contributions --root ."] "animus_runtime::request_context::{Contribution, ContributionPlan, SkillTurn, SkillBodyService}"),
   with_deps ["runtime.model-profile-composition", "runtime.tool-executor-kit", "adapters.dto-boundary"] (component "runtime.agent-role-profiles" "animus-runtime" class_reusable "runtime" authority_none "agent-role" ["cargo test -p animus-runtime agent_roles --locked", "scripts/cairn/check-agent-role-profiles --root ."] "animus_runtime::agent_roles"),
@@ -230,8 +316,28 @@ let component_values = [
   with_deps ["core.intent-state", "adapters.dto-boundary", "runtime.loop-kernel", "std.runtime-shell"] (component "root.compat-facade" "animus" class_crate_feature "default" authority_shell "compatibility" ["cargo check -p animus --locked", "scripts/cairn/check-runtime-facade-inventory --root ."] "animus"),
 ]
 in
+let port_values = [
+  port "port.live-model-provider" "adapters.model-port" ["std.live-openai-provider-host"] ["std.live-steel-agent-shell"] "application" "exactly-one" "std.live-steel-agent-shell" "required" "live-provider" authority_shell "check-composition-activation-graph",
+  port "port.live-durable-session" "runtime.ledger-session-seam" ["std.durable-session-store-host"] ["std.live-steel-agent-shell"] "session" "exactly-one" "std.live-steel-agent-shell" "required" "durable-session-store" authority_shell "check-composition-activation-graph",
+  port "port.live-rlm-executor" "runtime.rlm-host-executor" ["std.rlm-host-effect-executor"] ["std.live-steel-agent-shell"] "request" "exactly-one" "std.live-steel-agent-shell" "required" "rlm-host-executor" authority_shell "check-composition-activation-graph",
+  port "port.live-terminal-connection" "adapters.daemon-workers" ["std.local-daemon-supervisor-host"] ["std.live-terminal-agent-host"] "client" "exactly-one" "std.live-terminal-agent-host" "required" "live-terminal" authority_shell "check-composition-activation-graph",
+]
+in
+let event_values = [
+  event "event.live-session-result" "runtime.coding-session-core" ["std.live-steel-agent-shell"] "ordered" "metadata-only" "std.live-steel-agent-shell" "required" "acyclic" "check-composition-activation-graph",
+  event "event.live-terminal-snapshot" "std.local-daemon-supervisor-host" ["std.live-terminal-agent-host"] "snapshot-first" "live-only" "std.live-terminal-agent-host" "required" "acyclic" "check-composition-activation-graph",
+  event "event.live-tool-result-committed" "runtime.coding-session-core" ["std.live-steel-agent-shell"] "ordered" "durable" "std.coding-session-host" "required" "acyclic" "check-composition-activation-graph",
+]
+in
+let all_lines =
+  std.array.map line component_values
+  @ std.array.map port_line port_values
+  @ std.array.map event_line event_values
+in
 {
   component_contract = ComponentRecord,
+  port_contract = PortRecord,
+  event_contract = EventRecord,
   classes = {
     reusable = class_reusable,
     host_injection = class_host_injection,
@@ -247,12 +353,19 @@ in
   },
   features = { always = feature_always },
   make_component = component,
+  make_port = port,
+  make_event = event,
   add_dependencies = with_deps,
   add_composition = with_composition,
   set_evidence = with_evidence,
   render_line = line,
-  render_docs_fn = render_docs,
+  render_port_line = port_line,
+  render_event_line = event_line,
+  render_docs_fn = fun records => render_docs records [] [],
+  render_activation_docs_fn = render_docs,
   components | Array ComponentRecord = component_values,
-  component_lines = std.string.join "\n" (std.array.map line component_values),
-  docs_markdown = render_docs component_values,
+  ports | Array PortRecord = port_values,
+  events | Array EventRecord = event_values,
+  component_lines = std.string.join "\n" all_lines,
+  docs_markdown = render_docs component_values port_values event_values,
 }

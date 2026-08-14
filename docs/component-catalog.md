@@ -2,7 +2,7 @@
 
 This projection is generated from `.cairn/component-catalog.ncl`. Do not edit catalog rows by hand; update the Nickel source and run `scripts/cairn/check-component-catalog --root .`.
 
-The catalog names Lego-style Animus components, the smallest public import surface, authority posture, dependency links, capability family, and focused validation rail. It is metadata evidence only: it does not claim provider, filesystem, process, network, terminal, credential, persistence, production, or live-service readiness unless a row explicitly classifies that authority as shell-owned or injected.
+The catalog names Lego-style Animus components, application-owned capability seams, event ownership, activation posture, and focused rails. It is metadata evidence only. It does not prove runtime readiness, event delivery, effect success, authority, production readiness, or release eligibility.
 
 | Component | Class | Owner | Feature gate | Authority | Family | Focused checks | Smallest import |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -48,6 +48,7 @@ The catalog names Lego-style Animus components, the smallest public import surfa
 | `runtime.persistent-goals` | `optional-bridge` | `animus-runtime` | `persistent-goals` | `none` | `goal-state` | `cargo test -p animus-runtime --features persistent-goals persistent_goals --locked<br>cargo check -p animus-runtime --target wasm32-unknown-unknown --features persistent-goals --locked<br>scripts/cairn/check-persistent-goals --root .` | `animus_runtime::persistent_goals::{GoalState, GoalSession, GoalStatus, GoalReceipt}` |
 | `runtime.schedule-reliability` | `optional-bridge` | `animus-runtime` | `schedule-reliability` | `none` | `schedule` | `cargo test -p animus-runtime --features schedule-reliability schedule_reliability --locked<br>cargo check -p animus-runtime --target wasm32-unknown-unknown --features schedule-reliability --locked<br>scripts/cairn/check-schedule-reliability --root .` | `animus_runtime::schedule_reliability::{ScheduleState, ScheduleTickPlan, ScheduleReceipt}` |
 | `runtime.agent-control-core` | `reusable-contract` | `animus-runtime` | `runtime` | `none` | `agent-control` | `cargo test -p animus-session-core runstate::tests --locked<br>cargo test -p animus-runtime --test sessioncorefacade --locked` | `animus_runtime::{AgentControlState, reduce_agent_control_command}` |
+| `runtime.composition-activation-graph` | `reusable-contract` | `animus-session-core` | `runtime` | `none` | `runtime` | `cargo test -p animus-session-core composition_activation_graph --locked<br>cargo check -p animus-session-core --target wasm32-unknown-unknown --locked<br>scripts/cairn/check-composition-activation-graph --root .` | `animus_runtime::composition_activation_graph` |
 | `runtime.model-profile-composition` | `reusable-contract` | `animus-runtime` | `runtime` | `none` | `model` | `cargo test -p animus-runtime modelprofiles --locked<br>scripts/cairn/check-model-runtime-profiles --root .` | `animus_runtime::{ModelRuntimeProfileSet, ModelMemoryAccessMode, ModelInvocationPlan, compose_model_invocation_plan}` |
 | `runtime.request-context-contributions` | `reusable-contract` | `animus-runtime` | `runtime` | `none` | `context` | `cargo test -p animus-runtime request_context --locked<br>scripts/cairn/check-request-context-contributions --root .` | `animus_runtime::request_context::{Contribution, ContributionPlan, SkillTurn, SkillBodyService}` |
 | `runtime.agent-role-profiles` | `reusable-contract` | `animus-runtime` | `runtime` | `none` | `agent-role` | `cargo test -p animus-runtime agent_roles --locked<br>scripts/cairn/check-agent-role-profiles --root .` | `animus_runtime::agent_roles` |
@@ -164,6 +165,186 @@ The catalog names Lego-style Animus components, the smallest public import surfa
 | `root.concrete-mcp-client-facade` | `shell-adapter` | `animus` | `mcp-client-host` | `shell-owned` | `tool` | `cargo check -p animus --no-default-features --features mcp-client-host --locked<br>scripts/cairn/check-runtime-facade-inventory --root .<br>scripts/cairn/check-concrete-mcp-client-host --root .` | `animus::mcp_client` |
 | `root.compat-facade` | `crate-feature` | `animus` | `default` | `shell-owned` | `compatibility` | `cargo check -p animus --locked<br>scripts/cairn/check-runtime-facade-inventory --root .` | `animus` |
 
+## Dependency map
+
+| Component | Dependencies | Composition links |
+| --- | --- | --- |
+| `core.intent-state` | - | - |
+| `adapters.dto-boundary` | - | - |
+| `adapters.agent-control-port` | `adapters.dto-boundary` | - |
+| `host-control.protocol-core` | - | - |
+| `adapters.model-port` | `adapters.dto-boundary` | - |
+| `adapters.provider-video-contracts` | `adapters.dto-boundary`, `adapters.safe-receipts` | - |
+| `adapters.provider-video-service` | `adapters.provider-video-contracts`, `adapters.model-port` | - |
+| `adapters.tool-port` | `adapters.dto-boundary` | - |
+| `adapters.status-observations` | `adapters.dto-boundary` | - |
+| `adapters.safe-receipts` | `adapters.dto-boundary` | - |
+| `adapters.rlm-kernel-contracts` | `adapters.safe-receipts` | - |
+| `adapters.steel-skill-module-contracts` | `adapters.rlm-kernel-contracts`, `adapters.skill-source-lifecycle` | - |
+| `adapters.continual-harness` | `adapters.dto-boundary`, `adapters.safe-receipts` | - |
+| `adapters.daemon-workers` | `adapters.dto-boundary`, `adapters.safe-receipts` | - |
+| `adapters.transactional-daemon-handoff-ports` | `adapters.daemon-workers` | - |
+| `adapters.messaging-receipts` | `adapters.dto-boundary`, `adapters.safe-receipts`, `adapters.orchestration` | - |
+| `adapters.observability` | `adapters.safe-receipts` | - |
+| `adapters.universal-weave` | `adapters.dto-boundary` | - |
+| `adapters.context-references` | `adapters.dto-boundary`, `adapters.safe-receipts` | - |
+| `adapters.harbor-atif` | `adapters.dto-boundary`, `adapters.safe-receipts` | - |
+| `adapters.host-authority-provider` | `adapters.dto-boundary`, `adapters.safe-receipts` | - |
+| `adapters.pijul-vcs-port` | `adapters.dto-boundary`, `adapters.safe-receipts` | - |
+| `adapters.secret-resolution-port` | `adapters.dto-boundary`, `adapters.safe-receipts` | - |
+| `adapters.skill-source-lifecycle` | `adapters.dto-boundary`, `adapters.safe-receipts` | - |
+| `adapters.trajectory-normalizer-port` | `adapters.dto-boundary`, `adapters.safe-receipts` | - |
+| `adapters.native-evaluation-services` | `evaluation.native-core`, `adapters.safe-receipts` | - |
+| `adapters.change-request-contracts` | - | `adapters.orchestration`, `adapters.model-port`, `adapters.model-evidence`, `runtime.pack.quality`, `runtime.schedule-reliability`, `std.revision-gated-workspace-edit-host` |
+| `adapters.dependency-maintenance` | `adapters.change-request-contracts` | `adapters.orchestration`, `adapters.model-evidence`, `runtime.pack.quality`, `runtime.schedule-reliability`, `std.revision-gated-workspace-edit-host` |
+| `adapters.harbor-evaluation` | `adapters.dto-boundary`, `adapters.safe-receipts`, `adapters.native-evaluation-services` | - |
+| `adapters.spacewasm-diagnostic` | `adapters.dto-boundary`, `adapters.safe-receipts` | - |
+| `adapters.mesh-provider` | `adapters.dto-boundary`, `adapters.safe-receipts` | - |
+| `adapters.codebase-graph` | `adapters.context-references`, `adapters.safe-receipts` | - |
+| `adapters.document-ingest` | `adapters.context-references` | - |
+| `adapters.model-evidence` | `adapters.dto-boundary` | - |
+| `adapters.orchestration` | `adapters.dto-boundary`, `adapters.safe-receipts` | - |
+| `router.recipe-selection` | - | - |
+| `session.state-core` | `adapters.dto-boundary` | - |
+| `runtime.loop-kernel` | `core.intent-state`, `adapters.dto-boundary`, `adapters.model-port`, `adapters.tool-port`, `session.state-core` | - |
+| `runtime.autonomous-gates` | `runtime.loop-kernel`, `adapters.safe-receipts` | - |
+| `runtime.persistent-goals` | `runtime.loop-kernel`, `adapters.safe-receipts` | - |
+| `runtime.schedule-reliability` | `runtime.loop-kernel`, `adapters.safe-receipts` | - |
+| `runtime.agent-control-core` | `runtime.loop-kernel`, `session.state-core`, `adapters.agent-control-port` | - |
+| `runtime.composition-activation-graph` | `session.state-core`, `adapters.safe-receipts` | - |
+| `runtime.model-profile-composition` | `runtime.loop-kernel`, `adapters.dto-boundary`, `adapters.model-port`, `runtime.tool-executor-kit`, `router.recipe-selection` | - |
+| `runtime.request-context-contributions` | `runtime.model-profile-composition`, `adapters.context-references`, `adapters.safe-receipts` | - |
+| `runtime.agent-role-profiles` | `runtime.model-profile-composition`, `runtime.tool-executor-kit`, `adapters.dto-boundary` | - |
+| `evaluation.native-core` | - | - |
+| `runtime.harbor-evaluation-core` | `evaluation.native-core`, `adapters.native-evaluation-services`, `adapters.harbor-evaluation`, `adapters.harbor-atif`, `adapters.safe-receipts` | - |
+| `runtime.tool-dispatch-planning` | `runtime.loop-kernel`, `adapters.tool-port` | - |
+| `runtime.tool-executor-kit` | `runtime.tool-dispatch-planning`, `adapters.tool-port` | - |
+| `runtime.tool-executor-service` | `runtime.tool-executor-kit` | - |
+| `runtime.rlm-host-executor` | `adapters.rlm-kernel-contracts`, `runtime.tool-executor-kit`, `runtime.loop-kernel` | - |
+| `runtime.resumable-steel-host-bridge` | `runtime.rlm-host-executor`, `steel.rlm-kernel`, `adapters.rlm-kernel-contracts` | - |
+| `runtime.ledger-session-seam` | `runtime.loop-kernel`, `adapters.safe-receipts` | - |
+| `runtime.durable-session-store-core` | `runtime.ledger-session-seam`, `adapters.safe-receipts` | - |
+| `runtime.session-authority-profile` | `session.state-core`, `runtime.model-profile-composition`, `runtime.tool-executor-kit`, `runtime.durable-session-store-core`, `adapters.safe-receipts` | - |
+| `runtime.authority-seal` | `session.state-core`, `runtime.session-authority-profile`, `adapters.safe-receipts` | - |
+| `runtime.application-host-binding-pilot` | `runtime.session-authority-profile`, `runtime.authority-seal`, `runtime.coding-session-core`, `adapters.safe-receipts` | - |
+| `runtime.coding-session-core` | `runtime.loop-kernel`, `runtime.durable-session-store-core`, `runtime.session-authority-profile`, `runtime.interrupted-tool-repair`, `adapters.model-port`, `adapters.tool-port` | - |
+| `runtime.coding-session-queue-cas` | `runtime.coding-session-core`, `adapters.safe-receipts` | - |
+| `runtime.child-session-service-core` | `runtime.coding-session-core`, `runtime.session-authority-profile`, `adapters.rlm-kernel-contracts`, `adapters.safe-receipts` | - |
+| `runtime.interrupted-tool-repair` | `session.state-core`, `runtime.ledger-session-seam`, `adapters.model-port`, `adapters.safe-receipts` | - |
+| `runtime.session-branch-explorer` | `session.state-core`, `runtime.ledger-session-seam`, `runtime.conversation-projection`, `adapters.safe-receipts` | - |
+| `runtime.conversation-projection` | `session.state-core`, `runtime.ledger-session-seam`, `runtime.active-turn-recovery`, `adapters.safe-receipts` | - |
+| `runtime.session-event-replay` | `session.state-core`, `runtime.ledger-session-seam`, `runtime.conversation-projection`, `adapters.safe-receipts` | - |
+| `runtime.execution-backend-planner` | `runtime.application-host-binding-pilot`, `runtime.authority-seal`, `adapters.safe-receipts` | - |
+| `runtime.active-turn-recovery` | `session.state-core`, `runtime.durable-session-store-core`, `runtime.session-authority-profile`, `runtime.interrupted-tool-repair`, `runtime.provider-retry`, `adapters.safe-receipts` | - |
+| `runtime.pending-input-vault` | `runtime.active-turn-recovery`, `runtime.coding-session-core`, `runtime.durable-session-store-core`, `adapters.safe-receipts` | - |
+| `runtime.transactional-daemon-handoff` | `runtime.active-turn-recovery`, `runtime.pending-input-vault`, `runtime.coding-session-core`, `runtime.durable-session-store-core`, `runtime.session-authority-profile`, `adapters.safe-receipts` | - |
+| `runtime.provider-retry` | `runtime.model-profile-composition`, `adapters.model-port`, `adapters.safe-receipts` | - |
+| `runtime.pijul-vcs-core` | `adapters.pijul-vcs-port`, `adapters.safe-receipts`, `runtime.pack.provenance` | - |
+| `runtime.trajectory-transcript-core` | `adapters.trajectory-normalizer-port`, `adapters.safe-receipts`, `runtime.ledger-session-seam`, `runtime.pack.batch` | - |
+| `runtime.rejected-attempt-context` | `runtime.loop-kernel`, `adapters.safe-receipts` | - |
+| `runtime.redacted-session-tree-export` | `session.state-core`, `runtime.ledger-session-seam`, `runtime.interrupted-tool-repair`, `adapters.safe-receipts` | - |
+| `runtime.pack.headless` | `runtime.loop-kernel` | - |
+| `runtime.pack.provenance` | `runtime.loop-kernel` | - |
+| `runtime.pack.worker-team` | `runtime.loop-kernel` | - |
+| `runtime.pack.policy` | `runtime.loop-kernel` | - |
+| `runtime.pack.batch` | `runtime.loop-kernel` | - |
+| `runtime.pack.compaction` | `runtime.loop-kernel` | - |
+| `runtime.pack.dataset-export` | `runtime.loop-kernel` | - |
+| `runtime.pack.quality` | `runtime.loop-kernel` | - |
+| `runtime.pack.research` | `runtime.loop-kernel` | - |
+| `runtime.pack.scaffold` | `runtime.loop-kernel` | - |
+| `runtime.pack.orchestration` | `runtime.loop-kernel`, `adapters.orchestration` | - |
+| `runtime.status-prelude` | `runtime.loop-kernel`, `adapters.status-observations` | - |
+| `runtime.observability-projection` | `runtime.loop-kernel`, `adapters.observability` | - |
+| `steel.loop-fabric` | `adapters.dto-boundary`, `runtime.loop-kernel` | - |
+| `steel.rlm-kernel` | `steel.loop-fabric`, `adapters.rlm-kernel-contracts`, `adapters.tool-port` | - |
+| `steel.durable-kernel-restore` | `steel.rlm-kernel`, `adapters.rlm-kernel-contracts`, `adapters.safe-receipts` | - |
+| `steel.skill-module-loader` | `adapters.steel-skill-module-contracts`, `steel.rlm-kernel`, `steel.durable-kernel-restore`, `runtime.model-profile-composition` | - |
+| `std.lean-loop-fabric` | `adapters.dto-boundary`, `runtime.loop-kernel` | - |
+| `preserves.schema-primitives` | - | - |
+| `preserves.adapter-bridge` | `adapters.dto-boundary`, `preserves.schema-primitives` | - |
+| `preserves.runtime-bridge` | `preserves.adapter-bridge`, `runtime.loop-kernel`, `runtime.provider-retry` | - |
+| `preserves.provenance-bridge` | `preserves.schema-primitives`, `runtime.loop-kernel` | - |
+| `preserves.policy-bridge` | `adapters.dto-boundary`, `preserves.schema-primitives` | - |
+| `preserves.dataspace-bridge` | `adapters.dto-boundary`, `preserves.schema-primitives` | - |
+| `preserves.syndicate-turn-bridge` | `preserves.dataspace-bridge`, `preserves.schema-primitives` | - |
+| `preserves.review-fixtures` | `preserves.schema-primitives` | - |
+| `preserves.compat-facade` | `preserves.adapter-bridge`, `preserves.runtime-bridge`, `preserves.provenance-bridge`, `preserves.policy-bridge`, `preserves.dataspace-bridge`, `preserves.syndicate-turn-bridge`, `preserves.review-fixtures` | - |
+| `std.host-authority-catalog` | - | - |
+| `std.live-openai-provider-host` | `adapters.model-port`, `runtime.provider-retry`, `std.host-authority-catalog` | - |
+| `std.iroh-agent-comms-shell` | `std.host-authority-catalog` | - |
+| `std.syndicate-turn-shell` | `preserves.syndicate-turn-bridge`, `std.host-authority-catalog` | - |
+| `std.iroh-syndicate-shell` | `preserves.syndicate-turn-bridge`, `std.host-authority-catalog` | `std.iroh-agent-comms-shell`, `std.syndicate-turn-shell` |
+| `std.model-profile-loader` | `runtime.model-profile-composition`, `std.host-authority-catalog` | - |
+| `std.agent-role-loader` | `runtime.agent-role-profiles`, `std.host-authority-catalog` | - |
+| `std.session-branch-explorer-host` | `runtime.session-branch-explorer`, `std.host-authority-catalog` | - |
+| `std.execution-backend-host` | `runtime.execution-backend-planner`, `std.host-authority-catalog` | - |
+| `std.conversation-projection-cache` | `runtime.conversation-projection`, `std.host-authority-catalog` | - |
+| `std.active-turn-recovery-host` | `runtime.active-turn-recovery`, `std.host-authority-catalog` | - |
+| `std.provider-retry-shell` | `runtime.provider-retry`, `adapters.model-port`, `std.host-authority-catalog` | - |
+| `std.rejected-attempt-context-host` | `runtime.rejected-attempt-context`, `std.host-authority-catalog` | - |
+| `std.session-tree-export-writer` | `runtime.redacted-session-tree-export`, `std.host-authority-catalog` | - |
+| `std.rlm-host-effect-executor` | `runtime.rlm-host-executor`, `runtime.authority-seal`, `std.revision-gated-workspace-edit-host`, `std.concrete-child-session-host`, `steel.rlm-kernel`, `adapters.context-references`, `adapters.tool-port` | - |
+| `std.durable-session-store-host` | `runtime.durable-session-store-core`, `std.host-authority-catalog` | - |
+| `std.durable-steel-kernel-restore-host` | `steel.durable-kernel-restore`, `runtime.active-turn-recovery`, `std.durable-session-store-host`, `std.host-authority-catalog` | - |
+| `std.coding-session-host` | `runtime.coding-session-core`, `runtime.session-authority-profile`, `std.durable-session-store-host`, `std.host-authority-catalog` | - |
+| `std.concrete-child-session-host` | `runtime.child-session-service-core`, `std.coding-session-host`, `std.durable-session-store-host`, `adapters.rlm-kernel-contracts`, `std.host-authority-catalog` | - |
+| `std.live-steel-agent-shell` | `std.live-openai-provider-host`, `std.coding-session-host`, `std.durable-session-store-host`, `std.durable-steel-kernel-restore-host`, `std.rlm-host-effect-executor`, `std.concrete-child-session-host`, `steel.skill-module-loader` | - |
+| `std.local-daemon-supervisor-host` | `adapters.daemon-workers`, `adapters.transactional-daemon-handoff-ports`, `std.live-steel-agent-shell`, `std.durable-session-store-host` | - |
+| `std.live-terminal-agent-host` | `std.local-daemon-supervisor-host`, `tui.host-shell` | - |
+| `std.pending-input-vault-host` | `runtime.pending-input-vault`, `std.coding-session-host`, `std.active-turn-recovery-host`, `std.durable-session-store-host`, `std.host-authority-catalog` | - |
+| `std.transactional-daemon-handoff-host` | `adapters.transactional-daemon-handoff-ports`, `runtime.transactional-daemon-handoff`, `std.pending-input-vault-host`, `std.coding-session-host`, `std.durable-session-store-host`, `std.host-authority-catalog` | - |
+| `std.revision-gated-workspace-edit-host` | `adapters.dto-boundary`, `adapters.tool-port` | - |
+| `std.concrete-mcp-client-host` | `adapters.dto-boundary`, `adapters.tool-port`, `runtime.request-context-contributions`, `runtime.authority-seal` | - |
+| `std.native-evaluation-host` | `evaluation.native-core`, `adapters.native-evaluation-services`, `runtime.active-turn-recovery`, `std.durable-session-store-host`, `std.host-authority-catalog` | - |
+| `std.basalt-authority` | `adapters.host-authority-provider`, `runtime.agent-role-profiles`, `runtime.authority-seal`, `std.host-authority-catalog` | - |
+| `std.pijul-vcs-host` | `adapters.pijul-vcs-port`, `runtime.pijul-vcs-core`, `std.host-authority-catalog` | - |
+| `std.secretspec-host-resolution` | `adapters.secret-resolution-port`, `std.host-authority-catalog` | - |
+| `std.trajectory-transcript-host` | `adapters.trajectory-normalizer-port`, `runtime.trajectory-transcript-core`, `std.host-authority-catalog` | - |
+| `evaluation.composition-conformance` | `evaluation.native-core`, `adapters.native-evaluation-services`, `runtime.harbor-evaluation-core`, `runtime.pack.dataset-export`, `std.native-evaluation-host` | - |
+| `std.acp-stdio-host` | `adapters.dto-boundary`, `runtime.coding-session-core`, `runtime.session-authority-profile`, `std.coding-session-host`, `std.durable-session-store-host` | - |
+| `std.sandlock-host` | `adapters.dto-boundary`, `std.host-authority-catalog` | - |
+| `std.branchfs-host` | `adapters.dto-boundary`, `std.host-authority-catalog` | - |
+| `std.agent-guardrail` | `adapters.dto-boundary`, `std.host-authority-catalog` | - |
+| `std.harbor-evaluation` | `runtime.harbor-evaluation-core`, `adapters.harbor-evaluation`, `std.host-authority-catalog` | - |
+| `std.spacewasm-diagnostic` | `adapters.spacewasm-diagnostic`, `std.host-authority-catalog` | - |
+| `std.mesh-provider` | `adapters.mesh-provider`, `std.host-authority-catalog` | - |
+| `std.codebase-graph-host` | `adapters.codebase-graph`, `adapters.context-references`, `std.host-authority-catalog` | - |
+| `std.codebase-tool-host` | `std.codebase-graph-host`, `runtime.tool-executor-kit`, `std.host-authority-catalog` | - |
+| `std.context-shell` | `runtime.loop-kernel`, `adapters.context-references`, `std.host-authority-catalog` | - |
+| `std.observability-sinks` | `adapters.observability`, `std.host-authority-catalog` | - |
+| `std.agent-control-host` | `adapters.agent-control-port`, `runtime.agent-control-core` | - |
+| `std.runtime-shell` | `runtime.loop-kernel`, `adapters.model-port`, `adapters.tool-port`, `std.host-authority-catalog` | - |
+| `tui.session-branch-explorer` | `runtime.session-branch-explorer`, `std.session-branch-explorer-host` | - |
+| `tui.terminal-image-planner` | `adapters.safe-receipts` | - |
+| `tui.terminal-image-host` | `tui.terminal-image-planner` | - |
+| `tui.terminal-video-planner` | `adapters.safe-receipts`, `tui.terminal-image-planner` | - |
+| `tui.terminal-video-host` | `tui.terminal-video-planner`, `tui.terminal-image-host` | - |
+| `tui.host-shell` | `runtime.loop-kernel`, `runtime.coding-session-core` | - |
+| `root.bounded-execution-evaluation` | - | - |
+| `root.transactional-daemon-handoff-facade` | `runtime.transactional-daemon-handoff`, `adapters.transactional-daemon-handoff-ports`, `std.transactional-daemon-handoff-host` | - |
+| `root.rlm-host-effect-executor-facade` | `std.rlm-host-effect-executor` | - |
+| `root.revision-gated-workspace-edit-facade` | `std.revision-gated-workspace-edit-host` | - |
+| `root.concrete-mcp-client-facade` | `std.concrete-mcp-client-host` | - |
+| `root.compat-facade` | `core.intent-state`, `adapters.dto-boundary`, `runtime.loop-kernel`, `std.runtime-shell` | - |
+
+## Capability seams
+
+| Port | Owner | Providers | Consumers | Scope | Multiplicity | Lifecycle owner | Activation | Feature | Authority | Focused check |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `port.live-model-provider` | `adapters.model-port` | `std.live-openai-provider-host` | `std.live-steel-agent-shell` | `application` | `exactly-one` | `std.live-steel-agent-shell` | `required` | `live-provider` | `shell-owned` | `check-composition-activation-graph` |
+| `port.live-durable-session` | `runtime.ledger-session-seam` | `std.durable-session-store-host` | `std.live-steel-agent-shell` | `session` | `exactly-one` | `std.live-steel-agent-shell` | `required` | `durable-session-store` | `shell-owned` | `check-composition-activation-graph` |
+| `port.live-rlm-executor` | `runtime.rlm-host-executor` | `std.rlm-host-effect-executor` | `std.live-steel-agent-shell` | `request` | `exactly-one` | `std.live-steel-agent-shell` | `required` | `rlm-host-executor` | `shell-owned` | `check-composition-activation-graph` |
+| `port.live-terminal-connection` | `adapters.daemon-workers` | `std.local-daemon-supervisor-host` | `std.live-terminal-agent-host` | `client` | `exactly-one` | `std.live-terminal-agent-host` | `required` | `live-terminal` | `shell-owned` | `check-composition-activation-graph` |
+
+## Event ownership
+
+| Event | Producer | Consumers | Delivery | Durability | Lifecycle owner | Activation | Cycle policy | Focused check |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `event.live-session-result` | `runtime.coding-session-core` | `std.live-steel-agent-shell` | `ordered` | `metadata-only` | `std.live-steel-agent-shell` | `required` | `acyclic` | `check-composition-activation-graph` |
+| `event.live-terminal-snapshot` | `std.local-daemon-supervisor-host` | `std.live-terminal-agent-host` | `snapshot-first` | `live-only` | `std.live-terminal-agent-host` | `required` | `acyclic` | `check-composition-activation-graph` |
+| `event.live-tool-result-committed` | `runtime.coding-session-core` | `std.live-steel-agent-shell` | `ordered` | `durable` | `std.coding-session-host` | `required` | `acyclic` | `check-composition-activation-graph` |
+
 ## Validation
 
-Run `scripts/cairn/check-component-catalog --root .` to validate labels, dependency links, cycles, focused checks, safe evidence fields, fixtures, and this projection. The Nix check is `nix build .#checks.x86_64-linux.component-catalog --no-link -L`.
+Run `scripts/cairn/check-component-catalog --root .` to validate components, dependencies, seams, event routes, activation metadata, maintained product-profile binding, safe evidence fields, fixtures, and this projection. The Nix check is `nix build .#checks.x86_64-linux.component-catalog --no-link -L`.

@@ -3,8 +3,7 @@
 use std::io::Read as _;
 use std::path::PathBuf;
 
-const CONFIG_JSON: &[u8] =
-    include_bytes!("../../../config/generated/live-steel-agent-shell.json");
+const CONFIG_JSON: &[u8] = include_bytes!("../../../config/generated/live-steel-agent-shell.json");
 const EXPECTED_ARGUMENTS: usize = 2;
 const MAX_CREDENTIAL_BYTES: u64 = 16_384;
 
@@ -16,6 +15,8 @@ fn main() {
 }
 
 fn run() -> Result<(), Box<dyn std::error::Error>> {
+    let _activation = animus_live_steel_agent::preflight_live_application_activation()
+        .map_err(|error| format!("activation preflight failed: {error:?}"))?;
     let arguments = std::env::args().skip(1).collect::<Vec<_>>();
     if arguments.len() != EXPECTED_ARGUMENTS {
         return Err("usage: animus-live-steel-agent <store-root> <prompt> < credential".into());

@@ -2,6 +2,8 @@
 
 Animus keeps the broad `animus-runtime` facade for compatibility and adds focused domain preludes for new embedder code. The minimal kernel import path is `animus_runtime::kernel`; it re-exports typed runtime input/config, neutral loop fabric, turn state, runtime events/reports, capability registry, model/tool dispatch planning, and injected adapter orchestration without pulling Steel or optional runtime packs.
 
+The always-on `animus_runtime::composition_activation_graph` module is a direct re-export from `animus-session-core`. Product roots use it before effects. It validates explicit composition, feature, authority, generation, and readiness facts without adding host authority. See [composition activation graph](composition-activation-graph.md).
+
 ## Domain preludes
 
 Use the smallest prelude that matches the integration seam:
@@ -30,6 +32,7 @@ Focused checks:
 
 ```sh
 scripts/cairn/check-runtime-kernel-split --root .
+scripts/cairn/check-composition-activation-graph --root .
 cargo test -p animus-runtime admission::tests --locked
 cargo test -p animus-runtime shell::tests --locked
 cargo test -p animus-runtime --locked

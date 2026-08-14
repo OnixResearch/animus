@@ -3,7 +3,8 @@
 use animus_live_terminal::{
     ClientCommand, ClientSessionEvent, ClientSnapshot, LiveTerminalRequest,
     TerminalConnectionError, TerminalConnectionPort, TerminalExit, TerminalHostError,
-    TerminalHostPort, TerminalInput, run_attached_terminal,
+    TerminalHostPort, TerminalInput, preflight_live_terminal_activation, run_attached_terminal,
+    run_attached_terminal_with_activation,
 };
 use std::collections::VecDeque;
 
@@ -181,12 +182,56 @@ fn event_flood_and_iteration_exhaustion_fail_closed_without_automatic_mode_switc
     assert!(idle_connection.detached);
 }
 
+#[test]
+fn blocked_activation_calls_no_terminal_or_connection_effect() {
+    // r[verify agent_harness_runtime.composition_activation_graph.fail_loud]
+    let config = direct_config();
+    let mut activation = preflight_live_terminal_activation().expect("activation profile");
+    activation.status =
+        animus_runtime::composition_activation_graph::ActivationDecisionStatus::Blocked;
+    let mut connection = FixtureConnection::new(Vec::new());
+    let mut host = FixtureHost::new([None]);
+
+    let result = run_attached_terminal_with_activation(
+        LiveTerminalRequest {
+            config: &config,
+            connection: &mut connection,
+            host: &mut host,
+            maximum_iterations: MAXIMUM_ITERATIONS,
+        },
+        &activation,
+    );
+
+    assert!(matches!(result, Err(TerminalHostError::Activation)));
+    assert_eq!(host.viewport_count, 0);
+    assert_eq!(host.poll_count, 0);
+    assert_eq!(host.render_count, 0);
+    assert!(connection.commands.is_empty());
+    assert!(!connection.detached);
+
+    let mut forged = preflight_live_terminal_activation().expect("activation profile");
+    forged.graph_identity = String::from("forged-activation-graph");
+    let forged_result = run_attached_terminal_with_activation(
+        LiveTerminalRequest {
+            config: &config,
+            connection: &mut connection,
+            host: &mut host,
+            maximum_iterations: MAXIMUM_ITERATIONS,
+        },
+        &forged,
+    );
+    assert!(matches!(forged_result, Err(TerminalHostError::Activation)));
+    assert_eq!(host.viewport_count, 0);
+    assert!(connection.commands.is_empty());
+}
+
 struct FixtureHost {
     inputs: VecDeque<Option<TerminalInput>>,
     viewport: (u16, u16),
     cancelled: bool,
     signalled: bool,
     fail_render: bool,
+    viewport_count: u64,
     poll_count: u64,
     render_count: u64,
 }
@@ -199,6 +244,7 @@ impl FixtureHost {
             cancelled: false,
             signalled: false,
             fail_render: false,
+            viewport_count: 0,
             poll_count: 0,
             render_count: 0,
         }
@@ -207,6 +253,7 @@ impl FixtureHost {
 
 impl TerminalHostPort for FixtureHost {
     fn viewport(&mut self) -> Result<(u16, u16), TerminalHostError> {
+        self.viewport_count += 1;
         Ok(self.viewport)
     }
 

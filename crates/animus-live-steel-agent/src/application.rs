@@ -24,6 +24,8 @@ pub struct LiveApplicationInput<'a> {
 pub enum LiveApplicationError {
     /// Typed application configuration failed validation.
     Configuration,
+    /// The selected composition failed activation preflight.
+    Activation,
     /// Store root could not be opened as an explicit capability.
     StoreRoot,
     /// Store policy, recovery, lock, or persistence failed.
@@ -62,19 +64,16 @@ pub fn run_live_application(
 ) -> Result<crate::LiveSteelAgentRunOutput, LiveApplicationError> {
     let parsed = crate::parse_live_steel_agent_config(input.config_json)
         .map_err(|_error| LiveApplicationError::Configuration)?;
+    let _activation = crate::activation::preflight_live_application_activation()
+        .map_err(|_error| LiveApplicationError::Activation)?;
     if input.credential.trim().is_empty() {
         return Err(LiveApplicationError::Provider);
     }
-    let api_key = animus_std_openai::OpenAiApiKey::new(
-        parsed.credential_reference(),
-        input.credential,
-    )
-    .map_err(|_error| LiveApplicationError::Provider)?;
-    let root = cap_std::fs::Dir::open_ambient_dir(
-        input.store_root,
-        cap_std::ambient_authority(),
-    )
-    .map_err(|_error| LiveApplicationError::StoreRoot)?;
+    let api_key =
+        animus_std_openai::OpenAiApiKey::new(parsed.credential_reference(), input.credential)
+            .map_err(|_error| LiveApplicationError::Provider)?;
+    let root = cap_std::fs::Dir::open_ambient_dir(input.store_root, cap_std::ambient_authority())
+        .map_err(|_error| LiveApplicationError::StoreRoot)?;
     let definitions = crate::store_definitions(&parsed).map_err(LiveApplicationError::Store)?;
     let resume_required = crate::session_resume_required(&root, &parsed, &definitions)
         .map_err(LiveApplicationError::Store)?;

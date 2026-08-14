@@ -381,6 +381,7 @@
                 || baseName == "check-ast-grep-agent-boundary-audits"
                 || baseName == "check-component-catalog"
                 || baseName == "check-clash-ucan-authority"
+                || baseName == "check-composition-activation-graph"
                 || baseName == "check-composition-conformance"
                 || baseName == "check-current-head-release-evidence-index"
                 || baseName == "check-exec-policy"
@@ -1350,6 +1351,11 @@
 
           composition-conformance = cargoCheck "animus-composition-conformance" [ pkgs.b3sum ] ''
             sh scripts/cairn/check-composition-conformance --root .
+          '';
+
+          composition-activation-graph = cargoCheck "animus-composition-activation-graph" [ pkgs.b3sum pkgs.nickel ] ''
+            export ANIMUS_ACTIVATION_STATIC_ONLY=1
+            sh scripts/cairn/check-composition-activation-graph --root .
           '';
 
           adapter-conformance-index =

@@ -11,6 +11,7 @@
 #![allow(clippy::module_name_repetitions)]
 #![forbid(unsafe_code)]
 
+mod activation;
 mod config;
 mod connection;
 mod core;
@@ -19,6 +20,7 @@ mod lifecycle;
 #[cfg(feature = "live-terminal")]
 mod render;
 
+pub use activation::preflight_live_terminal_activation;
 pub use config::{
     ConnectionMode, TerminalConfigError, ValidatedTerminalConfig, parse_terminal_config,
 };
@@ -36,7 +38,10 @@ pub use core::{
 };
 #[cfg(feature = "live-terminal")]
 pub use host::CrosstermTerminalHost;
-pub use host::{LiveTerminalRequest, TerminalHostError, TerminalHostPort, run_attached_terminal};
+pub use host::{
+    LiveTerminalRequest, TerminalHostError, TerminalHostPort, run_attached_terminal,
+    run_attached_terminal_with_activation,
+};
 #[cfg(feature = "live-terminal")]
 pub use lifecycle::CrosstermTerminalLifecycle;
 pub use lifecycle::{

@@ -19,6 +19,8 @@ The terminal crate does not copy Prime Agent source. It rejects the reference ru
 
 `config/live-terminal-agent-host.ncl` is the typed source of truth. Rust revalidates its exact JSON export before terminal or connection effects.
 
+The host runs the maintained composition activation preflight before it calls the connection or terminal ports. A blocked decision returns `TerminalHostError::Activation`. It does not use an ambient connection fallback. See [composition activation graph](composition-activation-graph.md).
+
 Connection mode is explicit:
 
 - `daemon` requires one caller-owned endpoint root and one configured Unix endpoint name;
@@ -72,6 +74,7 @@ Run the focused rail:
 
 ```text
 scripts/cairn/check-live-terminal-agent-host --root .
+scripts/cairn/check-composition-activation-graph --root .
 ```
 
 The rail does not establish arbitrary terminal compatibility, remote security, crash-proof restoration, task correctness, production readiness, or release eligibility.

@@ -71,6 +71,8 @@ let multi_role_smoke_feature = "multi-role-smoke" in
 let profile_retry_smoke_feature = "profile-retry-smoke" in
 let openai_provider_feature = "openai-provider-host" in
 let openai_provider_family = "model" in
+let models_dev_feature = "models-dev-catalog" in
+let models_dev_family = "model" in
 let lean_loop_feature = "lean-loop" in
 let lean_loop_family = "loop" in
 let rlm_kernel_feature = "rlm-kernel" in
@@ -94,6 +96,8 @@ let schedule_reliability_feature = "schedule-reliability" in
 let schedule_reliability_family = "schedule" in
 let session_event_replay_feature = "session-event-replay" in
 let session_event_replay_family = "session-event-replay" in
+let composition_activation_feature = "compat" in
+let composition_activation_family = "compatibility" in
 let execution_backend_feature = "execution-backend-planner" in
 let execution_backend_family = "execution-backend" in
 let native_evaluation_feature = "native-evaluation" in
@@ -611,6 +615,21 @@ let session_event_replay_record = fun export_path_value owning_crate_value sourc
   capability_family = session_event_replay_family,
 }
 in
+let composition_activation_record = fun export_path_value owning_crate_value source_value review_note_value => {
+  export_path = export_path_value,
+  owning_crate = owning_crate_value,
+  source = source_value,
+  class = reusable,
+  side_effect = none,
+  stability = stable,
+  review_note = review_note_value,
+  feature_gate = composition_activation_feature,
+  required_authority = none,
+  depends_on = [],
+  composes_with = ["animus-live-steel-agent::run_live_application", "animus-live-terminal::run_attached_terminal"],
+  capability_family = composition_activation_family,
+}
+in
 let execution_backend_record = fun export_path_value owning_crate_value source_value class_value side_effect_value review_note_value required_authority_value => {
   export_path = export_path_value,
   owning_crate = owning_crate_value,
@@ -639,6 +658,21 @@ let openai_provider_record = fun export_path_value owning_crate_value source_val
   depends_on = ["animus-std::ProviderDispatchPlan", "animus-adapters::ModelStreamFrame", "animus-runtime::provider_retry"],
   composes_with = ["steel"],
   capability_family = openai_provider_family,
+}
+in
+let models_dev_record = fun export_path_value owning_crate_value source_value review_note_value => {
+  export_path = export_path_value,
+  owning_crate = owning_crate_value,
+  source = source_value,
+  class = shell,
+  side_effect = shell_owned,
+  stability = optional_stability,
+  review_note = review_note_value,
+  feature_gate = models_dev_feature,
+  required_authority = shell_owned,
+  depends_on = [],
+  composes_with = [],
+  capability_family = models_dev_family,
 }
 in
 let agent_control_record = fun export_path_value owning_crate_value source_value review_note_value => {
@@ -2838,6 +2872,7 @@ let entry_values = [
   schedule_reliability_record "animus::schedule_reliability" "animus" root "optional compatibility re-export of schedule reliability contracts",
   session_event_replay_record "animus-runtime::session_event_replay" "animus-runtime" session_core "pure bounded reconnect replay over admitted ledger facts with one client order through the runtime facade",
   session_event_replay_record "animus::session_event_replay" "animus" root "optional compatibility re-export of session event replay contracts",
+  composition_activation_record "animus-runtime::composition_activation_graph" "animus-runtime" runtime "runtime facade re-export of the no-std activation core",
   execution_backend_record "animus-runtime::execution_backend_planner" "animus-runtime" runtime reusable none "pure weakest-admitted backend selection and implementation-free current-enforcement service" none,
   execution_backend_record "animus-std::execution_backend_planner_host" "animus-std" std_shell shell shell_owned "thin host recheck seam over an explicitly supplied current-enforcement service" shell_owned,
   execution_backend_record "animus::execution_backend_planner" "animus" root reusable none "optional compatibility re-export of execution backend planner contracts" none,
@@ -3159,6 +3194,24 @@ let entry_values = [
   entry "animus-std::ThinkingPolicy" "animus-std" std_shell shell shell_owned stable "auto-classified public export for composition inventory",
   entry "animus-std::TokenCost" "animus-std" std_shell shell shell_owned stable "auto-classified public export for composition inventory",
   entry "animus-std::UnsupportedStreamPolicy" "animus-std" std_shell shell shell_owned stable "auto-classified public export for composition inventory",
+  models_dev_record "animus-std::MAX_MODELS_DEV_SNAPSHOT_BYTES" "animus-std" std_shell "bounded caller-supplied Models.dev snapshot limit",
+  models_dev_record "animus-std::MODELS_DEV_API_URL" "animus-std" std_shell "reviewed Models.dev source label without network authority",
+  models_dev_record "animus-std::MODELS_DEV_SOURCE_LABEL" "animus-std" std_shell "safe Models.dev source label",
+  models_dev_record "animus-std::ModelsDevIngestError" "animus-std" std_shell "closed Models.dev ingest error vocabulary",
+  models_dev_record "animus-std::ModelsDevIngestReport" "animus-std" std_shell "metadata-only Models.dev ingest report",
+  models_dev_record "animus-std::ModelsDevJsonErrorKind" "animus-std" std_shell "closed Models.dev JSON error class",
+  models_dev_record "animus-std::ModelsDevProviderBinding" "animus-std" std_shell "validated Models.dev provider binding",
+  models_dev_record "animus-std::ModelsDevProviderBindingDraft" "animus-std" std_shell "caller-supplied Models.dev provider binding draft",
+  models_dev_record "animus-std::ingest_models_dev_api_json" "animus-std" std_shell "bounded caller-byte Models.dev projection",
+  models_dev_record "animus::MAX_MODELS_DEV_SNAPSHOT_BYTES" "animus" root "root facade for the bounded Models.dev snapshot limit",
+  models_dev_record "animus::MODELS_DEV_API_URL" "animus" root "root facade for the reviewed Models.dev source label",
+  models_dev_record "animus::MODELS_DEV_SOURCE_LABEL" "animus" root "root facade for the safe Models.dev source label",
+  models_dev_record "animus::ModelsDevIngestError" "animus" root "root facade for Models.dev ingest errors",
+  models_dev_record "animus::ModelsDevIngestReport" "animus" root "root facade for metadata-only Models.dev ingest reports",
+  models_dev_record "animus::ModelsDevJsonErrorKind" "animus" root "root facade for Models.dev JSON error classes",
+  models_dev_record "animus::ModelsDevProviderBinding" "animus" root "root facade for validated Models.dev provider bindings",
+  models_dev_record "animus::ModelsDevProviderBindingDraft" "animus" root "root facade for Models.dev provider binding drafts",
+  models_dev_record "animus::ingest_models_dev_api_json" "animus" root "root facade for bounded caller-byte Models.dev projection",
   entry "animus-steel::DEFAULT_RUNTIME_HOST_ACTIONS" "animus-steel" steel reusable none optional_stability "auto-classified public export for composition inventory",
   entry "animus-steel::SteelHostAction" "animus-steel" steel reusable none optional_stability "auto-classified public export for composition inventory",
   entry "animus-steel::SteelPolicyActivation" "animus-steel" steel reusable none optional_stability "auto-classified public export for composition inventory",
@@ -3724,6 +3777,7 @@ let entry_values = [
   live_steel_agent_record "animus-live-steel-agent::open_kernel_persistence" "private kernel journal and lease opener",
   live_steel_agent_record "animus-live-steel-agent::open_session_persistence" "coding-session journal and lease opener",
   live_steel_agent_record "animus-live-steel-agent::parse_live_steel_agent_config" "strict Nickel-exported JSON validator",
+  live_steel_agent_record "animus-live-steel-agent::preflight_live_application_activation" "pure maintained product activation preflight before shell effects",
   live_steel_agent_record "animus-live-steel-agent::restore_interrupted_kernel" "prior committed kernel restore for interrupted cells",
   live_steel_agent_record "animus-live-steel-agent::restore_or_create_kernel" "strict present-state restore or fresh empty-state creation",
   live_steel_agent_record "animus-live-steel-agent::run_live_application" "non-default headless product root over explicit provider store Steel child control and receipt adapters",
@@ -3824,7 +3878,9 @@ let entry_values = [
   live_terminal_record "animus-live-terminal::reduce_iteration" "pure bounded terminal event-loop reducer",
   live_terminal_record "animus-live-terminal::render_terminal_view" "deterministic Ratatui view projection",
   live_terminal_record "animus-live-terminal::render_text_projection" "deterministic text rendering projection",
+  live_terminal_record "animus-live-terminal::preflight_live_terminal_activation" "pure product activation preflight before connection or terminal effects",
   live_terminal_record "animus-live-terminal::run_attached_terminal" "bounded terminal input event command and render orchestration",
+  live_terminal_record "animus-live-terminal::run_attached_terminal_with_activation" "activation-gated terminal orchestration over explicit borrowed host ports",
   entry "animus::child_session_host" "animus" root shell shell_owned stable "root feature facade for the non-default concrete child-session host",
   durable_steel_kernel_restore_record "animus::DurableSteelKernelHostError" "animus" root reusable none "root reexport of the bounded durable Steel kernel host error" none,
   durable_steel_kernel_restore_record "animus::DurableSteelKernelHostIssue" "animus" root reusable none "root reexport of the durable Steel kernel issue class" none,

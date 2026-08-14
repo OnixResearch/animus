@@ -18,6 +18,11 @@ fn main() {
 }
 
 fn run() -> Result<(), String> {
+    let activation = animus_live_terminal::preflight_live_terminal_activation()
+        .map_err(|_error| String::from("activation-invalid"))?;
+    if !activation.effects_admitted() {
+        return Err(String::from("activation-blocked"));
+    }
     let config_path =
         env::var(CONFIG_PATH_ENV).map_err(|_error| String::from("config-path-missing"))?;
     let config_bytes = std::fs::read(config_path).map_err(|_error| String::from("config-read"))?;
@@ -56,13 +61,15 @@ fn run() -> Result<(), String> {
             return Err(String::from("backend-start"));
         }
     };
-    let result =
-        animus_live_terminal::run_attached_terminal(animus_live_terminal::LiveTerminalRequest {
+    let result = animus_live_terminal::run_attached_terminal_with_activation(
+        animus_live_terminal::LiveTerminalRequest {
             config: &config,
             connection: &mut connection,
             host: &mut host,
             maximum_iterations: MAXIMUM_ITERATIONS,
-        });
+        },
+        &activation,
+    );
     drop(host);
     let cleanup = guard
         .restore()

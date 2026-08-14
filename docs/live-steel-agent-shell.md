@@ -36,6 +36,8 @@ Live provider availability and model behavior remain unresolved until a separate
 
 `scripts/config/export-nickel-configs` writes the deterministic JSON file. Rust validates the complete file before it opens a store or contacts a provider.
 
+The binary runs the maintained composition activation preflight before it reads the credential. The library entrypoint repeats the same pure check before store or provider effects. A blocked result returns `LiveApplicationError::Activation` without an ambient fallback. See [composition activation graph](composition-activation-graph.md).
+
 The binary accepts `<store-root> <prompt>`. It reads one explicit credential value from standard input. It does not read an environment variable, provider account, current directory, or ambient credential store.
 
 ## Durable ordering
@@ -62,7 +64,7 @@ The deterministic fixture rail is:
 scripts/cairn/check-live-steel-agent-shell --root .
 ```
 
-The rail runs positive and negative tool-loop, child, configuration, cancellation, host-failure, durable restart, and restore-drift checks. It also runs Clippy with warnings denied.
+The rail runs positive and negative tool-loop, child, configuration, cancellation, host-failure, durable restart, and restore-drift checks. The composition activation rail adds startup-order and fail-loud coverage. It also runs Clippy with warnings denied.
 
 Receipts contain safe labels, counts, BLAKE3 identities, one fixed omission marker, and explicit non-claims. They omit prompts, provider bodies, tool arguments, Steel source, host results, child content, credentials, and paths.
 

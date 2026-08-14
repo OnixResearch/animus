@@ -7,21 +7,15 @@ const ARG_ROOT: &str = "--root";
 const ARG_CATALOG: &str = "--catalog";
 const ARG_DOCS: &str = "--docs";
 const COMPONENT_KIND: &str = "component";
+const PORT_KIND: &str = "port";
+const EVENT_KIND: &str = "event";
 const FIELD_SEPARATOR: char = '|';
 const LIST_SEPARATOR: char = ',';
+const DOC_LIST_SEPARATOR: &str = ", ";
+const DOC_ROW_CHECK_SEPARATOR: &str = "<br>";
 const COMPONENT_FIELD_COUNT: usize = 12;
-const INDEX_KIND: usize = 0;
-const INDEX_COMPONENT_ID: usize = 1;
-const INDEX_OWNER: usize = 2;
-const INDEX_COMPONENT_CLASS: usize = 3;
-const INDEX_FEATURE_GATE: usize = 4;
-const INDEX_REQUIRED_AUTHORITY: usize = 5;
-const INDEX_DEPENDS_ON: usize = 6;
-const INDEX_COMPOSES_WITH: usize = 7;
-const INDEX_CAPABILITY_FAMILY: usize = 8;
-const INDEX_FOCUSED_CHECKS: usize = 9;
-const INDEX_EVIDENCE_LABELS: usize = 10;
-const INDEX_PUBLIC_IMPORT: usize = 11;
+const PORT_FIELD_COUNT: usize = 13;
+const EVENT_FIELD_COUNT: usize = 11;
 const EXIT_FAILURE: i32 = 1;
 const EXIT_SUCCESS: i32 = 0;
 
@@ -34,7 +28,13 @@ const CLASS_CRATE_FEATURE: &str = "crate-feature";
 const AUTHORITY_NONE: &str = "none";
 const AUTHORITY_INJECTED: &str = "injected-only";
 const AUTHORITY_SHELL: &str = "shell-owned";
-const DOC_ROW_CHECK_SEPARATOR: &str = "<br>";
+const ACTIVATION_REQUIRED: &str = "required";
+const ACTIVATION_OPTIONAL: &str = "optional";
+const MULTIPLICITY_EXACTLY_ONE: &str = "exactly-one";
+const MULTIPLICITY_ZERO_OR_ONE: &str = "zero-or-one";
+const MULTIPLICITY_ONE_OR_MORE: &str = "one-or-more";
+const CYCLE_ACYCLIC: &str = "acyclic";
+const CYCLE_BOUNDED: &str = "bounded";
 
 const ISSUE_MALFORMED_RECORD: &str = "COMPONENT_CATALOG_MALFORMED_RECORD";
 const ISSUE_DUPLICATE_ID: &str = "COMPONENT_CATALOG_DUPLICATE_ID";
@@ -47,11 +47,35 @@ const ISSUE_UNKNOWN_DEPENDENCY: &str = "COMPONENT_CATALOG_UNKNOWN_DEPENDENCY";
 const ISSUE_UNKNOWN_COMPOSITION_LINK: &str = "COMPONENT_CATALOG_UNKNOWN_COMPOSITION_LINK";
 const ISSUE_DEPENDENCY_CYCLE: &str = "COMPONENT_CATALOG_DEPENDENCY_CYCLE";
 const ISSUE_MISSING_CHECKS: &str = "COMPONENT_CATALOG_MISSING_CHECKS";
-const ISSUE_REUSABLE_AMBIENT_AUTHORITY: &str =
-    "COMPONENT_CATALOG_REUSABLE_AMBIENT_AUTHORITY";
+const ISSUE_REUSABLE_AMBIENT_AUTHORITY: &str = "COMPONENT_CATALOG_REUSABLE_AMBIENT_AUTHORITY";
 const ISSUE_OPTIONAL_BRIDGE_AUTHORITY: &str = "COMPONENT_CATALOG_OPTIONAL_BRIDGE_AUTHORITY";
 const ISSUE_UNSAFE_EVIDENCE_FIELD: &str = "COMPONENT_CATALOG_UNSAFE_EVIDENCE_FIELD";
 const ISSUE_DOC_DRIFT: &str = "COMPONENT_CATALOG_DOC_DRIFT";
+const ISSUE_DUPLICATE_PORT: &str = "COMPONENT_CATALOG_DUPLICATE_PORT";
+const ISSUE_UNKNOWN_PORT_OWNER: &str = "COMPONENT_CATALOG_UNKNOWN_PORT_OWNER";
+const ISSUE_UNKNOWN_PORT_PROVIDER: &str = "COMPONENT_CATALOG_UNKNOWN_PORT_PROVIDER";
+const ISSUE_UNKNOWN_PORT_CONSUMER: &str = "COMPONENT_CATALOG_UNKNOWN_PORT_CONSUMER";
+const ISSUE_UNKNOWN_LIFECYCLE_OWNER: &str = "COMPONENT_CATALOG_UNKNOWN_LIFECYCLE_OWNER";
+const ISSUE_UNKNOWN_SCOPE: &str = "COMPONENT_CATALOG_UNKNOWN_SCOPE";
+const ISSUE_UNKNOWN_MULTIPLICITY: &str = "COMPONENT_CATALOG_UNKNOWN_MULTIPLICITY";
+const ISSUE_UNKNOWN_ACTIVATION: &str = "COMPONENT_CATALOG_UNKNOWN_ACTIVATION";
+const ISSUE_ORPHAN_REQUIRED_PORT: &str = "COMPONENT_CATALOG_ORPHAN_REQUIRED_PORT";
+const ISSUE_INVALID_MULTIPLICITY: &str = "COMPONENT_CATALOG_INVALID_MULTIPLICITY";
+const ISSUE_PORT_AUTHORITY_MISMATCH: &str = "COMPONENT_CATALOG_PORT_AUTHORITY_MISMATCH";
+const ISSUE_DUPLICATE_EVENT: &str = "COMPONENT_CATALOG_DUPLICATE_EVENT";
+const ISSUE_UNKNOWN_EVENT_PRODUCER: &str = "COMPONENT_CATALOG_UNKNOWN_EVENT_PRODUCER";
+const ISSUE_UNKNOWN_EVENT_CONSUMER: &str = "COMPONENT_CATALOG_UNKNOWN_EVENT_CONSUMER";
+const ISSUE_UNKNOWN_DELIVERY: &str = "COMPONENT_CATALOG_UNKNOWN_DELIVERY";
+const ISSUE_UNKNOWN_DURABILITY: &str = "COMPONENT_CATALOG_UNKNOWN_DURABILITY";
+const ISSUE_UNKNOWN_CYCLE_POLICY: &str = "COMPONENT_CATALOG_UNKNOWN_CYCLE_POLICY";
+const ISSUE_MISSING_EVENT_CONSUMER: &str = "COMPONENT_CATALOG_MISSING_EVENT_CONSUMER";
+const ISSUE_UNSUPPORTED_EVENT_CYCLE: &str = "COMPONENT_CATALOG_UNSUPPORTED_EVENT_CYCLE";
+const ISSUE_PROFILE_DRIFT: &str = "COMPONENT_CATALOG_PROFILE_DRIFT";
+
+const LIVE_STEEL_CONSUMER: &str = "std.live-steel-agent-shell";
+const LIVE_STEEL_PROFILE_PATH: &str = "crates/animus-live-steel-agent/src/activation.rs";
+const LIVE_TERMINAL_CONSUMER: &str = "std.live-terminal-agent-host";
+const LIVE_TERMINAL_PROFILE_PATH: &str = "crates/animus-live-terminal/src/activation.rs";
 
 const ALLOWED_CLASSES: &[&str] = &[
     CLASS_REUSABLE,
@@ -206,6 +230,23 @@ const ALLOWED_FAMILIES: &[&str] = &[
     "maintenance",
 ];
 
+const ALLOWED_SCOPES: &[&str] = &["application", "session", "worker", "client", "request"];
+const ALLOWED_MULTIPLICITIES: &[&str] = &[
+    MULTIPLICITY_EXACTLY_ONE,
+    MULTIPLICITY_ZERO_OR_ONE,
+    MULTIPLICITY_ONE_OR_MORE,
+];
+const ALLOWED_ACTIVATIONS: &[&str] = &[ACTIVATION_REQUIRED, ACTIVATION_OPTIONAL];
+const ALLOWED_DELIVERIES: &[&str] = &[
+    "ordered",
+    "snapshot-first",
+    "serial",
+    "parallel",
+    "waterfall",
+];
+const ALLOWED_DURABILITIES: &[&str] = &["durable", "live-only", "metadata-only"];
+const ALLOWED_CYCLE_POLICIES: &[&str] = &[CYCLE_ACYCLIC, CYCLE_BOUNDED];
+
 const UNSAFE_FIELD_MARKERS: &[&str] = &[
     "/home/",
     "api_key=",
@@ -251,6 +292,43 @@ struct ComponentEntry {
     public_import: String,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct PortEntry {
+    port_id: String,
+    owner_component_id: String,
+    provider_component_ids: Vec<String>,
+    consumer_component_ids: Vec<String>,
+    scope_class: String,
+    multiplicity: String,
+    lifecycle_owner_component_id: String,
+    activation: String,
+    feature_gate: String,
+    required_authority: String,
+    focused_check: String,
+    evidence_labels: Vec<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct EventEntry {
+    event_id: String,
+    producer_component_id: String,
+    consumer_component_ids: Vec<String>,
+    delivery: String,
+    durability: String,
+    lifecycle_owner_component_id: String,
+    activation: String,
+    cycle_policy: String,
+    focused_check: String,
+    evidence_labels: Vec<String>,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+struct Catalog {
+    components: Vec<ComponentEntry>,
+    ports: Vec<PortEntry>,
+    events: Vec<EventEntry>,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 struct Issue {
     code: &'static str,
@@ -272,24 +350,26 @@ fn run() -> Result<(), String> {
     let config = parse_args(env::args())?;
     let catalog_text = fs::read_to_string(&config.catalog)
         .map_err(|error| format!("failed to read component catalog: {error}"))?;
-    let (entries, mut issues) = parse_catalog(&catalog_text);
-    issues.extend(validate_catalog(&entries));
+    let (catalog, mut issues) = parse_catalog(&catalog_text);
+    issues.extend(validate_catalog(&catalog));
+    issues.extend(validate_profile_projection(&config.root, &catalog));
 
     if let Some(docs_path) = config.docs {
         let docs_text = fs::read_to_string(&docs_path)
             .map_err(|error| format!("failed to read component catalog docs: {error}"))?;
-        let expected_docs = render_docs(&entries);
+        let expected_docs = render_docs(&catalog);
         if docs_text != expected_docs {
             issues.push(Issue {
                 code: ISSUE_DOC_DRIFT,
                 subject: docs_path.display().to_string(),
-                detail: "docs/component-catalog.md does not match Nickel catalog projection".to_string(),
+                detail: "docs/component-catalog.md does not match Nickel catalog projection"
+                    .to_string(),
             });
         }
     }
 
     issues.sort();
-    print_report(&entries, &issues);
+    print_report(&catalog, &issues);
     if issues.is_empty() {
         Ok(())
     } else {
@@ -338,8 +418,8 @@ fn parse_args(mut args: impl Iterator<Item = String>) -> Result<Config, String> 
     })
 }
 
-fn parse_catalog(text: &str) -> (Vec<ComponentEntry>, Vec<Issue>) {
-    let mut entries = Vec::new();
+fn parse_catalog(text: &str) -> (Catalog, Vec<Issue>) {
+    let mut catalog = Catalog::default();
     let mut issues = Vec::new();
 
     for (line_index, raw_line) in text.lines().enumerate() {
@@ -347,31 +427,83 @@ fn parse_catalog(text: &str) -> (Vec<ComponentEntry>, Vec<Issue>) {
         if line.is_empty() {
             continue;
         }
-        let parts: Vec<&str> = line.split(FIELD_SEPARATOR).collect();
-        if parts.len() != COMPONENT_FIELD_COUNT || parts[INDEX_KIND] != COMPONENT_KIND {
+        let parts = line.split(FIELD_SEPARATOR).collect::<Vec<_>>();
+        let kind = parts.first().copied().unwrap_or_default();
+        let parse_result = match kind {
+            COMPONENT_KIND if parts.len() == COMPONENT_FIELD_COUNT => {
+                catalog.components.push(parse_component(&parts));
+                Ok(())
+            }
+            PORT_KIND if parts.len() == PORT_FIELD_COUNT => {
+                catalog.ports.push(parse_port(&parts));
+                Ok(())
+            }
+            EVENT_KIND if parts.len() == EVENT_FIELD_COUNT => {
+                catalog.events.push(parse_event(&parts));
+                Ok(())
+            }
+            _ => Err(()),
+        };
+        if parse_result.is_err() {
             issues.push(Issue {
                 code: ISSUE_MALFORMED_RECORD,
                 subject: format!("line {}", display_line_number(line_index)),
-                detail: format!("expected {COMPONENT_FIELD_COUNT} pipe-separated component fields"),
+                detail: format!(
+                    "expected a {COMPONENT_FIELD_COUNT}-field component, {PORT_FIELD_COUNT}-field port, or {EVENT_FIELD_COUNT}-field event"
+                ),
             });
-            continue;
         }
-        entries.push(ComponentEntry {
-            component_id: parts[INDEX_COMPONENT_ID].to_string(),
-            owner: parts[INDEX_OWNER].to_string(),
-            component_class: parts[INDEX_COMPONENT_CLASS].to_string(),
-            feature_gate: parts[INDEX_FEATURE_GATE].to_string(),
-            required_authority: parts[INDEX_REQUIRED_AUTHORITY].to_string(),
-            depends_on: parse_list(parts[INDEX_DEPENDS_ON]),
-            composes_with: parse_list(parts[INDEX_COMPOSES_WITH]),
-            capability_family: parts[INDEX_CAPABILITY_FAMILY].to_string(),
-            focused_checks: parse_list(parts[INDEX_FOCUSED_CHECKS]),
-            evidence_labels: parse_list(parts[INDEX_EVIDENCE_LABELS]),
-            public_import: parts[INDEX_PUBLIC_IMPORT].to_string(),
-        });
     }
 
-    (entries, issues)
+    (catalog, issues)
+}
+
+fn parse_component(parts: &[&str]) -> ComponentEntry {
+    ComponentEntry {
+        component_id: parts[1].to_string(),
+        owner: parts[2].to_string(),
+        component_class: parts[3].to_string(),
+        feature_gate: parts[4].to_string(),
+        required_authority: parts[5].to_string(),
+        depends_on: parse_list(parts[6]),
+        composes_with: parse_list(parts[7]),
+        capability_family: parts[8].to_string(),
+        focused_checks: parse_list(parts[9]),
+        evidence_labels: parse_list(parts[10]),
+        public_import: parts[11].to_string(),
+    }
+}
+
+fn parse_port(parts: &[&str]) -> PortEntry {
+    PortEntry {
+        port_id: parts[1].to_string(),
+        owner_component_id: parts[2].to_string(),
+        provider_component_ids: parse_list(parts[3]),
+        consumer_component_ids: parse_list(parts[4]),
+        scope_class: parts[5].to_string(),
+        multiplicity: parts[6].to_string(),
+        lifecycle_owner_component_id: parts[7].to_string(),
+        activation: parts[8].to_string(),
+        feature_gate: parts[9].to_string(),
+        required_authority: parts[10].to_string(),
+        focused_check: parts[11].to_string(),
+        evidence_labels: parse_list(parts[12]),
+    }
+}
+
+fn parse_event(parts: &[&str]) -> EventEntry {
+    EventEntry {
+        event_id: parts[1].to_string(),
+        producer_component_id: parts[2].to_string(),
+        consumer_component_ids: parse_list(parts[3]),
+        delivery: parts[4].to_string(),
+        durability: parts[5].to_string(),
+        lifecycle_owner_component_id: parts[6].to_string(),
+        activation: parts[7].to_string(),
+        cycle_policy: parts[8].to_string(),
+        focused_check: parts[9].to_string(),
+        evidence_labels: parse_list(parts[10]),
+    }
 }
 
 fn display_line_number(line_index: usize) -> usize {
@@ -391,159 +523,554 @@ fn parse_list(field: &str) -> Vec<String> {
     }
 }
 
-fn validate_catalog(entries: &[ComponentEntry]) -> Vec<Issue> {
+fn validate_profile_projection(root: &PathBuf, catalog: &Catalog) -> Vec<Issue> {
+    let profiles = [
+        (LIVE_STEEL_CONSUMER, LIVE_STEEL_PROFILE_PATH),
+        (LIVE_TERMINAL_CONSUMER, LIVE_TERMINAL_PROFILE_PATH),
+    ];
     let mut issues = Vec::new();
-    let mut seen_ids = BTreeSet::new();
-    let mut all_ids = BTreeSet::new();
-
-    for entry in entries {
-        if !all_ids.insert(entry.component_id.clone()) {
-            issues.push(Issue {
-                code: ISSUE_DUPLICATE_ID,
-                subject: entry.component_id.clone(),
-                detail: "component id appears more than once".to_string(),
-            });
+    for (consumer, relative_path) in profiles {
+        let ports = catalog
+            .ports
+            .iter()
+            .filter(|port| {
+                port.consumer_component_ids
+                    .iter()
+                    .any(|value| value == consumer)
+            })
+            .collect::<Vec<_>>();
+        let events = catalog
+            .events
+            .iter()
+            .filter(|event| {
+                event
+                    .consumer_component_ids
+                    .iter()
+                    .any(|value| value == consumer)
+            })
+            .collect::<Vec<_>>();
+        if ports.is_empty() && events.is_empty() {
+            continue;
+        }
+        let profile_path = root.join(relative_path);
+        let profile_source = match fs::read_to_string(&profile_path) {
+            Ok(source) => source,
+            Err(error) => {
+                issues.push(issue(
+                    ISSUE_PROFILE_DRIFT,
+                    relative_path,
+                    &format!("failed to read maintained activation profile: {error}"),
+                ));
+                continue;
+            }
+        };
+        for port in ports {
+            let mut values = vec![
+                port.port_id.as_str(),
+                port.owner_component_id.as_str(),
+                port.lifecycle_owner_component_id.as_str(),
+                port.scope_class.as_str(),
+                port.feature_gate.as_str(),
+            ];
+            values.extend(port.provider_component_ids.iter().map(String::as_str));
+            values.extend(port.consumer_component_ids.iter().map(String::as_str));
+            validate_profile_values(
+                &profile_source,
+                relative_path,
+                port.port_id.as_str(),
+                values,
+                &mut issues,
+            );
+        }
+        for event in events {
+            let mut values = vec![
+                event.event_id.as_str(),
+                event.producer_component_id.as_str(),
+                event.lifecycle_owner_component_id.as_str(),
+            ];
+            values.extend(event.consumer_component_ids.iter().map(String::as_str));
+            validate_profile_values(
+                &profile_source,
+                relative_path,
+                event.event_id.as_str(),
+                values,
+                &mut issues,
+            );
         }
     }
-
-    for entry in entries {
-        validate_entry(entry, &all_ids, &mut seen_ids, &mut issues);
-    }
-
-    issues.extend(validate_dependency_cycles(entries));
     issues
 }
 
-fn validate_entry(
-    entry: &ComponentEntry,
-    all_ids: &BTreeSet<String>,
-    seen_ids: &mut BTreeSet<String>,
+fn validate_profile_values(
+    source: &str,
+    relative_path: &str,
+    subject: &str,
+    values: Vec<&str>,
     issues: &mut Vec<Issue>,
 ) {
-    seen_ids.insert(entry.component_id.clone());
+    let missing = values
+        .into_iter()
+        .filter(|value| !source.contains(value))
+        .collect::<BTreeSet<_>>();
+    if !missing.is_empty() {
+        issues.push(issue(
+            ISSUE_PROFILE_DRIFT,
+            subject,
+            &format!(
+                "{relative_path} omits catalog values: {}",
+                missing
+                    .into_iter()
+                    .collect::<Vec<_>>()
+                    .join(DOC_LIST_SEPARATOR)
+            ),
+        ));
+    }
+}
 
-    if !is_valid_component_id(&entry.component_id) {
-        issues.push(Issue {
-            code: ISSUE_INVALID_ID,
-            subject: entry.component_id.clone(),
-            detail: "component ids must use lowercase letters, digits, '.', and '-'".to_string(),
-        });
+fn validate_catalog(catalog: &Catalog) -> Vec<Issue> {
+    let mut issues = Vec::new();
+    let mut all_ids = BTreeSet::new();
+    for entry in &catalog.components {
+        if !all_ids.insert(entry.component_id.clone()) {
+            issues.push(issue(
+                ISSUE_DUPLICATE_ID,
+                entry.component_id.as_str(),
+                "component id appears more than once",
+            ));
+        }
+    }
+    for entry in &catalog.components {
+        validate_component(entry, &all_ids, &mut issues);
+    }
+    issues.extend(validate_dependency_cycles(&catalog.components));
+    validate_ports(catalog, &all_ids, &mut issues);
+    validate_events(catalog, &all_ids, &mut issues);
+    issues.extend(validate_event_cycles(&catalog.events));
+    issues
+}
+
+fn validate_component(entry: &ComponentEntry, all_ids: &BTreeSet<String>, issues: &mut Vec<Issue>) {
+    if !is_valid_id(&entry.component_id) {
+        issues.push(issue(
+            ISSUE_INVALID_ID,
+            entry.component_id.as_str(),
+            "component ids must use lowercase letters, digits, '.', and '-'",
+        ));
     }
     if !ALLOWED_CLASSES.contains(&entry.component_class.as_str()) {
-        issues.push(Issue {
-            code: ISSUE_UNKNOWN_CLASS,
-            subject: entry.component_id.clone(),
-            detail: entry.component_class.clone(),
-        });
+        issues.push(issue(
+            ISSUE_UNKNOWN_CLASS,
+            entry.component_id.as_str(),
+            entry.component_class.as_str(),
+        ));
     }
     if !ALLOWED_FEATURES.contains(&entry.feature_gate.as_str()) {
-        issues.push(Issue {
-            code: ISSUE_UNKNOWN_FEATURE,
-            subject: entry.component_id.clone(),
-            detail: entry.feature_gate.clone(),
-        });
+        issues.push(issue(
+            ISSUE_UNKNOWN_FEATURE,
+            entry.component_id.as_str(),
+            entry.feature_gate.as_str(),
+        ));
     }
     if !ALLOWED_AUTHORITIES.contains(&entry.required_authority.as_str()) {
-        issues.push(Issue {
-            code: ISSUE_UNKNOWN_AUTHORITY,
-            subject: entry.component_id.clone(),
-            detail: entry.required_authority.clone(),
-        });
+        issues.push(issue(
+            ISSUE_UNKNOWN_AUTHORITY,
+            entry.component_id.as_str(),
+            entry.required_authority.as_str(),
+        ));
     }
     if !ALLOWED_FAMILIES.contains(&entry.capability_family.as_str()) {
-        issues.push(Issue {
-            code: ISSUE_UNKNOWN_FAMILY,
-            subject: entry.component_id.clone(),
-            detail: entry.capability_family.clone(),
-        });
+        issues.push(issue(
+            ISSUE_UNKNOWN_FAMILY,
+            entry.component_id.as_str(),
+            entry.capability_family.as_str(),
+        ));
     }
     if entry.focused_checks.is_empty() {
-        issues.push(Issue {
-            code: ISSUE_MISSING_CHECKS,
-            subject: entry.component_id.clone(),
-            detail: "component entries must name at least one focused check".to_string(),
-        });
+        issues.push(issue(
+            ISSUE_MISSING_CHECKS,
+            entry.component_id.as_str(),
+            "component entries must name at least one focused check",
+        ));
     }
     if entry.component_class == CLASS_REUSABLE && entry.required_authority != AUTHORITY_NONE {
-        issues.push(Issue {
-            code: ISSUE_REUSABLE_AMBIENT_AUTHORITY,
-            subject: entry.component_id.clone(),
-            detail: format!(
+        issues.push(issue(
+            ISSUE_REUSABLE_AMBIENT_AUTHORITY,
+            entry.component_id.as_str(),
+            format!(
                 "reusable contract requires {} authority",
                 entry.required_authority
-            ),
-        });
+            )
+            .as_str(),
+        ));
     }
-    if entry.component_class == CLASS_OPTIONAL_BRIDGE && entry.required_authority != AUTHORITY_NONE {
-        issues.push(Issue {
-            code: ISSUE_OPTIONAL_BRIDGE_AUTHORITY,
-            subject: entry.component_id.clone(),
-            detail: format!(
+    if entry.component_class == CLASS_OPTIONAL_BRIDGE && entry.required_authority != AUTHORITY_NONE
+    {
+        issues.push(issue(
+            ISSUE_OPTIONAL_BRIDGE_AUTHORITY,
+            entry.component_id.as_str(),
+            format!(
                 "optional bridge requires {} authority",
                 entry.required_authority
-            ),
-        });
+            )
+            .as_str(),
+        ));
     }
-
     for dependency in &entry.depends_on {
         if !all_ids.contains(dependency) {
-            issues.push(Issue {
-                code: ISSUE_UNKNOWN_DEPENDENCY,
-                subject: entry.component_id.clone(),
-                detail: dependency.clone(),
-            });
+            issues.push(issue(
+                ISSUE_UNKNOWN_DEPENDENCY,
+                entry.component_id.as_str(),
+                dependency.as_str(),
+            ));
         }
     }
     for link in &entry.composes_with {
         if !all_ids.contains(link) {
-            issues.push(Issue {
-                code: ISSUE_UNKNOWN_COMPOSITION_LINK,
-                subject: entry.component_id.clone(),
-                detail: link.clone(),
-            });
+            issues.push(issue(
+                ISSUE_UNKNOWN_COMPOSITION_LINK,
+                entry.component_id.as_str(),
+                link.as_str(),
+            ));
         }
     }
-    for (field_name, field_value) in entry_safe_fields(entry) {
-        if contains_unsafe_marker(&field_value) {
-            issues.push(Issue {
-                code: ISSUE_UNSAFE_EVIDENCE_FIELD,
-                subject: entry.component_id.clone(),
-                detail: field_name.to_string(),
-            });
+    validate_safe_fields(
+        entry.component_id.as_str(),
+        [
+            ("component_id", entry.component_id.as_str()),
+            ("owner", entry.owner.as_str()),
+            ("feature_gate", entry.feature_gate.as_str()),
+            ("capability_family", entry.capability_family.as_str()),
+            ("public_import", entry.public_import.as_str()),
+        ],
+        issues,
+    );
+    validate_safe_list(
+        entry.component_id.as_str(),
+        "focused_checks",
+        &entry.focused_checks,
+        issues,
+    );
+    validate_safe_list(
+        entry.component_id.as_str(),
+        "evidence_labels",
+        &entry.evidence_labels,
+        issues,
+    );
+}
+
+fn validate_ports(catalog: &Catalog, all_ids: &BTreeSet<String>, issues: &mut Vec<Issue>) {
+    let component_map = catalog
+        .components
+        .iter()
+        .map(|entry| (entry.component_id.as_str(), entry))
+        .collect::<BTreeMap<_, _>>();
+    let mut port_ids = BTreeSet::new();
+    for port in &catalog.ports {
+        if !is_valid_id(&port.port_id) {
+            issues.push(issue(
+                ISSUE_INVALID_ID,
+                port.port_id.as_str(),
+                "port ids must use lowercase letters, digits, '.', and '-'",
+            ));
         }
+        if !port_ids.insert(port.port_id.as_str()) {
+            issues.push(issue(
+                ISSUE_DUPLICATE_PORT,
+                port.port_id.as_str(),
+                "port id appears more than once",
+            ));
+        }
+        validate_known_ref(
+            all_ids,
+            port.owner_component_id.as_str(),
+            ISSUE_UNKNOWN_PORT_OWNER,
+            port.port_id.as_str(),
+            issues,
+        );
+        validate_known_ref(
+            all_ids,
+            port.lifecycle_owner_component_id.as_str(),
+            ISSUE_UNKNOWN_LIFECYCLE_OWNER,
+            port.port_id.as_str(),
+            issues,
+        );
+        for provider in &port.provider_component_ids {
+            validate_known_ref(
+                all_ids,
+                provider.as_str(),
+                ISSUE_UNKNOWN_PORT_PROVIDER,
+                port.port_id.as_str(),
+                issues,
+            );
+        }
+        for consumer in &port.consumer_component_ids {
+            validate_known_ref(
+                all_ids,
+                consumer.as_str(),
+                ISSUE_UNKNOWN_PORT_CONSUMER,
+                port.port_id.as_str(),
+                issues,
+            );
+        }
+        validate_choice(
+            &port.scope_class,
+            ALLOWED_SCOPES,
+            ISSUE_UNKNOWN_SCOPE,
+            port.port_id.as_str(),
+            issues,
+        );
+        validate_choice(
+            &port.multiplicity,
+            ALLOWED_MULTIPLICITIES,
+            ISSUE_UNKNOWN_MULTIPLICITY,
+            port.port_id.as_str(),
+            issues,
+        );
+        validate_choice(
+            &port.activation,
+            ALLOWED_ACTIVATIONS,
+            ISSUE_UNKNOWN_ACTIVATION,
+            port.port_id.as_str(),
+            issues,
+        );
+        validate_choice(
+            &port.feature_gate,
+            ALLOWED_FEATURES,
+            ISSUE_UNKNOWN_FEATURE,
+            port.port_id.as_str(),
+            issues,
+        );
+        validate_choice(
+            &port.required_authority,
+            ALLOWED_AUTHORITIES,
+            ISSUE_UNKNOWN_AUTHORITY,
+            port.port_id.as_str(),
+            issues,
+        );
+        if port.focused_check.is_empty() {
+            issues.push(issue(
+                ISSUE_MISSING_CHECKS,
+                port.port_id.as_str(),
+                "port entries must name one focused check",
+            ));
+        }
+        if port.activation == ACTIVATION_REQUIRED
+            && (port.provider_component_ids.is_empty() || port.consumer_component_ids.is_empty())
+        {
+            issues.push(issue(
+                ISSUE_ORPHAN_REQUIRED_PORT,
+                port.port_id.as_str(),
+                "required port must declare providers and direct consumers",
+            ));
+        }
+        if !multiplicity_admits(&port.multiplicity, port.provider_component_ids.len()) {
+            issues.push(issue(
+                ISSUE_INVALID_MULTIPLICITY,
+                port.port_id.as_str(),
+                port.multiplicity.as_str(),
+            ));
+        }
+        for provider in &port.provider_component_ids {
+            if let Some(component) = component_map.get(provider.as_str()) {
+                if !authority_supplies(
+                    component.required_authority.as_str(),
+                    port.required_authority.as_str(),
+                ) {
+                    issues.push(issue(
+                        ISSUE_PORT_AUTHORITY_MISMATCH,
+                        port.port_id.as_str(),
+                        provider.as_str(),
+                    ));
+                }
+            }
+        }
+        validate_safe_fields(
+            port.port_id.as_str(),
+            [
+                ("port_id", port.port_id.as_str()),
+                ("scope_class", port.scope_class.as_str()),
+                ("focused_check", port.focused_check.as_str()),
+            ],
+            issues,
+        );
+        validate_safe_list(
+            port.port_id.as_str(),
+            "evidence_labels",
+            &port.evidence_labels,
+            issues,
+        );
     }
 }
 
-fn is_valid_component_id(value: &str) -> bool {
+fn validate_events(catalog: &Catalog, all_ids: &BTreeSet<String>, issues: &mut Vec<Issue>) {
+    let mut event_ids = BTreeSet::new();
+    for event in &catalog.events {
+        if !is_valid_id(&event.event_id) {
+            issues.push(issue(
+                ISSUE_INVALID_ID,
+                event.event_id.as_str(),
+                "event ids must use lowercase letters, digits, '.', and '-'",
+            ));
+        }
+        if !event_ids.insert(event.event_id.as_str()) {
+            issues.push(issue(
+                ISSUE_DUPLICATE_EVENT,
+                event.event_id.as_str(),
+                "event id appears more than once",
+            ));
+        }
+        validate_known_ref(
+            all_ids,
+            event.producer_component_id.as_str(),
+            ISSUE_UNKNOWN_EVENT_PRODUCER,
+            event.event_id.as_str(),
+            issues,
+        );
+        validate_known_ref(
+            all_ids,
+            event.lifecycle_owner_component_id.as_str(),
+            ISSUE_UNKNOWN_LIFECYCLE_OWNER,
+            event.event_id.as_str(),
+            issues,
+        );
+        for consumer in &event.consumer_component_ids {
+            validate_known_ref(
+                all_ids,
+                consumer.as_str(),
+                ISSUE_UNKNOWN_EVENT_CONSUMER,
+                event.event_id.as_str(),
+                issues,
+            );
+        }
+        validate_choice(
+            &event.delivery,
+            ALLOWED_DELIVERIES,
+            ISSUE_UNKNOWN_DELIVERY,
+            event.event_id.as_str(),
+            issues,
+        );
+        validate_choice(
+            &event.durability,
+            ALLOWED_DURABILITIES,
+            ISSUE_UNKNOWN_DURABILITY,
+            event.event_id.as_str(),
+            issues,
+        );
+        validate_choice(
+            &event.activation,
+            ALLOWED_ACTIVATIONS,
+            ISSUE_UNKNOWN_ACTIVATION,
+            event.event_id.as_str(),
+            issues,
+        );
+        validate_choice(
+            &event.cycle_policy,
+            ALLOWED_CYCLE_POLICIES,
+            ISSUE_UNKNOWN_CYCLE_POLICY,
+            event.event_id.as_str(),
+            issues,
+        );
+        if event.focused_check.is_empty() {
+            issues.push(issue(
+                ISSUE_MISSING_CHECKS,
+                event.event_id.as_str(),
+                "event entries must name one focused check",
+            ));
+        }
+        if event.activation == ACTIVATION_REQUIRED && event.consumer_component_ids.is_empty() {
+            issues.push(issue(
+                ISSUE_MISSING_EVENT_CONSUMER,
+                event.event_id.as_str(),
+                "required event must declare at least one consumer",
+            ));
+        }
+        validate_safe_fields(
+            event.event_id.as_str(),
+            [
+                ("event_id", event.event_id.as_str()),
+                ("focused_check", event.focused_check.as_str()),
+            ],
+            issues,
+        );
+        validate_safe_list(
+            event.event_id.as_str(),
+            "evidence_labels",
+            &event.evidence_labels,
+            issues,
+        );
+    }
+}
+
+fn validate_known_ref(
+    all_ids: &BTreeSet<String>,
+    value: &str,
+    code: &'static str,
+    subject: &str,
+    issues: &mut Vec<Issue>,
+) {
+    if !all_ids.contains(value) {
+        issues.push(issue(code, subject, value));
+    }
+}
+
+fn validate_choice(
+    value: &str,
+    allowed: &[&str],
+    code: &'static str,
+    subject: &str,
+    issues: &mut Vec<Issue>,
+) {
+    if !allowed.contains(&value) {
+        issues.push(issue(code, subject, value));
+    }
+}
+
+fn multiplicity_admits(multiplicity: &str, count: usize) -> bool {
+    match multiplicity {
+        MULTIPLICITY_EXACTLY_ONE => count == 1,
+        MULTIPLICITY_ZERO_OR_ONE => count <= 1,
+        MULTIPLICITY_ONE_OR_MORE => count >= 1,
+        _ => true,
+    }
+}
+
+fn authority_supplies(provider: &str, required: &str) -> bool {
+    match required {
+        AUTHORITY_NONE => true,
+        AUTHORITY_INJECTED => provider == AUTHORITY_INJECTED || provider == AUTHORITY_SHELL,
+        AUTHORITY_SHELL => provider == AUTHORITY_SHELL,
+        _ => provider == required,
+    }
+}
+
+fn is_valid_id(value: &str) -> bool {
     !value.is_empty()
-        && value
-            .chars()
-            .all(|character| character.is_ascii_lowercase() || character.is_ascii_digit() || character == '.' || character == '-')
+        && value.chars().all(|character| {
+            character.is_ascii_lowercase()
+                || character.is_ascii_digit()
+                || character == '.'
+                || character == '-'
+        })
 }
 
-fn entry_safe_fields(entry: &ComponentEntry) -> Vec<(&'static str, String)> {
-    let mut fields = vec![
-        ("component_id", entry.component_id.clone()),
-        ("owner", entry.owner.clone()),
-        ("feature_gate", entry.feature_gate.clone()),
-        ("capability_family", entry.capability_family.clone()),
-        ("public_import", entry.public_import.clone()),
-    ];
-    fields.extend(
-        entry
-            .focused_checks
-            .iter()
-            .cloned()
-            .map(|value| ("focused_checks", value)),
-    );
-    fields.extend(
-        entry
-            .evidence_labels
-            .iter()
-            .cloned()
-            .map(|value| ("evidence_labels", value)),
-    );
-    fields
+fn validate_safe_fields<const FIELD_COUNT: usize>(
+    subject: &str,
+    fields: [(&str, &str); FIELD_COUNT],
+    issues: &mut Vec<Issue>,
+) {
+    for (field_name, field_value) in fields {
+        if contains_unsafe_marker(field_value) {
+            issues.push(issue(ISSUE_UNSAFE_EVIDENCE_FIELD, subject, field_name));
+        }
+    }
+}
+
+fn validate_safe_list(subject: &str, field_name: &str, values: &[String], issues: &mut Vec<Issue>) {
+    for value in values {
+        if contains_unsafe_marker(value) {
+            issues.push(issue(ISSUE_UNSAFE_EVIDENCE_FIELD, subject, field_name));
+        }
+    }
 }
 
 fn contains_unsafe_marker(value: &str) -> bool {
@@ -554,16 +1081,15 @@ fn contains_unsafe_marker(value: &str) -> bool {
 }
 
 fn validate_dependency_cycles(entries: &[ComponentEntry]) -> Vec<Issue> {
-    let mut graph = BTreeMap::new();
-    for entry in entries {
-        graph.insert(entry.component_id.as_str(), entry.depends_on.as_slice());
-    }
-
+    let graph = entries
+        .iter()
+        .map(|entry| (entry.component_id.as_str(), entry.depends_on.as_slice()))
+        .collect::<BTreeMap<_, _>>();
     let mut issues = Vec::new();
     let mut visited = BTreeSet::new();
     let mut visiting = BTreeSet::new();
     for entry in entries {
-        detect_cycle(
+        detect_dependency_cycle(
             entry.component_id.as_str(),
             &graph,
             &mut visiting,
@@ -574,7 +1100,7 @@ fn validate_dependency_cycles(entries: &[ComponentEntry]) -> Vec<Issue> {
     issues
 }
 
-fn detect_cycle<'a>(
+fn detect_dependency_cycle<'a>(
     node: &'a str,
     graph: &BTreeMap<&'a str, &'a [String]>,
     visiting: &mut BTreeSet<&'a str>,
@@ -585,18 +1111,17 @@ fn detect_cycle<'a>(
         return;
     }
     if !visiting.insert(node) {
-        issues.push(Issue {
-            code: ISSUE_DEPENDENCY_CYCLE,
-            subject: node.to_string(),
-            detail: "dependency cycle detected".to_string(),
-        });
+        issues.push(issue(
+            ISSUE_DEPENDENCY_CYCLE,
+            node,
+            "dependency cycle detected",
+        ));
         return;
     }
-
     if let Some(dependencies) = graph.get(node) {
         for dependency in *dependencies {
             if graph.contains_key(dependency.as_str()) {
-                detect_cycle(dependency.as_str(), graph, visiting, visited, issues);
+                detect_dependency_cycle(dependency.as_str(), graph, visiting, visited, issues);
             }
         }
     }
@@ -604,52 +1129,178 @@ fn detect_cycle<'a>(
     visited.insert(node);
 }
 
-fn render_docs(entries: &[ComponentEntry]) -> String {
+fn validate_event_cycles(events: &[EventEntry]) -> Vec<Issue> {
+    let mut edges = BTreeMap::<&str, Vec<&str>>::new();
+    for event in events {
+        for consumer in &event.consumer_component_ids {
+            edges
+                .entry(event.producer_component_id.as_str())
+                .or_default()
+                .push(consumer.as_str());
+        }
+    }
+    let mut issues = Vec::new();
+    for event in events
+        .iter()
+        .filter(|event| event.cycle_policy == CYCLE_ACYCLIC)
+    {
+        for consumer in &event.consumer_component_ids {
+            let mut visited = BTreeSet::new();
+            if path_exists(
+                consumer.as_str(),
+                event.producer_component_id.as_str(),
+                &edges,
+                &mut visited,
+            ) {
+                issues.push(issue(
+                    ISSUE_UNSUPPORTED_EVENT_CYCLE,
+                    event.event_id.as_str(),
+                    "event cycle includes an acyclic edge",
+                ));
+            }
+        }
+    }
+    issues
+}
+
+fn path_exists<'a>(
+    current: &'a str,
+    target: &str,
+    edges: &BTreeMap<&'a str, Vec<&'a str>>,
+    visited: &mut BTreeSet<&'a str>,
+) -> bool {
+    if current == target {
+        return true;
+    }
+    if !visited.insert(current) {
+        return false;
+    }
+    edges.get(current).is_some_and(|next_values| {
+        next_values
+            .iter()
+            .any(|next| path_exists(next, target, edges, visited))
+    })
+}
+
+fn render_docs(catalog: &Catalog) -> String {
     let mut text = String::new();
     text.push_str("# Component catalog\n\n");
     text.push_str("This projection is generated from `.cairn/component-catalog.ncl`. Do not edit catalog rows by hand; update the Nickel source and run `scripts/cairn/check-component-catalog --root .`.\n\n");
-    text.push_str("The catalog names Lego-style Animus components, the smallest public import surface, authority posture, dependency links, capability family, and focused validation rail. It is metadata evidence only: it does not claim provider, filesystem, process, network, terminal, credential, persistence, production, or live-service readiness unless a row explicitly classifies that authority as shell-owned or injected.\n\n");
+    text.push_str("The catalog names Lego-style Animus components, application-owned capability seams, event ownership, activation posture, and focused rails. It is metadata evidence only. It does not prove runtime readiness, event delivery, effect success, authority, production readiness, or release eligibility.\n\n");
     text.push_str("| Component | Class | Owner | Feature gate | Authority | Family | Focused checks | Smallest import |\n");
     text.push_str("| --- | --- | --- | --- | --- | --- | --- | --- |\n");
-    for entry in entries {
+    for entry in &catalog.components {
+        text.push_str(format_component_row(entry).as_str());
+    }
+    text.push_str("\n## Dependency map\n\n");
+    text.push_str("| Component | Dependencies | Composition links |\n");
+    text.push_str("| --- | --- | --- |\n");
+    for entry in &catalog.components {
         text.push_str("| `");
         text.push_str(&entry.component_id);
+        text.push_str("` | ");
+        text.push_str(code_list(&entry.depends_on).as_str());
+        text.push_str(" | ");
+        text.push_str(code_list(&entry.composes_with).as_str());
+        text.push_str(" |\n");
+    }
+    text.push_str("\n## Capability seams\n\n");
+    text.push_str("| Port | Owner | Providers | Consumers | Scope | Multiplicity | Lifecycle owner | Activation | Feature | Authority | Focused check |\n");
+    text.push_str("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n");
+    for port in &catalog.ports {
+        text.push_str("| `");
+        text.push_str(&port.port_id);
         text.push_str("` | `");
-        text.push_str(&entry.component_class);
+        text.push_str(&port.owner_component_id);
+        text.push_str("` | ");
+        text.push_str(code_list(&port.provider_component_ids).as_str());
+        text.push_str(" | ");
+        text.push_str(code_list(&port.consumer_component_ids).as_str());
+        text.push_str(" | `");
+        text.push_str(&port.scope_class);
         text.push_str("` | `");
-        text.push_str(&entry.owner);
+        text.push_str(&port.multiplicity);
         text.push_str("` | `");
-        text.push_str(&entry.feature_gate);
+        text.push_str(&port.lifecycle_owner_component_id);
         text.push_str("` | `");
-        text.push_str(&entry.required_authority);
+        text.push_str(&port.activation);
         text.push_str("` | `");
-        text.push_str(&entry.capability_family);
+        text.push_str(&port.feature_gate);
         text.push_str("` | `");
-        text.push_str(&entry.focused_checks.join(DOC_ROW_CHECK_SEPARATOR));
+        text.push_str(&port.required_authority);
         text.push_str("` | `");
-        text.push_str(&entry.public_import);
+        text.push_str(&port.focused_check);
+        text.push_str("` |\n");
+    }
+    text.push_str("\n## Event ownership\n\n");
+    text.push_str("| Event | Producer | Consumers | Delivery | Durability | Lifecycle owner | Activation | Cycle policy | Focused check |\n");
+    text.push_str("| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n");
+    for event in &catalog.events {
+        text.push_str("| `");
+        text.push_str(&event.event_id);
+        text.push_str("` | `");
+        text.push_str(&event.producer_component_id);
+        text.push_str("` | ");
+        text.push_str(code_list(&event.consumer_component_ids).as_str());
+        text.push_str(" | `");
+        text.push_str(&event.delivery);
+        text.push_str("` | `");
+        text.push_str(&event.durability);
+        text.push_str("` | `");
+        text.push_str(&event.lifecycle_owner_component_id);
+        text.push_str("` | `");
+        text.push_str(&event.activation);
+        text.push_str("` | `");
+        text.push_str(&event.cycle_policy);
+        text.push_str("` | `");
+        text.push_str(&event.focused_check);
         text.push_str("` |\n");
     }
     text.push_str("\n## Validation\n\n");
-    text.push_str("Run `scripts/cairn/check-component-catalog --root .` to validate labels, dependency links, cycles, focused checks, safe evidence fields, fixtures, and this projection. The Nix check is `nix build .#checks.x86_64-linux.component-catalog --no-link -L`.\n");
+    text.push_str("Run `scripts/cairn/check-component-catalog --root .` to validate components, dependencies, seams, event routes, activation metadata, maintained product-profile binding, safe evidence fields, fixtures, and this projection. The Nix check is `nix build .#checks.x86_64-linux.component-catalog --no-link -L`.\n");
     text
 }
 
-fn print_report(entries: &[ComponentEntry], issues: &[Issue]) {
+fn format_component_row(entry: &ComponentEntry) -> String {
+    format!(
+        "| `{}` | `{}` | `{}` | `{}` | `{}` | `{}` | `{}` | `{}` |\n",
+        entry.component_id,
+        entry.component_class,
+        entry.owner,
+        entry.feature_gate,
+        entry.required_authority,
+        entry.capability_family,
+        entry.focused_checks.join(DOC_ROW_CHECK_SEPARATOR),
+        entry.public_import
+    )
+}
+
+fn code_list(values: &[String]) -> String {
+    if values.is_empty() {
+        "-".to_string()
+    } else {
+        values
+            .iter()
+            .map(|value| format!("`{value}`"))
+            .collect::<Vec<_>>()
+            .join(DOC_LIST_SEPARATOR)
+    }
+}
+
+fn print_report(catalog: &Catalog, issues: &[Issue]) {
     for issue in issues {
-        println!(
-            "ERROR {} {} {}",
-            issue.code, issue.subject, issue.detail
-        );
+        println!("ERROR {} {} {}", issue.code, issue.subject, issue.detail);
     }
 
     let mut by_class = BTreeMap::<&str, usize>::new();
     let mut by_family = BTreeMap::<&str, usize>::new();
     let mut dependency_links = 0usize;
     let mut composition_links = 0usize;
-    for entry in entries {
+    for entry in &catalog.components {
         *by_class.entry(entry.component_class.as_str()).or_default() += 1;
-        *by_family.entry(entry.capability_family.as_str()).or_default() += 1;
+        *by_family
+            .entry(entry.capability_family.as_str())
+            .or_default() += 1;
         dependency_links += entry.depends_on.len();
         composition_links += entry.composes_with.len();
     }
@@ -662,7 +1313,17 @@ fn print_report(entries: &[ComponentEntry], issues: &[Issue]) {
     }
     println!("dependency links: {dependency_links}");
     println!("composition links: {composition_links}");
+    println!("capability seams: {}", catalog.ports.len());
+    println!("event routes: {}", catalog.events.len());
     if issues.is_empty() {
         println!("component catalog: ok");
+    }
+}
+
+fn issue(code: &'static str, subject: &str, detail: &str) -> Issue {
+    Issue {
+        code,
+        subject: subject.to_string(),
+        detail: detail.to_string(),
     }
 }

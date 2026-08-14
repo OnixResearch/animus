@@ -14,12 +14,15 @@ The maintained matrix covers:
 - middleware denials plus runtime failure reports;
 - capability absence plus no ambient fallback.
 
+The composition activation graph is the pre-effect closure gate for maintained product roots. Its separate rail covers required providers, event routes, readiness, optional degradation, and startup ordering. See [composition activation graph](composition-activation-graph.md).
+
 Each matrix entry has an owner, feature requirements, one positive case, one negative case, and a safe evidence label. Positive scenarios use in-memory DTOs and fake adapters. Negative scenarios cover malformed model responses, disabled model surfaces, unauthorized tools, missing executor-kit bindings, oversized output, unsafe receipts, unsafe headless records, middleware failures, and ambient fallback attempts.
 
 ## Command
 
 ```sh
 scripts/cairn/check-composition-conformance --root .
+scripts/cairn/check-composition-activation-graph --root .
 nix build .#checks.x86_64-linux.composition-conformance --no-link -L
 ```
 
