@@ -33,10 +33,14 @@ const TEST_TOOL_CAPABILITY: &str = "tool.read";
 const TEST_TOOL_ASSISTANT: &str = "I will inspect the fixture";
 const TEST_TOOL_OUTPUT: &str = "bounded fixture output";
 const TEST_TOOL_VISIBLE_CHARS: u32 = 128;
+const BLAKE3_HEX_CHARS: usize = 64;
 const EXPECTED_TOOL_FLOW_MESSAGES: usize = 5;
+const EXPECTED_COMMITTED_TOOL_MESSAGES: usize = 4;
 const EXPECTED_TOOL_FLOW_COMMITS: u32 = 4;
+const EXPECTED_TOOL_RESULT_COMMITS: u32 = 3;
 const EXPECTED_TOOL_FLOW_PROVIDER_DISPATCHES: u32 = 2;
 const EXPECTED_TOOL_FLOW_TOOL_DISPATCHES: u32 = 1;
+const EXPECTED_TOOL_COMMIT_OBSERVATIONS: u32 = 1;
 const EXPECTED_TOOL_FLOW_AUTHORITY_OBSERVATIONS: u32 = 3;
 const FIRST_PROVIDER_DISPATCH: u32 = 1;
 const SECOND_COMMIT: u32 = 2;
@@ -163,6 +167,8 @@ impl CodingSessionProviderService for ToolSequenceProvider {
 #[derive(Clone, Debug, Default)]
 struct TestTool {
     dispatch_count: u32,
+    commit_observation_count: u32,
+    fail_commit_observation: bool,
 }
 
 impl CodingSessionToolService for TestTool {
@@ -189,6 +195,25 @@ impl CodingSessionToolService for TestTool {
             bounded,
             animus_adapters::tool::OutputRedactionClass::Safe,
         ))
+    }
+
+    fn observe_committed(
+        &mut self,
+        observation: &CodingSessionToolCommitObservation,
+    ) -> Result<(), CodingSessionServiceIssue> {
+        if self.fail_commit_observation {
+            return Err(CodingSessionServiceIssue::Failed);
+        }
+        let expected_owner =
+            animus_runtime::tool_execution_stages::coding_session_tool_commit_owner_identity();
+        if observation.commit_owner_identity != expected_owner
+            || !observation.synchronized
+            || observation.result_identity.len() != BLAKE3_HEX_CHARS
+        {
+            return Err(CodingSessionServiceIssue::Stale);
+        }
+        self.commit_observation_count = self.commit_observation_count.saturating_add(1);
+        Ok(())
     }
 }
 
@@ -377,12 +402,64 @@ fn host_runs_fake_tool_call_and_result_through_durable_boundaries() {
         EXPECTED_TOOL_FLOW_TOOL_DISPATCHES
     );
     assert_eq!(
+        services.tool.commit_observation_count,
+        EXPECTED_TOOL_COMMIT_OBSERVATIONS
+    );
+    assert_eq!(
         services.persistence.commit_count,
         EXPECTED_TOOL_FLOW_COMMITS
     );
     assert_eq!(
         services.authority.observation_count,
         EXPECTED_TOOL_FLOW_AUTHORITY_OBSERVATIONS
+    );
+}
+
+#[test]
+fn post_commit_observer_failure_blocks_provider_continuation() {
+    // r[verify agent_harness_runtime.tool_execution_stages.commit]
+    let services = CodingSessionHostServices {
+        provider: ToolSequenceProvider { dispatch_count: 0 },
+        tool: TestTool {
+            fail_commit_observation: true,
+            ..TestTool::default()
+        },
+        persistence: MemoryPersistence::new(false),
+        policy: AllowCodingSessionPolicy,
+        authority: AdmittedCodingSessionAuthority::default(),
+        cancellation: ObservedCodingSessionCancellation,
+        timer: AvailableCodingSessionTimer,
+        summarizer: FakeCodingSessionSummarizer {
+            summary: String::from(SMOKE_SUMMARY),
+        },
+        events: RecordingEvents::default(),
+    };
+    let mut host = CodingSessionHost::new(new_state(false), services).expect("tool host");
+    let error = host
+        .prompt(TEST_RUN, TEST_USER_ENTRY, input(TEST_PROMPT))
+        .expect_err("post-commit observer failure");
+    assert_eq!(error.issue(), CodingSessionHostIssue::SessionBlocked);
+    assert_eq!(error.reducer_issue(), Some(CodingSessionIssue::ToolFailure));
+    assert_eq!(
+        host.message_snapshot().len(),
+        EXPECTED_COMMITTED_TOOL_MESSAGES
+    );
+    assert_eq!(
+        host.message_snapshot()
+            .last()
+            .map(CodingSessionMessage::kind),
+        Some(CodingSessionMessageKind::ToolResult)
+    );
+    let services = host.into_services();
+    assert_eq!(services.provider.dispatch_count, FIRST_PROVIDER_DISPATCH);
+    assert_eq!(
+        services.tool.dispatch_count,
+        EXPECTED_TOOL_FLOW_TOOL_DISPATCHES
+    );
+    assert_eq!(services.tool.commit_observation_count, 0);
+    assert_eq!(
+        services.persistence.commit_count,
+        EXPECTED_TOOL_RESULT_COMMITS
     );
 }
 

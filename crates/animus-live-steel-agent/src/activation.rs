@@ -4,7 +4,7 @@ use animus_runtime::composition_activation_graph as activation;
 
 const ACTIVATION_GENERATION: u64 = 1;
 #[cfg(test)]
-const REQUIRED_COMPONENT_COUNT: usize = 11;
+const REQUIRED_COMPONENT_COUNT: usize = 13;
 const LIVE_PORT_COUNT: usize = 3;
 #[cfg(test)]
 const LIVE_EVENT_COUNT: usize = 2;
@@ -22,11 +22,13 @@ const COMPONENT_SESSION_PORT: &str = "runtime.ledger-session-seam";
 const COMPONENT_RLM_PORT: &str = "runtime.rlm-host-executor";
 const COMPONENT_SESSION: &str = "runtime.coding-session-core";
 const COMPONENT_SNAPSHOT_CORE: &str = "runtime.model-request-snapshot-core";
+const COMPONENT_TOOL_STAGE_CORE: &str = "runtime.tool-execution-stage-core";
 const COMPONENT_PROVIDER: &str = "std.live-openai-provider-host";
 const COMPONENT_STORE: &str = "std.durable-session-store-host";
 const COMPONENT_EXECUTOR: &str = "std.rlm-host-effect-executor";
 const COMPONENT_SESSION_HOST: &str = "std.coding-session-host";
 const COMPONENT_SNAPSHOT_HOST: &str = "std.model-request-snapshot-host";
+const COMPONENT_TOOL_STAGE_HOST: &str = "std.tool-execution-stage-host";
 const COMPONENT_SHELL: &str = "std.live-steel-agent-shell";
 
 struct PortProfile {
@@ -109,6 +111,11 @@ fn graph_draft() -> activation::ActivationGraphDraft {
                 activation::ActivationAuthorityClass::None,
             ),
             component(
+                COMPONENT_TOOL_STAGE_CORE,
+                "runtime",
+                activation::ActivationAuthorityClass::None,
+            ),
+            component(
                 COMPONENT_PROVIDER,
                 "openai-provider-host",
                 activation::ActivationAuthorityClass::ShellOwned,
@@ -131,6 +138,11 @@ fn graph_draft() -> activation::ActivationGraphDraft {
             component(
                 COMPONENT_SNAPSHOT_HOST,
                 "coding-session-host",
+                activation::ActivationAuthorityClass::ShellOwned,
+            ),
+            component(
+                COMPONENT_TOOL_STAGE_HOST,
+                "tool-execution-stages",
                 activation::ActivationAuthorityClass::ShellOwned,
             ),
             component(
@@ -211,11 +223,13 @@ fn selection() -> activation::SelectedComposition {
             String::from(COMPONENT_RLM_PORT),
             String::from(COMPONENT_SESSION),
             String::from(COMPONENT_SNAPSHOT_CORE),
+            String::from(COMPONENT_TOOL_STAGE_CORE),
             String::from(COMPONENT_PROVIDER),
             String::from(COMPONENT_STORE),
             String::from(COMPONENT_EXECUTOR),
             String::from(COMPONENT_SESSION_HOST),
             String::from(COMPONENT_SNAPSHOT_HOST),
+            String::from(COMPONENT_TOOL_STAGE_HOST),
             String::from(COMPONENT_SHELL),
         ],
         enabled_features: vec![
@@ -225,6 +239,7 @@ fn selection() -> activation::SelectedComposition {
             String::from("durable-session-store"),
             String::from("rlm-host-executor"),
             String::from("coding-session-host"),
+            String::from("tool-execution-stages"),
             String::from("live-provider"),
         ],
         authority_ceiling: activation::ActivationAuthorityClass::ShellOwned,

@@ -474,7 +474,10 @@ pub struct ToolExecutionPlan {
     executor_binding: Option<String>,
     capability_labels: Vec<String>,
     mutation_targets: Vec<String>,
+    mutation_posture: Option<ToolMutationPosture>,
     output_policy: Option<ToolExecutorOutputPolicy>,
+    cancellation: ToolExecutorCancellation,
+    deadline: ToolExecutorDeadline,
     request_identity: String,
     dispatch_issue: crate::ToolDispatchPlanIssue,
 }
@@ -528,10 +531,34 @@ impl ToolExecutionPlan {
         self.mutation_targets.as_slice()
     }
 
+    /// Returns the admitted mutation posture, when a definition matched.
+    #[must_use]
+    pub const fn mutation_posture(&self) -> Option<ToolMutationPosture> {
+        self.mutation_posture
+    }
+
     /// Returns the admitted output policy, when a definition matched.
     #[must_use]
     pub const fn output_policy(&self) -> Option<ToolExecutorOutputPolicy> {
         self.output_policy
+    }
+
+    /// Returns the exact pre-effect cancellation posture.
+    #[must_use]
+    pub const fn cancellation(&self) -> ToolExecutorCancellation {
+        self.cancellation
+    }
+
+    /// Returns the exact caller-owned deadline posture.
+    #[must_use]
+    pub const fn deadline(&self) -> ToolExecutorDeadline {
+        self.deadline
+    }
+
+    /// Returns the domain-separated exact request identity.
+    #[must_use]
+    pub fn request_identity(&self) -> &str {
+        self.request_identity.as_str()
     }
 
     /// Returns the underlying neutral dispatch issue.
@@ -578,8 +605,11 @@ pub fn plan_tool_execution(request: ToolExecutionPlanRequest<'_>) -> ToolExecuti
         executor_binding: definition.map(|current| String::from(current.executor_binding())),
         capability_labels: request.request.required_capability_labels().to_vec(),
         mutation_targets: request.request.mutation_targets().to_vec(),
+        mutation_posture: definition.map(ToolDefinition::mutation_posture),
         output_policy: definition.map(ToolDefinition::output_policy),
-        request_identity: tool_request_identity(request.request),
+        cancellation: request.admission.cancellation,
+        deadline: request.admission.deadline,
+        request_identity: tool_request_binding_identity(request.request),
         dispatch_issue: dispatch_plan.issue(),
     }
 }
@@ -750,6 +780,24 @@ impl ToolExecutorOutput {
             full_output_reference: full_output_reference.map(String::from),
             redaction_class,
         }
+    }
+
+    /// Returns the transient output body.
+    #[must_use]
+    pub fn body(&self) -> &str {
+        self.body.as_str()
+    }
+
+    /// Returns the optional host-owned full-output reference.
+    #[must_use]
+    pub fn full_output_reference(&self) -> Option<&str> {
+        self.full_output_reference.as_deref()
+    }
+
+    /// Returns the output redaction class.
+    #[must_use]
+    pub const fn redaction_class(&self) -> animus_adapters::tool::OutputRedactionClass {
+        self.redaction_class
     }
 }
 
@@ -945,22 +993,55 @@ pub fn execute_admitted_tool<S: ToolExecutorService>(
     plan: &ToolExecutionPlan,
     request: &animus_adapters::ToolRequest,
 ) -> Result<ToolExecutionOutcome, ToolExecutorKitError> {
+    let output = invoke_admitted_tool(service, plan, request)?;
+    validate_tool_executor_output(plan, &output)
+}
+
+/// Calls one matching injected executor without normalizing its transient output.
+///
+/// The staged tool shell uses this seam so output handlers can only narrow the
+/// transient value before the executor kit performs final validation.
+///
+/// # Errors
+///
+/// Returns [`ToolExecutorKitError`] when admission, request binding, executor
+/// binding, or the injected service fails.
+pub fn invoke_admitted_tool<S: ToolExecutorService>(
+    service: &mut S,
+    plan: &ToolExecutionPlan,
+    request: &animus_adapters::ToolRequest,
+) -> Result<ToolExecutorOutput, ToolExecutorKitError> {
     let Some(binding) = plan.executor_binding() else {
         return Err(plan_denied_error(plan));
     };
     if !plan.is_admitted() {
         return Err(plan_denied_error(plan));
     }
-    if tool_request_identity(request) != plan.request_identity {
+    if tool_request_binding_identity(request) != plan.request_identity {
         return Err(ToolExecutorKitError::RequestBindingMismatch);
     }
     if service.binding_label() != binding {
         return Err(ToolExecutorKitError::BindingMismatch);
     }
-    let output = service
+    service
         .execute(plan, request)
-        .map_err(|failure| ToolExecutorKitError::ServiceFailed { failure })?;
-    completed_outcome(plan, &output)
+        .map_err(|failure| ToolExecutorKitError::ServiceFailed { failure })
+}
+
+/// Performs the existing final bounded-output and receipt validation.
+///
+/// # Errors
+///
+/// Returns [`ToolExecutorKitError`] when transient output is unsafe,
+/// unbounded, inconsistent with policy, or cannot produce safe evidence.
+pub fn validate_tool_executor_output(
+    plan: &ToolExecutionPlan,
+    output: &ToolExecutorOutput,
+) -> Result<ToolExecutionOutcome, ToolExecutorKitError> {
+    if !plan.is_admitted() {
+        return Err(plan_denied_error(plan));
+    }
+    completed_outcome(plan, output)
 }
 
 /// Builds a safe receipt proving that a plan denied executor effects.
@@ -1185,7 +1266,9 @@ fn is_blake3_hex(value: &str) -> bool {
     value.len() == BLAKE3_HEX_CHARS && value.as_bytes().iter().all(u8::is_ascii_hexdigit)
 }
 
-fn tool_request_identity(request: &animus_adapters::ToolRequest) -> String {
+/// Returns the domain-separated exact identity of one validated tool request.
+#[must_use]
+pub fn tool_request_binding_identity(request: &animus_adapters::ToolRequest) -> String {
     debug_assert!(!request.name().is_empty());
     debug_assert!(!request.schema_identity().is_empty());
     let mut hasher = blake3::Hasher::new();

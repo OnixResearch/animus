@@ -9,6 +9,7 @@ The `animus-live-steel-agent` package is a non-default headless application. It 
 - the tool-capable OpenAI Responses host;
 - separate durable coding-session and private Steel-kernel journals;
 - `CodingSessionHost` for message and tool-loop ordering;
+- the fixed staged tool shell with no optional handlers by default;
 - `SteelRlmKernel` and `execute_bridged_cell`;
 - `RlmHostExecutor` with explicit context and child routes;
 - `ConcreteChildSessionService` with `NormalCodingSessionController`;
@@ -42,7 +43,11 @@ The binary accepts `<store-root> <prompt>`. It reads one explicit credential val
 
 ## Durable ordering
 
-`CodingSessionHost` commits the assistant tool call before `steel_repl` dispatch. It commits the correlated tool result before provider continuation.
+`CodingSessionHost` commits the assistant tool call before `steel_repl` dispatch. The tool adapter then runs the fixed staged execution plan through final validation.
+
+The shell keeps the pending staged result and private safe-point journal bound together. It completes post-commit observation only after the exact correlated result commit.
+
+Provider continuation cannot observe the result before that transition completes. See [tool execution stages](tool-execution-stages.md).
 
 The session and kernel stores use separate journals and exclusive leases. The shell releases both leases after the final safe point.
 
@@ -59,6 +64,8 @@ Steel modules are reviewed source values. Native modules, FFI, dynamic libraries
 ## Model-request snapshot prerequisite
 
 The maintained activation profile requires the pure snapshot core and the snapshot host shell. This requirement makes the private commit boundary explicit in the live composition.
+
+The profile also requires the pure tool-stage core and its std shell. Missing staged execution blocks activation before tool effects.
 
 Provider-native projection, credentials, and transport remain outside the snapshot. See [durable model-request snapshots](model-request-snapshots.md).
 

@@ -48,4 +48,4 @@ pub use store::{
     open_snapshot_persistence, restore_interrupted_kernel, restore_or_create_kernel,
     session_resume_required, store_definitions,
 };
-pub use tool::{SteelToolBinding, SteelToolError, SteelToolService};
+pub use tool::{KernelSafePointPersistence, SteelToolBinding, SteelToolError, SteelToolService};

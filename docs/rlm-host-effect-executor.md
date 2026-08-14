@@ -25,12 +25,20 @@ Each binding contains a stable BLAKE3 owner identity, a stable BLAKE3 scope iden
 | `file_read` | `cap-root-core` admission and caller-opened `cap_std::fs::Dir` | Relative lexical admission, descriptor `O_NOFOLLOW` on Unix, regular-file checks, identity rechecks, and a byte bound | Parent paths, symlinks, directories, ambient roots, and oversized reads |
 | `file_edit` | `animus_std_workspace_edit::WorkspaceEditHost` | An injected binder supplies exact snapshot, revision, target, visibility, gate, and writer facts | Direct writes, invented revisions, implicit targets, and conflict masking |
 | `shell` | `animus_runtime::resolve_process_job_profile` and `bounded_exec` | Exact named profile, absolute program, explicit working directory, cleared environment, bounded output, timeout, cancellation, process-group teardown | Shell command text, relative programs, inherited environment, unknown profiles, and CPU or memory claims that `bounded-exec` cannot enforce |
-| `tool` | `ToolExecutorKit` through `ToolKitRoute` | Exact admitted tool binding, request parser, output policy, and receipt identity | Global tool lookup, unknown tools, unbounded output, and opaque payload fallback |
+| `tool` | `ToolExecutorKit` and staged execution through `ToolKitRoute` | Exact admitted tool, request, authority seal, commit owner, output policy, durable commit, and terminal receipt | Global lookup, unknown tools, unbounded output, opaque fallback, and uncommitted return |
 | `context_read` | `ContextResolverSet` through `ResolverContextRoute` | Explicit resolver pack and byte/line budget | Resolver discovery, unrestricted URL or file access, and hidden truncation |
 | `subagent` | `ConcreteChildSessionService` through `ConcreteChildRoute` | Injected pre-admitted child facts and bounded status polling | Ambient agent spawning, transcript receipts, and unbounded waits |
 | `kernel_clear` | The injected Steel kernel bridge owner | One delegated clear call and one stable result identity | Global kernel lookup and direct state mutation by the executor |
 
 The host crate links AGPL host components. Its manifest therefore declares `AGPL-3.0-or-later`. It is not a default workspace member or a default root feature.
+
+## Tool-stage commit ownership
+
+The route requires a product-owned `ToolRouteCommitService`. The generic RLM host cannot claim durable completion.
+
+The tool result remains private until the service returns exact synchronized commit evidence. The route then completes metadata-only observation and projects a terminal staged receipt.
+
+See [tool execution stages](tool-execution-stages.md).
 
 ## Results and failures
 

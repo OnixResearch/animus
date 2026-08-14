@@ -28,7 +28,7 @@ The core does not read configuration, open stores, discover services, or execute
 <!-- r[impl agent_harness_runtime.composition_activation_graph.fail_loud] -->
 ## Product integration
 
-`animus-live-steel-agent` checks its maintained profile before credential, store, provider, or tool effects. A blocked profile returns `LiveApplicationError::Activation`.
+`animus-live-steel-agent` checks its maintained profile before credential, store, provider, or tool effects. The profile requires both tool-stage components. A blocked profile returns `LiveApplicationError::Activation`.
 
 `animus-live-terminal` checks its profile before it calls the connection or terminal host ports. A blocked profile returns `TerminalHostError::Activation`.
 

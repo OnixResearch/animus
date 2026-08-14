@@ -384,6 +384,7 @@
                 || baseName == "check-composition-activation-graph"
                 || baseName == "check-component-scopes"
                 || baseName == "check-model-request-snapshots"
+                || baseName == "check-tool-execution-stages"
                 || baseName == "check-composition-conformance"
                 || baseName == "check-current-head-release-evidence-index"
                 || baseName == "check-exec-policy"
@@ -1395,6 +1396,25 @@
                 cd source
                 export ANIMUS_MODEL_REQUEST_SNAPSHOT_STATIC_ONLY=1
                 sh scripts/cairn/check-model-request-snapshots --root .
+                touch "$out"
+              '';
+
+          tool-execution-stages =
+            pkgs.runCommand "animus-tool-execution-stages"
+              {
+                nativeBuildInputs = [
+                  pkgs.rustc
+                  pkgs.gcc
+                  pkgs.nickel
+                  pkgs.b3sum
+                ];
+              }
+              ''
+                cp -r ${source} source
+                chmod -R u+w source
+                cd source
+                export ANIMUS_TOOL_EXECUTION_STAGE_STATIC_ONLY=1
+                sh scripts/cairn/check-tool-execution-stages --root .
                 touch "$out"
               '';
 

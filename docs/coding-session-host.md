@@ -45,7 +45,7 @@ The reducer returns next state, ordered events, and at most one explicit effect 
 1. metadata-only authority-profile binding before the first user/provider boundary;
 2. admitted user message and active leaf before provider dispatch;
 3. assistant tool-call message before tool dispatch;
-4. tool result before provider continuation;
+4. exact staged tool result before post-commit observation and provider continuation;
 5. final assistant message before terminal completion;
 6. selected queued input before it becomes model-visible;
 7. summary or synthetic repair before its completion event.
@@ -83,6 +83,14 @@ The packaged `animus-coding-session-smoke` binary uses deterministic fake servic
 ## Optional ACP stdio caller
 
 The [`animus-acp-stdio-host`](acp-stdio-host.md) crate is an optional protocol caller of this facade. `CodingSessionEffectGate` and the `drive_*_with_gate` methods allow a protocol-side permission decision to deny before an effect, but an allow never replaces the existing authority probe or injected service admission. ACP new/load/prompt/cancel requests delegate into this same host; ACP does not own a second transcript, queue, run state, active leaf, durable store, or tool executor.
+
+## Tool-stage commit boundary
+
+`CodingSessionCommitRequest::tool_response_after_commit` carries a final-validated staged tool result. The reducer checks its exact result and commit-owner bindings after the durable message commit.
+
+The host then calls `CodingSessionToolService::observe_committed` with metadata-only commit facts. Observer failure blocks provider continuation. The observer cannot change the committed result.
+
+See [tool execution stages](tool-execution-stages.md).
 
 ## Model-request snapshot boundary
 

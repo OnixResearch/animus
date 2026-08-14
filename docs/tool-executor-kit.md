@@ -25,7 +25,13 @@ A denied plan never invokes a service and can produce a safe denial receipt.
 
 ## Imperative shell
 
-`ToolExecutorService` is host-implemented. `execute_admitted_tool` rejects denied plans, substituted request values, and binding mismatches before it invokes the selected service. It normalizes transient output once and returns a `ToolExecutionOutcome` with a bounded `ToolResponse` and validated receipt. Filesystem, process, network, provider, plugin, persistence, credential, and other concrete authority remains entirely with the host implementation.
+`ToolExecutorService` is host-implemented. `invoke_admitted_tool` rejects denied plans, substituted request values, and binding mismatches before it invokes the selected service. `validate_tool_executor_output` applies the final bounded-output and receipt barrier. `execute_admitted_tool` remains the compatible combined operation. Filesystem, process, network, provider, plugin, persistence, credential, and other concrete authority remains entirely with the host implementation.
+
+## Staged composition
+
+[Tool execution stages](tool-execution-stages.md) wrap these existing operations without replacing them. Final admission still uses `plan_tool_execution`. Execution still uses `invoke_admitted_tool`. Final validation still uses `validate_tool_executor_output`.
+
+Optional handlers can deny or narrow. They cannot add authority, widen bounds, reorder fixed phases, or bypass exact coding-session durable commit.
 
 ## Receipt boundary
 
@@ -59,6 +65,7 @@ Focused checks:
 cargo test -p animus-runtime executionkit --locked
 cargo test -p animus-runtime composition_conformance --locked
 scripts/cairn/check-tool-catalog --root .
+scripts/cairn/check-tool-execution-stages --root .
 scripts/cairn/check-composition-conformance --root .
 scripts/cairn/check-adapter-conformance-index --root .
 scripts/cairn/check-component-catalog --root .

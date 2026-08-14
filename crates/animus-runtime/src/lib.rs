@@ -199,6 +199,9 @@ mod tool_admission;
 pub mod tool_executor_kit {
     pub use crate::executionkit::*;
 }
+/// Fixed monotonic stages around authoritative tool admission, execution, and commit owners.
+#[path = "toolexecutionstages/mod.rs"]
+pub mod tool_execution_stages;
 #[path = "toolexecutorpacks.rs"]
 pub mod tool_executor_packs;
 mod transition;

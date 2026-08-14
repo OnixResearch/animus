@@ -130,6 +130,27 @@ pub struct CodingSessionCommitObservation {
     pub synchronized: bool,
 }
 
+/// Exact metadata passed to a tool service only after validated durable result commit.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CodingSessionToolCommitObservation {
+    /// Commit effect identity.
+    pub effect_id: String,
+    /// Active run identity.
+    pub run_id: String,
+    /// Exact BLAKE3 bounded tool-result identity.
+    pub result_identity: String,
+    /// Exact BLAKE3 coding-session commit-owner identity.
+    pub commit_owner_identity: String,
+    /// New durable BLAKE3 session head.
+    pub durable_head_identity: String,
+    /// Exact committed active leaf.
+    pub active_leaf_id: String,
+    /// New durable cursor.
+    pub durable_cursor: u64,
+    /// Whether synchronization completed.
+    pub synchronized: bool,
+}
+
 pub trait CodingSessionProviderService {
     /// # Errors
     /// Returns a typed issue when provider admission or dispatch fails.
@@ -146,6 +167,20 @@ pub trait CodingSessionToolService {
         &mut self,
         request: &CodingSessionToolRequest,
     ) -> Result<animus_adapters::ToolResponse, CodingSessionServiceIssue>;
+
+    /// Observes metadata only after the coding-session reducer validates exact durable commit.
+    ///
+    /// The default preserves existing tool services that select no post-commit handler.
+    ///
+    /// # Errors
+    ///
+    /// Returns a typed issue when a selected post-commit observer rejects the exact commit.
+    fn observe_committed(
+        &mut self,
+        _observation: &CodingSessionToolCommitObservation,
+    ) -> Result<(), CodingSessionServiceIssue> {
+        Ok(())
+    }
 }
 
 pub trait CodingSessionPersistenceService {
@@ -604,6 +639,14 @@ where
         let transition = reduce_coding_session_outcome(&self.state, &outcome)
             .map_err(|error| CodingSessionHostError::from_reducer(&error))?;
         self.apply_transition(transition);
+        if let Some(observation) = committed_tool_observation(&effect, &outcome) {
+            if let Err(issue) = observation
+                .and_then(|observation| self.services.tool.observe_committed(&observation))
+            {
+                self.block_after_committed_tool(issue)?;
+                return Err(CodingSessionHostError::blocked(self.state.last_issue()));
+            }
+        }
         Ok(true)
     }
 
@@ -688,16 +731,7 @@ where
     ) -> CodingSessionEffectOutcome {
         match effect {
             CodingSessionEffectRequest::Commit(request) => {
-                self.services.persistence.commit(request).map_or_else(
-                    |issue| failed_outcome(effect, CodingSessionEffectService::Persistence, issue),
-                    |observation| CodingSessionEffectOutcome::CommitSucceeded {
-                        effect_id: String::from(request.effect_id()),
-                        new_head_hash: observation.new_head_hash,
-                        active_leaf_id: observation.active_leaf_id,
-                        durable_cursor: observation.durable_cursor,
-                        synchronized: observation.synchronized,
-                    },
-                )
+                self.execute_commit_effect(effect, request)
             }
             CodingSessionEffectRequest::Provider(request) => {
                 if let Err(issue) = self.admit_current_authority() {
@@ -758,6 +792,41 @@ where
                 )
             }
         }
+    }
+
+    // r[impl agent_harness_runtime.tool_execution_stages.commit]
+    fn execute_commit_effect(
+        &mut self,
+        effect: &CodingSessionEffectRequest,
+        request: &CodingSessionCommitRequest,
+    ) -> CodingSessionEffectOutcome {
+        let observation = match self.services.persistence.commit(request) {
+            Ok(observation) => observation,
+            Err(issue) => {
+                return failed_outcome(effect, CodingSessionEffectService::Persistence, issue);
+            }
+        };
+        CodingSessionEffectOutcome::CommitSucceeded {
+            effect_id: String::from(request.effect_id()),
+            new_head_hash: observation.new_head_hash,
+            active_leaf_id: observation.active_leaf_id,
+            durable_cursor: observation.durable_cursor,
+            synchronized: observation.synchronized,
+        }
+    }
+
+    fn block_after_committed_tool(
+        &mut self,
+        issue: CodingSessionServiceIssue,
+    ) -> Result<(), CodingSessionHostError> {
+        let effect = self.state.pending_effect().cloned().ok_or_else(|| {
+            CodingSessionHostError::blocked(Some(CodingSessionIssue::ToolFailure))
+        })?;
+        let outcome = failed_outcome(&effect, CodingSessionEffectService::Tool, issue);
+        let transition = reduce_coding_session_outcome(&self.state, &outcome)
+            .map_err(|error| CodingSessionHostError::from_reducer(&error))?;
+        self.apply_transition(transition);
+        Ok(())
     }
 
     fn admit_current_authority(&mut self) -> Result<(), CodingSessionServiceIssue> {
@@ -1298,6 +1367,45 @@ const fn effect_service(effect: &CodingSessionEffectRequest) -> CodingSessionEff
         CodingSessionEffectRequest::Recovery(_) => CodingSessionEffectService::Recovery,
         CodingSessionEffectRequest::Summarizer(_) => CodingSessionEffectService::Summarizer,
     }
+}
+
+fn committed_tool_observation(
+    effect: &CodingSessionEffectRequest,
+    outcome: &CodingSessionEffectOutcome,
+) -> Option<Result<CodingSessionToolCommitObservation, CodingSessionServiceIssue>> {
+    let (
+        CodingSessionEffectRequest::Commit(request),
+        CodingSessionEffectOutcome::CommitSucceeded {
+            new_head_hash,
+            active_leaf_id,
+            durable_cursor,
+            synchronized,
+            ..
+        },
+    ) = (effect, outcome)
+    else {
+        return None;
+    };
+    let tool_response = request.tool_response_after_commit()?;
+    Some((|| {
+        let run_id = request
+            .run_id()
+            .ok_or(CodingSessionServiceIssue::Malformed)?;
+        let result_identity = tool_response
+            .content_hash()
+            .ok_or(CodingSessionServiceIssue::Malformed)?;
+        Ok(CodingSessionToolCommitObservation {
+            effect_id: String::from(request.effect_id()),
+            run_id: String::from(run_id),
+            result_identity: String::from(result_identity),
+            commit_owner_identity:
+                animus_runtime::tool_execution_stages::coding_session_tool_commit_owner_identity(),
+            durable_head_identity: new_head_hash.clone(),
+            active_leaf_id: active_leaf_id.clone(),
+            durable_cursor: *durable_cursor,
+            synchronized: *synchronized,
+        })
+    })())
 }
 
 fn failed_outcome(

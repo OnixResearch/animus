@@ -22,6 +22,7 @@ pub use executor::{CapabilityPacks, RlmHostExecutor, RlmHostExecutorConfig};
 pub use routes::{
     ChildRoute, ConcreteChildRoute, ContextRoute, EditRoute, FileReadPack, KernelClearRoute,
     ProcessPack, ProcessProfileSet, ResolverContextRoute, RevisionGatedEditRoute,
-    SteelKernelClearRoute, ToolKitRoute, ToolRequestBinding, ToolRoute, WorkspaceEditBinding,
+    SteelKernelClearRoute, ToolKitRoute, ToolRequestBinding, ToolRoute, ToolRouteCommitObservation,
+    ToolRouteCommitRequest, ToolRouteCommitService, WorkspaceEditBinding,
     WorkspaceEditRequestBinder,
 };

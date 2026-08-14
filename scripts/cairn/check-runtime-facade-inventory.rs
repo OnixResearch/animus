@@ -135,6 +135,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "rlm-kernel",
     "steel-skill-modules",
     "rlm-host-executor",
+    "tool-execution-stages",
     "durable-steel-kernel-restore",
     "loop",
     "policy",

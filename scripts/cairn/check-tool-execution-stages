@@ -1,0 +1,131 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+readonly ENABLED=1
+readonly RAIL_NAME=tool-execution-stages
+readonly RECEIPT_SCHEMA=animus.focused-rail.v1
+readonly RECEIPT_DIR=target/cairn/focused-rails
+
+usage() {
+  printf '%s\n' 'usage: scripts/cairn/check-tool-execution-stages --root <repo-root>'
+}
+
+root=
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --root)
+      [ "$#" -ge 2 ] || { usage >&2; exit "${FAILURE}"; }
+      root=$2
+      shift 2
+      ;;
+    *)
+      usage >&2
+      exit "${FAILURE}"
+      ;;
+  esac
+done
+
+[ -n "${root}" ] || { usage >&2; exit "${FAILURE}"; }
+cd "${root}"
+
+require_text() {
+  file=$1
+  text=$2
+  if ! grep -Fq -- "${text}" "${file}"; then
+    printf 'error: %s does not contain required text: %s\n' "${file}" "${text}" >&2
+    exit "${FAILURE}"
+  fi
+}
+
+require_text '.cairn/component-catalog.ncl' 'runtime.tool-execution-stage-core'
+require_text '.cairn/component-catalog.ncl' 'std.tool-execution-stage-host'
+require_text '.cairn/runtime-facade-inventory.ncl' 'animus-runtime::tool_execution_stages'
+require_text '.cairn/runtime-facade-inventory.ncl' 'animus-std::tool_execution_stage_host'
+require_text 'docs/tool-execution-stages.md' 'pre_admission -> final_admission -> pre_execution -> execution -> output_narrowing -> final_validation -> durable_commit -> post_commit_observation'
+require_text 'docs/tool-execution-stages.md' 'No provider continuation can observe a tool result before that result has an exact durable commit.'
+require_text 'crates/animus-runtime/src/toolexecutionstages/data.rs' 'pub const TOOL_EXECUTION_STAGE_PHASES'
+require_text 'crates/animus-runtime/src/toolexecutionstages/data.rs' 'pub struct ToolExecutionStageReceipt'
+require_text 'crates/animus-runtime/src/toolexecutionstages/receipt.rs' 'pub fn project_tool_execution_stage_receipt'
+require_text 'crates/animus-std/src/toolexecutionstages.rs' 'pub fn execute_staged_tool'
+require_text 'crates/animus-std/src/toolexecutionstages.rs' 'pub fn complete_staged_tool_commit'
+require_text 'crates/animus-std-rlm-host/src/routes.rs' 'pub trait ToolRouteCommitService'
+require_text 'crates/animus-live-steel-agent/src/tool.rs' 'persist_staged_safe_point'
+require_text 'crates/animus-live-steel-agent/src/shell.rs' 'execute_staged_tool'
+require_text 'crates/animus-live-steel-agent/src/shell.rs' 'observe_committed'
+
+if grep -R -E 'std::fs|std::process|Command::new|std::env|TcpStream|UdpSocket|SystemTime::now|Instant::now|reqwest|hyper::|tokio::|serde_json' \
+  crates/animus-runtime/src/toolexecutionstages --include='*.rs' >/dev/null 2>&1
+then
+  printf '%s\n' 'error: tool execution stage core gained ambient host or provider authority' >&2
+  exit "${FAILURE}"
+fi
+
+sh scripts/cairn/check-component-catalog --root .
+sh scripts/cairn/check-runtime-facade-inventory --root .
+
+if [ "${ANIMUS_TOOL_EXECUTION_STAGE_STATIC_ONLY:-0}" = "${ENABLED}" ]; then
+  printf 'Nix static rail %s: pass\n' "${RAIL_NAME}"
+  exit 0
+fi
+
+for command_name in cargo b3sum; do
+  if ! command -v "${command_name}" >/dev/null 2>&1; then
+    printf 'error: %s is required. Run inside `nix develop`.\n' "${command_name}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+cargo test -p animus-runtime tool_execution_stages --locked
+cargo check -p animus-runtime --no-default-features --target wasm32-unknown-unknown --locked
+cargo test -p animus-std --features tool-execution-stages --lib --locked
+cargo test -p animus-std --features coding-session-host --lib --locked
+cargo test -p animus-std-rlm-host --test tool_stages --locked
+cargo test -p animus-live-steel-agent --test fixture --test durable --locked
+cargo clippy -p animus-runtime --all-targets --locked --no-deps -- -D warnings
+cargo clippy -p animus-std --all-targets --features tool-execution-stages --locked --no-deps -- -D warnings
+cargo clippy -p animus-std-rlm-host --all-targets --locked --no-deps -- -D warnings
+cargo clippy -p animus-live-steel-agent --all-targets --locked --no-deps -- -D warnings
+
+scripts/cairn/check-tool-catalog --root .
+scripts/cairn/check-coding-session-host --root .
+scripts/cairn/check-composition-conformance --root .
+scripts/cairn/check-safe-receipts-artifacts --root .
+
+mkdir -p "${RECEIPT_DIR}"
+tmp_body=$(mktemp "${TMPDIR:-/tmp}/animus-tool-execution-stages.XXXXXX")
+trap 'rm -f "${tmp_body}"' EXIT HUP INT TERM
+
+cat > "${tmp_body}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+case_classes:
+- positive
+- negative
+claims:
+- fixed phase order and exact handler cohort binding
+- monotonic denial, authority, mutation, output, redaction, and outcome validation
+- executor-kit final admission, execution, and final validation barriers preserved
+- exact coding-session durable commit before metadata-only observation
+safe_evidence:
+- tool, schema, request, plan, handler, authority, result, commit, status, count, and non-claim metadata only
+- no arguments, output, credentials, provider payloads, private paths, raw errors, or handler diagnostics
+non_claims:
+- not tool correctness, rollback, sandboxing, provider correctness, task success, production readiness, or release eligibility
+EOF
+
+receipt_hash=$(b3sum "${tmp_body}" | awk '{print $1}')
+receipt_path=${RECEIPT_DIR}/${RAIL_NAME}.md
+{
+  cat "${tmp_body}"
+  printf 'receipt_hash: BLAKE3:%s\n' "${receipt_hash}"
+} > "${receipt_path}"
+
+if grep -Eq 'RAW_ARGUMENTS:|RAW_OUTPUT:|RAW_HANDLER_ERROR:|PROVIDER_PAYLOAD:|BEGIN [A-Z ]*PRIVATE KEY|API_KEY=|AWS_SECRET_ACCESS_KEY|(^|[^[:alnum:]])sk-|/home/[^[:space:]]+' "${receipt_path}"; then
+  printf 'error: focused rail %s wrote unsafe evidence\n' "${RAIL_NAME}" >&2
+  exit "${FAILURE}"
+fi
+
+printf 'focused rail %s: pass\n' "${RAIL_NAME}"
+printf 'receipt: %s\n' "${receipt_path}"

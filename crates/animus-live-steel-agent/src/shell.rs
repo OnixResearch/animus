@@ -9,6 +9,14 @@ const QUEUE_SOURCE: &str = "coding-session-host";
 const RUN_ID_PREFIX: &str = "run.live-steel-agent.";
 const ENTRY_ID_PREFIX: &str = "entry.live-steel-agent.user.";
 const SUMMARY: &str = "live Steel agent summary omitted";
+const LIVE_STEEL_TOOL_EXECUTOR_BINDING: &str = "executor.live-steel-agent.steel-repl";
+const LIVE_STEEL_TOOL_LABEL: &str = "Steel REPL";
+const LIVE_STEEL_TOOL_DESCRIPTION: &str = "Evaluates one bounded Steel expression.";
+const LIVE_STEEL_TOOL_PROMPT: &str = "Use steel_repl for one bounded Steel expression.";
+const LIVE_STEEL_TOOL_GUIDELINE: &str = "Supply one code argument.";
+const LIVE_STEEL_TOOL_PROVENANCE: &str = "maintained-live-composition";
+const LIVE_STEEL_TOOL_RESULT_SHAPE: &str = "bounded-text.v1";
+const MAX_UTF8_BYTES_PER_CHAR: u64 = 4;
 
 /// Coding-session persistence with explicit lease release.
 pub trait SessionPersistence: coding_host::CodingSessionPersistenceService {
@@ -240,8 +248,10 @@ where
             },
             tool: ToolAdapter {
                 tool: &mut self.tool,
+                config: &self.config,
                 shared: Rc::clone(&shared),
                 dispatch_count: 0,
+                pending_stage: None,
             },
             persistence: self.session_persistence,
             policy: coding_host::AllowCodingSessionPolicy,
@@ -515,8 +525,10 @@ fn prepare_live_model_request_snapshot(
 
 struct ToolAdapter<'a, Executor, Persistence> {
     tool: &'a mut crate::SteelToolService<Executor, Persistence>,
+    config: &'a crate::ValidatedLiveSteelAgentConfig,
     shared: Rc<RefCell<SharedProviderState>>,
     dispatch_count: u32,
+    pending_stage: Option<animus_std::tool_execution_stage_host::PendingStagedToolExecution>,
 }
 
 impl<Executor, Persistence> coding_host::CodingSessionToolService
@@ -532,6 +544,9 @@ where
         animus_adapters::ToolResponse,
         animus_runtime::coding_session_host::CodingSessionServiceIssue,
     > {
+        if self.pending_stage.is_some() {
+            return Err(animus_runtime::coding_session_host::CodingSessionServiceIssue::Stale);
+        }
         self.dispatch_count = self.dispatch_count.saturating_add(1);
         let correlation = self
             .shared
@@ -542,17 +557,212 @@ where
         if request.request().correlation_id() != correlation {
             return Err(animus_runtime::coding_session_host::CodingSessionServiceIssue::Stale);
         }
-        let response = self.tool.execute(request.request()).map_err(|_error| {
-            animus_runtime::coding_session_host::CodingSessionServiceIssue::Failed
+        let catalog = live_steel_tool_catalog(request.request(), self.config)?;
+        let capabilities = live_steel_tool_capabilities()?;
+        let executor_bindings = [animus_runtime::tool_executor_kit::ToolExecutorBinding::new(
+            LIVE_STEEL_TOOL_EXECUTOR_BINDING,
+            animus_runtime::tool_executor_kit::ToolExecutorReadiness::Ready,
+        )
+        .map_err(|_error| {
+            animus_runtime::coding_session_host::CodingSessionServiceIssue::Malformed
+        })?];
+        let authority = crate::build_expected_authority(self.config).map_err(|_error| {
+            animus_runtime::coding_session_host::CodingSessionServiceIssue::Denied
         })?;
+        let commit_owner =
+            animus_runtime::tool_execution_stages::coding_session_tool_commit_owner_identity();
+        let stage_input = animus_std::tool_execution_stage_host::StagedToolExecutionInput {
+            tool: animus_runtime::tool_executor_kit::ToolExecutionPlanRequest {
+                request: request.request(),
+                catalog: &catalog,
+                capabilities: &capabilities,
+                executors: &executor_bindings,
+                admission: animus_runtime::tool_executor_kit::ToolExecutorAdmission::admitted(),
+            },
+            authority_seal_identity: authority.unit.unit_identity(),
+            commit_owner_identity: commit_owner.as_str(),
+            handlers: &[],
+        };
+        let mut stage_services = live_noop_stage_services();
+        let mut executor = LiveSteelToolKitExecutor { tool: self.tool };
+        let pending = animus_std::tool_execution_stage_host::execute_staged_tool(
+            &mut executor,
+            &mut stage_services,
+            &stage_input,
+        )
+        .map_err(|_error| animus_runtime::coding_session_host::CodingSessionServiceIssue::Failed)?;
+        executor.persist_safe_point()?;
+        let response = pending.outcome().response().clone();
+        self.pending_stage = Some(pending);
+        Ok(response)
+    }
+
+    fn observe_committed(
+        &mut self,
+        observation: &coding_host::CodingSessionToolCommitObservation,
+    ) -> Result<(), animus_runtime::coding_session_host::CodingSessionServiceIssue> {
+        let pending = self
+            .pending_stage
+            .take()
+            .ok_or(animus_runtime::coding_session_host::CodingSessionServiceIssue::Stale)?;
+        let stage_observation =
+            animus_runtime::tool_execution_stages::ToolExecutionStageCommitObservation {
+                stage_plan_identity: String::from(pending.plan().plan_identity()),
+                result_identity: observation.result_identity.clone(),
+                commit_owner_identity: observation.commit_owner_identity.clone(),
+                durable_head_identity: observation.durable_head_identity.clone(),
+                complete: true,
+                synchronized: observation.synchronized,
+            };
+        let mut post_commit = animus_std::tool_execution_stage_host::NoToolExecutionStageHandlers;
+        let completed = animus_std::tool_execution_stage_host::complete_staged_tool_commit(
+            &mut post_commit,
+            pending,
+            &stage_observation,
+        )
+        .map_err(|_error| animus_runtime::coding_session_host::CodingSessionServiceIssue::Failed)?;
         self.shared
             .borrow_mut()
             .pending_mut()
             .ok_or(animus_runtime::coding_session_host::CodingSessionServiceIssue::Stale)?
-            .bind_result(response.output())
-            .map_err(service_issue)?;
-        Ok(response)
+            .bind_result(completed.outcome.response().output())
+            .map_err(service_issue)
     }
+}
+
+struct LiveSteelToolKitExecutor<'tool, Executor, Persistence> {
+    tool: &'tool mut crate::SteelToolService<Executor, Persistence>,
+}
+
+impl<Executor, Persistence> LiveSteelToolKitExecutor<'_, Executor, Persistence>
+where
+    Executor: animus_runtime::rlm_kernel::RlmKernelHostExecutor,
+    Persistence: crate::tool::KernelSafePointPersistence,
+{
+    fn persist_safe_point(
+        &mut self,
+    ) -> Result<(), animus_runtime::coding_session_host::CodingSessionServiceIssue> {
+        self.tool.persist_staged_safe_point().map_err(|_error| {
+            animus_runtime::coding_session_host::CodingSessionServiceIssue::Failed
+        })
+    }
+}
+
+impl<Executor, Persistence> animus_runtime::tool_executor_kit::ToolExecutorService
+    for LiveSteelToolKitExecutor<'_, Executor, Persistence>
+where
+    Executor: animus_runtime::rlm_kernel::RlmKernelHostExecutor,
+    Persistence: crate::tool::KernelSafePointPersistence,
+{
+    fn binding_label(&self) -> &str {
+        LIVE_STEEL_TOOL_EXECUTOR_BINDING
+    }
+
+    fn execute(
+        &mut self,
+        _plan: &animus_runtime::tool_executor_kit::ToolExecutionPlan,
+        request: &animus_adapters::ToolRequest,
+    ) -> Result<
+        animus_runtime::tool_executor_kit::ToolExecutorOutput,
+        animus_runtime::tool_executor_kit::ToolExecutorServiceFailure,
+    > {
+        let value = self
+            .tool
+            .execute_stage_value(request)
+            .map_err(|error| match error {
+                crate::SteelToolError::Cancelled => {
+                    animus_runtime::tool_executor_kit::ToolExecutorServiceFailure::Cancelled
+                }
+                crate::SteelToolError::Request
+                | crate::SteelToolError::Evaluation
+                | crate::SteelToolError::Host
+                | crate::SteelToolError::Output
+                | crate::SteelToolError::Persistence => {
+                    animus_runtime::tool_executor_kit::ToolExecutorServiceFailure::ExecutionFailed
+                }
+            })?;
+        Ok(animus_runtime::tool_executor_kit::ToolExecutorOutput::new(
+            value.as_str(),
+            None,
+            animus_adapters::tool::OutputRedactionClass::Safe,
+        ))
+    }
+}
+
+fn live_noop_stage_services() -> animus_std::tool_execution_stage_host::ToolExecutionStageServices<
+    animus_std::tool_execution_stage_host::NoToolExecutionStageHandlers,
+    animus_std::tool_execution_stage_host::NoToolExecutionStageHandlers,
+    animus_std::tool_execution_stage_host::NoToolExecutionStageHandlers,
+    animus_std::tool_execution_stage_host::NoToolExecutionStageHandlers,
+> {
+    animus_std::tool_execution_stage_host::ToolExecutionStageServices {
+        pre_admission: animus_std::tool_execution_stage_host::NoToolExecutionStageHandlers,
+        pre_execution: animus_std::tool_execution_stage_host::NoToolExecutionStageHandlers,
+        output: animus_std::tool_execution_stage_host::NoToolExecutionStageHandlers,
+        post_commit: animus_std::tool_execution_stage_host::NoToolExecutionStageHandlers,
+    }
+}
+
+fn live_steel_tool_catalog(
+    request: &animus_adapters::ToolRequest,
+    config: &crate::ValidatedLiveSteelAgentConfig,
+) -> Result<
+    animus_runtime::tool_executor_kit::ToolCatalog,
+    animus_runtime::coding_session_host::CodingSessionServiceIssue,
+> {
+    let metadata =
+        animus_adapters::tool::Definition::validate(&animus_adapters::tool::DefinitionDraft {
+            name: Some(animus_std_openai::STEEL_REPL_TOOL_NAME),
+            label: Some(LIVE_STEEL_TOOL_LABEL),
+            description: Some(LIVE_STEEL_TOOL_DESCRIPTION),
+            parameter_schema_identity: Some(request.schema_identity()),
+            prompt_snippet: Some(LIVE_STEEL_TOOL_PROMPT),
+            prompt_guidelines: &[LIVE_STEEL_TOOL_GUIDELINE],
+            source_identity: Some(config.config_identity()),
+            provenance: Some(LIVE_STEEL_TOOL_PROVENANCE),
+            capability_labels: &[animus_adapter_rlm_kernel::STEEL_REPL_CAPABILITY],
+            result_metadata_shape: Some(LIVE_STEEL_TOOL_RESULT_SHAPE),
+            status: animus_adapters::tool::DefinitionStatus::Active,
+        })
+        .map_err(|_error| {
+            animus_runtime::coding_session_host::CodingSessionServiceIssue::Malformed
+        })?;
+    let max_output_bytes = u64::from(config.max_tool_result_chars())
+        .checked_mul(MAX_UTF8_BYTES_PER_CHAR)
+        .ok_or(animus_runtime::coding_session_host::CodingSessionServiceIssue::Malformed)?;
+    let output_policy = animus_runtime::tool_executor_kit::ToolExecutorOutputPolicy::new(
+        config.max_tool_result_chars(),
+        max_output_bytes,
+        false,
+    )
+    .map_err(|_error| animus_runtime::coding_session_host::CodingSessionServiceIssue::Malformed)?;
+    let definition = animus_runtime::tool_executor_kit::ToolDefinition::from_draft(
+        animus_runtime::tool_executor_kit::ToolDefinitionDraft {
+            metadata,
+            executor_binding: LIVE_STEEL_TOOL_EXECUTOR_BINDING,
+            argument_names: &["code"],
+            mutation_posture: animus_runtime::tool_executor_kit::ToolMutationPosture::ReadOnly,
+            output_policy,
+            approval_posture: animus_adapters::tool::ApprovalPosture::PreApproved,
+        },
+    )
+    .map_err(|_error| animus_runtime::coding_session_host::CodingSessionServiceIssue::Malformed)?;
+    animus_runtime::tool_executor_kit::ToolCatalog::new(vec![definition])
+        .map_err(|_error| animus_runtime::coding_session_host::CodingSessionServiceIssue::Malformed)
+}
+
+fn live_steel_tool_capabilities() -> Result<
+    animus_runtime::RuntimeCapabilityRegistry,
+    animus_runtime::coding_session_host::CodingSessionServiceIssue,
+> {
+    animus_runtime::RuntimeCapabilityRegistry::from_drafts(&[
+        animus_runtime::RuntimeCapabilityDescriptorDraft {
+            label: animus_adapter_rlm_kernel::STEEL_REPL_CAPABILITY,
+            service_kind: "tool",
+            scope: None,
+        },
+    ])
+    .map_err(|_error| animus_runtime::coding_session_host::CodingSessionServiceIssue::Malformed)
 }
 
 #[derive(serde::Deserialize)]

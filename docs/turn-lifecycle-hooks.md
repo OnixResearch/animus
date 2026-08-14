@@ -11,3 +11,5 @@ Startup uses the existing `session_start` lifecycle hook point. Animus does not 
 The reusable runtime exposes `advance_turn_hooks` as the pure FSM boundary. It returns typed lifecycle hook effects and performs no process, filesystem, network, clock, provider, persistence, Steel, or hook-adapter execution.
 
 Component scopes do not replace lifecycle hooks. Hooks remain extension points for turn events. `animus_runtime::component_scope` owns registration visibility, generation fences, quiescence, and reverse release planning.
+
+Turn hooks do not replace [tool execution stages](tool-execution-stages.md). Tool stages own fixed per-tool barriers, monotonic narrowing, exact durable commit, and metadata-only post-commit observation.

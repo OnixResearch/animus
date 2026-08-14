@@ -34,3 +34,7 @@ tempfile = "3.27.0"
 name = "animus-live-steel-agent"
 path = "src/main.rs"
 required-features = ["live-provider"]
+
+[[test]]
+name = "application"
+required-features = ["live-provider"]

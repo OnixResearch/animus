@@ -213,8 +213,41 @@ pub trait ToolRequestBinding {
     ) -> Result<animus_adapters::ToolRequest, DispatchFailure>;
 }
 
-/// Concrete adapter over the existing tool-executor kit.
-pub struct ToolKitRoute<'a, Service, Binder> {
+/// Metadata-only request to the product-owned RLM tool-result commit service.
+pub struct ToolRouteCommitRequest<'input> {
+    /// Immutable stage-plan identity.
+    pub stage_plan: &'input str,
+    /// Exact final bounded-result identity.
+    pub result: &'input str,
+    /// Exact durable commit-owner identity.
+    pub commit_owner: &'input str,
+}
+
+/// Product-owned durable commit observation for one RLM tool route.
+pub struct ToolRouteCommitObservation {
+    /// New durable BLAKE3 head identity.
+    pub durable_head_identity: String,
+    /// Whether the complete correlated result was committed.
+    pub complete: bool,
+    /// Whether synchronization completed.
+    pub synchronized: bool,
+}
+
+/// Product-owned exact durable commit boundary for RLM tool routes.
+pub trait ToolRouteCommitService {
+    /// Commits one exact metadata-bound final result.
+    ///
+    /// # Errors
+    ///
+    /// Returns a safe typed failure without raw request or result content.
+    fn commit(
+        &mut self,
+        request: ToolRouteCommitRequest<'_>,
+    ) -> Result<ToolRouteCommitObservation, DispatchFailure>;
+}
+
+/// Concrete staged adapter over the existing tool-executor kit.
+pub struct ToolKitRoute<'a, Service, Binder, Commit> {
     /// Existing metadata-only tool catalog.
     pub catalog: &'a animus_runtime::tool_executor_kit::ToolCatalog,
     /// Exact runtime capability registry.
@@ -223,16 +256,23 @@ pub struct ToolKitRoute<'a, Service, Binder> {
     pub executors: &'a [animus_runtime::tool_executor_kit::ToolExecutorBinding],
     /// Current tool-specific admission facts.
     pub admission: animus_runtime::tool_executor_kit::ToolExecutorAdmission,
+    /// Exact BLAKE3 runtime-authority seal identity.
+    pub authority_seal_identity: &'a str,
+    /// Exact BLAKE3 durable commit-owner identity.
+    pub commit_owner_identity: &'a str,
     /// Exact executor service.
     pub service: Service,
     /// Strict request binder.
     pub binder: Binder,
+    /// Product-owned exact durable result commit service.
+    pub commit: Commit,
 }
 
-impl<Service, Binder> ToolRoute for ToolKitRoute<'_, Service, Binder>
+impl<Service, Binder, Commit> ToolRoute for ToolKitRoute<'_, Service, Binder, Commit>
 where
     Service: animus_runtime::tool_executor_kit::ToolExecutorService,
     Binder: ToolRequestBinding,
+    Commit: ToolRouteCommitService,
 {
     fn execute_tool(
         &mut self,
@@ -244,27 +284,69 @@ where
         let request = self
             .binder
             .bind_tool_request(name, payload, max_result_chars)?;
-        let plan = animus_runtime::tool_executor_kit::plan_tool_execution(
-            animus_runtime::tool_executor_kit::ToolExecutionPlanRequest {
+        let input = animus_std::tool_execution_stage_host::StagedToolExecutionInput {
+            tool: animus_runtime::tool_executor_kit::ToolExecutionPlanRequest {
                 request: &request,
                 catalog: self.catalog,
                 capabilities: self.capabilities,
                 executors: self.executors,
                 admission: self.admission,
             },
-        );
-        if !plan.is_admitted() {
-            return Err(failure(route, DispatchFailureClass::Denied, "tool_plan"));
-        }
-        let outcome = animus_runtime::tool_executor_kit::execute_admitted_tool(
+            authority_seal_identity: self.authority_seal_identity,
+            commit_owner_identity: self.commit_owner_identity,
+            handlers: &[],
+        };
+        let mut services = rlm_noop_stage_services();
+        let pending = animus_std::tool_execution_stage_host::execute_staged_tool(
             &mut self.service,
-            &plan,
-            &request,
+            &mut services,
+            &input,
         )
-        .map_err(map_tool_failure)?;
-        let identity = BindingIdentity::new(outcome.receipt().receipt_hash())
+        .map_err(|_error| failure(route, DispatchFailureClass::Denied, "tool_stages"))?;
+        let result_identity = pending
+            .state()
+            .result_identity()
+            .ok_or_else(|| failure(route, DispatchFailureClass::Malformed, "tool_result"))?;
+        let commit = self.commit.commit(ToolRouteCommitRequest {
+            stage_plan: pending.plan().plan_identity(),
+            result: result_identity,
+            commit_owner: pending.plan().commit_owner_identity(),
+        })?;
+        let observation =
+            animus_runtime::tool_execution_stages::ToolExecutionStageCommitObservation {
+                stage_plan_identity: String::from(pending.plan().plan_identity()),
+                result_identity: String::from(result_identity),
+                commit_owner_identity: String::from(pending.plan().commit_owner_identity()),
+                durable_head_identity: commit.durable_head_identity,
+                complete: commit.complete,
+                synchronized: commit.synchronized,
+            };
+        let completed = animus_std::tool_execution_stage_host::complete_staged_tool_commit(
+            &mut services.post_commit,
+            pending,
+            &observation,
+        )
+        .map_err(|_error| failure(route, DispatchFailureClass::Stale, "tool_commit"))?;
+        let identity = BindingIdentity::new(completed.receipt.receipt_identity())
             .map_err(|_error| failure(route, DispatchFailureClass::Malformed, "tool_receipt"))?;
-        Ok((outcome.response().model_visible_text().to_owned(), identity))
+        Ok((
+            completed.outcome.response().model_visible_text().to_owned(),
+            identity,
+        ))
+    }
+}
+
+fn rlm_noop_stage_services() -> animus_std::tool_execution_stage_host::ToolExecutionStageServices<
+    animus_std::tool_execution_stage_host::NoToolExecutionStageHandlers,
+    animus_std::tool_execution_stage_host::NoToolExecutionStageHandlers,
+    animus_std::tool_execution_stage_host::NoToolExecutionStageHandlers,
+    animus_std::tool_execution_stage_host::NoToolExecutionStageHandlers,
+> {
+    animus_std::tool_execution_stage_host::ToolExecutionStageServices {
+        pre_admission: animus_std::tool_execution_stage_host::NoToolExecutionStageHandlers,
+        pre_execution: animus_std::tool_execution_stage_host::NoToolExecutionStageHandlers,
+        output: animus_std::tool_execution_stage_host::NoToolExecutionStageHandlers,
+        post_commit: animus_std::tool_execution_stage_host::NoToolExecutionStageHandlers,
     }
 }
 
@@ -741,54 +823,6 @@ fn map_workspace_failure(error: &animus_std_workspace_edit::HostError) -> Dispat
         | HostError::UnsupportedPlatform => DispatchFailureClass::OwnerFailure,
     };
     failure(RouteClass::FileEdit, class, "workspace_edit")
-}
-
-fn map_tool_failure(
-    error: animus_runtime::tool_executor_kit::ToolExecutorKitError,
-) -> DispatchFailure {
-    use animus_runtime::tool_executor_kit::{
-        ToolExecutionFailureClass, ToolExecutorKitError, ToolExecutorServiceFailure,
-    };
-    let class = match error {
-        ToolExecutorKitError::PlanDenied { failure } => match failure {
-            ToolExecutionFailureClass::MissingExecutor
-            | ToolExecutionFailureClass::UnavailableExecutor => DispatchFailureClass::Unavailable,
-            ToolExecutionFailureClass::Cancelled => DispatchFailureClass::Cancelled,
-            ToolExecutionFailureClass::TimedOut => DispatchFailureClass::TimedOut,
-            ToolExecutionFailureClass::OutputPolicyDenied
-            | ToolExecutionFailureClass::UnboundedOutput => DispatchFailureClass::BoundExceeded,
-            ToolExecutionFailureClass::MutationConflict => DispatchFailureClass::Conflict,
-            ToolExecutionFailureClass::MalformedArguments
-            | ToolExecutionFailureClass::SchemaMismatch
-            | ToolExecutionFailureClass::UnsafeOutput
-            | ToolExecutionFailureClass::ReceiptLeak => DispatchFailureClass::Malformed,
-            ToolExecutionFailureClass::UnknownTool
-            | ToolExecutionFailureClass::InactiveDefinition
-            | ToolExecutionFailureClass::UntrustedDefinition
-            | ToolExecutionFailureClass::DeniedCapability
-            | ToolExecutionFailureClass::ApprovalDenied
-            | ToolExecutionFailureClass::FallbackDenied
-            | ToolExecutionFailureClass::ExecutorBindingMismatch => DispatchFailureClass::Denied,
-            ToolExecutionFailureClass::ExecutorFailed => DispatchFailureClass::OwnerFailure,
-        },
-        ToolExecutorKitError::ServiceFailed { failure } => match failure {
-            ToolExecutorServiceFailure::Cancelled => DispatchFailureClass::Cancelled,
-            ToolExecutorServiceFailure::TimedOut => DispatchFailureClass::TimedOut,
-            ToolExecutorServiceFailure::ExecutionFailed => DispatchFailureClass::OwnerFailure,
-        },
-        ToolExecutorKitError::OutputTooLarge { .. } => DispatchFailureClass::BoundExceeded,
-        ToolExecutorKitError::BindingMismatch | ToolExecutorKitError::RequestBindingMismatch => {
-            DispatchFailureClass::Stale
-        }
-        ToolExecutorKitError::CatalogTooLarge { .. }
-        | ToolExecutorKitError::DuplicateTool
-        | ToolExecutorKitError::InvalidArgumentNames
-        | ToolExecutorKitError::InvalidOutputPolicy
-        | ToolExecutorKitError::UnsafeMetadata
-        | ToolExecutorKitError::InvalidOutput
-        | ToolExecutorKitError::UnsafeReceipt => DispatchFailureClass::Malformed,
-    };
-    failure(RouteClass::Tool, class, "tool_kit")
 }
 
 fn map_child_failure(

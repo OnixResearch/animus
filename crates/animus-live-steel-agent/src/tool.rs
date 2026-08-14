@@ -36,6 +36,7 @@ pub struct SteelToolService<Executor, Persistence> {
     binding: SteelToolBinding,
     cancelled: bool,
     host_observation_count: u64,
+    pending_stage_journal: Option<animus_steel::SteelKernelPrivateJournal>,
 }
 
 /// Exact private-journal binding for one Steel tool service.
@@ -63,6 +64,7 @@ impl<Executor, Persistence> SteelToolService<Executor, Persistence> {
             binding,
             cancelled: false,
             host_observation_count: 0,
+            pending_stage_journal: None,
         }
     }
 
@@ -98,6 +100,9 @@ impl<Executor, Persistence> SteelToolService<Executor, Persistence> {
     where
         Persistence: KernelSafePointPersistence,
     {
+        if self.pending_stage_journal.is_some() {
+            return Err(SteelToolError::Persistence);
+        }
         self.persistence.close()
     }
 }
@@ -117,6 +122,30 @@ where
         &mut self,
         request: &animus_adapters::ToolRequest,
     ) -> Result<animus_adapters::ToolResponse, SteelToolError> {
+        let value = self.execute_stage_value(request)?;
+        let bounded = animus_adapters::tool::BoundedOutput::new(
+            &animus_adapters::tool::OutputDraft {
+                body: value.as_str(),
+                full_output_reference: None,
+                hash_requirement: animus_adapters::tool::HashRequirement::Required,
+            },
+            request.output_policy(),
+        )
+        .map_err(|_error| SteelToolError::Output)?;
+        self.persist_staged_safe_point()?;
+        Ok(animus_adapters::ToolResponse::from_bounded(
+            bounded,
+            animus_adapters::tool::OutputRedactionClass::Safe,
+        ))
+    }
+
+    pub(crate) fn execute_stage_value(
+        &mut self,
+        request: &animus_adapters::ToolRequest,
+    ) -> Result<String, SteelToolError> {
+        if self.pending_stage_journal.is_some() {
+            return Err(SteelToolError::Persistence);
+        }
         validate_request(request)?;
         let source = request.arguments()[0].value();
         let cell_identity = hash_parts(
@@ -144,34 +173,16 @@ where
             &mut self.executor,
             &mut control,
         )
-        .map_err(|error| match error.detail() {
-            animus_runtime::rlm_kernel::RlmBridgeErrorDetail::Execution(_) => SteelToolError::Host,
-            animus_runtime::rlm_kernel::RlmBridgeErrorDetail::Contract(
-                animus_adapter_rlm_kernel::Error::BridgeCancelled,
-            ) => SteelToolError::Cancelled,
-            animus_runtime::rlm_kernel::RlmBridgeErrorDetail::Contract(_)
-            | animus_runtime::rlm_kernel::RlmBridgeErrorDetail::Steel(_) => {
-                SteelToolError::Evaluation
-            }
-        })?;
-        self.host_observation_count = self.host_observation_count.saturating_add(
-            u64::try_from(completed.observations().len()).unwrap_or(u64::MAX),
-        );
+        .map_err(|error| map_bridge_error(&error))?;
+        self.host_observation_count = self
+            .host_observation_count
+            .saturating_add(u64::try_from(completed.observations().len()).unwrap_or(u64::MAX));
         let value = match completed.evaluation() {
-            animus_steel::SteelRlmEvaluation::Value { value, .. } => value.as_str(),
+            animus_steel::SteelRlmEvaluation::Value { value, .. } => value.clone(),
             animus_steel::SteelRlmEvaluation::HostRequest { .. } => {
                 return Err(SteelToolError::Evaluation);
             }
         };
-        let bounded = animus_adapters::tool::BoundedOutput::new(
-            &animus_adapters::tool::OutputDraft {
-                body: value,
-                full_output_reference: None,
-                hash_requirement: animus_adapters::tool::HashRequirement::Required,
-            },
-            request.output_policy(),
-        )
-        .map_err(|_error| SteelToolError::Output)?;
         let journal = self
             .kernel
             .private_journal_snapshot(
@@ -179,11 +190,20 @@ where
                 self.binding.generation,
             )
             .map_err(|_error| SteelToolError::Persistence)?;
-        self.persistence.persist(&journal)?;
-        Ok(animus_adapters::ToolResponse::from_bounded(
-            bounded,
-            animus_adapters::tool::OutputRedactionClass::Safe,
-        ))
+        self.pending_stage_journal = Some(journal);
+        Ok(value)
+    }
+
+    pub(crate) fn persist_staged_safe_point(&mut self) -> Result<(), SteelToolError> {
+        let journal = self
+            .pending_stage_journal
+            .take()
+            .ok_or(SteelToolError::Persistence)?;
+        if self.persistence.persist(&journal).is_err() {
+            self.pending_stage_journal = Some(journal);
+            return Err(SteelToolError::Persistence);
+        }
+        Ok(())
     }
 }
 
@@ -238,6 +258,19 @@ where
 
     fn close(self) -> Result<(), SteelToolError> {
         self.close().map_err(|_error| SteelToolError::Persistence)
+    }
+}
+
+fn map_bridge_error<HostError>(
+    error: &animus_runtime::rlm_kernel::RlmBridgeExecutionError<HostError>,
+) -> SteelToolError {
+    match error.detail() {
+        animus_runtime::rlm_kernel::RlmBridgeErrorDetail::Execution(_) => SteelToolError::Host,
+        animus_runtime::rlm_kernel::RlmBridgeErrorDetail::Contract(
+            animus_adapter_rlm_kernel::Error::BridgeCancelled,
+        ) => SteelToolError::Cancelled,
+        animus_runtime::rlm_kernel::RlmBridgeErrorDetail::Contract(_)
+        | animus_runtime::rlm_kernel::RlmBridgeErrorDetail::Steel(_) => SteelToolError::Evaluation,
     }
 }
 

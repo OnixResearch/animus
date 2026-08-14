@@ -122,6 +122,50 @@ fn marker_only_host_request_is_executed_before_tool_completion() {
     ));
 }
 
+#[test]
+fn failed_kernel_safe_point_stays_pending_and_blocks_close() {
+    let config = parse_live_steel_agent_config(CONFIG).expect("fixture configuration");
+    let kernel =
+        animus_steel::SteelRlmKernel::new(config.rlm_policy().clone()).expect("fixture kernel");
+    let mut service = animus_live_steel_agent::SteelToolService::new(
+        kernel,
+        ContextExecutor::default(),
+        FailingKernelPersistence,
+        animus_live_steel_agent::SteelToolBinding {
+            session_identity: String::from(config.session_identity()),
+            generation: config.authority_generation(),
+        },
+    );
+    let request = tool_request("(+ 1 2)");
+    assert!(matches!(
+        service.execute(&request),
+        Err(animus_live_steel_agent::SteelToolError::Persistence)
+    ));
+    assert!(matches!(
+        service.execute(&request),
+        Err(animus_live_steel_agent::SteelToolError::Persistence)
+    ));
+    assert!(matches!(
+        service.close(),
+        Err(animus_live_steel_agent::SteelToolError::Persistence)
+    ));
+}
+
+struct FailingKernelPersistence;
+
+impl animus_live_steel_agent::KernelSafePointPersistence for FailingKernelPersistence {
+    fn persist(
+        &mut self,
+        _journal: &animus_steel::SteelKernelPrivateJournal,
+    ) -> Result<(), animus_live_steel_agent::SteelToolError> {
+        Err(animus_live_steel_agent::SteelToolError::Persistence)
+    }
+
+    fn close(self) -> Result<(), animus_live_steel_agent::SteelToolError> {
+        Ok(())
+    }
+}
+
 #[derive(Default)]
 struct MemoryPersistence {
     messages: Vec<animus_runtime::coding_session_host::CodingSessionMessage>,

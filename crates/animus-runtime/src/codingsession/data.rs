@@ -653,6 +653,21 @@ impl CodingSessionCommitRequest {
             .last()
             .map_or("", CodingSessionMessage::entry_id)
     }
+
+    /// Returns the exact tool response whose commit precedes provider continuation.
+    #[must_use]
+    pub const fn tool_response_after_commit(&self) -> Option<&animus_adapters::ToolResponse> {
+        match &self.after_commit {
+            CodingSessionAfterCommit::ContinueProvider { tool_response } => Some(tool_response),
+            CodingSessionAfterCommit::DispatchProvider
+            | CodingSessionAfterCommit::DispatchTool { .. }
+            | CodingSessionAfterCommit::Complete { .. }
+            | CodingSessionAfterCommit::InjectNextOrProvider
+            | CodingSessionAfterCommit::RecoveryReady
+            | CodingSessionAfterCommit::CompactionReady
+            | CodingSessionAfterCommit::AuthorityRebound => None,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
