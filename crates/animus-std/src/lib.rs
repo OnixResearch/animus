@@ -318,6 +318,12 @@ pub use providers::{
     validate_provider_dispatch_constructor_inventory, validate_provider_dispatch_receipt,
     validate_provider_dispatch_shared_field_matrix,
 };
+#[cfg(feature = "models-dev-catalog")]
+pub use providers::{
+    MAX_MODELS_DEV_SNAPSHOT_BYTES, MODELS_DEV_API_URL, MODELS_DEV_SOURCE_LABEL,
+    ModelsDevIngestError, ModelsDevIngestReport, ModelsDevJsonErrorKind, ModelsDevProviderBinding,
+    ModelsDevProviderBindingDraft, ingest_models_dev_api_json,
+};
 #[cfg(feature = "session-tree-export")]
 pub use redactedwriter::{
     SessionTreeExportConfigError, SessionTreeExportJsonErrorKind, SessionTreeExportWriteCall,

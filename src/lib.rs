@@ -41,3 +41,11 @@ pub use animus_std::{
     ConfigError, INTENT_ENV_KEY, RunError, RunReport, RuntimeConfig, SummaryModelAdapter,
     load_runtime, run, run_with_model,
 };
+
+/// Re-export of the bounded Models.dev catalog projection.
+#[cfg(feature = "models-dev-catalog")]
+pub use animus_std::{
+    MAX_MODELS_DEV_SNAPSHOT_BYTES, MODELS_DEV_API_URL, MODELS_DEV_SOURCE_LABEL,
+    ModelsDevIngestError, ModelsDevIngestReport, ModelsDevJsonErrorKind, ModelsDevProviderBinding,
+    ModelsDevProviderBindingDraft, ingest_models_dev_api_json,
+};

@@ -15,6 +15,20 @@ Animus adapts Pi-style provider/model registry behavior only at the `animus-std`
 
 The selected metadata is not a network client. The shell remains responsible for creating any concrete provider client and injecting it behind the model adapter boundary.
 
+## Models.dev snapshot ingest
+
+The non-default `models-dev-catalog` feature parses caller-fetched [`https://models.dev/api.json`](https://models.dev/api.json) bytes at the `animus-std` boundary.
+
+The caller supplies an exact provider and model allowlist. The caller also supplies the API kind, endpoint identity, and credential requirement.
+
+`ingest_models_dev_api_json` projects text and image input support, token limits, reasoning metadata, explicit thinking levels, and exact representable prices.
+
+The parser ignores unknown source fields. It omits unsupported modalities, streaming claims, unrepresentable prices, and reasoning controls outside the Animus contract.
+
+The result includes the BLAKE3 identity of the supplied bytes. This identity does not prove freshness, availability, provenance, pricing truth, or endpoint safety.
+
+The function performs no HTTP request, refresh, credential lookup, endpoint discovery, client construction, or runtime dispatch. A host owns those effects.
+
 ## Thinking-level policy
 
 Model capabilities declare supported `ThinkingLevel` values. A `ModelSelection` resolves requested thinking with an explicit policy:
