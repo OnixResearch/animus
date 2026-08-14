@@ -10,6 +10,7 @@
 #![allow(clippy::module_name_repetitions)]
 #![forbid(unsafe_code)]
 
+mod component_scope;
 mod config;
 mod core;
 mod process;
@@ -18,6 +19,14 @@ mod service;
 mod transport;
 mod worker;
 
+pub use component_scope::{
+    ClientDeliveryScopeLease, ComponentScopeCancellationPort, ComponentScopeDeliveryPort,
+    ComponentScopeHost, ComponentScopeHostBounds, ComponentScopeHostError,
+    ComponentScopeHostOutcome, ComponentScopePorts, ComponentScopeQuiescencePort,
+    ComponentScopeReceiptPort, ComponentScopeReleasePort, ScopeBoundPortRequest,
+    ScopeMemberPortRequest, ScopePortStatus, ScopeReceiptPortRequest, WorkerRootScopePlan,
+    plan_client_delivery_scope_lease, plan_worker_root_scope,
+};
 pub use config::{LocalDaemonConfigError, ValidatedLocalDaemonConfig, parse_local_daemon_config};
 pub use core::{
     Attachment, HealthFacts, LocalDaemonError, LocalDaemonReceipt, LocalDaemonReceiptCounts,

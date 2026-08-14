@@ -98,6 +98,8 @@ let session_event_replay_feature = "session-event-replay" in
 let session_event_replay_family = "session-event-replay" in
 let composition_activation_feature = "compat" in
 let composition_activation_family = "compatibility" in
+let component_scope_feature = "compat" in
+let component_scope_family = "compatibility" in
 let execution_backend_feature = "execution-backend-planner" in
 let execution_backend_family = "execution-backend" in
 let native_evaluation_feature = "native-evaluation" in
@@ -628,6 +630,21 @@ let composition_activation_record = fun export_path_value owning_crate_value sou
   depends_on = [],
   composes_with = ["animus-live-steel-agent::run_live_application", "animus-live-terminal::run_attached_terminal"],
   capability_family = composition_activation_family,
+}
+in
+let component_scope_record = fun export_path_value owning_crate_value source_value review_note_value => {
+  export_path = export_path_value,
+  owning_crate = owning_crate_value,
+  source = source_value,
+  class = reusable,
+  side_effect = none,
+  stability = stable,
+  review_note = review_note_value,
+  feature_gate = component_scope_feature,
+  required_authority = none,
+  depends_on = ["animus-runtime::composition_activation_graph"],
+  composes_with = ["animus-local-daemon::ComponentScopeHost"],
+  capability_family = component_scope_family,
 }
 in
 let execution_backend_record = fun export_path_value owning_crate_value source_value class_value side_effect_value review_note_value required_authority_value => {
@@ -2873,6 +2890,7 @@ let entry_values = [
   session_event_replay_record "animus-runtime::session_event_replay" "animus-runtime" session_core "pure bounded reconnect replay over admitted ledger facts with one client order through the runtime facade",
   session_event_replay_record "animus::session_event_replay" "animus" root "optional compatibility re-export of session event replay contracts",
   composition_activation_record "animus-runtime::composition_activation_graph" "animus-runtime" runtime "runtime facade re-export of the no-std activation core",
+  component_scope_record "animus-runtime::component_scope" "animus-runtime" runtime "runtime facade re-export of the no-std generation-fenced component-scope core",
   execution_backend_record "animus-runtime::execution_backend_planner" "animus-runtime" runtime reusable none "pure weakest-admitted backend selection and implementation-free current-enforcement service" none,
   execution_backend_record "animus-std::execution_backend_planner_host" "animus-std" std_shell shell shell_owned "thin host recheck seam over an explicitly supplied current-enforcement service" shell_owned,
   execution_backend_record "animus::execution_backend_planner" "animus" root reusable none "optional compatibility re-export of execution backend planner contracts" none,
@@ -3783,6 +3801,24 @@ let entry_values = [
   live_steel_agent_record "animus-live-steel-agent::run_live_application" "non-default headless product root over explicit provider store Steel child control and receipt adapters",
   live_steel_agent_record "animus-live-steel-agent::session_resume_required" "durable session recovery posture observation",
   live_steel_agent_record "animus-live-steel-agent::store_definitions" "generated durable policy and descriptor construction",
+  local_daemon_record "animus-local-daemon::ClientDeliveryScopeLease" "client-owned delivery lease without worker-scope ownership",
+  local_daemon_record "animus-local-daemon::ComponentScopeCancellationPort" "injected exact-member cancellation request port",
+  local_daemon_record "animus-local-daemon::ComponentScopeDeliveryPort" "injected exact-generation delivery close port",
+  local_daemon_record "animus-local-daemon::ComponentScopeHost" "bounded shell over reducer-requested component-scope effects",
+  local_daemon_record "animus-local-daemon::ComponentScopeHostBounds" "finite component-scope effect bound",
+  local_daemon_record "animus-local-daemon::ComponentScopeHostError" "safe component-scope host failure class",
+  local_daemon_record "animus-local-daemon::ComponentScopeHostOutcome" "terminal scope state and metadata-only receipt",
+  local_daemon_record "animus-local-daemon::ComponentScopePorts" "explicit narrow component-scope port bundle",
+  local_daemon_record "animus-local-daemon::ComponentScopeQuiescencePort" "injected generation-bound quiescence observation port",
+  local_daemon_record "animus-local-daemon::ComponentScopeReceiptPort" "injected metadata-only terminal receipt port",
+  local_daemon_record "animus-local-daemon::ComponentScopeReleasePort" "injected reverse-order member release port",
+  local_daemon_record "animus-local-daemon::ScopeBoundPortRequest" "generation-bound scope effect request",
+  local_daemon_record "animus-local-daemon::ScopeMemberPortRequest" "generation-bound member effect request",
+  local_daemon_record "animus-local-daemon::ScopePortStatus" "safe complete or unresolved port status",
+  local_daemon_record "animus-local-daemon::ScopeReceiptPortRequest" "exact terminal receipt commit request",
+  local_daemon_record "animus-local-daemon::WorkerRootScopePlan" "exact worker-generation root-scope mapping",
+  local_daemon_record "animus-local-daemon::plan_client_delivery_scope_lease" "client delivery lease planner",
+  local_daemon_record "animus-local-daemon::plan_worker_root_scope" "worker generation root-scope planner",
   local_daemon_record "animus-local-daemon::Attachment" "bounded client attachment metadata",
   local_daemon_record "animus-local-daemon::EventBatchRequest" "bounded later-event cursor and attachment request",
   local_daemon_record "animus-local-daemon::HealthFacts" "supplied process recovery facts",

@@ -22,6 +22,9 @@ fn runtime_facade_preserves_session_core_types() {
         animus_runtime::branch_explorer::BranchExplorerError,
     ) -> animus_session_core::branch_explorer::BranchExplorerError = |value| value;
     let _: fn(
+        animus_runtime::component_scope::ComponentScopeError,
+    ) -> animus_session_core::component_scope::ComponentScopeError = |value| value;
+    let _: fn(
         animus_runtime::conversation_projection::ConversationProjectionError,
     ) -> animus_session_core::conversation_projection::ConversationProjectionError = |value| value;
     let _: fn(
@@ -47,6 +50,10 @@ fn runtime_facade_preserves_session_core_types() {
     assert_eq!(
         std::mem::size_of::<animus_runtime::branch_explorer::BranchExplorerError>(),
         std::mem::size_of::<animus_session_core::branch_explorer::BranchExplorerError>()
+    );
+    assert_eq!(
+        std::mem::size_of::<animus_runtime::component_scope::ComponentScopeError>(),
+        std::mem::size_of::<animus_session_core::component_scope::ComponentScopeError>()
     );
     assert_eq!(
         std::mem::size_of::<animus_runtime::conversation_projection::ConversationProjectionError>(),

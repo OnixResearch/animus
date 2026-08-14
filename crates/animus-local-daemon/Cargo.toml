@@ -17,6 +17,7 @@ live-worker = ["animus-live-steel-agent/live-provider"]
 [dependencies]
 animus-adapter-daemon = { path = "../animus-adapter-daemon", version = "0.1.0" }
 animus-live-steel-agent = { path = "../animus-live-steel-agent", version = "0.1.0" }
+animus-session-core = { path = "../animus-session-core", version = "0.1.0" }
 blake3 = "1.8.5"
 cap-std = "3.4.5"
 nix = { version = "0.30.1", features = ["process", "signal", "socket"] }

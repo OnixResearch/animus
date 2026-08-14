@@ -79,6 +79,8 @@ mod checkpoint;
 #[path = "childsession.rs"]
 /// Pure concrete child-session admission, lifecycle, result, and persistence contracts.
 pub mod child_session_service;
+/// Pure generation-fenced component registration, resolution, and teardown.
+pub use animus_session_core::component_scope;
 /// Pure composition-activation graph validation, preflight, and safe inspection.
 pub use animus_session_core::composition_activation_graph;
 /// Pure canonical conversation projection and cache reconciliation.

@@ -55,6 +55,15 @@ Attach returns a current snapshot before later events. Event flow has a finite c
 
 Commands cross the `WorkerSessionPort`. The supervisor selects the exact worker generation but does not execute the command.
 
+<!-- r[impl agent_harness_runtime.component_scope.registration] -->
+## Component-scope mapping
+
+Each worker generation maps to one deterministic root component-scope plan. Each client attachment gets a separate generation-bound delivery lease.
+
+Client detach removes only that delivery lease. It does not own or close the worker scope. Authorized worker stop remains separate.
+
+`ComponentScopeHost` calls only its injected delivery, cancellation, quiescence, release, and receipt ports. It executes only effects from the pure reducer.
+
 ## Evidence
 
 Receipts contain BLAKE3 identities, bounded counts, and these non-claims:

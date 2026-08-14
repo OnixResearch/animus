@@ -382,6 +382,7 @@
                 || baseName == "check-component-catalog"
                 || baseName == "check-clash-ucan-authority"
                 || baseName == "check-composition-activation-graph"
+                || baseName == "check-component-scopes"
                 || baseName == "check-composition-conformance"
                 || baseName == "check-current-head-release-evidence-index"
                 || baseName == "check-exec-policy"
@@ -1357,6 +1358,25 @@
             export ANIMUS_ACTIVATION_STATIC_ONLY=1
             sh scripts/cairn/check-composition-activation-graph --root .
           '';
+
+          component-scopes =
+            pkgs.runCommand "animus-component-scopes"
+              {
+                nativeBuildInputs = [
+                  pkgs.rustc
+                  pkgs.gcc
+                  pkgs.nickel
+                  pkgs.b3sum
+                ];
+              }
+              ''
+                cp -r ${source} source
+                chmod -R u+w source
+                cd source
+                export ANIMUS_COMPONENT_SCOPE_STATIC_ONLY=1
+                sh scripts/cairn/check-component-scopes --root .
+                touch "$out"
+              '';
 
           adapter-conformance-index =
             pkgs.runCommand "animus-adapter-conformance-index"

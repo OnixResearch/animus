@@ -9,3 +9,5 @@ Startup uses the existing `session_start` lifecycle hook point. Animus does not 
 `post_turn` is emitted after a turn result is recorded. It may observe, warn, or request continuation, but cannot deny completed work, request revalidation of already-used payloads, execute tools, rewrite denied actions, weaken sandbox policy, or suppress approval.
 
 The reusable runtime exposes `advance_turn_hooks` as the pure FSM boundary. It returns typed lifecycle hook effects and performs no process, filesystem, network, clock, provider, persistence, Steel, or hook-adapter execution.
+
+Component scopes do not replace lifecycle hooks. Hooks remain extension points for turn events. `animus_runtime::component_scope` owns registration visibility, generation fences, quiescence, and reverse release planning.

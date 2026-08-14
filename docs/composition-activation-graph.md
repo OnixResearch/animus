@@ -39,6 +39,14 @@ An activation decision projects to a bounded metadata-only snapshot. The snapsho
 
 The projection excludes service handles, configuration bodies, endpoints, credentials, private paths, prompts, payloads, and mutation commands. The Host Control mapping fixture uses only these safe fields. It does not add a runtime dependency on an unpublished Host Control package.
 
+## Component scopes
+
+The validated activation graph admits component-scope registrations and dependency sets. The scope core rejects dependencies that the graph does not declare.
+
+Scope teardown derives a reverse release order from those admitted dependencies. It rejects unsupported ownership cycles before any host cleanup effect.
+
+The live terminal profile includes `runtime.component-scope-core`. This required component is checked before terminal or connection effects.
+
 ## Reviewed source
 
 The design review used DeepSeek Harness commit `47f943859bef60e4160492346772ded9b24f765a`. The reviewed source has an MIT license and developer-preview status.

@@ -1,0 +1,124 @@
+#!/usr/bin/env sh
+# r[agent_harness_runtime.component_scope.verification]
+set -eu
+
+readonly FAILURE=1
+readonly ENABLED=1
+readonly RAIL_NAME=component-scopes
+readonly RECEIPT_SCHEMA=animus.focused-rail.v1
+readonly RECEIPT_DIR=target/cairn/focused-rails
+readonly EXPECTED_CORE_TEST_COUNT=6
+readonly EXPECTED_HOST_TEST_COUNT=3
+readonly EXPECTED_DAEMON_SERVICE_TEST_COUNT=2
+readonly CORE_FILE=crates/animus-session-core/src/componentscope/core.rs
+readonly DATA_FILE=crates/animus-session-core/src/componentscope/data.rs
+readonly HOST_FILE=crates/animus-local-daemon/src/component_scope.rs
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+
+if [ "${1:-}" = "--root" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  repo_root=$(CDPATH= cd -- "$2" && pwd)
+fi
+
+cd "${repo_root}"
+
+for required_file in "${CORE_FILE}" "${DATA_FILE}" "${HOST_FILE}"; do
+  if [ ! -f "${required_file}" ]; then
+    printf 'error: component-scope source missing: %s\n' "${required_file}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+for required_token in \
+  'ComponentScopeState::Closing' \
+  'ComponentScopeState::Quiescing' \
+  'ComponentScopeState::Releasing' \
+  'ComponentScopeState::Closed' \
+  'ComponentScopeState::FailedCleanup' \
+  'ScopeTransitionClass::CloseReused'; do
+  if ! grep -F "${required_token}" "${CORE_FILE}" >/dev/null 2>&1; then
+    printf 'error: component-scope reducer token missing: %s\n' "${required_token}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+for required_port in \
+  'ComponentScopeDeliveryPort' \
+  'ComponentScopeCancellationPort' \
+  'ComponentScopeQuiescencePort' \
+  'ComponentScopeReleasePort' \
+  'ComponentScopeReceiptPort'; do
+  if ! grep -F "${required_port}" "${HOST_FILE}" >/dev/null 2>&1; then
+    printf 'error: component-scope host port missing: %s\n' "${required_port}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+sh scripts/cairn/check-component-catalog --root .
+
+if [ "${ANIMUS_COMPONENT_SCOPE_STATIC_ONLY:-0}" = "${ENABLED}" ]; then
+  printf 'Nix static rail %s: pass\n' "${RAIL_NAME}"
+  exit 0
+fi
+
+if ! command -v cargo >/dev/null 2>&1; then
+  printf '%s\n' 'error: cargo is required. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+if ! command -v b3sum >/dev/null 2>&1; then
+  printf '%s\n' 'error: b3sum is required. Run inside `nix develop`.' >&2
+  exit "${FAILURE}"
+fi
+
+cargo test -p animus-session-core component_scope --locked
+cargo check -p animus-session-core --target wasm32-unknown-unknown --locked
+cargo test -p animus-local-daemon --test component_scope --test service --locked
+cargo test -p animus-live-terminal --all-features activation --locked
+cargo test -p animus-runtime hooks::lifecycle::tests --lib --locked
+cargo test -p animus-runtime hooks::turn::tests --lib --locked
+scripts/cairn/check-agent-control --root .
+scripts/cairn/check-request-lifecycle --root .
+scripts/cairn/check-daemon-workers --root .
+scripts/cairn/check-transactional-daemon-handoff --root .
+
+mkdir -p "${RECEIPT_DIR}"
+tmp_body=$(mktemp "${TMPDIR:-/tmp}/animus-component-scopes.XXXXXX")
+trap 'rm -f "${tmp_body}"' EXIT HUP INT TERM
+
+cat > "${tmp_body}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+core_test_count: ${EXPECTED_CORE_TEST_COUNT}
+host_test_count: ${EXPECTED_HOST_TEST_COUNT}
+daemon_service_test_count: ${EXPECTED_DAEMON_SERVICE_TEST_COUNT}
+case_classes:
+- positive
+- negative
+safe_evidence:
+- scope, generation, graph, plan, component, transition, count, cleanup class, and non-claim metadata only
+- no handles, commands, paths, payloads, prompts, credentials, endpoints, or raw errors
+non_claims:
+- not task cancellation, process death, resource reclamation, sandboxing, or external liveness
+- not implementation correctness, effect success, authority, production readiness, or release eligibility
+EOF
+
+receipt_hash=$(b3sum "${tmp_body}" | awk '{print $1}')
+receipt_path=${RECEIPT_DIR}/${RAIL_NAME}.md
+{
+  cat "${tmp_body}"
+  printf 'receipt_hash: BLAKE3:%s\n' "${receipt_hash}"
+} > "${receipt_path}"
+
+if grep -Eq 'RAW_PROMPT:|PROVIDER_PAYLOAD:|UNBOUNDED_OUTPUT:|BEGIN [A-Z ]*PRIVATE KEY|API_KEY=|AWS_SECRET_ACCESS_KEY|(^|[^[:alnum:]])sk-|/home/[^[:space:]]+' "${receipt_path}"; then
+  printf 'error: focused rail %s wrote unsafe evidence\n' "${RAIL_NAME}" >&2
+  exit "${FAILURE}"
+fi
+
+printf 'focused rail %s: pass\n' "${RAIL_NAME}"
+printf 'receipt: %s\n' "${receipt_path}"

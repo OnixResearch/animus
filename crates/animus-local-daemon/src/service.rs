@@ -101,11 +101,17 @@ pub struct EventBatchRequest<'a> {
     pub maximum_events: u32,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct AttachedClient {
+    attachment: crate::Attachment,
+    delivery_scope_lease: crate::ClientDeliveryScopeLease,
+}
+
 /// Explicit local supervisor service.
 pub struct LocalSupervisorService<Worker> {
     config: crate::ValidatedLocalDaemonConfig,
     registry: crate::WorkerRegistry,
-    attachments: BTreeMap<String, crate::Attachment>,
+    attachments: BTreeMap<String, AttachedClient>,
     worker: Worker,
 }
 
@@ -147,8 +153,10 @@ impl<Worker: WorkerSessionPort> LocalSupervisorService<Worker> {
             self.config.max_events(),
         )
         .map_err(|_error| ServiceError::Decision)?;
-        let snapshot = self.worker.snapshot(root_id)?;
         let record = self.registry.find(root_id).ok_or(ServiceError::Decision)?;
+        let delivery_scope_lease = crate::plan_client_delivery_scope_lease(record, client_id)
+            .map_err(|_error| ServiceError::ComponentScope)?;
+        let snapshot = self.worker.snapshot(root_id)?;
         if snapshot.worker_id != record.worker_id
             || snapshot.generation != record.generation
             || snapshot.restore_status == crate::RestoreStatus::Blocked
@@ -171,11 +179,14 @@ impl<Worker: WorkerSessionPort> LocalSupervisorService<Worker> {
         }
         self.attachments.insert(
             format!("{root_id}\0{client_id}"),
-            crate::Attachment {
-                client_id: String::from(client_id),
-                last_sequence: events
-                    .last()
-                    .map_or(snapshot.event_sequence, |event| event.sequence),
+            AttachedClient {
+                attachment: crate::Attachment {
+                    client_id: String::from(client_id),
+                    last_sequence: events
+                        .last()
+                        .map_or(snapshot.event_sequence, |event| event.sequence),
+                },
+                delivery_scope_lease,
             },
         );
         Ok((snapshot, events))
@@ -198,7 +209,7 @@ impl<Worker: WorkerSessionPort> LocalSupervisorService<Worker> {
             .attachments
             .get_mut(key.as_str())
             .ok_or(ServiceError::UnknownAttachment)?;
-        if attachment.last_sequence != request.sequence {
+        if attachment.attachment.last_sequence != request.sequence {
             return Err(ServiceError::WorkerIdentity);
         }
         let events =
@@ -215,7 +226,7 @@ impl<Worker: WorkerSessionPort> LocalSupervisorService<Worker> {
         {
             return Err(ServiceError::Bound);
         }
-        attachment.last_sequence = events
+        attachment.attachment.last_sequence = events
             .last()
             .map_or(request.sequence, |event| event.sequence);
         Ok(events)
@@ -279,7 +290,9 @@ impl<Worker: WorkerSessionPort> LocalSupervisorService<Worker> {
     /// Returns [`ServiceError`] for unknown roots, stale generation, or worker failure.
     pub fn stop(&mut self, root_id: &str, generation: u64) -> Result<(), ServiceError> {
         let record = self.registry.find(root_id).ok_or(ServiceError::Decision)?;
-        if record.generation != generation {
+        let scope_plan =
+            crate::plan_worker_root_scope(record).map_err(|_error| ServiceError::ComponentScope)?;
+        if scope_plan.generation.get() != generation {
             return Err(ServiceError::WorkerIdentity);
         }
         self.worker.request_stop(root_id, generation)
@@ -305,6 +318,18 @@ impl<Worker: WorkerSessionPort> LocalSupervisorService<Worker> {
         self.worker.retry(root_id, generation)
     }
 
+    /// Returns one client-owned delivery lease without worker-scope ownership.
+    #[must_use]
+    pub fn client_delivery_scope_lease(
+        &self,
+        root_id: &str,
+        client_id: &str,
+    ) -> Option<&crate::ClientDeliveryScopeLease> {
+        self.attachments
+            .get(format!("{root_id}\0{client_id}").as_str())
+            .map(|attached| &attached.delivery_scope_lease)
+    }
+
     /// Returns the current attachment count.
     #[must_use]
     pub fn attachment_count(&self) -> usize {
@@ -325,6 +350,8 @@ pub enum ServiceError {
     UnknownAttachment,
     /// Explicit retry is not admitted in current state.
     RetryDenied,
+    /// Worker or client scope mapping was invalid.
+    ComponentScope,
     /// Worker-owned service failed.
     Worker,
 }

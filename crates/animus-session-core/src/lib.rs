@@ -39,6 +39,9 @@ mod prelude;
 pub mod active_turn_recovery;
 /// Pure bounded session branch projection, control planning, comparison, and evidence.
 pub mod branch_explorer;
+#[path = "componentscope/mod.rs"]
+/// Pure generation-fenced component registration, resolution, and teardown.
+pub mod component_scope;
 #[path = "compositionactivation.rs"]
 /// Pure composition-activation graph validation, preflight, and safe inspection.
 pub mod composition_activation_graph;

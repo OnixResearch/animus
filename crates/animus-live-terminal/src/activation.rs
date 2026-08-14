@@ -16,6 +16,7 @@ const REQUIRED_NON_CLAIMS: [&str; 6] = [
     "not-release-eligibility",
 ];
 const COMPONENT_DAEMON_CONTRACT: &str = "adapters.daemon-workers";
+const COMPONENT_SCOPE_CORE: &str = "runtime.component-scope-core";
 const COMPONENT_DAEMON_HOST: &str = "std.local-daemon-supervisor-host";
 const COMPONENT_TUI: &str = "tui.host-shell";
 const COMPONENT_TERMINAL: &str = "std.live-terminal-agent-host";
@@ -36,6 +37,11 @@ fn graph_draft() -> activation::ActivationGraphDraft {
         components: vec![
             component(
                 COMPONENT_DAEMON_CONTRACT,
+                "always",
+                activation::ActivationAuthorityClass::None,
+            ),
+            component(
+                COMPONENT_SCOPE_CORE,
                 "always",
                 activation::ActivationAuthorityClass::None,
             ),
@@ -100,6 +106,7 @@ fn selection() -> activation::SelectedComposition {
         generation: ACTIVATION_GENERATION,
         component_ids: vec![
             String::from(COMPONENT_DAEMON_CONTRACT),
+            String::from(COMPONENT_SCOPE_CORE),
             String::from(COMPONENT_DAEMON_HOST),
             String::from(COMPONENT_TUI),
             String::from(COMPONENT_TERMINAL),

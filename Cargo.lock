@@ -320,6 +320,7 @@ version = "0.1.0"
 dependencies = [
  "animus-adapter-daemon",
  "animus-live-steel-agent",
+ "animus-session-core",
  "blake3",
  "cap-std",
  "nix 0.30.1",

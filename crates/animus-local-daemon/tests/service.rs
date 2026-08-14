@@ -1,5 +1,8 @@
 //! Supervisor and worker composition tests.
 
+use std::cell::Cell;
+use std::rc::Rc;
+
 use animus_local_daemon::{
     HealthFacts, LocalSupervisorService, RestoreStatus, ServiceError, WorkerCommand, WorkerEvent,
     WorkerLifecycle, WorkerRegistry, WorkerRegistryRecord, WorkerSessionPort, WorkerSnapshot,
@@ -13,7 +16,7 @@ const MAX_WORKERS: u16 = 8;
 #[derive(Default)]
 struct FixtureWorker {
     routed: usize,
-    stopped: usize,
+    stopped: Rc<Cell<usize>>,
     retried: usize,
 }
 
@@ -48,7 +51,7 @@ impl WorkerSessionPort for FixtureWorker {
     }
 
     fn request_stop(&mut self, _root_id: &str, _generation: u64) -> Result<(), ServiceError> {
-        self.stopped += 1;
+        self.stopped.set(self.stopped.get().saturating_add(1));
         Ok(())
     }
 
@@ -69,11 +72,17 @@ fn snapshot_first_attach_detach_command_stop_and_retry_use_worker_port() {
     let config = parse_local_daemon_config(CONFIG).expect("config");
     let registry =
         WorkerRegistry::new(vec![record(WorkerLifecycle::Ready)], MAX_WORKERS).expect("registry");
-    let mut service = LocalSupervisorService::new(config, registry, FixtureWorker::default());
+    let worker = FixtureWorker::default();
+    let stopped = Rc::clone(&worker.stopped);
+    let mut service = LocalSupervisorService::new(config, registry, worker);
     let (snapshot, events) = service.attach("root-a", "client-a", 8).expect("attach");
     assert_eq!(snapshot.event_sequence, 4);
     assert_eq!(events[0].sequence, 5);
     assert_eq!(service.attachment_count(), 1);
+    let client_scope_lease = service
+        .client_delivery_scope_lease("root-a", "client-a")
+        .expect("client delivery scope lease");
+    assert!(!client_scope_lease.owns_worker_scope());
     let later = service
         .events_after(animus_local_daemon::EventBatchRequest {
             root_id: "root-a",
@@ -85,6 +94,12 @@ fn snapshot_first_attach_detach_command_stop_and_retry_use_worker_port() {
     assert_eq!(later[0].sequence, 6);
     service.detach("root-a", "client-a").expect("detach");
     assert_eq!(service.attachment_count(), 0);
+    assert!(
+        service
+            .client_delivery_scope_lease("root-a", "client-a")
+            .is_none()
+    );
+    assert_eq!(stopped.get(), 0);
     assert_eq!(
         service
             .route(&WorkerCommand {
@@ -98,6 +113,7 @@ fn snapshot_first_attach_detach_command_stop_and_retry_use_worker_port() {
         "command-a"
     );
     service.stop("root-a", 1).expect("stop");
+    assert_eq!(stopped.get(), 1);
 
     let config = parse_local_daemon_config(CONFIG).expect("config");
     let registry =
