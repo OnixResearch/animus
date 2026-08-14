@@ -659,6 +659,11 @@ impl CodingSessionCommitRequest {
 pub struct CodingSessionProviderRequest {
     pub(super) effect_id: String,
     pub(super) run_id: String,
+    pub(super) session_id: String,
+    pub(super) branch_id: String,
+    pub(super) active_leaf_id: String,
+    pub(super) durable_head_hash: String,
+    pub(super) request_sequence: u64,
     pub(super) request: animus_adapters::ModelRequest,
 }
 
@@ -671,6 +676,31 @@ impl CodingSessionProviderRequest {
     #[must_use]
     pub fn run_id(&self) -> &str {
         self.run_id.as_str()
+    }
+
+    #[must_use]
+    pub fn session_id(&self) -> &str {
+        self.session_id.as_str()
+    }
+
+    #[must_use]
+    pub fn branch_id(&self) -> &str {
+        self.branch_id.as_str()
+    }
+
+    #[must_use]
+    pub fn active_leaf_id(&self) -> &str {
+        self.active_leaf_id.as_str()
+    }
+
+    #[must_use]
+    pub fn durable_head_hash(&self) -> &str {
+        self.durable_head_hash.as_str()
+    }
+
+    #[must_use]
+    pub const fn request_sequence(&self) -> u64 {
+        self.request_sequence
     }
 
     #[must_use]

@@ -211,6 +211,9 @@ pub struct DurableSessionStoreDescriptor {
     pub receipt_policy: String,
 }
 
+const MODEL_REQUEST_SNAPSHOT_WIRE_CODE: u8 = 9;
+const MODEL_REQUEST_TERMINAL_WIRE_CODE: u8 = 10;
+
 /// Private replay record kind.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum DurableSessionRecordKind {
@@ -230,6 +233,10 @@ pub enum DurableSessionRecordKind {
     AuthorityProfileBinding,
     /// Private committed Steel kernel safe-point snapshot.
     SteelKernelState,
+    /// Private complete provider-neutral model-request snapshot.
+    ModelRequestSnapshot,
+    /// Private correlated terminal provider observation.
+    ModelRequestTerminal,
 }
 
 impl DurableSessionRecordKind {
@@ -245,6 +252,8 @@ impl DurableSessionRecordKind {
             Self::BranchMove => 6,
             Self::AuthorityProfileBinding => 7,
             Self::SteelKernelState => 8,
+            Self::ModelRequestSnapshot => MODEL_REQUEST_SNAPSHOT_WIRE_CODE,
+            Self::ModelRequestTerminal => MODEL_REQUEST_TERMINAL_WIRE_CODE,
         }
     }
 
@@ -260,6 +269,8 @@ impl DurableSessionRecordKind {
             6 => Some(Self::BranchMove),
             7 => Some(Self::AuthorityProfileBinding),
             8 => Some(Self::SteelKernelState),
+            MODEL_REQUEST_SNAPSHOT_WIRE_CODE => Some(Self::ModelRequestSnapshot),
+            MODEL_REQUEST_TERMINAL_WIRE_CODE => Some(Self::ModelRequestTerminal),
             _other => None,
         }
     }
@@ -276,6 +287,8 @@ impl DurableSessionRecordKind {
             Self::BranchMove => "branch_move",
             Self::AuthorityProfileBinding => "authority_profile_binding",
             Self::SteelKernelState => "steel_kernel_state",
+            Self::ModelRequestSnapshot => "model_request_snapshot",
+            Self::ModelRequestTerminal => "model_request_terminal",
         }
     }
 }
@@ -372,6 +385,12 @@ impl DurableSessionFrame {
     #[must_use]
     pub fn private_payload(&self) -> &[u8] {
         self.payload.as_slice()
+    }
+
+    /// Returns the prior durable frame or commit identity.
+    #[must_use]
+    pub fn previous_frame_hash(&self) -> &str {
+        self.previous_frame_hash.as_str()
     }
 
     /// Returns frame identity.

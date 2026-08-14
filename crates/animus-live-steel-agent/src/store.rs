@@ -14,8 +14,12 @@ const STORE_POLICY_JSON: &str =
     include_str!("../../../config/generated/durable-session-store-policy.json");
 const SESSION_STORE_ID: &str = "store.live-steel-agent.session";
 const KERNEL_STORE_ID: &str = "store.live-steel-agent.kernel";
+const SNAPSHOT_STORE_ID: &str = "store.live-steel-agent.model-request-snapshots";
 const SESSION_LEASE_ID: &str = "lease.live-steel-agent.session";
 const KERNEL_LEASE_ID: &str = "lease.live-steel-agent.kernel";
+const SNAPSHOT_LEASE_ID: &str = "lease.live-steel-agent.model-request-snapshots";
+const SNAPSHOT_JOURNAL_NAME: &str = "model-request-snapshots.journal";
+const SNAPSHOT_LOCK_NAME: &str = "model-request-snapshots.lock";
 const RECEIPT_POLICY: &str = "metadata-only";
 
 /// Safe durable-composition failure.
@@ -27,6 +31,8 @@ pub enum LiveStoreError {
     Session,
     /// The private kernel store could not open safely.
     Kernel,
+    /// The private model-request snapshot store could not open safely.
+    Snapshot,
     /// A present kernel snapshot failed strict effect-disabled restore.
     KernelRestore,
 }
@@ -47,6 +53,8 @@ pub struct LiveStoreDefinitions {
     pub session: DurableSessionStoreDescriptor,
     /// Dedicated private Steel-kernel descriptor.
     pub kernel: DurableSessionStoreDescriptor,
+    /// Dedicated private model-request snapshot descriptor.
+    pub snapshot: DurableSessionStoreDescriptor,
 }
 
 /// Loads exact store definitions from generated policy and validated app config.
@@ -75,10 +83,12 @@ pub fn store_definitions(
     };
     let session = descriptor(SESSION_STORE_ID, config.application_id());
     let kernel = descriptor(KERNEL_STORE_ID, config.session_identity());
+    let snapshot = descriptor(SNAPSHOT_STORE_ID, config.application_id());
     Ok(LiveStoreDefinitions {
         policy,
         session,
         kernel,
+        snapshot,
     })
 }
 
@@ -111,6 +121,41 @@ pub fn open_session_persistence<'a>(
         &definitions.policy,
         &definitions.session,
     ))
+}
+
+/// Opens the dedicated private model-request snapshot persistence lease.
+///
+/// # Errors
+///
+/// Returns [`LiveStoreError::Snapshot`] when admission, recovery, locking, or I/O fails.
+pub fn open_snapshot_persistence<'a>(
+    root: &'a cap_std::fs::Dir,
+    definitions: &'a LiveStoreDefinitions,
+) -> Result<
+    animus_std::model_request_snapshot_host::DurableModelRequestSnapshotStore<'a, FileSynchronizer>,
+    LiveStoreError,
+> {
+    let store = open_durable_session_store(
+        &DurableSessionStoreOpenRequest {
+            policy: &definitions.policy,
+            descriptor: &definitions.snapshot,
+            location: DurableSessionStoreLocation {
+                root,
+                journal_name: SNAPSHOT_JOURNAL_NAME,
+                lock_name: SNAPSHOT_LOCK_NAME,
+            },
+            lease_id: SNAPSHOT_LEASE_ID,
+        },
+        FileSynchronizer,
+    )
+    .map_err(|_error| LiveStoreError::Snapshot)?;
+    Ok(
+        animus_std::model_request_snapshot_host::DurableModelRequestSnapshotStore::new(
+            store,
+            &definitions.policy,
+            &definitions.snapshot,
+        ),
+    )
 }
 
 /// Opens the dedicated private Steel-kernel persistence lease.

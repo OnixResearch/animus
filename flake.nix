@@ -383,6 +383,7 @@
                 || baseName == "check-clash-ucan-authority"
                 || baseName == "check-composition-activation-graph"
                 || baseName == "check-component-scopes"
+                || baseName == "check-model-request-snapshots"
                 || baseName == "check-composition-conformance"
                 || baseName == "check-current-head-release-evidence-index"
                 || baseName == "check-exec-policy"
@@ -1375,6 +1376,25 @@
                 cd source
                 export ANIMUS_COMPONENT_SCOPE_STATIC_ONLY=1
                 sh scripts/cairn/check-component-scopes --root .
+                touch "$out"
+              '';
+
+          model-request-snapshots =
+            pkgs.runCommand "animus-model-request-snapshots"
+              {
+                nativeBuildInputs = [
+                  pkgs.rustc
+                  pkgs.gcc
+                  pkgs.nickel
+                  pkgs.b3sum
+                ];
+              }
+              ''
+                cp -r ${source} source
+                chmod -R u+w source
+                cd source
+                export ANIMUS_MODEL_REQUEST_SNAPSHOT_STATIC_ONLY=1
+                sh scripts/cairn/check-model-request-snapshots --root .
                 touch "$out"
               '';
 

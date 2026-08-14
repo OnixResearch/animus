@@ -244,9 +244,7 @@ pub(crate) fn initial_dispatch(
         model_call_id,
         tool_capabilities(model_id)?,
         tool_schemas()?,
-        animus_std_openai::OpenAiToolPolicy::serial(
-            animus_std_openai::OpenAiToolChoice::auto(),
-        ),
+        animus_std_openai::OpenAiToolPolicy::serial(animus_std_openai::OpenAiToolChoice::auto()),
     )
     .map_err(|_error| ProviderStreamError::ToolCohort)
 }
@@ -263,12 +261,17 @@ pub(crate) fn pending_from_call(
     })
 }
 
+pub(crate) struct PlannedProviderRequest {
+    pub(crate) plan: animus_std::ProviderDispatchPlan,
+    pub(crate) canonical: animus_adapters::CanonicalModelRequest,
+}
+
 pub(crate) fn plan_request(
     config: &crate::ValidatedLiveSteelAgentConfig,
     request: &animus_runtime::coding_session_host::CodingSessionProviderRequest,
     continuation: bool,
     correlation_id: Option<&str>,
-) -> Result<animus_std::ProviderDispatchPlan, ProviderStreamError> {
+) -> Result<PlannedProviderRequest, ProviderStreamError> {
     let text = [animus_adapters::CanonicalMessageContentPartDraft::Text {
         text: request.request().prompt(),
     }];
@@ -324,7 +327,7 @@ pub(crate) fn plan_request(
         .iter()
         .map(String::as_str)
         .collect::<Vec<_>>();
-    animus_std::plan_provider_dispatch(&animus_std::ProviderDispatchInput {
+    let plan = animus_std::plan_provider_dispatch(&animus_std::ProviderDispatchInput {
         selected_model: config.selected_model(),
         canonical_request: &canonical,
         reviewed_projection_fixture: expected.as_slice(),
@@ -342,7 +345,8 @@ pub(crate) fn plan_request(
         fallback: animus_std::ProviderDispatchFallbackState::NotRequested,
         receipt_policy: animus_std::ProviderDispatchReceiptPolicy::SafeSummaryOnly,
     })
-    .map_err(|_error| ProviderStreamError::Planning)
+    .map_err(|_error| ProviderStreamError::Planning)?;
+    Ok(PlannedProviderRequest { plan, canonical })
 }
 
 pub(crate) fn final_text(
@@ -390,8 +394,7 @@ fn tool_capabilities(
     .map_err(|_error| ProviderStreamError::ToolCohort)
 }
 
-fn tool_schemas(
-) -> Result<Vec<animus_std_openai::OpenAiToolSchemaBinding>, ProviderStreamError> {
+fn tool_schemas() -> Result<Vec<animus_std_openai::OpenAiToolSchemaBinding>, ProviderStreamError> {
     Ok(vec![
         animus_std_openai::OpenAiToolSchemaBinding::from_json(
             animus_std_openai::STEEL_REPL_TOOL_SCHEMA,

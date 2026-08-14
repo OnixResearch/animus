@@ -100,6 +100,8 @@ let composition_activation_feature = "compat" in
 let composition_activation_family = "compatibility" in
 let component_scope_feature = "compat" in
 let component_scope_family = "compatibility" in
+let model_request_snapshot_feature = "compat" in
+let model_request_snapshot_family = "model" in
 let execution_backend_feature = "execution-backend-planner" in
 let execution_backend_family = "execution-backend" in
 let native_evaluation_feature = "native-evaluation" in
@@ -645,6 +647,21 @@ let component_scope_record = fun export_path_value owning_crate_value source_val
   depends_on = ["animus-runtime::composition_activation_graph"],
   composes_with = ["animus-local-daemon::ComponentScopeHost"],
   capability_family = component_scope_family,
+}
+in
+let model_request_snapshot_record = fun export_path_value owning_crate_value source_value class_value side_effect_value review_note_value required_authority_value => {
+  export_path = export_path_value,
+  owning_crate = owning_crate_value,
+  source = source_value,
+  class = class_value,
+  side_effect = side_effect_value,
+  stability = stable,
+  review_note = review_note_value,
+  feature_gate = model_request_snapshot_feature,
+  required_authority = required_authority_value,
+  depends_on = if owning_crate_value == "animus-std" then ["animus-runtime::model_request_snapshot", "animus-std::coding_session_host"] else [],
+  composes_with = if owning_crate_value == "animus-std" then ["animus-live-steel-agent::run_live_application"] else ["animus-std::model_request_snapshot_host"],
+  capability_family = model_request_snapshot_family,
 }
 in
 let execution_backend_record = fun export_path_value owning_crate_value source_value class_value side_effect_value review_note_value required_authority_value => {
@@ -2891,6 +2908,8 @@ let entry_values = [
   session_event_replay_record "animus::session_event_replay" "animus" root "optional compatibility re-export of session event replay contracts",
   composition_activation_record "animus-runtime::composition_activation_graph" "animus-runtime" runtime "runtime facade re-export of the no-std activation core",
   component_scope_record "animus-runtime::component_scope" "animus-runtime" runtime "runtime facade re-export of the no-std generation-fenced component-scope core",
+  model_request_snapshot_record "animus-runtime::model_request_snapshot" "animus-runtime" runtime reusable none "runtime facade re-export of the no-std private model-request snapshot core" none,
+  model_request_snapshot_record "animus-std::model_request_snapshot_host" "animus-std" std_shell shell shell_owned "private durable snapshot commit and exact provider-dispatch shell" shell_owned,
   execution_backend_record "animus-runtime::execution_backend_planner" "animus-runtime" runtime reusable none "pure weakest-admitted backend selection and implementation-free current-enforcement service" none,
   execution_backend_record "animus-std::execution_backend_planner_host" "animus-std" std_shell shell shell_owned "thin host recheck seam over an explicitly supplied current-enforcement service" shell_owned,
   execution_backend_record "animus::execution_backend_planner" "animus" root reusable none "optional compatibility re-export of execution backend planner contracts" none,
@@ -3782,6 +3801,7 @@ let entry_values = [
   live_steel_agent_record "animus-live-steel-agent::MetadataChildStore" "metadata-only child lifecycle store",
   live_steel_agent_record "animus-live-steel-agent::ProviderStreamService" "injected provider stream acquisition port",
   live_steel_agent_record "animus-live-steel-agent::SessionPersistence" "coding-session persistence and lease-release port",
+  live_steel_agent_record "animus-live-steel-agent::SnapshotPersistence" "private model-request snapshot persistence and lease-release port",
   live_steel_agent_record "animus-live-steel-agent::SteelToolBinding" "exact private journal session and generation binding",
   live_steel_agent_record "animus-live-steel-agent::SteelToolError" "safe Steel tool failure class",
   live_steel_agent_record "animus-live-steel-agent::SteelToolService" "resumable Steel tool and safe-point owner",
@@ -3794,6 +3814,7 @@ let entry_values = [
   live_steel_agent_record "animus-live-steel-agent::context_route" "explicit context resolver route builder",
   live_steel_agent_record "animus-live-steel-agent::open_kernel_persistence" "private kernel journal and lease opener",
   live_steel_agent_record "animus-live-steel-agent::open_session_persistence" "coding-session journal and lease opener",
+  live_steel_agent_record "animus-live-steel-agent::open_snapshot_persistence" "private model-request snapshot journal and lease opener",
   live_steel_agent_record "animus-live-steel-agent::parse_live_steel_agent_config" "strict Nickel-exported JSON validator",
   live_steel_agent_record "animus-live-steel-agent::preflight_live_application_activation" "pure maintained product activation preflight before shell effects",
   live_steel_agent_record "animus-live-steel-agent::restore_interrupted_kernel" "prior committed kernel restore for interrupted cells",

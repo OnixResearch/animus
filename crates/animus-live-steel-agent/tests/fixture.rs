@@ -7,9 +7,8 @@ use animus_live_steel_agent::{
 use animus_runtime::rlm_kernel::RlmKernelHostExecutor;
 
 const CONFIG: &[u8] = include_bytes!("../../../config/generated/live-steel-agent-shell.json");
-const TOOL_STREAM: &[u8] = include_bytes!(
-    "../../animus-std-openai/tests/fixtures/openai-responses-tool-call.sse"
-);
+const TOOL_STREAM: &[u8] =
+    include_bytes!("../../animus-std-openai/tests/fixtures/openai-responses-tool-call.sse");
 const FINAL_STREAM: &[u8] =
     include_bytes!("../../animus-std-openai/tests/fixtures/openai-responses-final.sse");
 const EXPECTED_MESSAGES: u32 = 5;
@@ -30,9 +29,7 @@ impl RlmKernelHostExecutor for ContextExecutor {
         request: &animus_adapter_rlm_kernel::HostRequest,
     ) -> Result<String, Self::Error> {
         match request {
-            animus_adapter_rlm_kernel::HostRequest::ContextRead { key }
-                if key == "fixture-key" =>
-            {
+            animus_adapter_rlm_kernel::HostRequest::ContextRead { key } if key == "fixture-key" => {
                 self.calls = self.calls.saturating_add(1);
                 Ok(String::from("fixture-value"))
             }
@@ -50,12 +47,13 @@ fn production_entrypoint_runs_prompt_tool_result_continuation_and_final_commit()
         [TOOL_STREAM.to_vec(), FINAL_STREAM.to_vec()],
         usize::try_from(config.max_provider_response_bytes()).expect("stream bound"),
     );
-    let kernel = animus_steel::SteelRlmKernel::new(config.rlm_policy().clone())
-        .expect("fixture kernel");
+    let kernel =
+        animus_steel::SteelRlmKernel::new(config.rlm_policy().clone()).expect("fixture kernel");
     let composition = LiveSteelAgentComposition::new(LiveSteelAgentCompositionInput {
         config,
         provider,
         session_persistence: MemoryPersistence::default(),
+        snapshot_persistence: MemorySnapshotPersistence::default(),
         kernel,
         host_executor: ContextExecutor::default(),
         kernel_persistence: (),
@@ -66,7 +64,10 @@ fn production_entrypoint_runs_prompt_tool_result_continuation_and_final_commit()
         .expect("complete tool loop");
 
     assert_eq!(output.final_text(), "3");
-    assert_eq!(output.receipt().committed_message_count(), EXPECTED_MESSAGES);
+    assert_eq!(
+        output.receipt().committed_message_count(),
+        EXPECTED_MESSAGES
+    );
     assert_eq!(
         output.receipt().provider_dispatch_count(),
         EXPECTED_PROVIDER_DISPATCHES
@@ -95,13 +96,12 @@ fn production_entrypoint_runs_prompt_tool_result_continuation_and_final_commit()
 fn marker_only_host_request_is_executed_before_tool_completion() {
     // r[verify agent_harness_runtime.live_steel_agent_shell.tool_loop.marker_only]
     let config = parse_live_steel_agent_config(CONFIG).expect("fixture configuration");
-    let mut kernel = animus_steel::SteelRlmKernel::new(config.rlm_policy().clone())
-        .expect("kernel");
+    let mut kernel =
+        animus_steel::SteelRlmKernel::new(config.rlm_policy().clone()).expect("kernel");
     let request = tool_request("(animus-context-read \"fixture-key\")");
     let mut executor = ContextExecutor::default();
     let mut control = FixedControl;
-    let cell_identity =
-        "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+    let cell_identity = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
     let completed = animus_runtime::rlm_kernel::execute_bridged_cell(
         &mut kernel,
         animus_runtime::rlm_kernel::RlmBridgeExecutionRequest {
@@ -143,15 +143,18 @@ impl animus_std::coding_session_host::CodingSessionPersistenceService for Memory
         animus_runtime::coding_session_host::CodingSessionServiceIssue,
     > {
         self.messages.extend(request.messages().iter().cloned());
-        let cursor = u64::try_from(self.messages.len())
-            .map_err(|_error| animus_runtime::coding_session_host::CodingSessionServiceIssue::Malformed)?;
+        let cursor = u64::try_from(self.messages.len()).map_err(|_error| {
+            animus_runtime::coding_session_host::CodingSessionServiceIssue::Malformed
+        })?;
         self.head_hash = format!("{cursor:064x}");
-        Ok(animus_std::coding_session_host::CodingSessionCommitObservation {
-            new_head_hash: self.head_hash.clone(),
-            active_leaf_id: String::from(request.proposed_active_leaf_id()),
-            durable_cursor: cursor,
-            synchronized: true,
-        })
+        Ok(
+            animus_std::coding_session_host::CodingSessionCommitObservation {
+                new_head_hash: self.head_hash.clone(),
+                active_leaf_id: String::from(request.proposed_active_leaf_id()),
+                durable_cursor: cursor,
+                synchronized: true,
+            },
+        )
     }
 
     fn recover(
@@ -161,27 +164,123 @@ impl animus_std::coding_session_host::CodingSessionPersistenceService for Memory
         animus_runtime::coding_session_host::CodingSessionRecoverySnapshot,
         animus_runtime::coding_session_host::CodingSessionServiceIssue,
     > {
-        Ok(animus_runtime::coding_session_host::CodingSessionRecoverySnapshot {
-            status: if self.messages.is_empty() {
-                animus_runtime::coding_session_host::CodingSessionRecoveryStatus::Empty
-            } else {
-                animus_runtime::coding_session_host::CodingSessionRecoveryStatus::Clean
+        Ok(
+            animus_runtime::coding_session_host::CodingSessionRecoverySnapshot {
+                status: if self.messages.is_empty() {
+                    animus_runtime::coding_session_host::CodingSessionRecoveryStatus::Empty
+                } else {
+                    animus_runtime::coding_session_host::CodingSessionRecoveryStatus::Clean
+                },
+                committed_head_hash: if self.head_hash.is_empty() {
+                    String::from(
+                        animus_runtime::coding_session_host::CODING_SESSION_EMPTY_HEAD_HASH,
+                    )
+                } else {
+                    self.head_hash.clone()
+                },
+                active_leaf_id: self
+                    .messages
+                    .last()
+                    .map(|message| String::from(message.entry_id())),
+                durable_cursor: u64::try_from(self.messages.len()).map_err(|_error| {
+                    animus_runtime::coding_session_host::CodingSessionServiceIssue::Malformed
+                })?,
+                messages: self.messages.clone(),
             },
-            committed_head_hash: if self.head_hash.is_empty() {
-                String::from(
-                    animus_runtime::coding_session_host::CODING_SESSION_EMPTY_HEAD_HASH,
-                )
-            } else {
-                self.head_hash.clone()
-            },
-            active_leaf_id: self
-                .messages
-                .last()
-                .map(|message| String::from(message.entry_id())),
-            durable_cursor: u64::try_from(self.messages.len())
-                .map_err(|_error| animus_runtime::coding_session_host::CodingSessionServiceIssue::Malformed)?,
-            messages: self.messages.clone(),
-        })
+        )
+    }
+}
+
+#[derive(Default)]
+struct MemorySnapshotPersistence {
+    committed: Vec<animus_runtime::model_request_snapshot::CommittedModelRequestSnapshot>,
+    terminal: Vec<animus_runtime::model_request_snapshot::ModelRequestProviderTerminalObservation>,
+}
+
+impl animus_live_steel_agent::SnapshotPersistence for MemorySnapshotPersistence {
+    fn close(self) -> Result<(), animus_live_steel_agent::LiveSteelAgentError> {
+        Ok(())
+    }
+}
+
+impl animus_std::model_request_snapshot_host::ModelRequestSnapshotStorePort
+    for MemorySnapshotPersistence
+{
+    fn commit_snapshot(
+        &mut self,
+        plan: &animus_runtime::model_request_snapshot::ModelRequestSnapshotCommitPlan,
+    ) -> Result<
+        animus_runtime::model_request_snapshot::ModelRequestSnapshotCommitObservation,
+        animus_std::model_request_snapshot_host::ModelRequestSnapshotStoreIssue,
+    > {
+        let cursor = u64::try_from(self.committed.len())
+            .ok()
+            .and_then(|value| value.checked_add(1))
+            .ok_or(
+                animus_std::model_request_snapshot_host::ModelRequestSnapshotStoreIssue::Failed,
+            )?;
+        let observation =
+            animus_runtime::model_request_snapshot::ModelRequestSnapshotCommitObservation {
+                plan_identity: String::from(plan.plan_identity()),
+                snapshot_identity: String::from(plan.snapshot().snapshot_identity()),
+                session_id: String::from(plan.snapshot().session_id()),
+                branch_id: String::from(plan.snapshot().branch_id()),
+                active_leaf_id: String::from(plan.snapshot().active_leaf_id()),
+                turn_generation: plan.snapshot().turn_generation(),
+                request_sequence: plan.snapshot().request_sequence(),
+                new_head_hash: String::from(plan.plan_identity()),
+                durable_cursor: cursor,
+                complete: true,
+                synchronized: true,
+            };
+        let committed =
+            animus_runtime::model_request_snapshot::observe_model_request_snapshot_commit(
+                plan.clone(),
+                &observation,
+            )
+            .map_err(|_error| {
+                animus_std::model_request_snapshot_host::ModelRequestSnapshotStoreIssue::Failed
+            })?;
+        self.committed.push(committed);
+        Ok(observation)
+    }
+
+    fn commit_terminal(
+        &mut self,
+        observation: &animus_runtime::model_request_snapshot::ModelRequestProviderTerminalObservation,
+    ) -> Result<(), animus_std::model_request_snapshot_host::ModelRequestSnapshotStoreIssue> {
+        self.terminal.push(observation.clone());
+        Ok(())
+    }
+
+    fn load_committed_snapshot(
+        &mut self,
+        snapshot_identity: &str,
+    ) -> Result<
+        Option<animus_runtime::model_request_snapshot::CommittedModelRequestSnapshot>,
+        animus_std::model_request_snapshot_host::ModelRequestSnapshotStoreIssue,
+    > {
+        Ok(self
+            .committed
+            .iter()
+            .rev()
+            .find(|value| value.snapshot().snapshot_identity() == snapshot_identity)
+            .cloned())
+    }
+
+    fn load_terminal_observation(
+        &mut self,
+        snapshot_identity: &str,
+    ) -> Result<
+        Option<animus_runtime::model_request_snapshot::ModelRequestProviderTerminalObservation>,
+        animus_std::model_request_snapshot_host::ModelRequestSnapshotStoreIssue,
+    > {
+        Ok(self
+            .terminal
+            .iter()
+            .rev()
+            .find(|value| value.snapshot_identity == snapshot_identity)
+            .cloned())
     }
 }
 

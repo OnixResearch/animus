@@ -1790,6 +1790,13 @@ fn stage_provider_dispatch(
     debug_assert!(state.queue.is_some() || state.queued_bodies.is_empty());
     let run_id = current_run_id(&state)?.to_string();
     let request = build_provider_request(&state)?;
+    let active_leaf_id = state
+        .active_leaf_id()
+        .ok_or_else(|| error(super::data::CodingSessionIssue::InvalidState, FIELD_STATE))?
+        .to_string();
+    let request_sequence = u64::from(state.provider_dispatch_count)
+        .checked_add(u64::from(COUNTER_INCREMENT))
+        .ok_or_else(|| error(super::data::CodingSessionIssue::BoundExceeded, FIELD_STATE))?;
     let effect = super::data::CodingSessionEffectRequest::Provider(
         super::data::CodingSessionProviderRequest {
             effect_id: effect_id(
@@ -1801,6 +1808,11 @@ fn stage_provider_dispatch(
                 ],
             ),
             run_id,
+            session_id: String::from(state.session_id()),
+            branch_id: String::from(state.branch_id()),
+            active_leaf_id,
+            durable_head_hash: String::from(state.durable_head_hash()),
+            request_sequence,
             request: request.clone(),
         },
     );

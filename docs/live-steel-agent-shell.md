@@ -56,6 +56,12 @@ Child requests must match the configured profile and bounds. The child service c
 
 Steel modules are reviewed source values. Native modules, FFI, dynamic libraries, arbitrary imports, package discovery, and automatic activation are denied.
 
+## Model-request snapshot prerequisite
+
+The maintained activation profile requires the pure snapshot core and the snapshot host shell. This requirement makes the private commit boundary explicit in the live composition.
+
+Provider-native projection, credentials, and transport remain outside the snapshot. See [durable model-request snapshots](model-request-snapshots.md).
+
 ## Evidence
 
 The deterministic fixture rail is:

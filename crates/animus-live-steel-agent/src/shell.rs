@@ -32,11 +32,36 @@ where
     }
 }
 
+/// Model-request snapshot persistence with explicit lease release.
+pub trait SnapshotPersistence:
+    animus_std::model_request_snapshot_host::ModelRequestSnapshotStorePort
+{
+    /// Releases the snapshot persistence lease.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LiveSteelAgentError`] when release is uncertain.
+    fn close(self) -> Result<(), LiveSteelAgentError>
+    where
+        Self: Sized;
+}
+
+impl<Synchronizer> SnapshotPersistence
+    for animus_std::model_request_snapshot_host::DurableModelRequestSnapshotStore<'_, Synchronizer>
+where
+    Synchronizer: animus_std::DurableSessionSynchronizer,
+{
+    fn close(self) -> Result<(), LiveSteelAgentError> {
+        self.close().map_err(|_error| LiveSteelAgentError::Session)
+    }
+}
+
 /// Complete explicit inputs for one application composition.
 pub struct LiveSteelAgentCompositionInput<
     Provider,
     Executor,
     SessionPersistence,
+    SnapshotPersistence,
     KernelPersistence,
 > {
     /// Validated deterministic application configuration.
@@ -45,6 +70,8 @@ pub struct LiveSteelAgentCompositionInput<
     pub provider: Provider,
     /// Durable coding-session persistence.
     pub session_persistence: SessionPersistence,
+    /// Durable private model-request snapshot persistence.
+    pub snapshot_persistence: SnapshotPersistence,
     /// Fresh or effect-disabled restored Steel kernel.
     pub kernel: animus_steel::SteelRlmKernel,
     /// Exact host-effect executor, usually `RlmHostExecutor`.
@@ -103,20 +130,23 @@ pub struct LiveSteelAgentComposition<
     Provider,
     Executor,
     SessionPersistence,
+    SnapshotPersistence,
     KernelPersistence,
 > {
     config: crate::ValidatedLiveSteelAgentConfig,
     provider: Provider,
     session_persistence: SessionPersistence,
+    snapshot_persistence: SnapshotPersistence,
     tool: crate::SteelToolService<Executor, KernelPersistence>,
 }
 
-impl<Provider, Executor, Persistence, KernelPersistence>
-    LiveSteelAgentComposition<Provider, Executor, Persistence, KernelPersistence>
+impl<Provider, Executor, Persistence, SnapshotStore, KernelPersistence>
+    LiveSteelAgentComposition<Provider, Executor, Persistence, SnapshotStore, KernelPersistence>
 where
     Provider: crate::ProviderStreamService,
     Executor: animus_runtime::rlm_kernel::RlmKernelHostExecutor,
     Persistence: SessionPersistence,
+    SnapshotStore: SnapshotPersistence,
     KernelPersistence: crate::tool::KernelSafePointPersistence,
 {
     /// Selects and binds the provider, Steel kernel, bridge, host executor,
@@ -131,6 +161,7 @@ where
             Provider,
             Executor,
             Persistence,
+            SnapshotStore,
             KernelPersistence,
         >,
     ) -> Result<Self, LiveSteelAgentError> {
@@ -177,6 +208,7 @@ where
             config: input.config,
             provider: input.provider,
             session_persistence: input.session_persistence,
+            snapshot_persistence: input.snapshot_persistence,
             tool,
         })
     }
@@ -187,13 +219,21 @@ where
     ///
     /// Returns [`LiveSteelAgentError`] for provider, authority, persistence,
     /// tool, cancellation, bounds, ordering, or receipt failures.
-    pub fn run_prompt(mut self, prompt: &str) -> Result<LiveSteelAgentRunOutput, LiveSteelAgentError> {
+    #[allow(
+        clippy::too_many_lines,
+        reason = "keep provider, snapshot, session, and kernel lease order visible in one shell"
+    )]
+    pub fn run_prompt(
+        mut self,
+        prompt: &str,
+    ) -> Result<LiveSteelAgentRunOutput, LiveSteelAgentError> {
         // r[impl agent_harness_runtime.live_steel_agent_shell.tool_loop]
         // r[impl agent_harness_runtime.live_steel_agent_shell.session]
         let shared = Rc::new(RefCell::new(SharedProviderState::default()));
         let services = coding_host::CodingSessionHostServices {
             provider: ProviderAdapter {
                 provider: &mut self.provider,
+                snapshot_store: &mut self.snapshot_persistence,
                 config: &self.config,
                 shared: Rc::clone(&shared),
                 dispatch_count: 0,
@@ -259,9 +299,10 @@ where
         } = host.into_services();
         let provider_dispatch_count = provider.dispatch_count;
         let tool_dispatch_count = tool.dispatch_count;
-        persistence.close()?;
         drop(provider);
         drop(tool);
+        persistence.close()?;
+        self.snapshot_persistence.close()?;
         let kernel_snapshot = self
             .tool
             .kernel()
@@ -293,16 +334,19 @@ where
     }
 }
 
-struct ProviderAdapter<'a, Provider> {
+struct ProviderAdapter<'a, Provider, SnapshotStore> {
     provider: &'a mut Provider,
+    snapshot_store: &'a mut SnapshotStore,
     config: &'a crate::ValidatedLiveSteelAgentConfig,
     shared: Rc<RefCell<SharedProviderState>>,
     dispatch_count: u32,
 }
 
-impl<Provider> coding_host::CodingSessionProviderService for ProviderAdapter<'_, Provider>
+impl<Provider, SnapshotStore> coding_host::CodingSessionProviderService
+    for ProviderAdapter<'_, Provider, SnapshotStore>
 where
     Provider: crate::ProviderStreamService,
+    SnapshotStore: animus_std::model_request_snapshot_host::ModelRequestSnapshotStorePort,
 {
     fn dispatch(
         &mut self,
@@ -320,7 +364,7 @@ where
                 .map(|pending| String::from(pending.correlation_id()));
             (model_call_id, shared.pending().is_some(), correlation_id)
         };
-        let plan = crate::provider::plan_request(
+        let planned = crate::provider::plan_request(
             self.config,
             request,
             continuation,
@@ -338,7 +382,32 @@ where
             crate::provider::initial_dispatch(self.config.model_id(), model_call_id.as_str())
                 .map_err(service_issue)?
         };
-        let outcome = self.provider.stream(&plan, dispatch).map_err(service_issue)?;
+        let prepared = prepare_live_model_request_snapshot(
+            self.config,
+            request,
+            &planned.canonical,
+            &planned.plan,
+        )?;
+        let mut pending_dispatch = Some(dispatch);
+        let mut provider_effect =
+            |_snapshot_plan: &animus_runtime::model_request_snapshot::ModelRequestDispatchPlan,
+             _canonical: &animus_adapters::CanonicalModelRequest| {
+                let dispatch = pending_dispatch.take().ok_or(
+                animus_runtime::model_request_snapshot::ModelRequestProviderTerminalStatus::Failed,
+            )?;
+                self.provider
+                .stream(&planned.plan, dispatch)
+                .map_err(|_error| {
+                    animus_runtime::model_request_snapshot::ModelRequestProviderTerminalStatus::Failed
+                })
+            };
+        let outcome = animus_std::model_request_snapshot_host::dispatch_initial_model_request(
+            self.snapshot_store,
+            &mut provider_effect,
+            prepared,
+        )
+        .map_err(|_error| animus_runtime::coding_session_host::CodingSessionServiceIssue::Failed)?
+        .output;
         if outcome.tool_calls().len() > 1 {
             return Err(animus_runtime::coding_session_host::CodingSessionServiceIssue::Malformed);
         }
@@ -346,15 +415,19 @@ where
             if call.tool_name() != animus_std_openai::STEEL_REPL_TOOL_NAME {
                 return Err(animus_runtime::coding_session_host::CodingSessionServiceIssue::Denied);
             }
-            let arguments: SteelArguments = serde_json::from_str(call.arguments_json())
-                .map_err(|_error| animus_runtime::coding_session_host::CodingSessionServiceIssue::Malformed)?;
+            let arguments: SteelArguments =
+                serde_json::from_str(call.arguments_json()).map_err(|_error| {
+                    animus_runtime::coding_session_host::CodingSessionServiceIssue::Malformed
+                })?;
             let tool_request = steel_tool_request(
                 call.continuation_binding().tool_call_id(),
                 arguments.code.as_str(),
                 self.config.max_tool_result_chars(),
             )?;
-            let assistant = animus_adapters::ModelResponse::new("steel_repl requested")
-                .map_err(|_error| animus_runtime::coding_session_host::CodingSessionServiceIssue::Malformed)?;
+            let assistant =
+                animus_adapters::ModelResponse::new("steel_repl requested").map_err(|_error| {
+                    animus_runtime::coding_session_host::CodingSessionServiceIssue::Malformed
+                })?;
             self.shared.borrow_mut().install(
                 crate::provider::pending_from_call(self.config.model_id(), call)
                     .map_err(service_issue)?,
@@ -367,10 +440,77 @@ where
             );
         }
         let text = crate::provider::final_text(&outcome).map_err(service_issue)?;
-        let response = animus_adapters::ModelResponse::new(text.as_str())
-            .map_err(|_error| animus_runtime::coding_session_host::CodingSessionServiceIssue::Malformed)?;
+        let response = animus_adapters::ModelResponse::new(text.as_str()).map_err(|_error| {
+            animus_runtime::coding_session_host::CodingSessionServiceIssue::Malformed
+        })?;
         Ok(animus_runtime::coding_session_host::CodingSessionProviderReply::Final(response))
     }
+}
+
+fn prepare_live_model_request_snapshot(
+    config: &crate::ValidatedLiveSteelAgentConfig,
+    request: &animus_runtime::coding_session_host::CodingSessionProviderRequest,
+    canonical: &animus_adapters::CanonicalModelRequest,
+    provider_plan: &animus_std::ProviderDispatchPlan,
+) -> Result<
+    animus_std::model_request_snapshot_host::PreparedModelRequestSnapshot,
+    animus_runtime::coding_session_host::CodingSessionServiceIssue,
+> {
+    use animus_runtime::model_request_snapshot as snapshot;
+
+    let route_identity = snapshot::model_request_route_identity(
+        provider_plan.provider_id(),
+        provider_plan.model_id(),
+    );
+    let tool_identity = snapshot::model_request_tool_schema_set_identity(canonical);
+    let output_identity = snapshot::model_request_output_control_identity(canonical);
+    let budget_identity = snapshot::model_request_budget_identity(canonical);
+    let authority = crate::build_expected_authority(config)
+        .map_err(|_error| animus_runtime::coding_session_host::CodingSessionServiceIssue::Denied)?;
+    let model_invocation_identity =
+        blake3::hash(provider_plan.request_projection_identity().as_bytes())
+            .to_hex()
+            .to_string();
+    let adapter_cohort_identity = blake3::hash(config.endpoint_identity().as_bytes())
+        .to_hex()
+        .to_string();
+    let validated =
+        snapshot::validate_model_request_snapshot(&snapshot::ModelRequestSnapshotDraft {
+            schema: snapshot::MODEL_REQUEST_SNAPSHOT_SCHEMA,
+            session_id: request.session_id(),
+            branch_id: request.branch_id(),
+            active_leaf_id: request.active_leaf_id(),
+            turn_generation: config.authority_generation(),
+            request_sequence: request.request_sequence(),
+            canonical_request: canonical,
+            route: snapshot::ModelRequestRouteDraft {
+                provider_id: provider_plan.provider_id(),
+                model_id: provider_plan.model_id(),
+                route_identity: route_identity.as_str(),
+            },
+            model_invocation_identity: model_invocation_identity.as_str(),
+            request_context_plan_identity: config.config_identity(),
+            selected_context_contribution_identities: &[],
+            tool_schema_set_identity: tool_identity.as_str(),
+            output_control_identity: output_identity.as_str(),
+            budget_identity: budget_identity.as_str(),
+            authority_seal_identity: authority.unit.unit_identity(),
+            adapter_cohort_identity: adapter_cohort_identity.as_str(),
+            unsupported: snapshot::ModelRequestSnapshotUnsupportedDraft::default(),
+        })
+        .map_err(|_error| {
+            animus_runtime::coding_session_host::CodingSessionServiceIssue::Malformed
+        })?;
+    Ok(
+        animus_std::model_request_snapshot_host::PreparedModelRequestSnapshot {
+            prior_head_hash: String::from(request.durable_head_hash()),
+            current:
+                animus_std::model_request_snapshot_host::CurrentModelRequestSnapshotBindings::exact(
+                    &validated,
+                ),
+            snapshot: validated,
+        },
+    )
 }
 
 struct ToolAdapter<'a, Executor, Persistence> {
@@ -388,8 +528,10 @@ where
     fn dispatch(
         &mut self,
         request: &animus_runtime::coding_session_host::CodingSessionToolRequest,
-    ) -> Result<animus_adapters::ToolResponse, animus_runtime::coding_session_host::CodingSessionServiceIssue>
-    {
+    ) -> Result<
+        animus_adapters::ToolResponse,
+        animus_runtime::coding_session_host::CodingSessionServiceIssue,
+    > {
         self.dispatch_count = self.dispatch_count.saturating_add(1);
         let correlation = self
             .shared
@@ -400,10 +542,9 @@ where
         if request.request().correlation_id() != correlation {
             return Err(animus_runtime::coding_session_host::CodingSessionServiceIssue::Stale);
         }
-        let response = self
-            .tool
-            .execute(request.request())
-            .map_err(|_error| animus_runtime::coding_session_host::CodingSessionServiceIssue::Failed)?;
+        let response = self.tool.execute(request.request()).map_err(|_error| {
+            animus_runtime::coding_session_host::CodingSessionServiceIssue::Failed
+        })?;
         self.shared
             .borrow_mut()
             .pending_mut()
@@ -436,10 +577,12 @@ fn new_state(
 ) -> Result<animus_runtime::coding_session_host::CodingSessionState, LiveSteelAgentError> {
     let components = animus_runtime::session_authority_profile::SessionAuthorityComponentClass::ALL
         .iter()
-        .map(|class| animus_runtime::session_authority_profile::SessionAuthorityComponentDraft {
-            class: *class,
-            identity: config.authority_component_identity(),
-        })
+        .map(
+            |class| animus_runtime::session_authority_profile::SessionAuthorityComponentDraft {
+                class: *class,
+                identity: config.authority_component_identity(),
+            },
+        )
         .collect::<Vec<_>>();
     let authority_profile =
         animus_runtime::session_authority_profile::build_session_authority_profile(
@@ -448,17 +591,16 @@ fn new_state(
             },
         )
         .map_err(|_error| LiveSteelAgentError::Authority)?;
-    let queue_policy = animus_runtime::MessageQueuePolicy::new(
-        animus_runtime::MessageQueuePolicyDraft {
+    let queue_policy =
+        animus_runtime::MessageQueuePolicy::new(animus_runtime::MessageQueuePolicyDraft {
             max_items: config.max_queue_items(),
             allowed_sources: &[QUEUE_SOURCE],
             policy_label: QUEUE_POLICY_LABEL,
             policy_hash: config.config_identity(),
             allow_queue_mutations: true,
             allow_interrupts: true,
-        },
-    )
-    .map_err(|_error| LiveSteelAgentError::Authority)?;
+        })
+        .map_err(|_error| LiveSteelAgentError::Authority)?;
     animus_runtime::coding_session_host::new_coding_session_state(
         animus_runtime::coding_session_host::CodingSessionConfig {
             session_id: String::from(config.application_id()),
@@ -481,8 +623,10 @@ fn steel_tool_request(
     correlation_id: &str,
     code: &str,
     visible_char_budget: u32,
-) -> Result<animus_adapters::ToolRequest, animus_runtime::coding_session_host::CodingSessionServiceIssue>
-{
+) -> Result<
+    animus_adapters::ToolRequest,
+    animus_runtime::coding_session_host::CodingSessionServiceIssue,
+> {
     let arguments = animus_adapters::tool::PreparedArguments::prepare(
         &animus_adapters::tool::ArgumentPreparationRequest {
             current_schema_identity: animus_std_openai::STEEL_REPL_TOOL_SCHEMA,

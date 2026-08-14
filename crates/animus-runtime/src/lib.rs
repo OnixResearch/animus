@@ -85,6 +85,8 @@ pub use animus_session_core::component_scope;
 pub use animus_session_core::composition_activation_graph;
 /// Pure canonical conversation projection and cache reconciliation.
 pub use animus_session_core::conversation_projection;
+/// Pure private model-request snapshots, dispatch binding, recovery, and safe evidence.
+pub use animus_session_core::model_request_snapshot;
 #[path = "codingsession/mod.rs"]
 mod sessionhost;
 /// Pure coding-session lifecycle facade and effect-request state machine.

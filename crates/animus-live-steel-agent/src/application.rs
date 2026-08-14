@@ -80,6 +80,8 @@ pub fn run_live_application(
     let config = parsed.with_session_resume_required(resume_required);
     let session_persistence = crate::open_session_persistence(&root, &config, &definitions)
         .map_err(LiveApplicationError::Store)?;
+    let snapshot_persistence = crate::open_snapshot_persistence(&root, &definitions)
+        .map_err(LiveApplicationError::Store)?;
     let kernel_persistence = crate::open_kernel_persistence(&root, &config, &definitions)
         .map_err(LiveApplicationError::Store)?;
     let kernel = crate::restore_or_create_kernel(&config, &kernel_persistence)
@@ -112,6 +114,7 @@ pub fn run_live_application(
         config: config.clone(),
         provider,
         session_persistence,
+        snapshot_persistence,
         kernel,
         host_executor: executor,
         kernel_persistence,

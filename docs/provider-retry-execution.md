@@ -88,6 +88,12 @@ Receipt projection rejects any supplied raw request, response body, response hea
 
 A retry receipt records only supplied and validated local evidence. Its hashes are correlation identities, not an access-control or confidentiality mechanism; hosts still protect receipt stores and logs. It does not prove provider behavior, provider availability, provider acceptance, billing behavior, delivery, timer correctness, remote cancellation, exactly-once effects, semantic completion, or production readiness.
 
+## Snapshot-bound retry
+
+A durable model-request snapshot does not grant retry authority. `ModelRequestRetryOwnerDecision` must represent this existing owner's exact decision.
+
+An admitted retry keeps the committed snapshot identity. Context, profile, tool, output, route, authority, or adapter drift requires a new snapshot. See [durable model-request snapshots](model-request-snapshots.md).
+
 ## Verification
 
 Run the focused rail from the repository development shell:

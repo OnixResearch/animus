@@ -4,8 +4,8 @@ use std::collections::BTreeMap;
 
 use animus_std_rlm_host::{
     BindingIdentity, BindingSet, CapabilityPacks, CurrentAuthorityObservation,
-    CurrentAuthorityObserver, DispatchFailure, ExpectedAuthority,
-    ResolverContextRoute, RlmHostExecutor, RlmHostExecutorConfig, RouteBinding, RouteClass,
+    CurrentAuthorityObserver, DispatchFailure, ExpectedAuthority, ResolverContextRoute,
+    RlmHostExecutor, RlmHostExecutorConfig, RouteBinding, RouteClass,
 };
 
 const AUTHORITY_SESSION_ID: &str = "live-steel-agent.authority";
@@ -45,9 +45,7 @@ impl ExplicitContextMap {
     /// # Errors
     ///
     /// Returns [`LiveHostError::Context`] for an empty, duplicate, or unsafe key.
-    pub fn new(
-        values: impl IntoIterator<Item = (String, String)>,
-    ) -> Result<Self, LiveHostError> {
+    pub fn new(values: impl IntoIterator<Item = (String, String)>) -> Result<Self, LiveHostError> {
         let mut map = BTreeMap::new();
         for (key, value) in values {
             let key = key.strip_prefix(CONTEXT_PREFIX).unwrap_or(key.as_str());
@@ -152,19 +150,30 @@ pub fn build_expected_authority(
 ) -> Result<ExpectedAuthority, LiveHostError> {
     use animus_runtime::runtime_authority_seal as seal;
 
-    let expected_views = seal::RuntimeAuthorityViewClass::ALL.map(|class| {
-        seal::RuntimeAuthorityExpectedViewDraft {
-            class,
-            identity: config.authority_component_identity(),
+    let view_identity = |class| match class {
+        seal::RuntimeAuthorityViewClass::SessionLineage
+        | seal::RuntimeAuthorityViewClass::AuthorityProfile
+        | seal::RuntimeAuthorityViewClass::AdapterCohort
+        | seal::RuntimeAuthorityViewClass::RuntimeServices => config.authority_component_identity(),
+        seal::RuntimeAuthorityViewClass::DurableBinding => config.route_binding_identity(),
+        seal::RuntimeAuthorityViewClass::EnforcementObservation => {
+            config.authority_authorization_identity()
         }
-    });
-    let observed_views = seal::RuntimeAuthorityViewClass::ALL.map(|class| {
-        seal::RuntimeAuthorityObservedViewDraft {
+        seal::RuntimeAuthorityViewClass::OperationSet => config.operation_identity(),
+        seal::RuntimeAuthorityViewClass::ResourceProfile
+        | seal::RuntimeAuthorityViewClass::ResourceBudget => config.resource_identity(),
+    };
+    let expected_views =
+        seal::RuntimeAuthorityViewClass::ALL.map(|class| seal::RuntimeAuthorityExpectedViewDraft {
             class,
-            identity: config.authority_component_identity(),
+            identity: view_identity(class),
+        });
+    let observed_views =
+        seal::RuntimeAuthorityViewClass::ALL.map(|class| seal::RuntimeAuthorityObservedViewDraft {
+            class,
+            identity: view_identity(class),
             status: seal::RuntimeAuthorityObservationStatus::Current,
-        }
-    });
+        });
     let operations = [config.operation_identity()];
     let resources = [config.resource_identity()];
     let plan = seal::prepare_runtime_authority_seal(

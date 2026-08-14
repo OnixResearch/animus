@@ -57,6 +57,10 @@ mod conversationprojection;
 #[cfg(feature = "daemon-handoff")]
 #[path = "daemonhandoff/mod.rs"]
 mod handover_shell;
+#[cfg(feature = "coding-session-host")]
+#[path = "modelrequestsnapshot.rs"]
+/// Private model-request snapshot commit and provider-dispatch shell.
+pub mod model_request_snapshot_host;
 /// Non-default transactional daemon-handoff host over injected services.
 #[cfg(feature = "daemon-handoff")]
 pub mod daemon_handoff_host {

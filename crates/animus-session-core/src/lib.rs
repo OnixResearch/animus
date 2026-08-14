@@ -48,6 +48,9 @@ pub mod composition_activation_graph;
 #[path = "conversationprojection.rs"]
 /// Pure canonical conversation projection and cache reconciliation.
 pub mod conversation_projection;
+#[path = "modelrequestsnapshot/mod.rs"]
+/// Pure private model-request snapshots, dispatch binding, recovery, and safe evidence.
+pub mod model_request_snapshot;
 #[path = "interrupted_tool_repair/mod.rs"]
 mod session_recovery;
 /// Pure active-branch diagnosis and append-only interrupted tool-call repair.

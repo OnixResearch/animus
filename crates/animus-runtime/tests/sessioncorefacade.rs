@@ -28,6 +28,9 @@ fn runtime_facade_preserves_session_core_types() {
         animus_runtime::conversation_projection::ConversationProjectionError,
     ) -> animus_session_core::conversation_projection::ConversationProjectionError = |value| value;
     let _: fn(
+        animus_runtime::model_request_snapshot::ModelRequestSnapshotError,
+    ) -> animus_session_core::model_request_snapshot::ModelRequestSnapshotError = |value| value;
+    let _: fn(
         animus_runtime::interrupted_tool_repair::InterruptedToolRepairError,
     ) -> animus_session_core::interrupted_tool_repair::InterruptedToolRepairError = |value| value;
     let _: fn(
@@ -60,6 +63,11 @@ fn runtime_facade_preserves_session_core_types() {
         std::mem::size_of::<
             animus_session_core::conversation_projection::ConversationProjectionError,
         >()
+    );
+    assert_eq!(
+        std::mem::size_of::<animus_runtime::model_request_snapshot::ModelRequestSnapshotError>(),
+        std::mem::size_of::<animus_session_core::model_request_snapshot::ModelRequestSnapshotError>(
+        )
     );
     assert_eq!(
         std::mem::size_of::<animus_runtime::interrupted_tool_repair::InterruptedToolRepairError>(),

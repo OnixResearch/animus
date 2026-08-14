@@ -97,6 +97,12 @@ Redox OS provides a design signal for explicit resource handles and narrow proce
 
 The seal remains a metadata contract over supplied identities. Separate host evidence must support operating-system isolation claims.
 
+## Request snapshot binding
+
+Each private model-request snapshot cites the current seal identity. Provider dispatch rechecks that identity after durable snapshot commit.
+
+A changed seal blocks snapshot reuse and same-request retry. The snapshot never replaces current authority enforcement. See [durable model-request snapshots](model-request-snapshots.md).
+
 ## Verification
 
 Run the focused tests:

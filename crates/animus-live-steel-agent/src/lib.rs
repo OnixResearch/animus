@@ -41,11 +41,11 @@ pub use provider::{FixtureStreamProvider, LiveOpenAiProvider, ProviderStreamServ
 pub use receipt::{LIVE_SHELL_NON_CLAIMS, LiveSteelAgentRunReceipt};
 pub use shell::{
     LiveSteelAgentComposition, LiveSteelAgentCompositionInput, LiveSteelAgentError,
-    LiveSteelAgentRunOutput, SessionPersistence,
+    LiveSteelAgentRunOutput, SessionPersistence, SnapshotPersistence,
 };
 pub use store::{
     LiveStoreDefinitions, LiveStoreError, open_kernel_persistence, open_session_persistence,
-    restore_interrupted_kernel, restore_or_create_kernel, session_resume_required,
-    store_definitions,
+    open_snapshot_persistence, restore_interrupted_kernel, restore_or_create_kernel,
+    session_resume_required, store_definitions,
 };
 pub use tool::{SteelToolBinding, SteelToolError, SteelToolService};

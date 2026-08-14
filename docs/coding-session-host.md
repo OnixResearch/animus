@@ -84,6 +84,12 @@ The packaged `animus-coding-session-smoke` binary uses deterministic fake servic
 
 The [`animus-acp-stdio-host`](acp-stdio-host.md) crate is an optional protocol caller of this facade. `CodingSessionEffectGate` and the `drive_*_with_gate` methods allow a protocol-side permission decision to deny before an effect, but an allow never replaces the existing authority probe or injected service admission. ACP new/load/prompt/cancel requests delegate into this same host; ACP does not own a second transcript, queue, run state, active leaf, durable store, or tool executor.
 
+## Model-request snapshot boundary
+
+`CodingSessionProviderRequest` carries the committed session, branch, active leaf, durable head, and request sequence. The reducer derives these values from state.
+
+`SnapshotBoundCodingSessionProvider` wraps an existing provider service. It commits a complete private snapshot and rechecks current bindings before it calls that service. See [durable model-request snapshots](model-request-snapshots.md).
+
 ## Verification
 
 Run from the repository root:

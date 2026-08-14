@@ -1,0 +1,160 @@
+#!/usr/bin/env sh
+# r[agent_harness_runtime.model_request_snapshot.verification]
+set -eu
+
+readonly FAILURE=1
+readonly ENABLED=1
+readonly RAIL_NAME=model-request-snapshots
+readonly RECEIPT_SCHEMA=animus.focused-rail.v1
+readonly RECEIPT_DIR=target/cairn/focused-rails
+readonly CORE_DIR=crates/animus-session-core/src/modelrequestsnapshot
+readonly HOST_FILE=crates/animus-std/src/modelrequestsnapshot.rs
+readonly HOST_TEST_FILE=crates/animus-std/src/modelrequestsnapshot/tests.rs
+readonly CATALOG_FILE=.cairn/component-catalog.ncl
+readonly CONTRACT_DOC=docs/model-request-snapshots.md
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+
+if [ "${1:-}" = "--root" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  repo_root=$(CDPATH= cd -- "$2" && pwd)
+fi
+
+cd "${repo_root}"
+
+for required_path in \
+  "${CORE_DIR}/core.rs" \
+  "${CORE_DIR}/data.rs" \
+  "${CORE_DIR}/receipt.rs" \
+  "${CORE_DIR}/tests.rs" \
+  "${HOST_FILE}" \
+  "${HOST_TEST_FILE}" \
+  "${CATALOG_FILE}" \
+  "${CONTRACT_DOC}"
+do
+  if [ ! -f "${required_path}" ]; then
+    printf 'error: model-request snapshot source missing: %s\n' "${required_path}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+for required_token in \
+  'validate_model_request_snapshot' \
+  'plan_model_request_snapshot_commit' \
+  'observe_model_request_snapshot_commit' \
+  'plan_initial_model_request_dispatch' \
+  'plan_same_model_request_retry' \
+  'observe_model_request_provider_terminal' \
+  'classify_model_request_snapshot_recovery' \
+  'project_model_request_snapshot_receipt' \
+  'validate_model_request_snapshot_receipt'
+do
+  if ! grep -R -F "${required_token}" "${CORE_DIR}" --include='*.rs' >/dev/null 2>&1; then
+    printf 'error: model-request snapshot core token missing: %s\n' "${required_token}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+for required_token in \
+  'ModelRequestSnapshotStorePort' \
+  'ModelRequestSnapshotProviderPort' \
+  'SnapshotBoundCodingSessionProvider' \
+  'commit_model_request_snapshot' \
+  'dispatch_initial_model_request' \
+  'dispatch_same_model_request_retry' \
+  'classify_committed_recovery'
+do
+  if ! grep -F "${required_token}" "${HOST_FILE}" >/dev/null 2>&1; then
+    printf 'error: model-request snapshot host token missing: %s\n' "${required_token}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+for component_id in \
+  'runtime.model-request-snapshot-core' \
+  'std.model-request-snapshot-host'
+do
+  if ! grep -F "${component_id}" "${CATALOG_FILE}" >/dev/null 2>&1; then
+    printf 'error: model-request snapshot catalog component missing: %s\n' "${component_id}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+if grep -R -E 'std::fs|std::process|Command::new|std::env|TcpStream|UdpSocket|SystemTime::now|Instant::now|reqwest|hyper::|tokio::|serde_json' \
+  "${CORE_DIR}" --include='*.rs' >/dev/null 2>&1
+then
+  printf '%s\n' 'error: model-request snapshot pure core gained ambient host or provider authority' >&2
+  exit "${FAILURE}"
+fi
+
+sh scripts/cairn/check-component-catalog --root .
+sh scripts/cairn/check-runtime-facade-inventory --root .
+
+if [ "${ANIMUS_MODEL_REQUEST_SNAPSHOT_STATIC_ONLY:-0}" = "${ENABLED}" ]; then
+  printf 'Nix static rail %s: pass\n' "${RAIL_NAME}"
+  exit 0
+fi
+
+for command_name in cargo b3sum; do
+  if ! command -v "${command_name}" >/dev/null 2>&1; then
+    printf 'error: %s is required. Run inside `nix develop`.\n' "${command_name}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+cargo test -p animus-session-core model_request_snapshot --lib --locked
+cargo check -p animus-session-core --target wasm32-unknown-unknown --locked
+cargo test -p animus-std --features coding-session-host model_request_snapshot_host --lib --locked
+cargo test -p animus-runtime codingsession --lib --locked
+cargo test -p animus-runtime resilience --lib --locked
+cargo test -p animus-runtime --test sessioncorefacade --locked
+cargo test -p animus-live-steel-agent activation --lib --locked
+cargo test -p animus-live-steel-agent --test fixture --test durable --locked
+cargo clippy -p animus-session-core --all-targets --locked --no-deps -- -D warnings
+cargo clippy -p animus-runtime --all-targets --locked --no-deps -- -D warnings
+cargo clippy -p animus-std --all-targets --features coding-session-host --locked --no-deps -- -D warnings
+scripts/cairn/check-request-lifecycle --root .
+scripts/cairn/check-safe-receipts-artifacts --root .
+
+mkdir -p "${RECEIPT_DIR}"
+tmp_body=$(mktemp "${TMPDIR:-/tmp}/animus-model-request-snapshots.XXXXXX")
+trap 'rm -f "${tmp_body}"' EXIT HUP INT TERM
+
+cat > "${tmp_body}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+case_classes:
+- positive
+- negative
+claims:
+- exact provider-neutral reconstruction and canonical identity
+- private commit before initial provider contact
+- committed snapshot binding for initial dispatch and admitted same-request retry
+- committed-unobserved recovery with automatic replay denied
+safe_evidence:
+- snapshot, request, route, tool, output, budget, authority, adapter, terminal, status, count, and non-claim metadata only
+- no prompts, tool schemas, contribution bodies, credentials, endpoints, provider payloads, private paths, or raw errors
+non_claims:
+- not provider acceptance, delivery, failure, cancellation, billing, or exactly-once behavior
+- not automatic replay authority, semantic correctness, production readiness, or release eligibility
+EOF
+
+receipt_hash=$(b3sum "${tmp_body}" | awk '{print $1}')
+receipt_path=${RECEIPT_DIR}/${RAIL_NAME}.md
+{
+  cat "${tmp_body}"
+  printf 'receipt_hash: BLAKE3:%s\n' "${receipt_hash}"
+} > "${receipt_path}"
+
+if grep -Eq 'RAW_PROMPT:|PROVIDER_PAYLOAD:|UNBOUNDED_OUTPUT:|BEGIN [A-Z ]*PRIVATE KEY|API_KEY=|AWS_SECRET_ACCESS_KEY|(^|[^[:alnum:]])sk-|/home/[^[:space:]]+' "${receipt_path}"; then
+  printf 'error: focused rail %s wrote unsafe evidence\n' "${RAIL_NAME}" >&2
+  exit "${FAILURE}"
+fi
+
+printf 'focused rail %s: pass\n' "${RAIL_NAME}"
+printf 'receipt: %s\n' "${receipt_path}"
