@@ -74,6 +74,15 @@ fn snapshot_first_attach_detach_command_stop_and_retry_use_worker_port() {
     assert_eq!(snapshot.event_sequence, 4);
     assert_eq!(events[0].sequence, 5);
     assert_eq!(service.attachment_count(), 1);
+    let later = service
+        .events_after(animus_local_daemon::EventBatchRequest {
+            root_id: "root-a",
+            client_id: "client-a",
+            sequence: 5,
+            maximum_events: 8,
+        })
+        .expect("later events");
+    assert_eq!(later[0].sequence, 6);
     service.detach("root-a", "client-a").expect("detach");
     assert_eq!(service.attachment_count(), 0);
     assert_eq!(
@@ -83,6 +92,7 @@ fn snapshot_first_attach_detach_command_stop_and_retry_use_worker_port() {
                 generation: 1,
                 correlation_id: String::from("command-a"),
                 class: String::from("prompt"),
+                private_payload: br#"{"kind":"prompt"}"#.to_vec(),
             })
             .expect("route"),
         "command-a"
@@ -120,11 +130,21 @@ fn stale_generation_duplicate_detach_and_healthy_retry_fail_closed() {
             generation: 2,
             correlation_id: String::from("command-a"),
             class: String::from("prompt"),
+            private_payload: br#"{"kind":"prompt"}"#.to_vec(),
         }),
         Err(ServiceError::WorkerIdentity)
     );
     assert_eq!(
         service.detach("root-a", "missing-client"),
+        Err(ServiceError::UnknownAttachment)
+    );
+    assert_eq!(
+        service.events_after(animus_local_daemon::EventBatchRequest {
+            root_id: "root-a",
+            client_id: "missing-client",
+            sequence: 4,
+            maximum_events: 8,
+        }),
         Err(ServiceError::UnknownAttachment)
     );
     assert_eq!(

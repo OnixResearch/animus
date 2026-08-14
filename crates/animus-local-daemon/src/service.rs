@@ -1,5 +1,6 @@
 //! Supervisor composition over injected worker and event ports.
 
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 /// Safe snapshot metadata routed before event flow.
@@ -31,7 +32,7 @@ pub struct WorkerEvent {
 }
 
 /// Typed command routed to the worker-owned session service.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct WorkerCommand {
     /// Root identity.
     pub root_id: String,
@@ -39,8 +40,13 @@ pub struct WorkerCommand {
     pub generation: u64,
     /// Correlation identity.
     pub correlation_id: String,
-    /// Safe command class. Private command content stays in the worker channel.
+    /// Safe command class.
     pub class: String,
+    /// Private typed command payload routed unchanged to the worker.
+    ///
+    /// The supervisor does not parse or retain this payload. Daemon and terminal
+    /// receipts must omit it.
+    pub private_payload: Vec<u8>,
 }
 
 /// Worker-owned session port. The supervisor can route only.
@@ -80,6 +86,19 @@ pub trait WorkerSessionPort {
     ///
     /// Returns [`ServiceError`] when replacement startup or restore fails.
     fn retry(&mut self, root_id: &str, generation: u64) -> Result<WorkerSnapshot, ServiceError>;
+}
+
+/// One bounded later-event request for an existing client attachment.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct EventBatchRequest<'a> {
+    /// Root session identity.
+    pub root_id: &'a str,
+    /// Existing attached client identity.
+    pub client_id: &'a str,
+    /// Last sequence observed by the client.
+    pub sequence: u64,
+    /// Maximum events admitted for this call.
+    pub maximum_events: u32,
 }
 
 /// Explicit local supervisor service.
@@ -160,6 +179,46 @@ impl<Worker: WorkerSessionPort> LocalSupervisorService<Worker> {
             },
         );
         Ok((snapshot, events))
+    }
+
+    /// Returns one bounded later event batch for an existing client attachment.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ServiceError`] when the attachment is absent or event facts violate bounds.
+    pub fn events_after(
+        &mut self,
+        request: EventBatchRequest<'_>,
+    ) -> Result<Vec<WorkerEvent>, ServiceError> {
+        if request.maximum_events == 0 || request.maximum_events > self.config.max_events() {
+            return Err(ServiceError::Bound);
+        }
+        let key = format!("{}\0{}", request.root_id, request.client_id);
+        let attachment = self
+            .attachments
+            .get_mut(key.as_str())
+            .ok_or(ServiceError::UnknownAttachment)?;
+        if attachment.last_sequence != request.sequence {
+            return Err(ServiceError::WorkerIdentity);
+        }
+        let events =
+            self.worker
+                .events_after(request.root_id, request.sequence, request.maximum_events)?;
+        let maximum_events =
+            usize::try_from(request.maximum_events).map_err(|_error| ServiceError::Bound)?;
+        if events.len() > maximum_events
+            || events.iter().any(|event| {
+                event.root_id != request.root_id
+                    || event.sequence <= request.sequence
+                    || event.observation_identity.len() != animus_adapter_daemon::BLAKE3_HEX_CHARS
+            })
+        {
+            return Err(ServiceError::Bound);
+        }
+        attachment.last_sequence = events
+            .last()
+            .map_or(request.sequence, |event| event.sequence);
+        Ok(events)
     }
 
     /// Detaches one client lease without stopping worker execution.

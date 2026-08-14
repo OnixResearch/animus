@@ -1,0 +1,45 @@
+#!/bin/sh
+set -eu
+
+root=.
+if [ "${1:-}" = "--root" ]; then
+  root=${2:?missing root}
+  shift 2
+fi
+if [ "$#" -ne 0 ]; then
+  printf '%s\n' "usage: check-live-terminal-agent-host [--root PATH]" >&2
+  exit 2
+fi
+
+cd "$root"
+
+tmp_dir=$(mktemp -d)
+trap 'rm -rf "$tmp_dir"' EXIT HUP INT TERM
+
+nickel export --format json --field live_terminal_agent_host config/live-terminal-agent-host.ncl > "$tmp_dir/config.json"
+diff -u config/generated/live-terminal-agent-host.json "$tmp_dir/config.json"
+
+grep -F 'c5991bc853d27754aed345c13ff4d2e05c40f1f4' fixtures/live-terminal/prime-agent-c5991bc.md >/dev/null
+grep -F 'License: MIT' fixtures/live-terminal/prime-agent-c5991bc.md >/dev/null
+grep -F 'Status: `NOT_RUN_NO_CONTROLLING_TERMINAL`' docs/live-terminal-manual-evidence.md >/dev/null
+
+cargo check -p animus-live-terminal --all-targets --no-default-features --locked
+cargo test -p animus-live-terminal --all-features --locked
+cargo clippy -p animus-live-terminal --all-targets --all-features --locked -- -D warnings
+cargo test -p animus-local-daemon --locked
+cargo test -p animus-tui --features packaged-tui-dogfood-smoke,animus-runtime/rlm-kernel --locked
+sh scripts/cairn/check-component-catalog --root .
+sh scripts/cairn/check-runtime-facade-inventory --root .
+
+if grep -R -n -E 'TcpListener|TcpStream|home_dir\(|dirs::|provider.*execute|tool.*execute|Steel.*evaluate' crates/animus-live-terminal/src; then
+  printf '%s\n' "live terminal forbidden authority or discovery marker found" >&2
+  exit 1
+fi
+if grep -R -n -E 'is-security-sandbox|production-ready|release-eligible' crates/animus-live-terminal/src; then
+  printf '%s\n' "live terminal evidence overclaim marker found" >&2
+  exit 1
+fi
+
+printf '%s\n' "focused rail live-terminal-agent-host: pass"
+printf '%s\n' "manual controlling-terminal run: not run in the automated drain environment"
+printf '%s\n' "arbitrary terminal compatibility, remote security, crash-proof cleanup, task correctness, production readiness, and release eligibility: non-claims"

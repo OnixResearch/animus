@@ -90,6 +90,10 @@ const PUBLIC_EXPORT_SOURCES: &[(&str, &str)] = &[
         "crates/animus-live-steel-agent/src/lib.rs",
     ),
     ("animus-local-daemon", "crates/animus-local-daemon/src/lib.rs"),
+    (
+        "animus-live-terminal",
+        "crates/animus-live-terminal/src/lib.rs",
+    ),
     ("animus-steel", "crates/animus-steel/src/lib.rs"),
     ("animus-tui", "crates/animus-tui/src/lib.rs"),
 ];
@@ -116,6 +120,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "openai-provider-host",
     "live-provider",
     "local-daemon-supervisor-host",
+    "live-terminal",
     "profile-retry-smoke",
     "batch",
     "compaction",

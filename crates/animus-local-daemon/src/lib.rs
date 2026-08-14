@@ -31,8 +31,8 @@ pub use process::{
 };
 pub use registry::{RegistryError, RegistryStore};
 pub use service::{
-    LocalSupervisorService, ServiceError, WorkerCommand, WorkerEvent, WorkerSessionPort,
-    WorkerSnapshot,
+    EventBatchRequest, LocalSupervisorService, ServiceError, WorkerCommand, WorkerEvent,
+    WorkerSessionPort, WorkerSnapshot,
 };
 pub use transport::{
     LocalClient, LocalEndpoint, LocalListener, LocalPeerFacts, TransportError, TransportFrame,
