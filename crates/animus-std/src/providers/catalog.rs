@@ -1,5 +1,5 @@
 const MAX_PROVIDER_COUNT: usize = 32;
-const MAX_MODEL_COUNT: usize = 128;
+pub(super) const MAX_MODEL_COUNT: usize = 128;
 const NEXT_INDEX_OFFSET: usize = 1;
 
 /// One model entry in a shell-owned provider registry.

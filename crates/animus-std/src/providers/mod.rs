@@ -5,6 +5,8 @@ mod catalog;
 mod choice;
 mod concrete;
 mod identity;
+#[cfg(feature = "models-dev-catalog")]
+mod models_dev;
 mod reason;
 mod secret;
 mod stream;
@@ -34,6 +36,12 @@ pub use concrete::{
     validate_provider_dispatch_receipt, validate_provider_dispatch_shared_field_matrix,
 };
 pub use identity::{ModelId, ProviderId};
+#[cfg(feature = "models-dev-catalog")]
+pub use models_dev::{
+    MAX_MODELS_DEV_SNAPSHOT_BYTES, MODELS_DEV_API_URL, MODELS_DEV_SOURCE_LABEL,
+    ModelsDevIngestError, ModelsDevIngestReport, ModelsDevJsonErrorKind, ModelsDevProviderBinding,
+    ModelsDevProviderBindingDraft, ingest_models_dev_api_json,
+};
 pub use reason::{ReasoningSupport, ThinkingLevel, ThinkingPolicy};
 pub use secret::{
     CredentialHandle, CredentialRequirement, CredentialSource, MissingCredentialDiagnostic,

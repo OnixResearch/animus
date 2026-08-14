@@ -1,0 +1,21 @@
+# Tasks
+
+## B. Cohort and projection
+
+- [ ] [serial] B1: Record the reviewed OpenAI Responses wire cohort, Prime Agent behavior, fixture provenance, and supported feature matrix. r[agent_harness_runtime.tool_capable_openai_host.verification]
+- [ ] [serial] B2: Extend typed Nickel and Rust capability metadata for the exact tool and stream cohort. r[agent_harness_runtime.tool_capable_openai_host.capabilities]
+- [ ] [depends:B2] B3: Implement pure request projection for tool declarations, prior response binding, and correlated tool results. r[agent_harness_runtime.tool_capable_openai_host.projection]
+
+## S. Streaming and shell
+
+- [ ] [depends:B3] S1: Implement the bounded deterministic SSE parser through the existing canonical stream frame contract. r[agent_harness_runtime.tool_capable_openai_host.streaming]
+- [ ] [depends:S1] S2: Enforce model-call, provider-response, and tool-call correlation across continuations. r[agent_harness_runtime.tool_capable_openai_host.correlation]
+- [ ] [depends:S2] S3: Extend the explicit HTTPS shell without provider discovery, hidden retry, fallback, or ambient credentials. r[agent_harness_runtime.tool_capable_openai_host.authority]
+- [ ] [depends:S3] S4: Project stream progress and terminal outcomes into existing runtime and retry classifications. r[agent_harness_runtime.tool_capable_openai_host.streaming]
+
+## T. Tests and closeout
+
+- [ ] [depends:S4] T1: Add literal positive fixtures for content, reasoning, tool calls, tool results, usage, and finish events through the production parser. r[agent_harness_runtime.tool_capable_openai_host.verification]
+- [ ] [depends:S4] T2: Add negative fixtures for malformed SSE, unsupported capabilities, lossy projection, stale identities, duplicate terminals, unsafe reasoning, cancellation, body overflow, and secret leaks. r[agent_harness_runtime.tool_capable_openai_host.verification]
+- [ ] [depends:T2] T3: Add a deterministic fake transport loop and a separately opt-in live smoke with safe evidence. r[agent_harness_runtime.tool_capable_openai_host.authority]
+- [ ] [depends:T3] T4: Update docs, conformance index, component metadata, focused rails, and close through relevant workspace and Cairn checks. r[agent_harness_runtime.tool_capable_openai_host.verification]
