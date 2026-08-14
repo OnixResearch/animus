@@ -16,6 +16,7 @@ members = [
   "crates/animus-eval-core",
   "crates/animus-eval-conformance",
   "crates/animus-live-steel-agent",
+  "crates/animus-local-daemon",
   "crates/animus-preserves",
   "crates/animus-preserves-adapter",
   "crates/animus-preserves-schema",

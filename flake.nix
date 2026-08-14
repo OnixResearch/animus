@@ -363,6 +363,7 @@
                 || baseName == "check-acp-stdio-host"
                 || baseName == "check-live-openai-provider-host"
                 || baseName == "check-live-steel-agent-shell"
+                || baseName == "check-local-daemon-supervisor-host"
                 || baseName == "check-packaged-live-openai-smoke"
                 || baseName == "check-packaged-live-openrouter-smoke"
                 || baseName == "check-codebase-tool-host"
@@ -1256,6 +1257,14 @@
             pkgs.nickel
           ] ''
             sh scripts/cairn/check-live-steel-agent-shell --root .
+          '';
+
+          local-daemon-supervisor-host = cargoCheck "animus-local-daemon-supervisor-host" [
+            pkgs.clippy
+            pkgs.diffutils
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-local-daemon-supervisor-host --root .
           '';
 
           packaged-live-openai-smoke = cargoCheck "animus-packaged-live-openai-smoke" [

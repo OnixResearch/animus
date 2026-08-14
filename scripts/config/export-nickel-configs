@@ -48,6 +48,7 @@ secret_resolution_policy_source_file=${repo_root}/config/secret-resolution-polic
 skill_source_lifecycle_policy_source_file=${repo_root}/config/skill-source-lifecycle-policy.ncl
 steel_skill_module_policy_source_file=${repo_root}/config/steel-skill-module-policy.ncl
 live_steel_agent_shell_source_file=${repo_root}/config/live-steel-agent-shell.ncl
+local_daemon_supervisor_source_file=${repo_root}/config/local-daemon-supervisor.ncl
 trajectory_transcript_adapter_source_file=${repo_root}/config/trajectory-transcript-adapter.ncl
 mcp_client_host_source_file=${repo_root}/config/mcp-client-host.ncl
 
@@ -105,5 +106,6 @@ nickel export --format json --field secret_resolution_policy "${secret_resolutio
 nickel export --format json "${skill_source_lifecycle_policy_source_file}" > "${target_root}/config/generated/skill-source-lifecycle-policy.json"
 nickel export --format json --field steel_skill_module_policy "${steel_skill_module_policy_source_file}" > "${target_root}/config/generated/steel-skill-module-policy.json"
 nickel export --format json --field live_steel_agent_shell "${live_steel_agent_shell_source_file}" > "${target_root}/config/generated/live-steel-agent-shell.json"
+nickel export --format json --field local_daemon_config "${local_daemon_supervisor_source_file}" > "${target_root}/config/generated/local-daemon-supervisor.json"
 nickel export --format json "${trajectory_transcript_adapter_source_file}" > "${target_root}/config/generated/trajectory-transcript-adapter.json"
 nickel export --format json --field mcp_client_host "${mcp_client_host_source_file}" > "${target_root}/config/generated/mcp-client-host.json"

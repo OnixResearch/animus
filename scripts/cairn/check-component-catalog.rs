@@ -88,6 +88,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "model-runtime-profiles",
     "openai-provider-host",
     "live-provider",
+    "local-daemon-supervisor-host",
     "agent-role-profiles",
     "active-turn-recovery",
     "pending-input-vault",

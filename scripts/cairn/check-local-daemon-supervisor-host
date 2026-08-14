@@ -1,0 +1,46 @@
+#!/bin/sh
+set -eu
+
+root=.
+if [ "${1:-}" = "--root" ]; then
+  root=${2:?missing root}
+  shift 2
+fi
+if [ "$#" -ne 0 ]; then
+  printf '%s\n' "usage: check-local-daemon-supervisor-host [--root PATH]" >&2
+  exit 2
+fi
+
+cd "$root"
+
+tmp_dir=$(mktemp -d)
+trap 'rm -rf "$tmp_dir"' EXIT HUP INT TERM
+
+nickel export --format json --field local_daemon_config config/local-daemon-supervisor.ncl > "$tmp_dir/config.json"
+diff -u config/generated/local-daemon-supervisor.json "$tmp_dir/config.json"
+
+cargo test -p animus-adapter-daemon --locked
+cargo test -p animus-local-daemon --all-features --locked
+cargo check -p animus-local-daemon --all-targets --no-default-features --locked
+cargo check -p animus-local-daemon --all-targets --all-features --locked
+cargo clippy -p animus-local-daemon --all-targets --all-features --locked -- -D warnings
+
+sh scripts/cairn/check-daemon-workers --root .
+cargo test -p animus-runtime --features rlm-kernel handover::tests --locked
+cargo test -p animus-adapter-daemon transaction::tests --locked
+cargo test -p animus-std --features daemon-handoff,durable-steel-kernel-restore handover_shell::tests --locked
+cargo run -q -p animus-std --features daemon-handoff,durable-steel-kernel-restore --bin animus-daemon-handoff-smoke --locked
+sh scripts/cairn/check-component-catalog --root .
+sh scripts/cairn/check-runtime-facade-inventory --root .
+
+if grep -R -n -E 'TcpListener|TcpStream|std::env::var|home_dir\(' crates/animus-local-daemon/src crates/animus-local-daemon/tests; then
+  printf '%s\n' "local daemon forbidden transport or ambient discovery marker found" >&2
+  exit 1
+fi
+if grep -R -n -E 'is-security-sandbox|production-ready|release-eligible' crates/animus-local-daemon/src crates/animus-local-daemon/tests; then
+  printf '%s\n' "local daemon evidence overclaim marker found" >&2
+  exit 1
+fi
+
+printf '%s\n' "focused rail local-daemon-supervisor-host: pass"
+printf '%s\n' "remote security, sandboxing, HA, service management, production readiness, and release eligibility: non-claims"
