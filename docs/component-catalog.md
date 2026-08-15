@@ -169,6 +169,11 @@ The catalog names Lego-style Animus components, application-owned capability sea
 | `root.revision-gated-workspace-edit-facade` | `shell-adapter` | `animus` | `workspace-edit-host` | `shell-owned` | `workspace` | `cargo check -p animus --no-default-features --features workspace-edit-host --locked<br>scripts/cairn/check-runtime-facade-inventory --root .<br>scripts/cairn/check-revision-gated-workspace-edit-host --root .` | `animus::workspace_edit` |
 | `root.concrete-mcp-client-facade` | `shell-adapter` | `animus` | `mcp-client-host` | `shell-owned` | `tool` | `cargo check -p animus --no-default-features --features mcp-client-host --locked<br>scripts/cairn/check-runtime-facade-inventory --root .<br>scripts/cairn/check-concrete-mcp-client-host --root .` | `animus::mcp_client` |
 | `root.compat-facade` | `crate-feature` | `animus` | `default` | `shell-owned` | `compatibility` | `cargo check -p animus --locked<br>scripts/cairn/check-runtime-facade-inventory --root .` | `animus` |
+| `adapters.agent-watch-graph` | `reusable-contract` | `animus-adapter-agent-watch` | `always` | `none` | `agent-control` | `cargo test -p animus-adapter-agent-watch --locked<br>cargo check -p animus-adapter-agent-watch --target wasm32-unknown-unknown --no-default-features --locked<br>scripts/cairn/check-agent-watch-graph --root .` | `animus_adapter_agent_watch::{apply_watch_action, project_watcher_status, build_watch_receipt}` |
+| `adapters.trace-export` | `reusable-contract` | `animus-adapter-trace-export` | `always` | `none` | `dataset-export` | `cargo test -p animus-adapter-trace-export --locked<br>cargo check -p animus-adapter-trace-export --target wasm32-unknown-unknown --no-default-features --locked<br>scripts/cairn/check-agent-trace-export --root .` | `animus_adapter_trace_export::{validate_trace, bound_item, project_performance_accounting, build_trace_receipt}` |
+| `adapters.usage-accounting` | `reusable-contract` | `animus-adapter-usage-accounting` | `always` | `none` | `adapter-contracts` | `cargo test -p animus-adapter-usage-accounting --locked<br>cargo check -p animus-adapter-usage-accounting --target wasm32-unknown-unknown --no-default-features --locked<br>scripts/cairn/check-usage-accounting --root .` | `animus_adapter_usage_accounting::{project_accounting, project_subtrees, build_accounting_receipt}` |
+| `runtime.capability-conditional-prompt` | `reusable-contract` | `animus-runtime` | `always` | `none` | `policy` | `cargo test -p animus-runtime capability_conditional --locked<br>scripts/cairn/check-capability-conditional-prompt --root .` | `animus_runtime::capability_conditional::{compose_capability_conditional, build_capability_composition_receipt}` |
+| `runtime.execution-backend-sandbox-scope` | `reusable-contract` | `animus-runtime` | `execution-backend-planner` | `none` | `security-policy` | `cargo test -p animus-runtime --features execution-backend-planner sandbox_scope_tests --locked<br>scripts/cairn/check-execution-backend-sandbox-scope --root .` | `animus_runtime::execution_backend_planner::{plan_sandbox_scope, project_sandbox_scope_receipt}` |
 
 ## Dependency map
 
@@ -337,6 +342,11 @@ The catalog names Lego-style Animus components, application-owned capability sea
 | `root.revision-gated-workspace-edit-facade` | `std.revision-gated-workspace-edit-host` | - |
 | `root.concrete-mcp-client-facade` | `std.concrete-mcp-client-host` | - |
 | `root.compat-facade` | `core.intent-state`, `adapters.dto-boundary`, `runtime.loop-kernel`, `std.runtime-shell` | - |
+| `adapters.agent-watch-graph` | - | - |
+| `adapters.trace-export` | - | - |
+| `adapters.usage-accounting` | - | - |
+| `runtime.capability-conditional-prompt` | - | - |
+| `runtime.execution-backend-sandbox-scope` | - | - |
 
 ## Capability seams
 

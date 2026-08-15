@@ -71,6 +71,8 @@ mod background;
 #[allow(excessive_file_length)]
 mod batch;
 mod boundary;
+/// Pure capability-conditional prompt composition invariant.
+pub mod capability_conditional;
 /// Pure bounded session branch projection, control planning, comparison, and evidence.
 pub use animus_session_core::branch_explorer;
 mod capmap;

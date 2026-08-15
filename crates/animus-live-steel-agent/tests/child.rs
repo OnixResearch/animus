@@ -54,19 +54,16 @@ fn denied_factory_fails_without_registering_a_child() {
         animus_std::child_session_host::ConcreteChildSessionServices {
             factory: ExplicitChildFactory::denied(config.authority_component_identity()),
             store: MetadataChildStore::default(),
-            authority: ExplicitChildAuthority::admitted(
-                config.authority_authorization_identity(),
-            ),
+            authority: ExplicitChildAuthority::admitted(config.authority_authorization_identity()),
             timer: FixedChildTimer::default(),
             events: MetadataChildEvents::default(),
         },
     )
     .expect("denied service");
     let child_config = config.clone();
-    let mut admission_builder =
-        move |candidate: &animus_adapter_rlm_kernel::ChildSpawnRequest| {
-            admit_child_request(&child_config, candidate)
-        };
+    let mut admission_builder = move |candidate: &animus_adapter_rlm_kernel::ChildSpawnRequest| {
+        admit_child_request(&child_config, candidate)
+    };
     let mut route = ConcreteChildRoute {
         service: &mut service,
         admission: &mut admission_builder,

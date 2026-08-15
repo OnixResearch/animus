@@ -1485,6 +1485,7 @@ let entry_values = [
   entry "animus-runtime::NativeToolCallingMode" "animus-runtime" runtime reusable none stable "disabled optional or capability required native tool mode",
   entry "animus-runtime::blake3_model_runtime_profile_identity" "animus-runtime" runtime reusable none stable "canonical model runtime profile identity helper",
   entry "animus-runtime::agent_roles" "animus-runtime" runtime reusable none stable "pure capability-bound semantic role catalog composition intersection separation transition output and receipt module",
+  entry "animus-runtime::capability_conditional" "animus-runtime" runtime reusable none stable "pure capability-conditional prompt composition invariant with metadata-only receipts",
   entry "animus-runtime::TypedSubagentCapability" "animus-runtime" runtime reusable none stable "root reexport used by exact semantic-role capability intersections",
   entry "animus-runtime::subagent_capability_receipt_label" "animus-runtime" runtime reusable none stable "root reexport used for safe semantic-role capability identities",
   entry "animus-std::AgentRoleConfigError" "animus-std" std_shell reusable none stable "bounded generated semantic role configuration error",

@@ -69,7 +69,10 @@ pub enum LiveSteelAgentConfigError {
 
 impl core::fmt::Display for LiveSteelAgentConfigError {
     fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(formatter, "live Steel agent configuration rejected: {self:?}")
+        write!(
+            formatter,
+            "live Steel agent configuration rejected: {self:?}"
+        )
     }
 }
 
@@ -348,10 +351,7 @@ pub fn parse_live_steel_agent_config(
     exact_sorted_set(&raw.admitted_operations, REQUIRED_OPERATIONS)?;
     validate_labels(&raw.admitted_child_profiles, MAX_ITEMS, false)?;
     validate_labels(&raw.command_profiles, MAX_ITEMS, true)?;
-    exact_sorted_set(
-        &raw.tool_bindings,
-        &["steel_repl:animus.steel-repl.v1"],
-    )?;
+    exact_sorted_set(&raw.tool_bindings, &["steel_repl:animus.steel-repl.v1"])?;
     validate_evidence(&raw.evidence)?;
     let rlm_policy = build_rlm_policy(&raw)?;
     let selected_model = build_selected_model(&raw)?;
@@ -739,8 +739,8 @@ fn build_selected_model(
         .map_err(|_error| LiveSteelAgentConfigError::ProviderMismatch)?;
     let endpoint = animus_std::EndpointIdentity::new(raw.provider.endpoint_identity.as_str())
         .map_err(|_error| LiveSteelAgentConfigError::ProviderMismatch)?;
-    let capabilities = animus_std::ModelCapabilities::from_draft(
-        animus_std::ModelCapabilitiesDraft {
+    let capabilities =
+        animus_std::ModelCapabilities::from_draft(animus_std::ModelCapabilitiesDraft {
             input_modalities: vec![animus_std::InputModality::Text],
             context_budget: CONTEXT_BUDGET,
             output_budget: u32::try_from(raw.bounds.max_output_tokens)
@@ -757,9 +757,8 @@ fn build_selected_model(
                 animus_std::StreamSupport::Supported,
             ),
             cost: None,
-        },
-    )
-    .map_err(|_error| LiveSteelAgentConfigError::ProviderMismatch)?;
+        })
+        .map_err(|_error| LiveSteelAgentConfigError::ProviderMismatch)?;
     let model = animus_std::ModelEntry::new(
         model_id,
         animus_std::ApiKind::OpenAiResponses,
@@ -828,10 +827,7 @@ fn build_skill_modules(
     Ok(modules)
 }
 
-fn exact_sorted_set(
-    actual: &[String],
-    expected: &[&str],
-) -> Result<(), LiveSteelAgentConfigError> {
+fn exact_sorted_set(actual: &[String], expected: &[&str]) -> Result<(), LiveSteelAgentConfigError> {
     validate_labels(actual, MAX_NON_CLAIMS, false)?;
     let actual = actual.iter().map(String::as_str).collect::<BTreeSet<_>>();
     let expected = expected.iter().copied().collect::<BTreeSet<_>>();

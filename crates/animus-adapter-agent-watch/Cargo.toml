@@ -1,0 +1,17 @@
+[package]
+name = "animus-adapter-agent-watch"
+description = "Pure no_std session-local acyclic agent watch-graph contracts for Animus."
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+default = []
+
+[dependencies]
+blake3 = { version = "1.8.5", default-features = false }

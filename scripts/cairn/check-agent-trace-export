@@ -1,0 +1,50 @@
+#!/usr/bin/env sh
+# r[agent_harness_runtime.trace_export.verification]
+set -eu
+
+readonly FAILURE=1
+readonly DEFAULT_ROOT=.
+readonly RECEIPT=target/cairn/focused-rails/agent-trace-export.md
+
+root=${DEFAULT_ROOT}
+if [ "${1:-}" = "--root" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  root=$2
+fi
+cd "${root}"
+mkdir -p "$(dirname "${RECEIPT}")"
+
+cargo test -p animus-adapter-trace-export --locked
+cargo clippy -p animus-adapter-trace-export --all-targets -- -D warnings
+cargo check -p animus-adapter-trace-export --target wasm32-unknown-unknown --no-default-features --locked
+
+if cargo tree -p animus-adapter-trace-export --no-default-features --edges normal --format '{lib}' | grep -Eiq '(tokio|reqwest|hyper|serde_json)'; then
+  printf '%s\n' 'error: host or codec dependency leaked into the no-default trace crate' >&2
+  exit "${FAILURE}"
+fi
+
+sh scripts/cairn/check-component-catalog
+sh scripts/cairn/check-runtime-facade-inventory
+sh scripts/cairn/check-evidence-safety --root .
+
+cat > "${RECEIPT}" <<'EOF'
+schema: animus.focused-rail.v1
+rail: agent-trace-export
+status: pass
+coverage:
+- versioned trace-export DTO family over the admitted session ledger
+- lite and full content modes with exact complete-content metrics
+- per-agent journal-sequence authority and cross-agent overview marking
+- content-free performance accounting projection
+- metadata-only receipts and fail-closed validation
+- positive and negative fixtures; no-default and Wasm checks
+non_claims:
+- no live provider, daemon discovery, or billing reconciliation was exercised
+- trace export is not a full OTLP exporter or proof of behavioral correctness
+EOF
+
+printf '%s\n' 'focused rail agent-trace-export: pass'
+printf 'receipt: %s\n' "${RECEIPT}"

@@ -160,6 +160,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "animus-adapter-agent-watch"
+version = "0.1.0"
+dependencies = [
+ "blake3",
+]
+
+[[package]]
 name = "animus-adapter-atif"
 version = "0.1.0"
 dependencies = [
@@ -223,6 +230,20 @@ dependencies = [
 [[package]]
 name = "animus-adapter-safe"
 version = "0.1.0"
+
+[[package]]
+name = "animus-adapter-trace-export"
+version = "0.1.0"
+dependencies = [
+ "blake3",
+]
+
+[[package]]
+name = "animus-adapter-usage-accounting"
+version = "0.1.0"
+dependencies = [
+ "blake3",
+]
 
 [[package]]
 name = "animus-adapter-weave"

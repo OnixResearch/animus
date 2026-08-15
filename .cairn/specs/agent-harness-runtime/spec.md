@@ -24628,3 +24628,350 @@ r[agent_harness_runtime.tool_execution_stages.verification] The focused rail MUS
 - WHEN the focused rail runs
 - THEN admitted stage sequences MUST preserve existing authority and ordering
 - AND invalid candidates MUST fail before prohibited effects, continuation, or claims.
+
+### Requirement: Trace-export DTO family over the admitted ledger
+
+r[agent_harness_runtime.trace_export.wire] Animus MUST provide a versioned trace-export DTO family that projects validated provider-declared calls, assistant prose, reasoning, explicit directional agent messages, activations, and typed causal relationships from the admitted session ledger, with one canonical native JSONL projection and one TOON text projection.
+
+#### Scenario: Projection preserves item kind and per-agent order
+
+- GIVEN the admitted session ledger contains provider-declared calls, assistant prose, reasoning, directional messages, and activations for one agent
+- WHEN an export projection runs for that agent
+- THEN every exported item retains its authoritative journal sequence, qualified absolute append time, and valid item kind
+- AND no provider payload, raw prompt, credential, or private path leaks into the projection.
+
+### Requirement: Lite content bounds with exact metrics
+
+r[agent_harness_runtime.trace_export.bounds] The trace-export projection MUST support a lite mode that bounds each semantic text or output item to a fixed non-zero byte ceiling while retaining exact complete-content metrics, and a full mode that retains complete content.
+
+#### Scenario: Lite export bounds its items
+
+- GIVEN a lite export contains a semantic text or output item longer than the fixed ceiling
+- WHEN the projection emits that item
+- THEN the emitted item content is bounded to the ceiling
+- AND the export still retains the exact complete-content metrics for that item.
+
+### Requirement: Journal sequence is the only in-agent causality authority
+
+r[agent_harness_runtime.trace_export.sequence] Within one agent, the journal sequence MUST be the authoritative causality and ordering basis for exported items, while cross-agent wall-clock time MUST be treated as a readable overview only and never as causality.
+
+#### Scenario: Cross-agent wall time is not causality
+
+- GIVEN an export summarizes items from more than one agent
+- WHEN a consumer inspects ordering between those agents
+- THEN the export marks cross-agent time as an overview
+- AND no cross-agent ordering claim is derived from wall-clock comparison.
+
+### Requirement: Content-free performance accounting projection
+
+r[agent_harness_runtime.trace_export.accounting] Animus MUST provide a content-free performance accounting projection that records provider-prompt accounting, fixed-point cache ratios, and explicit missing-evidence coverage markers, with one summary per included agent and no semantic text or output bodies.
+
+#### Scenario: Performance projection emits one summary per agent
+
+- GIVEN a performance accounting projection over included agents
+- WHEN the projection runs
+- THEN it emits exactly one summary per included agent
+- AND the summary contains no assistant prose, reasoning text, tool output, or provider payload bodies.
+
+### Requirement: Trace-export validation fails closed
+
+r[agent_harness_runtime.trace_export.fail_closed] Trace-export validation MUST reject unknown item kinds, malformed records, non-monotonic journal sequences, unbounded items, duplicate summaries, and unsupported export shapes with bounded safe error classes before any projection is accepted.
+
+#### Scenario: Non-monotonic sequence is rejected
+
+- GIVEN an export projection contains an item whose journal sequence is lower than the previous item
+- WHEN trace-export validation runs
+- THEN validation rejects the projection with a sequence diagnostic
+- AND no partially bounded export is promoted as valid.
+
+### Requirement: Metadata-only trace receipts
+
+r[agent_harness_runtime.trace_export.receipts] Trace-export receipts MUST include schema version, source ledger identity, item counts, content-mode label, coverage markers, and BLAKE3 projection identity, and MUST NOT include raw prompts, provider payloads, credentials, private paths, or full item bodies.
+
+#### Scenario: Receipt rejects provider body
+
+- GIVEN a trace receipt fixture includes a provider payload or raw prompt body
+- WHEN receipt validation runs
+- THEN validation rejects the fixture with a typed leak diagnostic.
+
+### Requirement: Trace-export verification evidence
+
+r[agent_harness_runtime.trace_export.verification] The adaptation MUST include focused positive and negative tests for projection shape, lite bounds, sequence authority, content-free accounting, fail-closed validation, receipt leak rejection, and feature isolation.
+
+#### Scenario: Closeout evidence covers trace fixtures
+
+- GIVEN maintainers intend to archive the trace-export adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused ledger, projection, bounds, accounting, receipt, workspace, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Typed usage-record admission and attribution
+
+r[agent_harness_runtime.usage_accounting.records] Animus MUST admit typed usage records and bind each record to the agent and session that produced it before any accounting projection, using host-supplied record projections and safe model catalog metadata.
+
+#### Scenario: Record without attribution is rejected
+
+- GIVEN a usage record cannot be bound to a session or agent
+- WHEN accounting admission runs
+- THEN admission rejects the record with a typed attribution diagnostic
+- AND no unattributed record is priced into a session or agent summary.
+
+### Requirement: Pricing against the serving model
+
+r[agent_harness_runtime.usage_accounting.pricing] Animus MUST price each accepted usage record against the model that served it using registry price metadata, MUST use a documented fallback price when registry pricing is absent, and MUST fail a summary entry when a required price is missing.
+
+#### Scenario: Missing required price fails the summary
+
+- GIVEN a summary entry requires pricing metadata that is absent
+- WHEN the accounting projection runs
+- THEN the entry fails with a missing-price diagnostic
+- AND no entry is priced from an undeclared assumption.
+
+### Requirement: Approximate per-agent subtree projection
+
+r[agent_harness_runtime.usage_accounting.subtree] Animus MUST project an approximate per-agent subtree figure that follows only authenticated same-session creator relationships, retains completed descendants, and resets with the active session.
+
+#### Scenario: Subtree resets with the session
+
+- GIVEN a new active session begins on the same agent
+- WHEN the accounting projection runs for that agent
+- THEN the subtree figure starts from the new session
+- AND usage from completed prior sessions is not carried into the new subtree.
+
+### Requirement: Explicit non-authoritative label
+
+r[agent_harness_runtime.usage_accounting.non_authoritative] Animus MUST mark every accounting projection as a non-authoritative estimate rather than provider billing reconciliation.
+
+#### Scenario: Projection reports its estimate status
+
+- GIVEN an accounting projection is produced
+- WHEN a consumer reads the projection header
+- THEN the projection carries an explicit estimate marker
+- AND no projection claims provider billing reconciliation authority.
+
+### Requirement: Accounting validation fails closed
+
+r[agent_harness_runtime.usage_accounting.fail_closed] Accounting validation MUST reject malformed usage records, unknown models, missing required prices, negative totals, overflow, and duplicate agent summaries with bounded safe error classes.
+
+#### Scenario: Overflow is rejected
+
+- GIVEN an accounting projection totals overflow the bounded counter
+- WHEN validation runs
+- THEN validation rejects the projection with an overflow diagnostic
+- AND no truncated total is promoted as valid.
+
+### Requirement: Metadata-only accounting receipts
+
+r[agent_harness_runtime.usage_accounting.receipts] Accounting receipts MUST include schema version, record counts, model identities, price units, subtree identities, and BLAKE3 projection identity, and MUST NOT include raw usage payloads, provider bodies, credentials, or private paths.
+
+#### Scenario: Receipt rejects raw usage payload
+
+- GIVEN an accounting receipt fixture includes a raw usage payload or provider body
+- WHEN receipt validation runs
+- THEN validation rejects the fixture with a typed leak diagnostic.
+
+### Requirement: Accounting verification evidence
+
+r[agent_harness_runtime.usage_accounting.verification] The adaptation MUST include focused positive and negative tests for attribution, pricing, fallback pricing, subtree projection, session reset, fail-closed validation, receipt leak rejection, and feature isolation.
+
+#### Scenario: Closeout evidence covers accounting fixtures
+
+- GIVEN maintainers intend to archive the accounting adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused no-std, Wasm, workspace, receipt, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Session-local typed watch graph
+
+r[agent_harness_runtime.agent_watch.graph] Animus MUST provide a session-local typed watch-graph reducer that owns watch edges, status updates, and enable and disable transitions without process, socket, persistence, or provider authority.
+
+#### Scenario: Enables and disables reduce deterministically
+
+- GIVEN a session-local watch state and a valid enable or disable transition
+- WHEN the reducer applies the transition
+- THEN the reducer returns the next deterministic watch state
+- AND no message, transport, or persistence side effect occurs.
+
+### Requirement: Cycle-closing enables are rejected atomically
+
+r[agent_harness_runtime.agent_watch.acyclic] Animus MUST reject any watch enable that would close a cycle in the watch graph without changing watch state.
+
+#### Scenario: Rejected enable leaves state unchanged
+
+- GIVEN a watch graph in which a proposed enable would close a cycle
+- WHEN the reducer applies that enable
+- THEN the reducer rejects the enable with a typed cycle diagnostic
+- AND the watch state before the enable remains unchanged.
+
+### Requirement: Watcher-only redacted status
+
+r[agent_harness_runtime.agent_watch.status] Watchers MUST receive only self-reported semantic status and sanitized provider retry progress, never an agent's hidden prompts or raw provider data.
+
+#### Scenario: Raw provider data stays out of the projection
+
+- GIVEN a watcher observes a delegated agent during provider retry
+- WHEN the status projection runs
+- THEN the watcher sees a bounded sanitized retry status
+- AND no raw provider payload or hidden prompt crosses the projection.
+
+### Requirement: Watch validation fails closed
+
+r[agent_harness_runtime.agent_watch.fail_closed] Watch validation MUST reject unknown agents, duplicate edges, stale watchers, non-monotonic generation, and malformed status records with bounded safe error classes before watch state changes.
+
+#### Scenario: Unknown agent is rejected
+
+- GIVEN a watch transition names an agent outside the session
+- WHEN watch validation runs
+- THEN validation rejects the transition with a typed diagnostic
+- AND no watch edge is created for the unknown agent.
+
+### Requirement: Metadata-only watch receipts
+
+r[agent_harness_runtime.agent_watch.receipts] Watch receipts MUST include graph topology identity, edge identities, status labels, and rejection classes, and MUST NOT include prompts, transcripts, or provider payloads.
+
+#### Scenario: Receipt rejects transcript body
+
+- GIVEN a watch receipt fixture includes a transcript or prompt body
+- WHEN receipt validation runs
+- THEN validation rejects the fixture with a typed leak diagnostic.
+
+### Requirement: Agent-watch verification evidence
+
+r[agent_harness_runtime.agent_watch.verification] The adaptation MUST include focused positive and negative tests for graph transitions, acyclic enforcement, watcher-only redaction, fail-closed validation, receipt leak rejection, and feature isolation.
+
+#### Scenario: Closeout evidence covers watch fixtures
+
+- GIVEN maintainers intend to archive the watch-graph adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused subagent, host-control, workspace, receipt, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: Availability is an explicit composition input
+
+r[agent_harness_runtime.capability_conditional_prompt.availability] Prompt composition MUST receive an explicit resolved availability set of tools and skills available for the current turn, derived from extension defaults, model compatibility, policy rules, and the selected role, and MUST NOT infer availability from prompt text.
+
+#### Scenario: Composition consumes only the explicit availability set
+
+- GIVEN a prompt composition request carries a resolved availability set
+- WHEN composition runs
+- THEN every availability decision uses that set
+- AND no fragment availability is inferred from instruction text.
+
+### Requirement: Fragments render only when available
+
+r[agent_harness_runtime.capability_conditional_prompt.conditional] A prompt fragment MUST render only when every tool or skill it names is in the resolved availability set for that turn.
+
+#### Scenario: Unavailable fragment is dropped
+
+- GIVEN a fragment names a tool that is absent from the availability set
+- WHEN prompt composition runs
+- THEN the fragment is dropped from the composed prompt
+- AND the omission is recorded in the composition receipt.
+
+### Requirement: Missing-capability invariant with a negative fixture
+
+r[agent_harness_runtime.capability_conditional_prompt.missing] The composition invariant MUST include a mandatory negative fixture in which a role names a missing tool or skill and MUST NOT produce instructions for it, and capability-conditional composition MUST reject dangling capability references with a typed diagnostic.
+
+#### Scenario: Missing-tool instructions are a correctness failure
+
+- GIVEN a role names a tool that is not in the availability set
+- WHEN a negative composition test runs
+- THEN the test asserts no instructions are produced for the missing tool
+- AND the composition surface treats the dangling reference as an error.
+
+### Requirement: Composition validation fails closed
+
+r[agent_harness_runtime.capability_conditional_prompt.fail_closed] Composition validation MUST reject unresolvable capability inputs and dangling capability references with bounded safe error classes before any prompt is emitted.
+
+#### Scenario: Unresolvable capability denies the composition
+
+- GIVEN a composition request contains an unresolvable capability input
+- WHEN composition validation runs
+- THEN validation rejects the composition with a typed diagnostic
+- AND no prompt is emitted from the invalid composition.
+
+### Requirement: Metadata-only composition receipts
+
+r[agent_harness_runtime.capability_conditional_prompt.receipts] Composition receipts MUST include included fragment identities, omitted fragment identities, the availability-set identity, and rejection classes, and MUST NOT include raw prompt bodies or provider payloads.
+
+#### Scenario: Receipt rejects raw prompt body
+
+- GIVEN a composition receipt fixture includes a raw prompt body or provider payload
+- WHEN receipt validation runs
+- THEN validation rejects the fixture with a typed leak diagnostic.
+
+### Requirement: Capability-conditional composition verification evidence
+
+r[agent_harness_runtime.capability_conditional_prompt.verification] The adaptation MUST include focused positive and negative tests for availability resolution, conditional rendering, the missing-capability negative fixture, fail-closed validation, receipt leak rejection, and feature isolation.
+
+#### Scenario: Closeout evidence covers composition fixtures
+
+- GIVEN maintainers intend to archive the capability-conditional composition adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused profile, role, workspace, receipt, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.
+
+### Requirement: One sandbox scope per spawned component
+
+r[agent_harness_runtime.execution_backend_sandbox.scope] Animus MUST name exactly one sandbox descriptor per spawned extension or component when the execution-backend selector plans effects, and MUST NOT apply a single whole-host sandbox to every component.
+
+#### Scenario: Planner names a per-component descriptor
+
+- GIVEN a host spawns distinct UI, provider, tool-executor, and web-search components under one session
+- WHEN the execution-backend selector plans effects
+- THEN the plan names one admitted sandbox descriptor for each spawned component
+- AND no component silently inherits a broad whole-host scope.
+
+### Requirement: Reuse existing sandbox mechanisms
+
+r[agent_harness_runtime.execution_backend_sandbox.reuse] The per-component sandbox scope MUST reuse the admitted sandlock descriptors and the bubblewrap agent guardrail contracts and MUST NOT introduce a new sandbox mechanism.
+
+#### Scenario: Extensions reuse the reviewed descriptor catalog
+
+- GIVEN a spawned component matches a sandlock descriptor or guardrail profile
+- WHEN the planner selects its scope
+- THEN the plan references the reviewed descriptor identity
+- AND no duplicate enforcement mechanism is created.
+
+### Requirement: Capability-matched scope selection
+
+r[agent_harness_runtime.execution_backend_sandbox.matched] The selected scope MUST intersect the declared component sandbox need and the current capability request under the weakest-admitted-backend rule, and MUST keep the current host-recheck rule in force before effects.
+
+#### Scenario: Satisfying scope is selected
+
+- GIVEN a component declares a sandbox need and a capability request
+- WHEN the planner selects a scope
+- THEN the scope satisfies both the declared need and the capability request
+- AND the weakest admitted backend that satisfies them is selected.
+
+### Requirement: Sandbox-scope validation fails closed
+
+r[agent_harness_runtime.execution_backend_sandbox.fail_closed] Sandbox-scope validation MUST reject unknown components, missing descriptors, unreachable backends, and unsatisfiable capability requests with bounded safe error classes before any spawn effect.
+
+#### Scenario: Missing descriptor blocks the spawn
+
+- GIVEN a spawned component has no admitted descriptor
+- WHEN the planner validates its scope
+- THEN validation rejects the spawn with a descriptor diagnostic
+- AND no broad fallback scope is used silently.
+
+### Requirement: Metadata-only sandbox-scope receipts
+
+r[agent_harness_runtime.execution_backend_sandbox.receipts] Sandbox-scope receipts MUST include component identities, the selected backend, the sandbox descriptor identity, capability-gate facts, and rejection classes, and MUST NOT include raw environment values, credentials, or sandbox rule bodies.
+
+#### Scenario: Receipt rejects raw environment value
+
+- GIVEN a sandbox-scope receipt fixture includes a raw environment value or credential
+- WHEN receipt validation runs
+- THEN validation rejects the fixture with a typed leak diagnostic.
+
+### Requirement: Sandbox-scope verification evidence
+
+r[agent_harness_runtime.execution_backend_sandbox.verification] The adaptation MUST include focused positive and negative tests for per-component scoping, mechanism reuse, capability-matched selection, fail-closed validation, receipt leak rejection, and feature isolation.
+
+#### Scenario: Closeout evidence covers sandbox-scope fixtures
+
+- GIVEN maintainers intend to archive the sandbox-scope adaptation
+- WHEN closeout validation runs
+- THEN evidence names focused execution-backend, sandlock, guardrail, workspace, receipt, Cairn validation, and Cairn gate checks
+- AND any skipped rail includes a concrete blocker and next-best validation.

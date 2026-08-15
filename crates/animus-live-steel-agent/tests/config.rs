@@ -10,7 +10,10 @@ fn generated_nickel_configuration_revalidates_in_rust() {
     // r[verify agent_harness_runtime.live_steel_agent_shell.configuration]
     let config = parse_live_steel_agent_config(CONFIG).expect("generated configuration");
     assert_eq!(config.application_id(), "animus-live-steel-agent");
-    assert_eq!(config.credential_reference(), "brokered:injected-openai-api-key");
+    assert_eq!(
+        config.credential_reference(),
+        "brokered:injected-openai-api-key"
+    );
     assert_eq!(config.skill_modules().len(), 1);
 }
 

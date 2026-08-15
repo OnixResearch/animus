@@ -1,0 +1,50 @@
+#!/usr/bin/env sh
+# r[agent_harness_runtime.usage_accounting.verification]
+set -eu
+
+readonly FAILURE=1
+readonly DEFAULT_ROOT=.
+readonly RECEIPT=target/cairn/focused-rails/usage-accounting.md
+
+root=${DEFAULT_ROOT}
+if [ "${1:-}" = "--root" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  root=$2
+fi
+cd "${root}"
+mkdir -p "$(dirname "${RECEIPT}")"
+
+cargo test -p animus-adapter-usage-accounting --locked
+cargo clippy -p animus-adapter-usage-accounting --all-targets -- -D warnings
+cargo check -p animus-adapter-usage-accounting --target wasm32-unknown-unknown --no-default-features --locked
+
+if cargo tree -p animus-adapter-usage-accounting --no-default-features --edges normal --format '{lib}' | grep -Eiq '(tokio|reqwest|hyper|serde_json)'; then
+  printf '%s\n' 'error: host or codec dependency leaked into the no-default accounting crate' >&2
+  exit "${FAILURE}"
+fi
+
+sh scripts/cairn/check-component-catalog
+sh scripts/cairn/check-runtime-facade-inventory
+sh scripts/cairn/check-evidence-safety --root .
+
+cat > "${RECEIPT}" <<'EOF'
+schema: animus.focused-rail.v1
+rail: usage-accounting
+status: pass
+coverage:
+- typed usage-record admission and per-agent and per-session attribution
+- per-serving-model pricing with a documented fallback and missing-price diagnostics
+- approximate per-agent subtree projection with session reset
+- explicit non-authoritative estimate label
+- metadata-only receipts and fail-closed validation
+- positive and negative fixtures; no-default and Wasm checks
+non_claims:
+- no live provider, billing API, ledger persistence, or reconciliation was exercised
+- the projection is an eyeballed estimate, not provider billing reconciliation
+EOF
+
+printf '%s\n' 'focused rail usage-accounting: pass'
+printf 'receipt: %s\n' "${RECEIPT}"

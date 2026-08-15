@@ -1,0 +1,44 @@
+#!/usr/bin/env sh
+# r[agent_harness_runtime.execution_backend_sandbox.verification]
+set -eu
+
+readonly FAILURE=1
+readonly DEFAULT_ROOT=.
+readonly RECEIPT=target/cairn/focused-rails/execution-backend-sandbox-scope.md
+
+root=${DEFAULT_ROOT}
+if [ "${1:-}" = "--root" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  root=$2
+fi
+cd "${root}"
+mkdir -p "$(dirname "${RECEIPT}")"
+
+cargo test -p animus-runtime --features execution-backend-planner sandbox_scope_tests --locked
+cargo clippy -p animus-runtime --all-targets --features execution-backend-planner -- -D warnings
+cargo check -p animus-runtime --no-default-features --target wasm32-unknown-unknown --locked
+
+sh scripts/cairn/check-component-catalog
+sh scripts/cairn/check-runtime-facade-inventory
+sh scripts/cairn/check-evidence-safety --root .
+
+cat > "${RECEIPT}" <<'EOF'
+schema: animus.focused-rail.v1
+rail: execution-backend-sandbox-scope
+status: pass
+coverage:
+- one sandbox scope per spawned component under the weakest-admitted rule
+- reuse of current sandlock and bubblewrap-guardrail descriptor contracts
+- capability-matched scope intersection with fail-closed admission
+- metadata-only receipts and dependency isolation
+- positive and negative fixtures
+non_claims:
+- no live sandbox enforcement, host recheck, or backend availability was exercised
+- the planner names scopes; enforcement and rechecks remain host-owned
+EOF
+
+printf '%s\n' 'focused rail execution-backend-sandbox-scope: pass'
+printf 'receipt: %s\n' "${RECEIPT}"

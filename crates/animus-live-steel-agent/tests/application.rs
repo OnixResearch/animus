@@ -19,7 +19,10 @@ fn missing_credential_fails_before_store_creation() {
         context: ExplicitContextMap::default(),
     });
 
-    assert_eq!(result.map(|_output| ()), Err(LiveApplicationError::Provider));
+    assert_eq!(
+        result.map(|_output| ()),
+        Err(LiveApplicationError::Provider)
+    );
     assert!(!absent_store.exists());
 }
 

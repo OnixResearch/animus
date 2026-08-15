@@ -1,0 +1,47 @@
+#!/usr/bin/env sh
+# r[agent_harness_runtime.agent_watch.verification]
+set -eu
+
+readonly FAILURE=1
+readonly DEFAULT_ROOT=.
+readonly RECEIPT=target/cairn/focused-rails/agent-watch-graph.md
+
+root=${DEFAULT_ROOT}
+if [ "${1:-}" = "--root" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  root=$2
+fi
+cd "${root}"
+mkdir -p "$(dirname "${RECEIPT}")"
+
+cargo test -p animus-adapter-agent-watch --locked
+cargo clippy -p animus-adapter-agent-watch --all-targets -- -D warnings
+cargo check -p animus-adapter-agent-watch --target wasm32-unknown-unknown --no-default-features --locked
+
+if cargo tree -p animus-adapter-agent-watch --no-default-features --edges normal --format '{lib}' | grep -Eiq '(tokio|reqwest|hyper|serde_json)'; then
+  printf '%s\n' 'error: host or codec dependency leaked into the no-default watch crate' >&2
+  exit "${FAILURE}"
+fi
+
+sh scripts/cairn/check-component-catalog
+sh scripts/cairn/check-runtime-facade-inventory
+sh scripts/cairn/check-evidence-safety --root .
+
+cat > "${RECEIPT}" <<'EOF'
+schema: animus.focused-rail.v1
+rail: agent-watch-graph
+status: pass
+coverage:
+- session-local typed watch graph with atomic cycle-closing rejection
+- watcher-only redacted status and sanitized retry progress
+- metadata-only receipts and fail-closed admission
+- positive and negative fixtures; no-default and Wasm checks
+non_claims:
+- no live messaging, provider retry execution, persistence, daemon, or process was exercised
+EOF
+
+printf '%s\n' 'focused rail agent-watch-graph: pass'
+printf 'receipt: %s\n' "${RECEIPT}"

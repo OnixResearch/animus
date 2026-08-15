@@ -108,9 +108,7 @@ where
     /// # Errors
     ///
     /// Returns [`DurableSteelKernelHostError`] when no valid snapshot entry exists.
-    pub fn latest_kernel_head_identity(
-        &self,
-    ) -> Result<&str, DurableSteelKernelHostError> {
+    pub fn latest_kernel_head_identity(&self) -> Result<&str, DurableSteelKernelHostError> {
         self.store
             .recovery()
             .committed_frames()

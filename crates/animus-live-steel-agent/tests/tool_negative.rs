@@ -25,37 +25,43 @@ impl animus_runtime::rlm_kernel::RlmKernelHostExecutor for DenyHost {
 #[test]
 fn explicit_cancellation_stops_before_kernel_safe_point() {
     let config = parse_live_steel_agent_config(CONFIG).expect("config");
-    let kernel = animus_steel::SteelRlmKernel::new(config.rlm_policy().clone())
-        .expect("kernel");
+    let kernel = animus_steel::SteelRlmKernel::new(config.rlm_policy().clone()).expect("kernel");
     let mut tool = SteelToolService::new(kernel, DenyHost, (), binding(&config));
     tool.set_cancelled(true);
     let prior_head = kernel_head(&tool, &config);
 
-    assert_eq!(tool.execute(&tool_request(HOST_SOURCE)), Err(SteelToolError::Cancelled));
+    assert_eq!(
+        tool.execute(&tool_request(HOST_SOURCE)),
+        Err(SteelToolError::Cancelled)
+    );
     assert_eq!(kernel_head(&tool, &config), prior_head);
 }
 
 #[test]
 fn host_failure_does_not_commit_the_active_cell() {
     let config = parse_live_steel_agent_config(CONFIG).expect("config");
-    let kernel = animus_steel::SteelRlmKernel::new(config.rlm_policy().clone())
-        .expect("kernel");
+    let kernel = animus_steel::SteelRlmKernel::new(config.rlm_policy().clone()).expect("kernel");
     let mut tool = SteelToolService::new(kernel, DenyHost, (), binding(&config));
     let prior_head = kernel_head(&tool, &config);
 
-    assert_eq!(tool.execute(&tool_request(HOST_SOURCE)), Err(SteelToolError::Host));
+    assert_eq!(
+        tool.execute(&tool_request(HOST_SOURCE)),
+        Err(SteelToolError::Host)
+    );
     assert_eq!(kernel_head(&tool, &config), prior_head);
 }
 
 #[test]
 fn denied_tool_request_fails_before_steel_execution() {
     let config = parse_live_steel_agent_config(CONFIG).expect("config");
-    let kernel = animus_steel::SteelRlmKernel::new(config.rlm_policy().clone())
-        .expect("kernel");
+    let kernel = animus_steel::SteelRlmKernel::new(config.rlm_policy().clone()).expect("kernel");
     let mut tool = SteelToolService::new(kernel, DenyHost, (), binding(&config));
     let prior_head = kernel_head(&tool, &config);
 
-    assert_eq!(tool.execute(&denied_tool_request()), Err(SteelToolError::Request));
+    assert_eq!(
+        tool.execute(&denied_tool_request()),
+        Err(SteelToolError::Request)
+    );
     assert_eq!(kernel_head(&tool, &config), prior_head);
 }
 

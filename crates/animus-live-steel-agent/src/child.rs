@@ -4,8 +4,7 @@ use std::collections::BTreeMap;
 
 use animus_runtime::child_session_service::{
     ChildSessionFailureClass, ChildSessionLifecycleRecord, ChildSessionServiceSet,
-    ConcreteChildSessionAdmission,
-    ConcreteChildSessionAdmissionDraft,
+    ConcreteChildSessionAdmission, ConcreteChildSessionAdmissionDraft,
 };
 use animus_runtime::subagents::{
     FreshContextSubagentDraft, SubagentChildRunDraft, SubagentChildRunKind,
@@ -128,17 +127,16 @@ fn build_normal_child_controller(
         components: components.as_slice(),
     })
     .map_err(|_error| child_session_failure("child authority profile is malformed"))?;
-    let queue_policy = animus_runtime::MessageQueuePolicy::new(
-        animus_runtime::MessageQueuePolicyDraft {
+    let queue_policy =
+        animus_runtime::MessageQueuePolicy::new(animus_runtime::MessageQueuePolicyDraft {
             max_items: MAX_CHILD_QUEUE_ITEMS,
             allowed_sources: &["coding-session-host"],
             policy_label: CHILD_QUEUE_POLICY_LABEL,
             policy_hash: admission.admission_identity(),
             allow_queue_mutations: true,
             allow_interrupts: true,
-        },
-    )
-    .map_err(|_error| child_session_failure("child queue policy is malformed"))?;
+        })
+        .map_err(|_error| child_session_failure("child queue policy is malformed"))?;
     let state = new_coding_session_state(
         CodingSessionConfig {
             session_id: admission.subagent().child_id.clone(),
@@ -325,9 +323,7 @@ pub fn build_child_service(
                 response,
             ),
             store: MetadataChildStore::default(),
-            authority: ExplicitChildAuthority::admitted(
-                config.authority_authorization_identity(),
-            ),
+            authority: ExplicitChildAuthority::admitted(config.authority_authorization_identity()),
             timer: FixedChildTimer::default(),
             events: MetadataChildEvents::default(),
         },
@@ -339,7 +335,10 @@ pub fn build_child_service(
 /// # Errors
 ///
 /// Returns [`DispatchFailure`] for profile, limit, or authority drift.
-#[allow(clippy::too_many_lines, reason = "keeps one explicit closed child admission projection")]
+#[allow(
+    clippy::too_many_lines,
+    reason = "keeps one explicit closed child admission projection"
+)]
 pub fn admit_child_request(
     config: &crate::ValidatedLiveSteelAgentConfig,
     request: &animus_adapter_rlm_kernel::ChildSpawnRequest,

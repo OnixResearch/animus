@@ -86,7 +86,10 @@ impl LiveSteelAgentRunReceipt {
 
     /// Returns the receipt schema.
     #[must_use]
-    #[allow(clippy::unused_self, reason = "schema is exposed uniformly with receipt fields")]
+    #[allow(
+        clippy::unused_self,
+        reason = "schema is exposed uniformly with receipt fields"
+    )]
     pub const fn schema(&self) -> &'static str {
         RECEIPT_SCHEMA
     }

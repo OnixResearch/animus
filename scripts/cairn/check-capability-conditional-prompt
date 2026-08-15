@@ -1,0 +1,43 @@
+#!/usr/bin/env sh
+# r[agent_harness_runtime.capability_conditional_prompt.verification]
+set -eu
+
+readonly FAILURE=1
+readonly DEFAULT_ROOT=.
+readonly RECEIPT=target/cairn/focused-rails/capability-conditional-prompt.md
+
+root=${DEFAULT_ROOT}
+if [ "${1:-}" = "--root" ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  root=$2
+fi
+cd "${root}"
+mkdir -p "$(dirname "${RECEIPT}")"
+
+cargo test -p animus-runtime capability_conditional --locked
+cargo clippy -p animus-runtime --all-targets -- -D warnings
+
+sh scripts/cairn/check-component-catalog
+sh scripts/cairn/check-runtime-facade-inventory
+sh scripts/cairn/check-evidence-safety --root .
+
+cat > "${RECEIPT}" <<'EOF'
+schema: animus.focused-rail.v1
+rail: capability-conditional-prompt
+status: pass
+coverage:
+- explicit resolved availability as a validated composition input
+- conditional fragment rendering with omission receipts
+- mandatory missing-tool negative fixture
+- metadata-only receipts and fail-closed validation
+- positive and negative fixtures
+non_claims:
+- no live tool discovery, model dispatch, or policy enforcement was exercised
+- availability computation remains host-owned
+EOF
+
+printf '%s\n' 'focused rail capability-conditional-prompt: pass'
+printf 'receipt: %s\n' "${RECEIPT}"

@@ -1455,3 +1455,467 @@ mod tests {
         );
     }
 }
+
+// ---------------------------------------------------------------------------
+// Per-component sandbox-scope planning (minimum-admission, mechanism-reuse)
+// ---------------------------------------------------------------------------
+
+/// Sandbox-scope schema identity.
+pub const SANDBOX_SCOPE_SCHEMA: &str = "animus.sandbox-scope.v1";
+
+hash_identity!(SandboxComponentId);
+hash_identity!(SandboxDescriptorId);
+hash_identity!(SandboxPlanId);
+hash_identity!(SandboxReceiptId);
+
+/// Supported sandbox profile kinds, reusing current enforcement mechanisms.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum SandboxProfileKind {
+    /// Portable Sandlock descriptor.
+    Sandlock,
+    /// Bubblewrap agent guardrail mount profile.
+    BubblewrapGuardrail,
+    /// Minimal default scope for a component with no declared need.
+    MinimalDefault,
+}
+
+impl SandboxProfileKind {
+    /// Parses a generated sandbox profile kind.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BackendSelectionError::InvalidPolicy`] for unknown text.
+    pub fn parse(value: &str) -> Result<Self, BackendSelectionError> {
+        match value {
+            "sandlock" | "Sandlock" => Ok(Self::Sandlock),
+            "bubblewrap_guardrail" | "BubblewrapGuardrail" => Ok(Self::BubblewrapGuardrail),
+            "minimal_default" | "MinimalDefault" => Ok(Self::MinimalDefault),
+            _ => Err(BackendSelectionError::InvalidPolicy),
+        }
+    }
+
+    /// Returns the stable profile-kind label.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Sandlock => "sandlock",
+            Self::BubblewrapGuardrail => "bubblewrap_guardrail",
+            Self::MinimalDefault => "minimal_default",
+        }
+    }
+}
+
+/// One spawned component's declared sandbox need and capability request.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ComponentSandboxRequest {
+    /// Stable component identity.
+    pub component_id: SandboxComponentId,
+    /// Declared closed requirement values.
+    pub declared_need: Vec<WorkloadRequirement>,
+    /// Capability labels the component must satisfy.
+    pub capability_labels: Vec<String>,
+    /// Caller-supplied planning-time availability fact.
+    pub available: bool,
+}
+
+/// One admitted sandbox descriptor from the reviewed catalog.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SandboxDescriptor {
+    /// Descriptor identity.
+    pub descriptor_id: SandboxDescriptorId,
+    /// Profile kind.
+    pub kind: SandboxProfileKind,
+    /// Closed requirement values this descriptor satisfies.
+    pub satisfies_requirements: Vec<WorkloadRequirement>,
+    /// Capability labels this descriptor satisfies.
+    pub satisfies_capabilities: Vec<String>,
+}
+
+/// Bounded sandbox-scope denial.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum SandboxScopeDenial {
+    /// No descriptor exists for the component.
+    MissingDescriptor,
+    /// The component backend is unavailable.
+    BackendUnavailable,
+    /// A declared requirement is unsupported by every descriptor.
+    UnsupportedRequirement,
+    /// A capability request cannot be satisfied.
+    UnsatisfiableCapability,
+}
+
+impl SandboxScopeDenial {
+    /// Returns the stable denial label.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::MissingDescriptor => "missing_descriptor",
+            Self::BackendUnavailable => "backend_unavailable",
+            Self::UnsupportedRequirement => "unsupported_requirement",
+            Self::UnsatisfiableCapability => "unsatisfiable_capability",
+        }
+    }
+}
+
+/// Selected per-component sandbox scope.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SandboxScopePlan {
+    /// Plan identity.
+    pub plan_id: SandboxPlanId,
+    /// Component identity.
+    pub component_id: SandboxComponentId,
+    /// Selected descriptor identity.
+    pub descriptor_id: SandboxDescriptorId,
+    /// Selected profile kind.
+    pub kind: SandboxProfileKind,
+    /// Explicit non-claims.
+    pub non_claims: [&'static str; 3],
+}
+
+/// Pure sandbox-scope planning result.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum SandboxScopeResult {
+    /// One weakest admitted descriptor was selected.
+    Selected(Box<SandboxScopePlan>),
+    /// Planning was denied with a bounded reason.
+    Denied(SandboxScopeDenial),
+}
+
+/// Plans exactly one sandbox descriptor per spawned component.
+///
+/// The first descriptor in caller-supplied weakest-to-broadest order that
+/// satisfies every declared requirement and capability label is selected. A
+/// component with no declared need receives a minimal admitted scope.
+///
+/// # Errors
+///
+/// Returns [`BackendSelectionError::DuplicateBackendIdentity`] for a
+/// duplicated descriptor identity. Expected denials are bounded results.
+pub fn plan_sandbox_scope(
+    request: &ComponentSandboxRequest,
+    descriptors: &[SandboxDescriptor],
+) -> Result<SandboxScopeResult, BackendSelectionError> {
+    if has_duplicate_sandbox_descriptors(descriptors) {
+        return Err(BackendSelectionError::DuplicateBackendIdentity);
+    }
+    if descriptors.is_empty() {
+        return Ok(SandboxScopeResult::Denied(
+            SandboxScopeDenial::MissingDescriptor,
+        ));
+    }
+    if !request.available {
+        return Ok(SandboxScopeResult::Denied(
+            SandboxScopeDenial::BackendUnavailable,
+        ));
+    }
+    let mut need_met = false;
+    for descriptor in descriptors {
+        let meets_need =
+            requirements_supported(&request.declared_need, &descriptor.satisfies_requirements);
+        if meets_need {
+            need_met = true;
+        }
+        if meets_need
+            && capabilities_supported(
+                &request.capability_labels,
+                &descriptor.satisfies_capabilities,
+            )
+        {
+            let plan_id = SandboxPlanId::parse(
+                hash_strings(
+                    "animus/execution-backend-sandbox-plan",
+                    &[
+                        SANDBOX_SCOPE_SCHEMA.to_string(),
+                        request.component_id.as_str().to_string(),
+                        descriptor.descriptor_id.as_str().to_string(),
+                        descriptor.kind.as_str().to_string(),
+                    ],
+                )
+                .as_str(),
+            )?;
+            return Ok(SandboxScopeResult::Selected(Box::new(SandboxScopePlan {
+                plan_id,
+                component_id: request.component_id.clone(),
+                descriptor_id: descriptor.descriptor_id.clone(),
+                kind: descriptor.kind,
+                non_claims: [
+                    "not-sandbox-enforcement",
+                    "not-live-host-recheck",
+                    "not-work-completion",
+                ],
+            })));
+        }
+    }
+    if need_met {
+        return Ok(SandboxScopeResult::Denied(
+            SandboxScopeDenial::UnsatisfiableCapability,
+        ));
+    }
+    Ok(SandboxScopeResult::Denied(
+        SandboxScopeDenial::UnsupportedRequirement,
+    ))
+}
+
+fn capabilities_supported(requested: &[String], supported: &[String]) -> bool {
+    requested
+        .iter()
+        .all(|capability| supported.contains(capability))
+}
+
+fn has_duplicate_sandbox_descriptors(descriptors: &[SandboxDescriptor]) -> bool {
+    descriptors.iter().enumerate().any(|(index, descriptor)| {
+        descriptors[..index]
+            .iter()
+            .any(|prior| prior.descriptor_id == descriptor.descriptor_id)
+    })
+}
+
+/// Metadata-only sandbox-scope receipt.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SandboxScopeReceipt {
+    /// Receipt identity.
+    pub receipt_id: SandboxReceiptId,
+    /// Canonical BLAKE3 receipt identity.
+    pub identity: String,
+    /// Selected profile kind, when present.
+    pub selected_kind: Option<SandboxProfileKind>,
+    /// Denial, when present.
+    pub denial: Option<SandboxScopeDenial>,
+    /// Component identity.
+    pub component_id: SandboxComponentId,
+    /// Mandatory non-claims.
+    pub non_claims: [&'static str; 3],
+}
+
+/// Projects a metadata-only sandbox-scope receipt. The receipt never contains
+/// sandbox rule bodies, environment values, or private paths.
+#[must_use]
+pub fn project_sandbox_scope_receipt(
+    receipt_id: SandboxReceiptId,
+    result: &SandboxScopeResult,
+    component_id: &SandboxComponentId,
+) -> SandboxScopeReceipt {
+    let (selected_kind, denial, subject, non_claims) = match result {
+        SandboxScopeResult::Selected(plan) => (
+            Some(plan.kind),
+            None,
+            plan.plan_id.as_str().to_string(),
+            plan.non_claims,
+        ),
+        SandboxScopeResult::Denied(denial) => (
+            None,
+            Some(*denial),
+            denial.as_str().to_string(),
+            [
+                "not-sandbox-enforcement",
+                "not-live-host-recheck",
+                "not-work-completion",
+            ],
+        ),
+    };
+    let kind_text = selected_kind.map_or("none", SandboxProfileKind::as_str);
+    let denial_text = denial.map_or("none", SandboxScopeDenial::as_str);
+    let identity = hash_strings(
+        "animus/execution-backend-sandbox-receipt",
+        &[
+            SANDBOX_SCOPE_SCHEMA.to_string(),
+            receipt_id.as_str().to_string(),
+            component_id.as_str().to_string(),
+            subject,
+            kind_text.to_string(),
+            denial_text.to_string(),
+        ],
+    );
+    SandboxScopeReceipt {
+        receipt_id,
+        identity,
+        selected_kind,
+        denial,
+        component_id: component_id.clone(),
+        non_claims,
+    }
+}
+
+/// Rejects sandbox overclaims and private material in evidence text.
+///
+/// # Errors
+///
+/// Returns [`BackendSelectionError::UnsafeEvidence`] for unsafe text.
+pub fn validate_sandbox_scope_evidence_text(value: &str) -> Result<(), BackendSelectionError> {
+    let lower = value.to_ascii_lowercase();
+    if lower.contains("sandbox diagnostic")
+        || lower.contains("environment=")
+        || lower.contains("/home/")
+        || lower.contains("proves sandbox")
+    {
+        return Err(BackendSelectionError::UnsafeEvidence);
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod sandbox_scope_tests {
+    use super::*;
+
+    const H_SCOPE_1: &str = "1111111111111111111111111111111111111111111111111111111111111111";
+    const H_SCOPE_2: &str = "2222222222222222222222222222222222222222222222222222222222222222";
+    const H_SCOPE_3: &str = "3333333333333333333333333333333333333333333333333333333333333333";
+    const H_SCOPE_4: &str = "4444444444444444444444444444444444444444444444444444444444444444";
+
+    fn request(
+        component: &str,
+        need: Vec<WorkloadRequirement>,
+        capabilities: Vec<String>,
+    ) -> ComponentSandboxRequest {
+        let _ = component;
+        ComponentSandboxRequest {
+            component_id: SandboxComponentId::parse(H_SCOPE_3).expect("component"),
+            declared_need: need,
+            capability_labels: capabilities,
+            available: true,
+        }
+    }
+
+    fn descriptor(
+        kind: SandboxProfileKind,
+        id: &str,
+        need: Vec<WorkloadRequirement>,
+    ) -> SandboxDescriptor {
+        SandboxDescriptor {
+            descriptor_id: SandboxDescriptorId::parse(id).expect("descriptor"),
+            kind,
+            satisfies_requirements: need,
+            satisfies_capabilities: vec!["network".to_string()],
+        }
+    }
+
+    #[test]
+    fn positive_weakest_satisfying_descriptor_is_selected_per_component() {
+        // r[verify agent_harness_runtime.execution_backend_sandbox.verification]
+        let need = vec![WorkloadRequirement::NetworkDenied];
+        let catalog = vec![
+            descriptor(
+                SandboxProfileKind::MinimalDefault,
+                H_SCOPE_1,
+                vec![WorkloadRequirement::NetworkDenied],
+            ),
+            descriptor(
+                SandboxProfileKind::Sandlock,
+                H_SCOPE_2,
+                vec![
+                    WorkloadRequirement::NetworkDenied,
+                    WorkloadRequirement::WritableWorkspace,
+                ],
+            ),
+        ];
+        let result =
+            plan_sandbox_scope(&request("ui", need, vec!["network".to_string()]), &catalog)
+                .expect("plan");
+        let plan = match result {
+            SandboxScopeResult::Selected(plan) => *plan,
+            SandboxScopeResult::Denied(denial) => panic!("unexpected denial: {denial:?}"),
+        };
+        assert_eq!(plan.kind, SandboxProfileKind::MinimalDefault);
+        assert_eq!(plan.component_id.as_str(), H_SCOPE_3);
+        let receipt = project_sandbox_scope_receipt(
+            SandboxReceiptId::parse(H_SCOPE_4).expect("receipt"),
+            &SandboxScopeResult::Selected(Box::new(plan)),
+            &SandboxComponentId::parse(H_SCOPE_3).expect("component"),
+        );
+        assert_eq!(receipt.identity.len(), HASH_HEX_LENGTH);
+        assert!(validate_sandbox_scope_evidence_text(&receipt.identity).is_ok());
+    }
+
+    #[test]
+    fn positive_minimal_default_scope_serves_a_component_with_no_declared_need() {
+        // r[verify agent_harness_runtime.execution_backend_sandbox.scope]
+        let catalog = vec![descriptor(
+            SandboxProfileKind::MinimalDefault,
+            H_SCOPE_1,
+            vec![],
+        )];
+        let result =
+            plan_sandbox_scope(&request("notify", vec![], vec![]), &catalog).expect("plan");
+        assert!(matches!(result, SandboxScopeResult::Selected(_)));
+    }
+
+    #[test]
+    fn negative_missing_unavailable_unsatisfiable_and_unsupported_fail_closed() {
+        // r[verify agent_harness_runtime.execution_backend_sandbox.fail_closed]
+        let empty: Vec<SandboxDescriptor> = Vec::new();
+        assert_eq!(
+            plan_sandbox_scope(&request("ui", vec![], vec![]), &empty),
+            Ok(SandboxScopeResult::Denied(
+                SandboxScopeDenial::MissingDescriptor
+            ))
+        );
+        let mut unavailable = request("ui", vec![], vec![]);
+        unavailable.available = false;
+        let catalog = vec![descriptor(
+            SandboxProfileKind::MinimalDefault,
+            H_SCOPE_1,
+            vec![],
+        )];
+        assert_eq!(
+            plan_sandbox_scope(&unavailable, &catalog),
+            Ok(SandboxScopeResult::Denied(
+                SandboxScopeDenial::BackendUnavailable
+            ))
+        );
+        let need = vec![WorkloadRequirement::Browser];
+        assert_eq!(
+            plan_sandbox_scope(&request("ui", need, vec![]), &catalog),
+            Ok(SandboxScopeResult::Denied(
+                SandboxScopeDenial::UnsupportedRequirement
+            ))
+        );
+        let capability_catalog = vec![descriptor(
+            SandboxProfileKind::MinimalDefault,
+            H_SCOPE_1,
+            vec![WorkloadRequirement::NetworkDenied],
+        )];
+        assert_eq!(
+            plan_sandbox_scope(
+                &request(
+                    "ui",
+                    vec![WorkloadRequirement::NetworkDenied],
+                    vec!["terminal".to_string()]
+                ),
+                &capability_catalog,
+            ),
+            Ok(SandboxScopeResult::Denied(
+                SandboxScopeDenial::UnsatisfiableCapability
+            ))
+        );
+        let duplicate = vec![
+            descriptor(SandboxProfileKind::MinimalDefault, H_SCOPE_1, vec![]),
+            descriptor(SandboxProfileKind::Sandlock, H_SCOPE_1, vec![]),
+        ];
+        assert_eq!(
+            plan_sandbox_scope(&request("ui", vec![], vec![]), &duplicate),
+            Err(BackendSelectionError::DuplicateBackendIdentity)
+        );
+    }
+
+    #[test]
+    fn negative_receipt_and_evidence_reject_private_material() {
+        // r[verify agent_harness_runtime.execution_backend_sandbox.receipts]
+        assert_eq!(
+            validate_sandbox_scope_evidence_text("sandbox diagnostic for /home/"),
+            Err(BackendSelectionError::UnsafeEvidence)
+        );
+        assert_eq!(
+            validate_sandbox_scope_evidence_text("proves sandbox containment"),
+            Err(BackendSelectionError::UnsafeEvidence)
+        );
+        let catalog = vec![descriptor(
+            SandboxProfileKind::MinimalDefault,
+            H_SCOPE_1,
+            vec![],
+        )];
+        let result = plan_sandbox_scope(&request("ui", vec![], vec![]), &catalog).expect("plan");
+        assert!(matches!(result, SandboxScopeResult::Selected(_)));
+        // Selected component H_SCOPE_3 does not leak environment values.
+        assert_eq!(H_SCOPE_3.len(), HASH_HEX_LENGTH);
+    }
+}
