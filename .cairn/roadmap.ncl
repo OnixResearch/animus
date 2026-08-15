@@ -791,6 +791,37 @@ let change_entries = [
     "agent_harness_runtime.ratatui_tool_host.bridge",
     "agent_harness_runtime.model_streaming.runtime_events",
   ] [],
+  change "add-agent-trace-export-adapter" host_role "export-surfaces" [
+    "agent_harness_runtime.pi_session_tree.ledger_contract",
+    "agent_harness_runtime.provenance_ledger.session_ledger",
+    "agent_harness_runtime.hf_dataset_export.policy",
+    "agent_harness_runtime.clankers_batch_runner.output",
+  ] ["add-redacted-session-tree-export", "add-trajectory-transcript-adapter", "add-harbor-atif-json-adapter", "add-usage-cost-accounting-projection", "add-current-head-release-evidence-index"],
+  change "add-usage-cost-accounting-projection" core_role "receipt-provenance" [
+    "agent_harness_runtime.clankers_cost_model_routing.decision",
+    "agent_harness_runtime.clankers_cost_model_routing.catalog",
+    "agent_harness_runtime.clankers_cost_model_routing.receipts",
+    "agent_harness_runtime.model_streaming.runtime_events",
+    "agent_harness_runtime.clankers_batch_runner.output",
+  ] ["add-agent-trace-export-adapter", "add-concrete-provider-streaming-adapters", "add-per-model-runtime-profiles"],
+  change "add-acyclic-agent-watch-graph" core_role "event-hooks" [
+    "agent_harness_runtime.subagent_facade.boundary",
+    "agent_harness_runtime.subagent_coordinator.lifecycle",
+    "agent_harness_runtime.host_control.events_waits",
+    "agent_harness_runtime.clankers_continuation_policy.state",
+  ] ["add-agent-control-pubsub", "add-nested-subagent-delegation-graphs", "add-runtime-dag-contract-kit", "add-usage-cost-accounting-projection"],
+  change "add-capability-conditional-prompt-composition" core_role "policy-guidance" [
+    "agent_harness_runtime.clankers_prompt_assembly.sources",
+    "agent_harness_runtime.hermes_skill_manifest.progressive_disclosure",
+    "agent_harness_runtime.model_capability_matrix.negotiation",
+    "agent_harness_runtime.pi_tool_contracts.definition_metadata",
+  ] ["add-per-model-runtime-profiles", "add-capability-bound-agent-roles", "add-request-context-and-skill-turn-lifecycle"],
+  change "extend-execution-backend-sandbox-scope" host_role "concrete-adapters" [
+    "agent_harness_runtime.sandlock_sandbox.platform",
+    "agent_harness_runtime.runtime_authority_seal.monotonic",
+    "agent_harness_runtime.application_host_binding_pilot.current_enforcement",
+    "agent_harness_runtime.bounded_execution_evaluation.capability_states",
+  ] ["add-execution-backend-selection-planner", "add-sandlock-linux-host-adapter", "add-bubblewrap-agent-guardrail-host"],
 ]
 in
 
@@ -901,6 +932,11 @@ let overlap_entries = [
   overlap "live-steel-agent-composition" "add-live-steel-agent-shell" ["add-tool-capable-openai-provider-host", "compose-rlm-host-effect-executor", "add-concrete-child-session-service", "add-local-daemon-supervisor-host", "add-live-terminal-agent-host"],
   overlap "local-supervisor-worker-product-shell" "add-local-daemon-supervisor-host" ["add-live-steel-agent-shell", "add-live-terminal-agent-host", "add-transactional-daemon-handoff"],
   overlap "live-terminal-client-shell" "add-live-terminal-agent-host" ["add-live-steel-agent-shell", "add-local-daemon-supervisor-host", "add-packaged-tui-dogfood-smoke"],
+  overlap "agent-trace-export" "add-agent-trace-export-adapter" ["add-trajectory-transcript-adapter", "add-harbor-atif-json-adapter", "add-redacted-session-tree-export", "add-usage-cost-accounting-projection"],
+  overlap "usage-cost-accounting" "add-usage-cost-accounting-projection" ["add-agent-trace-export-adapter", "add-concrete-provider-streaming-adapters"],
+  overlap "agent-watch-status" "add-acyclic-agent-watch-graph" ["add-agent-control-pubsub", "add-nested-subagent-delegation-graphs", "add-usage-cost-accounting-projection"],
+  overlap "capability-conditional-prompts" "add-capability-conditional-prompt-composition" ["add-per-model-runtime-profiles", "add-capability-bound-agent-roles"],
+  overlap "execution-backend-sandbox-scope" "extend-execution-backend-sandbox-scope" ["add-execution-backend-selection-planner", "add-sandlock-linux-host-adapter", "add-bubblewrap-agent-guardrail-host"],
 ]
 in
 
