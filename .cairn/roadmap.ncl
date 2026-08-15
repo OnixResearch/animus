@@ -822,6 +822,15 @@ let change_entries = [
     "agent_harness_runtime.application_host_binding_pilot.current_enforcement",
     "agent_harness_runtime.bounded_execution_evaluation.capability_states",
   ] ["add-execution-backend-selection-planner", "add-sandlock-linux-host-adapter", "add-bubblewrap-agent-guardrail-host"],
+  change "adapt-zeron-steerable-agent-harness" core_role "event-hooks" [
+    "agent_harness_runtime.coding_session_host.queues",
+    "agent_harness_runtime.clankers_continuation_policy.state",
+    "agent_harness_runtime.pi_headless_protocol.queueing",
+    "agent_harness_runtime.pi_tool_contracts.failure_classes",
+    "agent_harness_runtime.active_turn_recovery.recovery",
+    "agent_harness_runtime.clankers_safe_receipts.closeout",
+    "agent_harness_runtime.validation",
+  ] ["add-coding-session-queue-cas", "adapt-goose-message-queue-interrupts", "add-agent-control-pubsub", "add-concrete-child-session-service", "add-durable-active-turn-recovery"],
 ]
 in
 
@@ -937,6 +946,7 @@ let overlap_entries = [
   overlap "agent-watch-status" "add-acyclic-agent-watch-graph" ["add-agent-control-pubsub", "add-nested-subagent-delegation-graphs", "add-usage-cost-accounting-projection"],
   overlap "capability-conditional-prompts" "add-capability-conditional-prompt-composition" ["add-per-model-runtime-profiles", "add-capability-bound-agent-roles"],
   overlap "execution-backend-sandbox-scope" "extend-execution-backend-sandbox-scope" ["add-execution-backend-selection-planner", "add-sandlock-linux-host-adapter", "add-bubblewrap-agent-guardrail-host"],
+  overlap "zeron-steerable-subprocess-harness" "adapt-zeron-steerable-agent-harness" ["add-coding-session-queue-cas", "adapt-goose-message-queue-interrupts", "add-agent-control-pubsub", "add-concrete-child-session-service"],
 ]
 in
 
