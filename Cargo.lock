@@ -118,6 +118,7 @@ dependencies = [
  "animus-adapter-maintenance",
  "animus-adapter-rlm-kernel",
  "animus-adapter-weave",
+ "animus-adapter-zeron-harness",
  "animus-adapters",
  "animus-core",
  "animus-eval-conformance",
@@ -137,6 +138,7 @@ dependencies = [
  "animus-std-rlm-host",
  "animus-std-secretspec",
  "animus-std-workspace-edit",
+ "animus-std-zeron-harness",
  "animus-steel",
  "animus-tui",
  "basalt",
@@ -251,6 +253,13 @@ version = "0.1.0"
 dependencies = [
  "blake3",
  "universal-weave",
+]
+
+[[package]]
+name = "animus-adapter-zeron-harness"
+version = "0.1.0"
+dependencies = [
+ "blake3",
 ]
 
 [[package]]
@@ -575,6 +584,14 @@ dependencies = [
  "cap-std",
  "durable-file-publication",
  "tempfile",
+]
+
+[[package]]
+name = "animus-std-zeron-harness"
+version = "0.1.0"
+dependencies = [
+ "animus-adapter-zeron-harness",
+ "bounded-exec",
 ]
 
 [[package]]

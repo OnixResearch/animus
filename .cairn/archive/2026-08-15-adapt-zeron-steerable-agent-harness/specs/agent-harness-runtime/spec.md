@@ -1,6 +1,6 @@
-# agent-harness-runtime Change Spec: Zeron steerable external-agent harness adaptation
+# agent-harness-runtime Delta Spec: Zeron steerable external-agent harness adaptation
 
-## Requirements
+## ADDED Requirements
 
 ### Requirement: Bounded external-agent harness reference
 

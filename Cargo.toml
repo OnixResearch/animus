@@ -13,6 +13,7 @@ members = [
   "crates/animus-adapter-trace-export",
   "crates/animus-adapter-usage-accounting",
   "crates/animus-adapter-weave",
+  "crates/animus-adapter-zeron-harness",
   "crates/animus-acp-stdio-host",
   "crates/animus-adapters",
   "crates/animus-core",
@@ -40,6 +41,7 @@ members = [
   "crates/animus-std-rlm-host",
   "crates/animus-std-secretspec",
   "crates/animus-std-workspace-edit",
+  "crates/animus-std-zeron-harness",
   "crates/animus-steel",
   "crates/animus-tui",
 ]
@@ -175,6 +177,8 @@ cairn-reference = ["dep:cairn_core"]
 trellis-reference = ["dep:trellis"]
 weave-adapter = ["dep:animus-adapter-weave"]
 continual-harness = ["dep:animus-adapter-continual"]
+zeron-harness-adapter = ["dep:animus-adapter-zeron-harness"]
+zeron-harness-host = ["std", "zeron-harness-adapter", "dep:animus-std-zeron-harness"]
 daemon-workers = ["dep:animus-adapter-daemon"]
 daemon-handoff = ["daemon-workers", "runtime", "std", "animus-std/daemon-handoff"]
 workspace-edit-host = ["dep:animus-std-workspace-edit"]
@@ -207,6 +211,7 @@ animus-adapter-atif = { path = "crates/animus-adapter-atif", version = "0.1.0", 
 animus-adapter-maintenance = { path = "crates/animus-adapter-maintenance", version = "0.1.0", optional = true }
 animus-adapter-rlm-kernel = { path = "crates/animus-adapter-rlm-kernel", version = "0.1.0", optional = true }
 animus-adapter-weave = { path = "crates/animus-adapter-weave", version = "0.1.0", optional = true }
+animus-adapter-zeron-harness = { path = "crates/animus-adapter-zeron-harness", version = "0.1.0", optional = true }
 animus-adapters = { path = "crates/animus-adapters", version = "0.1.0" }
 animus-core = { path = "crates/animus-core", version = "0.1.0" }
 animus-eval-core = { path = "crates/animus-eval-core", version = "0.1.0", optional = true }
@@ -226,6 +231,7 @@ animus-std-openai = { path = "crates/animus-std-openai", version = "0.1.0", opti
 animus-std-rlm-host = { path = "crates/animus-std-rlm-host", version = "0.1.0", optional = true }
 animus-std-secretspec = { path = "crates/animus-std-secretspec", version = "0.1.0", optional = true }
 animus-std-workspace-edit = { path = "crates/animus-std-workspace-edit", version = "0.1.0", optional = true }
+animus-std-zeron-harness = { path = "crates/animus-std-zeron-harness", version = "0.1.0", optional = true }
 animus-steel = { path = "crates/animus-steel", version = "0.1.0", optional = true }
 animus-tui = { path = "crates/animus-tui", version = "0.1.0", optional = true }
 basalt = { git = "ssh://git@github.com/OnixResearch/basalt.git", rev = "e9891e32dcdf655c6e12d0bea2a420f7cdca31c7", optional = true }

@@ -1,0 +1,14 @@
+[package]
+name = "animus-adapter-zeron-harness"
+description = "no_std steerable external-agent harness and durable owner-gated command-plane contracts."
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+blake3 = { version = "1.8.5", default-features = false }

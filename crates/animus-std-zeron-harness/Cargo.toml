@@ -1,0 +1,16 @@
+[package]
+name = "animus-std-zeron-harness"
+description = "Optional bounded external-agent subprocess host over pinned bounded-exec."
+edition.workspace = true
+license = "AGPL-3.0-or-later"
+readme.workspace = true
+rust-version.workspace = true
+version.workspace = true
+autobins = false
+
+[lints]
+workspace = true
+
+[dependencies]
+animus-adapter-zeron-harness = { path = "../animus-adapter-zeron-harness", version = "0.1.0" }
+bounded-exec = { git = "ssh://git@github.com/OnixResearch/bounded-exec.git", rev = "29dac88ecded94457572db3fdfaaaab95fa91525" }
