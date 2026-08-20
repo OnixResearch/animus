@@ -209,6 +209,19 @@ mod tests {
     }
 
     #[test]
+    fn shared_admission_rejects_trailing_text_and_binary_values() {
+        let message = AdapterMessage::from_model_request(&model_request());
+        let mut text = to_text(&message).expect("adapter message should encode as text");
+        text.push_str(" #t");
+        let mut bytes = to_bytes(&message).expect("adapter message should encode as binary");
+        let trailing = bytes.clone();
+        bytes.extend_from_slice(&trailing);
+
+        assert_eq!(from_text(&text), Err(Error::MalformedText));
+        assert_eq!(from_bytes(&bytes), Err(Error::MalformedBinary));
+    }
+
+    #[test]
     fn unsafe_unbounded_and_leaking_metadata_fail_without_echoing_values() {
         let raw_prompt = CompatibilityField::new("raw_prompt", PRIVATE_TOKEN)
             .expect_err("raw prompt metadata must fail");

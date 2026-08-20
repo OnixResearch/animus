@@ -1,3 +1,8 @@
+use preserves_admission_core::{
+    ProfileId as AdmissionProfileId, Syntax as AdmissionSyntax, admit as admit_preserves,
+    select_profile as select_admission_profile,
+};
+
 /// Encodes one validated adapter record as Preserves text.
 ///
 /// # Errors
@@ -14,6 +19,7 @@ pub fn to_record_text(record: &crate::AdapterRecord) -> Result<String, crate::Er
 ///
 /// Returns [`crate::Error`] when syntax, schema, metadata, or the owning DTO is invalid.
 pub fn from_record_text(text: &str) -> Result<crate::AdapterRecord, crate::Error> {
+    admit_text(text)?;
     let record = preserves::de::from_text(text).map_err(|_| crate::Error::MalformedText)?;
     crate::AdapterRecord::from_decoded(record)
 }
@@ -52,6 +58,7 @@ pub fn to_record_bytes(record: &crate::AdapterRecord) -> Result<Vec<u8>, crate::
 ///
 /// Returns [`crate::Error`] when syntax, schema, metadata, or the owning DTO is invalid.
 pub fn from_record_bytes(bytes: &[u8]) -> Result<crate::AdapterRecord, crate::Error> {
+    admit_bytes(bytes)?;
     let record = preserves::de::from_bytes(bytes).map_err(|_| crate::Error::MalformedBinary)?;
     crate::AdapterRecord::from_decoded(record)
 }
@@ -72,6 +79,20 @@ pub fn to_bytes(message: &crate::AdapterMessage) -> Result<Vec<u8>, crate::Error
 /// Returns [`crate::Error`] when syntax, schema, metadata, or the owning DTO is invalid.
 pub fn from_bytes(bytes: &[u8]) -> Result<crate::AdapterMessage, crate::Error> {
     Ok(from_record_bytes(bytes)?.into_payload())
+}
+
+fn admit_text(text: &str) -> Result<(), crate::Error> {
+    let profile = select_admission_profile(AdmissionProfileId::KamaciteCompatibleV1);
+    admit_preserves(text.as_bytes(), AdmissionSyntax::Text, profile)
+        .map(|_| ())
+        .map_err(|_| crate::Error::MalformedText)
+}
+
+fn admit_bytes(bytes: &[u8]) -> Result<(), crate::Error> {
+    let profile = select_admission_profile(AdmissionProfileId::KamaciteCompatibleV1);
+    admit_preserves(bytes, AdmissionSyntax::Packed, profile)
+        .map(|_| ())
+        .map_err(|_| crate::Error::MalformedBinary)
 }
 
 fn encode_text<T: serde::Serialize>(payload: &T) -> Result<String, crate::Error> {
