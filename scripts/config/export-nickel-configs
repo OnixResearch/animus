@@ -52,6 +52,7 @@ local_daemon_supervisor_source_file=${repo_root}/config/local-daemon-supervisor.
 live_terminal_agent_host_source_file=${repo_root}/config/live-terminal-agent-host.ncl
 trajectory_transcript_adapter_source_file=${repo_root}/config/trajectory-transcript-adapter.ncl
 mcp_client_host_source_file=${repo_root}/config/mcp-client-host.ncl
+pueue_host_source_file=${repo_root}/config/pueue-host.ncl
 
 if ! command -v nickel >/dev/null 2>&1; then
   printf '%s\n' 'error: nickel is required to export repo config. Run inside `nix develop`.' >&2
@@ -111,3 +112,4 @@ nickel export --format json --field local_daemon_config "${local_daemon_supervis
 nickel export --format json --field live_terminal_agent_host "${live_terminal_agent_host_source_file}" > "${target_root}/config/generated/live-terminal-agent-host.json"
 nickel export --format json "${trajectory_transcript_adapter_source_file}" > "${target_root}/config/generated/trajectory-transcript-adapter.json"
 nickel export --format json --field mcp_client_host "${mcp_client_host_source_file}" > "${target_root}/config/generated/mcp-client-host.json"
+nickel export --format json --field pueue_host "${pueue_host_source_file}" > "${target_root}/config/generated/pueue-host.json"

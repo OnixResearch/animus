@@ -45,3 +45,4 @@ diff -u config/generated/secret-resolution-policy.json "${tmp_dir}/config/genera
 diff -u config/generated/skill-source-lifecycle-policy.json "${tmp_dir}/config/generated/skill-source-lifecycle-policy.json"
 diff -u config/generated/trajectory-transcript-adapter.json "${tmp_dir}/config/generated/trajectory-transcript-adapter.json"
 diff -u config/generated/mcp-client-host.json "${tmp_dir}/config/generated/mcp-client-host.json"
+diff -u config/generated/pueue-host.json "${tmp_dir}/config/generated/pueue-host.json"

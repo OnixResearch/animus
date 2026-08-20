@@ -1,0 +1,139 @@
+#!/usr/bin/env sh
+# r[verify agent_harness_runtime.pueue_host.component.enabled]
+# r[verify agent_harness_runtime.pueue_host.component.default]
+# r[verify agent_harness_runtime.pueue_host.configuration.valid]
+# r[verify agent_harness_runtime.pueue_host.configuration.invalid]
+# r[verify agent_harness_runtime.pueue_host.admission.enqueue]
+# r[verify agent_harness_runtime.pueue_host.admission.denied]
+# r[verify agent_harness_runtime.pueue_host.execution.valid]
+# r[verify agent_harness_runtime.pueue_host.execution.interrupted]
+# r[verify agent_harness_runtime.pueue_host.projection.valid]
+# r[verify agent_harness_runtime.pueue_host.projection.invalid]
+# r[verify agent_harness_runtime.pueue_host.isolation.valid]
+# r[verify agent_harness_runtime.pueue_host.isolation.ambient]
+# r[verify agent_harness_runtime.pueue_host.tool.valid]
+# r[verify agent_harness_runtime.pueue_host.tool.denied]
+# r[verify agent_harness_runtime.pueue_host.publication.consumer]
+# r[verify agent_harness_runtime.pueue_host.verification.matrix]
+set -eu
+
+readonly FAILURE=1
+readonly RAIL_NAME='pueue-host'
+readonly RECEIPT_SCHEMA='animus.focused-rail.v1'
+readonly CRATE='crates/animus-std-pueue'
+readonly CONFIG='config/pueue-host.ncl'
+readonly GENERATED_CONFIG='config/generated/pueue-host.json'
+readonly DOC='docs/pueue-host.md'
+readonly POSITIVE_FAMILIES='typed-config,reviewed-enqueue,status-poll,bounded-wait,bounded-logs,groups,explicit-controls,executor-kit,isolated-real-daemon'
+readonly NEGATIVE_FAMILIES='raw-command,unknown-field,implicit-target,ambient-config,missing-daemon,unsupported-capability,malformed-output,output-bound,cancellation,timeout,receipt-leak'
+
+root='.'
+if [ "${1:-}" = '--root' ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  root=$2
+fi
+cd "${root}"
+
+for command in b3sum cargo diff grep nickel pueue pueued timeout uname; do
+  if ! command -v "${command}" >/dev/null 2>&1; then
+    printf 'error: %s is required\n' "${command}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+for marker in \
+  'BackgroundQueueService' \
+  'resolve_process_job_profile' \
+  'EnvironmentMode::Clear' \
+  'TerminationScope::ProcessGroup' \
+  'QueueLogViewport' \
+  'ToolExecutorService' \
+  'PUEUE_CONFIG_PATH'
+do
+  if ! grep -R -F "${marker}" "${CRATE}/src" >/dev/null; then
+    printf 'error: missing pueue host implementation marker: %s\n' "${marker}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+if grep -R -E 'Command::new|std::env|current_dir\(\)|home_dir|dirs::' "${CRATE}/src" >/dev/null 2>&1; then
+  printf '%s\n' 'error: pueue host gained ambient process or path discovery' >&2
+  exit "${FAILURE}"
+fi
+
+nickel typecheck "${CONFIG}"
+generated_projection=$(mktemp "${TMPDIR:-/tmp}/animus-pueue-config.XXXXXX")
+trap 'rm -f "${generated_projection}"' EXIT HUP INT TERM
+nickel export --format json --field pueue_host "${CONFIG}" > "${generated_projection}"
+diff -u "${GENERATED_CONFIG}" "${generated_projection}"
+for fixture in config/pueue-host/fixtures/negative-*.ncl; do
+  if nickel export --format json "${fixture}" >/dev/null 2>&1; then
+    printf 'error: negative Nickel fixture unexpectedly passed: %s\n' "${fixture}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+cargo test -p animus-std-pueue --all-targets --locked
+cargo clippy -p animus-std-pueue --all-targets --locked -- -D warnings
+cargo check -p animus --no-default-features --locked
+cargo check -p animus --no-default-features --features pueue-host --locked
+ANIMUS_PUEUE_BIN=$(command -v pueue) \
+ANIMUS_PUEUED_BIN=$(command -v pueued) \
+ANIMUS_PUEUE_TIMEOUT_BIN=$(command -v timeout) \
+ANIMUS_PUEUE_JOB_BIN=$(command -v uname) \
+  cargo test -p animus-std-pueue --test realdaemon --locked -- --ignored
+
+mkdir -p target/cairn/focused-rails
+default_tree=target/cairn/focused-rails/${RAIL_NAME}-default-tree.txt
+feature_tree=target/cairn/focused-rails/${RAIL_NAME}-feature-tree.txt
+cargo tree -p animus --locked > "${default_tree}"
+cargo tree -p animus --no-default-features --features pueue-host --locked > "${feature_tree}"
+if grep -E 'animus-std-pueue v[0-9]' "${default_tree}" >/dev/null; then
+  printf '%s\n' 'error: pueue host leaked into the default dependency graph' >&2
+  exit "${FAILURE}"
+fi
+if ! grep -E 'animus-std-pueue v[0-9]' "${feature_tree}" >/dev/null; then
+  printf '%s\n' 'error: pueue root feature omitted its host crate' >&2
+  exit "${FAILURE}"
+fi
+rm -f "${default_tree}" "${feature_tree}"
+
+sh scripts/cairn/check-process-job-profiles --root .
+sh scripts/cairn/check-adapter-conformance-index --root .
+sh scripts/cairn/check-component-catalog --root .
+sh scripts/cairn/check-runtime-facade-inventory --root .
+
+source_hash=$(find "${CRATE}/src" -type f -name '*.rs' -print0 \
+  | LC_ALL=C sort -z \
+  | xargs -0 b3sum \
+  | b3sum \
+  | cut -d ' ' -f 1)
+test_hash=$(find "${CRATE}/tests" -type f -name '*.rs' -print0 \
+  | LC_ALL=C sort -z \
+  | xargs -0 b3sum \
+  | b3sum \
+  | cut -d ' ' -f 1)
+config_hash=$(b3sum "${GENERATED_CONFIG}" | cut -d ' ' -f 1)
+doc_hash=$(b3sum "${DOC}" | cut -d ' ' -f 1)
+rail_script_hash=$(b3sum scripts/cairn/check-pueue-host | cut -d ' ' -f 1)
+receipt_path=target/cairn/focused-rails/${RAIL_NAME}.md
+cat > "${receipt_path}" <<EOF
+schema: ${RECEIPT_SCHEMA}
+rail: ${RAIL_NAME}
+status: pass
+source_blake3: ${source_hash}
+test_blake3: ${test_hash}
+config_blake3: ${config_hash}
+doc_blake3: ${doc_hash}
+rail_script_blake3: ${rail_script_hash}
+positive_fixture_families: ${POSITIVE_FAMILIES}
+negative_fixture_families: ${NEGATIVE_FAMILIES}
+claims: reviewed-profile-admission,explicit-namespace,bounded-client-processes,bounded-queue-projection,executor-kit-integration,default-dependency-isolation
+non_claims: command-correctness,scheduler-reliability,sandboxing,production-readiness,release-eligibility
+EOF
+
+printf '%s\n' 'focused rail pueue-host: pass'
+printf 'receipt: %s\n' "${receipt_path}"

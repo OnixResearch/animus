@@ -184,6 +184,7 @@
               diff -u ${./config/generated/pijul-vcs-adapter.json} "$tmp_dir/config/generated/pijul-vcs-adapter.json"
               diff -u ${./config/generated/secret-resolution-policy.json} "$tmp_dir/config/generated/secret-resolution-policy.json"
               diff -u ${./config/generated/trajectory-transcript-adapter.json} "$tmp_dir/config/generated/trajectory-transcript-adapter.json"
+              diff -u ${./config/generated/pueue-host.json} "$tmp_dir/config/generated/pueue-host.json"
 
               nickel typecheck ${./config/nickel-export-requests.ncl}
               NICKEL_EXPORT_BIN=${nickel-export.packages.${system}.default}/bin/nickel-export \
@@ -448,6 +449,8 @@
                 || baseName == "check-transactional-daemon-handoff"
                 || baseName == "check-revision-gated-workspace-edit-host"
                 || baseName == "check-concrete-mcp-client-host"
+                || baseName == "check-pueue-host"
+                || baseName == "check-process-job-profiles"
                 || baseName == "check-conversation-projection"
                 || baseName == "check-session-branch-explorer"
                 || baseName == "check-injected-services"
@@ -1120,6 +1123,17 @@
             sh scripts/cairn/check-concrete-mcp-client-host --root .
           '';
 
+          pueue-host = cargoCheck "animus-pueue-host" [
+            pkgs.b3sum
+            pkgs.clippy
+            pkgs.coreutils
+            pkgs.diffutils
+            pkgs.nickel
+            pkgs.pueue
+          ] ''
+            sh scripts/cairn/check-pueue-host --root .
+          '';
+
           conversation-projection = cargoCheck "animus-conversation-projection" [
             pkgs.b3sum
             pkgs.clippy
@@ -1639,6 +1653,10 @@
             -p animus-adapters
           '';
 
+          pueue-octet = octetCheck "animus-pueue-octet" ''
+            -p animus-std-pueue -- --all-targets --all-features
+          '';
+
           # This broad rail can expose debt in crates outside a focused change.
           octet = octetCheck "animus-octet" ''
             -p animus \
@@ -1648,6 +1666,7 @@
             -p animus-runtime \
             -p animus-session-core \
             -p animus-std \
+            -p animus-std-pueue \
             -p animus-std-workspace-edit \
             -p animus-tui
           '';
@@ -1672,6 +1691,7 @@
             nickel
             pkg-config
             pre-commit
+            pueue
             git
           ];
 

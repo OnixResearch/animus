@@ -135,6 +135,7 @@ dependencies = [
  "animus-std-lean-loop",
  "animus-std-mcp",
  "animus-std-openai",
+ "animus-std-pueue",
  "animus-std-rlm-host",
  "animus-std-secretspec",
  "animus-std-workspace-edit",
@@ -540,6 +541,19 @@ dependencies = [
  "serde",
  "serde_json",
  "zeroize",
+]
+
+[[package]]
+name = "animus-std-pueue"
+version = "0.1.0"
+dependencies = [
+ "animus-adapters",
+ "animus-runtime",
+ "blake3",
+ "bounded-exec",
+ "serde",
+ "serde_json",
+ "tempfile",
 ]
 
 [[package]]

@@ -113,7 +113,7 @@ pub use animus_std_eval as evaluation_host;
 #[cfg(feature = "basalt-authority-adapter")]
 pub use animus_std_basalt_authority as basalt_authority;
 
-/// Non-default bounded SecretSpec credential-resolution host.
+/// Non-default bounded `SecretSpec` credential-resolution host.
 #[cfg(feature = "secretspec-host-resolution")]
 pub use animus_std_secretspec as secretspec_host_resolution;
 
@@ -139,7 +139,7 @@ pub mod harbor_evaluation {
 #[cfg(feature = "harbor-atif")]
 pub use animus_adapter_atif as harbor_atif;
 
-/// Non-default SpaceWasm diagnostic contracts and injected host service.
+/// Non-default `SpaceWasm` diagnostic contracts and injected host service.
 #[cfg(feature = "spacewasm-diagnostic")]
 pub mod spacewasm_diagnostic {
     pub use animus_adapters::spacewasm::*;

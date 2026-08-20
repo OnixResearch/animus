@@ -26,7 +26,9 @@ The missing component is an imperative host for concrete pueue process, namespac
 
 **Rationale:** The queue host must not invoke a shell or inherit ambient process state.
 
-The production adapter can use the reviewed pinned `bounded-exec` cohort. Deterministic fixtures use a finite fake service.
+The production adapter uses the reviewed pinned `bounded-exec` cohort. Deterministic fixtures use a finite fake service.
+
+A caller-owned supervisor starts and stops `pueued`. The host runs a bounded health gate and fails closed when that explicit daemon is unavailable.
 
 ### Decision: Use typed queue configuration
 

@@ -99,6 +99,10 @@ pub use animus_std_rlm_host as rlm_host_executor;
 #[cfg(feature = "mcp-client-host")]
 pub use animus_std_mcp as mcp_client;
 
+/// Non-default capability-scoped pueue host.
+#[cfg(feature = "pueue-host")]
+pub use animus_std_pueue as pueue_host;
+
 /// Re-export of the optional family-scoped messaging contracts.
 #[cfg(feature = "messaging-receipts")]
 pub use animus_adapters::messaging as messaging_receipts;
