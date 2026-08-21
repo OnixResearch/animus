@@ -14,11 +14,9 @@
 #[cfg(feature = "live-provider")]
 mod activation;
 mod application;
-mod child;
 mod config;
-mod host;
-mod provider;
 mod receipt;
+mod runtime;
 mod session;
 mod shell;
 mod store;
@@ -27,19 +25,19 @@ mod tool;
 #[cfg(feature = "live-provider")]
 pub use activation::preflight_live_application_activation;
 pub use application::{LiveApplicationError, LiveApplicationInput, run_live_application};
-pub use child::{
-    ExplicitChildAuthority, ExplicitChildFactory, FixedChildTimer, LiveConcreteChildService,
-    MetadataChildEvents, MetadataChildStore, admit_child_request, build_child_service,
-};
 pub use config::{
     LiveSteelAgentConfigError, ValidatedLiveSteelAgentConfig, parse_live_steel_agent_config,
 };
-pub use host::{
+pub use receipt::{LIVE_SHELL_NON_CLAIMS, LiveSteelAgentRunReceipt};
+pub use runtime::child::{
+    ExplicitChildAuthority, ExplicitChildFactory, FixedChildTimer, LiveConcreteChildService,
+    MetadataChildEvents, MetadataChildStore, admit_child_request, build_child_service,
+};
+pub use runtime::host::{
     ExplicitContextMap, LiveAuthorityObserver, LiveHostError, build_bindings, build_executor,
     build_expected_authority, context_route,
 };
-pub use provider::{FixtureStreamProvider, LiveOpenAiProvider, ProviderStreamService};
-pub use receipt::{LIVE_SHELL_NON_CLAIMS, LiveSteelAgentRunReceipt};
+pub use runtime::provider::{FixtureStreamProvider, LiveOpenAiProvider, ProviderStreamService};
 pub use session::{
     LiveSteelEventRead, LiveSteelPrompt, LiveSteelQueueEdit, LiveSteelQueueRemoval,
     LiveSteelQueuedInput, MAX_LIVE_SESSION_EVENT_BATCH, PersistentLiveHost, PersistentStatus,

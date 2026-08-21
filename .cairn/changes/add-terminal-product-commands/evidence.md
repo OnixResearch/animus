@@ -9,6 +9,7 @@ Outcome: exact terminal controls, private event relay, and the persistent live-s
 - The published base revision `1498832358a6cd960508b4709fecc4f271c4c90e` passed the pre-change focused baseline.
 - `cargo test -p animus-local-daemon -p animus-live-terminal --all-targets --all-features --locked` passed 49 tests after the private relay change.
 - `cargo test -p animus-live-steel-agent --all-targets --all-features --locked` passed 25 tests after the persistent live-session change.
+- The child, host, and provider adapters now share a bounded `runtime` module directory. The same 25 tests, strict Clippy, and formatting checks pass after the layout correction.
 - The live Steel and terminal focused host rails passed tests, strict Clippy, documentation tests, catalog checks, and runtime-facade inventory checks.
 - `nix build .#checks.x86_64-linux.live-steel-agent-shell --no-link -L` passed.
 - `nix build .#checks.x86_64-linux.live-terminal-agent-host --no-link -L` passed.

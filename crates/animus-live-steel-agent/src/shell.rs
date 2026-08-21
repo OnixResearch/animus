@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::provider::{ProviderStreamError, SharedProviderState};
+use crate::runtime::provider::{ProviderStreamError, SharedProviderState};
 use animus_std::coding_session_host as coding_host;
 
 const QUEUE_POLICY_LABEL: &str = "live-steel-agent-queue";
@@ -337,7 +337,7 @@ where
                 .map(|pending| String::from(pending.correlation_id()));
             (model_call_id, shared.pending().is_some(), correlation_id)
         };
-        let planned = crate::provider::plan_request(
+        let planned = crate::runtime::provider::plan_request(
             self.config.as_ref(),
             request,
             continuation,
@@ -352,8 +352,11 @@ where
                 .into_dispatch()
                 .map_err(service_issue)?
         } else {
-            crate::provider::initial_dispatch(self.config.model_id(), model_call_id.as_str())
-                .map_err(service_issue)?
+            crate::runtime::provider::initial_dispatch(
+                self.config.model_id(),
+                model_call_id.as_str(),
+            )
+            .map_err(service_issue)?
         };
         let prepared = prepare_live_model_request_snapshot(
             self.config.as_ref(),
@@ -402,7 +405,7 @@ where
                     animus_runtime::coding_session_host::CodingSessionServiceIssue::Malformed
                 })?;
             self.shared.borrow_mut().install(
-                crate::provider::pending_from_call(self.config.model_id(), call)
+                crate::runtime::provider::pending_from_call(self.config.model_id(), call)
                     .map_err(service_issue)?,
             );
             return Ok(
@@ -412,7 +415,7 @@ where
                 },
             );
         }
-        let text = crate::provider::final_text(&outcome).map_err(service_issue)?;
+        let text = crate::runtime::provider::final_text(&outcome).map_err(service_issue)?;
         let response = animus_adapters::ModelResponse::new(text.as_str()).map_err(|_error| {
             animus_runtime::coding_session_host::CodingSessionServiceIssue::Malformed
         })?;
