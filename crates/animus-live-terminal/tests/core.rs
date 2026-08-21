@@ -111,6 +111,7 @@ fn snapshot_input_runtime_events_commands_and_receipt_are_bounded() {
 #[test]
 fn controls_emit_all_typed_descriptors_without_effect_execution() {
     let mut state = state();
+    let view_before = state.view().clone();
     let commands = [
         command_from_control(
             &mut state,
@@ -143,6 +144,10 @@ fn controls_emit_all_typed_descriptors_without_effect_execution() {
         )
         .expect("approval"),
         command_from_control(&mut state, ControlIntent::Cancel, MAX_PROMPT_BYTES).expect("cancel"),
+        command_from_control(&mut state, ControlIntent::KernelClear, MAX_PROMPT_BYTES)
+            .expect("kernel clear"),
+        command_from_control(&mut state, ControlIntent::StateInspection, MAX_PROMPT_BYTES)
+            .expect("state inspection"),
         command_from_control(
             &mut state,
             ControlIntent::Child {
@@ -160,16 +165,30 @@ fn controls_emit_all_typed_descriptors_without_effect_execution() {
         .expect("session"),
     ];
     assert_eq!(
-        commands.map(|command| command.class()),
+        commands.each_ref().map(ClientCommand::class),
         [
             "queue_edit",
             "queue_remove",
             "approval",
             "cancel",
+            "kernel_clear",
+            "state_inspection",
             "child",
             "session",
         ]
     );
+    assert_eq!(state.view(), &view_before);
+    for command in commands {
+        let serialized = serde_json::to_value(&command).expect("typed command JSON");
+        assert_eq!(serialized["kind"], command.class());
+        assert_eq!(command.correlation_id().len(), HASH.len());
+    }
+}
+
+#[test]
+fn unknown_product_control_kind_fails_closed() {
+    let unknown = format!(r#"{{"kind":"implicit_kernel_clear","correlation_id":"{HASH}"}}"#);
+    assert!(serde_json::from_str::<ClientCommand>(unknown.as_str()).is_err());
 }
 
 #[test]

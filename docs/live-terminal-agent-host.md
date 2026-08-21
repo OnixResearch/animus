@@ -51,7 +51,7 @@ The host handles input, tick, resize, cancellation, supported signal, disconnect
 
 ## Commands and rendering
 
-Key handling creates typed prompt, queue compare-and-swap, approval, cancellation, child, refresh, detach, and stop descriptors. The terminal does not execute the effects.
+Key handling and explicit controls create typed prompt, queue compare-and-swap, approval, cancellation, child, refresh, detach, stop, `kernel_clear`, and `state_inspection` descriptors. The terminal does not execute these effects. A worker must authorize and execute both product-control descriptors, and state inspection must return bounded metadata only.
 
 Snapshot-first state uses these existing projections:
 

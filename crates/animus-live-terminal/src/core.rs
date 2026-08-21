@@ -129,6 +129,16 @@ pub enum ClientCommand {
         /// Correlation identity.
         correlation_id: String,
     },
+    /// Request an explicit worker-authorized kernel clear.
+    KernelClear {
+        /// Correlation identity.
+        correlation_id: String,
+    },
+    /// Request bounded metadata-only worker state inspection.
+    StateInspection {
+        /// Correlation identity.
+        correlation_id: String,
+    },
     /// Route one child control through the session owner.
     Child {
         /// Correlation identity.
@@ -157,6 +167,8 @@ impl ClientCommand {
             Self::QueueRemove { .. } => "queue_remove",
             Self::Approval { .. } => "approval",
             Self::Cancel { .. } => "cancel",
+            Self::KernelClear { .. } => "kernel_clear",
+            Self::StateInspection { .. } => "state_inspection",
             Self::Child { .. } => "child",
             Self::Session { .. } => "session",
         }
@@ -171,6 +183,8 @@ impl ClientCommand {
             | Self::QueueRemove { correlation_id, .. }
             | Self::Approval { correlation_id, .. }
             | Self::Cancel { correlation_id }
+            | Self::KernelClear { correlation_id }
+            | Self::StateInspection { correlation_id }
             | Self::Child { correlation_id, .. }
             | Self::Session { correlation_id, .. } => correlation_id.as_str(),
         }
@@ -209,6 +223,10 @@ pub enum ControlIntent {
     },
     /// Request cancellation.
     Cancel,
+    /// Request an explicit worker-authorized kernel clear.
+    KernelClear,
+    /// Request bounded metadata-only worker state inspection.
+    StateInspection,
     /// Control one child.
     Child {
         /// Child identity.
@@ -689,6 +707,12 @@ pub fn command_from_control(
         ControlIntent::Cancel => ClientCommand::Cancel {
             correlation_id: state.next_correlation("cancel")?,
         },
+        ControlIntent::KernelClear => ClientCommand::KernelClear {
+            correlation_id: state.next_correlation("kernel_clear")?,
+        },
+        ControlIntent::StateInspection => ClientCommand::StateInspection {
+            correlation_id: state.next_correlation("state_inspection")?,
+        },
         ControlIntent::Child { child_id, action } => ClientCommand::Child {
             correlation_id: state.next_correlation("child")?,
             child_id,
@@ -884,6 +908,8 @@ pub(crate) fn validate_command(
         }
         ClientCommand::Approval { .. }
         | ClientCommand::Cancel { .. }
+        | ClientCommand::KernelClear { .. }
+        | ClientCommand::StateInspection { .. }
         | ClientCommand::Session { .. } => Ok(()),
         ClientCommand::Child { child_id, .. } => validate_label(child_id),
     }

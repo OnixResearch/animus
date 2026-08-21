@@ -155,21 +155,54 @@ fn injected_direct_service_receives_private_payload_only_when_route_is_called() 
         connection.route("root-direct", GENERATION, &forged),
         Err(TerminalConnectionError::Rejected)
     );
+    let malformed_kernel_clear = ClientCommand::KernelClear {
+        correlation_id: String::from("forged"),
+    };
+    assert_eq!(
+        connection.route("root-direct", GENERATION, &malformed_kernel_clear),
+        Err(TerminalConnectionError::Rejected)
+    );
     assert!(payloads.lock().expect("payload lock").is_empty());
 
-    let command = ClientCommand::Prompt {
-        correlation_id: String::from(HASH),
-        text: String::from("private direct prompt"),
-    };
-    connection
-        .route("root-direct", GENERATION, &command)
-        .expect("direct route");
+    let commands = [
+        ClientCommand::Prompt {
+            correlation_id: String::from(HASH),
+            text: String::from("private direct prompt"),
+        },
+        ClientCommand::KernelClear {
+            correlation_id: String::from(HASH),
+        },
+        ClientCommand::StateInspection {
+            correlation_id: String::from(HASH),
+        },
+    ];
+    for command in &commands {
+        connection
+            .route("root-direct", GENERATION, command)
+            .expect("direct route");
+    }
     let payloads = payloads.lock().expect("payload lock");
-    assert_eq!(payloads.len(), 1);
-    assert!(
-        std::str::from_utf8(payloads[0].as_slice())
+    assert_eq!(payloads.len(), commands.len());
+    assert!(payloads.iter().any(|payload| {
+        std::str::from_utf8(payload.as_slice())
             .expect("payload UTF-8")
             .contains("private direct prompt")
+    }));
+    assert_eq!(
+        payloads
+            .iter()
+            .map(|payload| {
+                serde_json::from_slice::<serde_json::Value>(payload).expect("typed command payload")
+                    ["kind"]
+                    .as_str()
+                    .expect("command kind")
+                    .to_owned()
+            })
+            .collect::<Vec<_>>(),
+        commands
+            .iter()
+            .map(|command| command.class().to_owned())
+            .collect::<Vec<_>>()
     );
 }
 
