@@ -24,6 +24,9 @@ use animus_std_pueue::{
 
 const ROOT: &str = "/tmp/animus-pueue-tool-test";
 const CORRELATION_ID: &str = "pueue-tool-test";
+const GROUP_PARALLELISM: u32 = 4;
+const TASK_ID: u64 = 42;
+const EXPECTED_PROCESS_CALLS: usize = 2;
 
 #[test]
 fn admitted_group_request_runs_through_executor_kit() {
@@ -39,7 +42,68 @@ fn admitted_group_request_runs_through_executor_kit() {
 
     assert!(outcome.response().output().contains("build"));
     assert!(outcome.response().output().contains("running"));
-    assert_eq!(executor.host().process().calls.len(), 2);
+    assert_eq!(
+        executor.host().process().calls.len(),
+        EXPECTED_PROCESS_CALLS
+    );
+}
+
+#[test]
+fn exact_group_parallelism_tool_request_reaches_only_the_named_group() {
+    let process = support::FakeProcess::with_outputs(vec![
+        support::success(support::status_fixture().as_str()),
+        support::success(""),
+    ]);
+    let mut executor = fixture_executor(process);
+    let request = tool_request(
+        format!(
+            r#"{{"operation":"control","action":"set_group_parallelism","target":{{"kind":"group","group":"build"}},"parallelism":{GROUP_PARALLELISM}}}"#
+        )
+        .as_str(),
+    );
+
+    execute_pueue_tool(&mut executor, &request, ToolExecutorAdmission::admitted())
+        .expect("admitted group parallelism");
+
+    assert_eq!(
+        executor.host().process().calls.len(),
+        EXPECTED_PROCESS_CALLS
+    );
+    let args = executor.host().process().calls[1].args();
+    assert!(args.ends_with(&[
+        String::from("parallel"),
+        String::from("--group"),
+        String::from("build"),
+        GROUP_PARALLELISM.to_string(),
+    ]));
+}
+
+#[test]
+fn missing_parallelism_and_task_parallelism_fail_before_process_effects() {
+    let cases = [
+        String::from(
+            r#"{"operation":"control","action":"set_group_parallelism","target":{"kind":"group","group":"build"}}"#,
+        ),
+        format!(
+            r#"{{"operation":"control","action":"set_group_parallelism","target":{{"kind":"task","task_id":{TASK_ID}}},"parallelism":{GROUP_PARALLELISM}}}"#
+        ),
+    ];
+    for request_json in cases {
+        let process = support::FakeProcess::default();
+        let mut executor = fixture_executor(process);
+        let request = tool_request(request_json.as_str());
+
+        let error = execute_pueue_tool(&mut executor, &request, ToolExecutorAdmission::admitted())
+            .expect_err("invalid parallelism request");
+
+        assert!(matches!(
+            error,
+            PueueToolError::ExecutorKit(ToolExecutorKitError::ServiceFailed {
+                failure: ToolExecutorServiceFailure::ExecutionFailed
+            })
+        ));
+        assert!(executor.host().process().calls.is_empty());
+    }
 }
 
 #[test]

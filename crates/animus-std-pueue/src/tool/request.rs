@@ -34,6 +34,7 @@ enum Command {
     Control {
         action: ControlAction,
         target: ControlTarget,
+        parallelism: Option<u32>,
     },
 }
 
@@ -45,6 +46,7 @@ enum ControlAction {
     Restart,
     Cancel,
     Clean,
+    SetGroupParallelism,
 }
 
 #[derive(Deserialize)]
@@ -104,7 +106,11 @@ fn queue_request(
             max_bytes,
         }),
         Command::Groups => Ok(QueueServiceRequest::ListGroups),
-        Command::Control { action, target } => control(action, &target),
+        Command::Control {
+            action,
+            target,
+            parallelism,
+        } => control(action, &target, parallelism),
     }
 }
 
@@ -160,6 +166,7 @@ fn interaction(
 fn control(
     action: ControlAction,
     target: &ControlTarget,
+    parallelism: Option<u32>,
 ) -> Result<QueueServiceRequest, PueueToolError> {
     let operation = match action {
         ControlAction::Pause => QueueOperationKind::Pause,
@@ -167,6 +174,7 @@ fn control(
         ControlAction::Restart => QueueOperationKind::Restart,
         ControlAction::Cancel => QueueOperationKind::Cancel,
         ControlAction::Clean => QueueOperationKind::Clean,
+        ControlAction::SetGroupParallelism => QueueOperationKind::SetGroupParallelism,
     };
     let (kind, label) = match target {
         ControlTarget::Task { task_id } => (QueueTargetKind::Task, Some(task_id.to_string())),
@@ -180,6 +188,7 @@ fn control(
             kind,
             label: label.as_deref(),
         }),
+        parallelism,
     })
     .map_err(|_error| PueueToolError::InvalidRequest)?;
     Ok(QueueServiceRequest::Control(request))

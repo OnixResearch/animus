@@ -27,6 +27,8 @@ use animus_std_pueue::{PueueHost, parse_pueue_host_config};
 
 const ROOT: &str = "/tmp/animus-pueue-host-test";
 const EXPECTED_PROCESS_CALLS: usize = 2;
+const GROUP_PARALLELISM: u32 = 4;
+const GROUP_PARALLELISM_TEXT: &str = "4";
 
 #[test]
 fn enqueue_uses_reviewed_profile_and_cleared_namespace_environment() {
@@ -185,6 +187,7 @@ fn explicit_control_targets_map_to_exact_pueue_commands() {
             QueueControlRequest::new(QueueControlDraft {
                 operation,
                 target: Some(target),
+                parallelism: None,
             })
             .expect("control request"),
         );
@@ -204,7 +207,7 @@ fn explicit_control_targets_map_to_exact_pueue_commands() {
 }
 
 #[test]
-fn unsupported_parallelism_control_is_denied_before_process_effects() {
+fn group_parallelism_maps_to_one_exact_group_command() {
     let request = QueueServiceRequest::Control(
         QueueControlRequest::new(QueueControlDraft {
             operation: QueueOperationKind::SetGroupParallelism,
@@ -212,14 +215,22 @@ fn unsupported_parallelism_control_is_denied_before_process_effects() {
                 kind: QueueTargetKind::Group,
                 label: Some("build"),
             }),
+            parallelism: Some(GROUP_PARALLELISM),
         })
         .expect("control request"),
     );
-    let mut host = PueueHost::new(fixture_config(), support::FakeProcess::default());
+    let process = support::FakeProcess::with_outputs(vec![
+        support::success(support::status_fixture().as_str()),
+        support::success(""),
+    ]);
+    let mut host = PueueHost::new(fixture_config(), process);
 
     let outcome = host.call(&request).expect("infallible queue host");
-    assert_eq!(outcome.kind(), OutcomeKind::Denied);
-    assert!(host.process().calls.is_empty());
+    assert_eq!(outcome.kind(), OutcomeKind::Completed);
+    assert!(arguments_end_with(
+        host.process().calls[1].args(),
+        &["parallel", "--group", "build", GROUP_PARALLELISM_TEXT]
+    ));
 }
 
 #[test]
