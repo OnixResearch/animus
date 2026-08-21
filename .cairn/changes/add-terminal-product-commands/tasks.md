@@ -23,7 +23,7 @@
 
 ## Phase 5: Product control authority
 
-- [ ] [serial] [task:executor-controls] [after:persistent-controls] Add explicit persistent executor approval and child-control delegation without moving authority into the terminal. r[agent_harness_runtime.live_steel_agent_shell.persistent_session.controls]
+- [x] [serial] [task:executor-controls] [after:persistent-controls] Add explicit persistent executor approval and child-control delegation without moving authority into the terminal. r[agent_harness_runtime.live_steel_agent_shell.persistent_session.controls]
 - [x] [serial] [task:lifecycle-routing] [after:terminal-projection] Route refresh, detach, and stop through explicit connection APIs instead of worker-private command bytes. r[agent_harness_runtime.live_terminal_agent_host.product_commands]
 - [x] [serial] [task:daemon-loop] [after:lifecycle-routing] Add a bounded authenticated local daemon request loop with deterministic disconnect cleanup. r[agent_harness_runtime.live_terminal_agent_host.product_commands]
 - [x] [serial] [task:control-tests] [after:executor-controls] [after:daemon-loop] Cover accepted controls and stale, missing, malformed, over-bound, and disconnect failures. r[agent_harness_runtime.live_terminal_agent_host.product_commands]

@@ -690,6 +690,32 @@ where
         self.registry.len()
     }
 
+    /// Returns safe status for one unambiguous child identity.
+    ///
+    /// # Errors
+    ///
+    /// Returns a typed failure when the child is absent, ambiguous, stale, or unobservable.
+    pub fn child_status(
+        &mut self,
+        child_id: &str,
+    ) -> Result<SubagentRunStatus, ChildSessionHostFailure> {
+        let handle = self.handle_for_child(child_id)?;
+        self.status_internal(&handle)
+    }
+
+    /// Requests cancellation for one unambiguous child identity.
+    ///
+    /// # Errors
+    ///
+    /// Returns a typed failure when the child is absent, ambiguous, stale, or cannot cancel.
+    pub fn cancel_child(
+        &mut self,
+        child_id: &str,
+    ) -> Result<SubagentRunStatus, ChildSessionHostFailure> {
+        let handle = self.handle_for_child(child_id)?;
+        self.cancel_internal(&handle)
+    }
+
     /// Collects a typed bounded parent result.
     ///
     /// # Errors
@@ -816,6 +842,29 @@ where
             self.timer,
             self.events,
         )
+    }
+
+    fn handle_for_child(&self, child_id: &str) -> Result<SubagentHandle, ChildSessionHostFailure> {
+        let mut matches = self
+            .registry
+            .values()
+            .filter(|entry| entry.admission.subagent().child_id == child_id);
+        let handle = matches
+            .next()
+            .map(|entry| entry.handle.clone())
+            .ok_or_else(|| {
+                ChildSessionHostFailure::new(
+                    ChildSessionFailureClass::StaleHandle,
+                    "child identity is not registered",
+                )
+            })?;
+        if matches.next().is_some() {
+            return Err(ChildSessionHostFailure::new(
+                ChildSessionFailureClass::DuplicateChild,
+                "child identity is ambiguous across parents",
+            ));
+        }
+        Ok(handle)
     }
 
     fn enqueue_internal(

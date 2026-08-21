@@ -703,6 +703,12 @@ where
             .map_err(|_error| CodingSessionHostError::new(CodingSessionHostIssue::ReceiptRejected))
     }
 
+    /// Returns mutable access to the existing tool service owner.
+    #[must_use]
+    pub const fn tool_service_mut(&mut self) -> &mut Tool {
+        &mut self.services.tool
+    }
+
     #[must_use]
     pub fn into_services(
         self,

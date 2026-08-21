@@ -39,9 +39,9 @@ pub use runtime::host::{
 };
 pub use runtime::provider::{FixtureStreamProvider, LiveOpenAiProvider, ProviderStreamService};
 pub use session::{
-    LiveSteelEventRead, LiveSteelPrompt, LiveSteelQueueEdit, LiveSteelQueueRemoval,
-    LiveSteelQueuedInput, MAX_LIVE_SESSION_EVENT_BATCH, PersistentLiveHost, PersistentStatus,
-    PrivateEventBatch,
+    LiveApprovalDecision, LiveChildStatus, LiveSessionExecutorControl, LiveSteelEventRead,
+    LiveSteelPrompt, LiveSteelQueueEdit, LiveSteelQueueRemoval, LiveSteelQueuedInput,
+    MAX_LIVE_SESSION_EVENT_BATCH, PersistentLiveHost, PersistentStatus, PrivateEventBatch,
 };
 pub use shell::{
     LiveSteelAgentComposition, LiveSteelAgentCompositionInput, LiveSteelAgentError,

@@ -65,6 +65,59 @@ pub struct LiveSteelQueueRemoval<'a> {
     pub expected_queue_identity: &'a str,
 }
 
+/// Explicit worker-owned approval decision.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum LiveApprovalDecision {
+    /// Admit the correlated pending operation.
+    Approve,
+    /// Deny the correlated pending operation.
+    Deny,
+}
+
+/// Safe child lifecycle status returned by the executor owner.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum LiveChildStatus {
+    /// Child work is queued or running.
+    Active,
+    /// Child work completed.
+    Completed,
+    /// Child cancellation was accepted or completed.
+    Cancelled,
+    /// Child work failed, timed out, or blocked.
+    Failed,
+}
+
+/// Narrow control port retained by the exact persistent host executor.
+pub trait LiveSessionExecutorControl {
+    /// Host-specific control failure.
+    type Error;
+
+    /// Answers one exact pending approval correlation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Self::Error`] when no matching pending approval exists.
+    fn answer_approval(
+        &mut self,
+        correlation_id: &str,
+        decision: LiveApprovalDecision,
+    ) -> Result<(), Self::Error>;
+
+    /// Returns metadata-only status for one exact child identity.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Self::Error`] when the child is unknown or cannot be observed.
+    fn child_status(&mut self, child_id: &str) -> Result<LiveChildStatus, Self::Error>;
+
+    /// Requests cancellation for one exact child identity.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Self::Error`] when the child is unknown or cancellation fails.
+    fn cancel_child(&mut self, child_id: &str) -> Result<LiveChildStatus, Self::Error>;
+}
+
 /// Cursor and maximum for one bounded private event read.
 #[derive(Clone, Copy)]
 pub struct LiveSteelEventRead {

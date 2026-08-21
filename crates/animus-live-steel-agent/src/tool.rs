@@ -79,6 +79,12 @@ impl<Executor, Persistence> SteelToolService<Executor, Persistence> {
         &self.kernel
     }
 
+    /// Returns the exact host executor for worker-owned control delegation.
+    #[must_use]
+    pub const fn host_executor_mut(&mut self) -> &mut Executor {
+        &mut self.executor
+    }
+
     /// Returns mutable persistence for controlled recovery tests.
     #[must_use]
     pub const fn persistence_mut(&mut self) -> &mut Persistence {

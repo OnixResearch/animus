@@ -497,6 +497,12 @@ pub(crate) struct ToolAdapter<Executor, Persistence> {
     pending_stage: Option<animus_std::tool_execution_stage_host::PendingStagedToolExecution>,
 }
 
+impl<Executor, Persistence> ToolAdapter<Executor, Persistence> {
+    pub(crate) const fn host_executor_mut(&mut self) -> &mut Executor {
+        self.tool.host_executor_mut()
+    }
+}
+
 impl<Executor, Persistence> coding_host::CodingSessionToolService
     for ToolAdapter<Executor, Persistence>
 where

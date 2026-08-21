@@ -41,6 +41,44 @@ impl RlmKernelHostExecutor for ContextExecutor {
     }
 }
 
+impl animus_live_steel_agent::LiveSessionExecutorControl for ContextExecutor {
+    type Error = &'static str;
+
+    fn answer_approval(
+        &mut self,
+        correlation_id: &str,
+        _decision: animus_live_steel_agent::LiveApprovalDecision,
+    ) -> Result<(), Self::Error> {
+        if correlation_id == CORRELATION_A {
+            Ok(())
+        } else {
+            Err("unknown approval")
+        }
+    }
+
+    fn child_status(
+        &mut self,
+        child_id: &str,
+    ) -> Result<animus_live_steel_agent::LiveChildStatus, Self::Error> {
+        if child_id == "child-active" {
+            Ok(animus_live_steel_agent::LiveChildStatus::Active)
+        } else {
+            Err("unknown child")
+        }
+    }
+
+    fn cancel_child(
+        &mut self,
+        child_id: &str,
+    ) -> Result<animus_live_steel_agent::LiveChildStatus, Self::Error> {
+        if child_id == "child-active" {
+            Ok(animus_live_steel_agent::LiveChildStatus::Cancelled)
+        } else {
+            Err("unknown child")
+        }
+    }
+}
+
 #[test]
 fn production_entrypoint_runs_prompt_tool_result_continuation_and_final_commit() {
     // r[verify agent_harness_runtime.live_steel_agent_shell.verification]
@@ -272,6 +310,29 @@ fn persistent_session_rejects_malformed_identity_and_event_bounds() {
     })
     .expect("composition");
     let mut session = composition.open_session().expect("persistent session");
+    session
+        .answer_approval(
+            CORRELATION_A,
+            animus_live_steel_agent::LiveApprovalDecision::Approve,
+        )
+        .expect("approval delegation");
+    assert_eq!(
+        session.child_status("child-active").expect("child status"),
+        animus_live_steel_agent::LiveChildStatus::Active
+    );
+    assert_eq!(
+        session.cancel_child("child-active").expect("child cancel"),
+        animus_live_steel_agent::LiveChildStatus::Cancelled
+    );
+    assert!(
+        session
+            .answer_approval(
+                INVALID_CORRELATION,
+                animus_live_steel_agent::LiveApprovalDecision::Deny
+            )
+            .is_err()
+    );
+    assert!(session.child_status("missing child").is_err());
     assert!(
         session
             .begin_prompt(animus_live_steel_agent::LiveSteelPrompt {
