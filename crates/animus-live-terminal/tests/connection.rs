@@ -15,7 +15,11 @@ const MAX_FRAME_BYTES: u32 = 1_048_576;
 const MAX_EVENTS: u32 = 8;
 const MAX_WORKERS: u16 = 8;
 const GENERATION: u64 = 1;
+const INITIAL_EVENT_SEQUENCE: u64 = 1;
+const FIRST_EVENT_SEQUENCE: u64 = 2;
+const SECOND_EVENT_SEQUENCE: u64 = 3;
 const DAEMON_REQUEST_COUNT: usize = 4;
+const STATE_EVENT_FIELD_COUNT: usize = 5;
 
 #[test]
 fn explicit_daemon_client_routes_typed_private_command_without_discovery_or_fallback() {
@@ -84,16 +88,16 @@ fn explicit_daemon_client_routes_typed_private_command_without_discovery_or_fall
         connection.route("root-direct", GENERATION, &forged),
         Err(TerminalConnectionError::Rejected)
     );
-    assert!(matches!(
-        snapshot.events[0],
-        animus_live_terminal::ClientSessionEvent::Observation { sequence: 2, .. }
-    ));
+    assert_client_state_inspection(&snapshot.events[0], FIRST_EVENT_SEQUENCE);
     let later = connection
-        .events_after("root-direct", 2, MAX_EVENTS)
+        .events_after("root-direct", FIRST_EVENT_SEQUENCE, MAX_EVENTS)
         .expect("later daemon events");
     assert!(matches!(
         later[0],
-        animus_live_terminal::ClientSessionEvent::Observation { sequence: 3, .. }
+        animus_live_terminal::ClientSessionEvent::Observation {
+            sequence: SECOND_EVENT_SEQUENCE,
+            ..
+        }
     ));
     let command = ClientCommand::Prompt {
         correlation_id: String::from(HASH),
@@ -225,19 +229,13 @@ fn daemon_dispatcher_uses_the_supervisor_service_and_tracks_one_attachment() {
         client_id: String::from("client-dispatch"),
         maximum_events: MAX_EVENTS,
     });
-    assert!(matches!(
-        attached,
-        DaemonResponse::Snapshot { ref events, .. } if events[0].sequence == 2
-    ));
+    assert_daemon_state_inspection(&attached, FIRST_EVENT_SEQUENCE);
     let events = dispatcher.dispatch(DaemonRequest::EventsAfter {
         root_id: String::from("root-direct"),
-        sequence: 2,
+        sequence: FIRST_EVENT_SEQUENCE,
         maximum_events: MAX_EVENTS,
     });
-    assert!(matches!(
-        events,
-        DaemonResponse::Events { ref events } if events[0].sequence == 3
-    ));
+    assert_daemon_observation(&events, SECOND_EVENT_SEQUENCE);
     assert_eq!(
         dispatcher.dispatch(DaemonRequest::Command {
             root_id: String::from("root-direct"),
@@ -289,7 +287,7 @@ fn daemon_dispatcher_uses_the_supervisor_service_and_tracks_one_attachment() {
     assert_eq!(
         dispatcher.dispatch(DaemonRequest::EventsAfter {
             root_id: String::from("root-direct"),
-            sequence: 3,
+            sequence: SECOND_EVENT_SEQUENCE,
             maximum_events: MAX_EVENTS,
         }),
         DaemonResponse::Failed {
@@ -308,6 +306,41 @@ fn daemon_dispatcher_uses_the_supervisor_service_and_tracks_one_attachment() {
             class: String::from("rejected"),
         }
     );
+}
+
+#[test]
+fn state_inspection_wire_shape_rejects_extra_private_fields() {
+    let state = state_inspection();
+    let observation_identity = state
+        .observation_identity(animus_local_daemon::StateInspectionIdentityFacts {
+            root_id: "root-direct",
+            sequence: FIRST_EVENT_SEQUENCE,
+            correlation_id: HASH,
+        })
+        .expect("state event identity");
+    let event = animus_live_terminal::DaemonEvent::StateInspection {
+        sequence: FIRST_EVENT_SEQUENCE,
+        correlation_id: String::from(HASH),
+        observation_identity,
+        state,
+    };
+    let encoded = serde_json::to_value(event).expect("state event JSON");
+    let object = encoded.as_object().expect("state event object");
+    assert_eq!(object.len(), STATE_EVENT_FIELD_COUNT);
+    assert_eq!(object["kind"], "state_inspection");
+    assert_eq!(object["correlation_id"], HASH);
+    assert!(!object.contains_key("prompt"));
+    assert!(!object.contains_key("source"));
+    assert!(!object.contains_key("credential"));
+    assert!(!object.contains_key("path"));
+
+    let mut extra_outer = encoded.clone();
+    extra_outer["prompt"] = serde_json::Value::String(String::from("private prompt"));
+    assert!(serde_json::from_value::<animus_live_terminal::DaemonEvent>(extra_outer).is_err());
+    let mut extra_state = encoded;
+    extra_state["state"]["credential"] =
+        serde_json::Value::String(String::from("private credential"));
+    assert!(serde_json::from_value::<animus_live_terminal::DaemonEvent>(extra_state).is_err());
 }
 
 #[test]
@@ -372,6 +405,39 @@ fn missing_endpoint_and_mismatched_response_identity_fail_without_fallback() {
     ));
 }
 
+fn assert_client_state_inspection(
+    event: &animus_live_terminal::ClientSessionEvent,
+    expected_sequence: u64,
+) {
+    assert!(matches!(
+        event,
+        animus_live_terminal::ClientSessionEvent::StateInspection { sequence, .. }
+            if *sequence == expected_sequence
+    ));
+}
+
+fn assert_daemon_state_inspection(response: &DaemonResponse, expected_sequence: u64) {
+    assert!(matches!(
+        response,
+        DaemonResponse::Snapshot { events, .. }
+            if matches!(&events[0], animus_live_terminal::DaemonEvent::StateInspection {
+                sequence,
+                ..
+            } if *sequence == expected_sequence)
+    ));
+}
+
+fn assert_daemon_observation(response: &DaemonResponse, expected_sequence: u64) {
+    assert!(matches!(
+        response,
+        DaemonResponse::Events { events }
+            if matches!(&events[0], animus_live_terminal::DaemonEvent::Observation {
+                sequence,
+                ..
+            } if *sequence == expected_sequence)
+    ));
+}
+
 struct FixtureWorker {
     payloads: Arc<Mutex<Vec<Vec<u8>>>>,
 }
@@ -385,7 +451,7 @@ impl animus_local_daemon::WorkerSessionPort for FixtureWorker {
             root_id: String::from(root_id),
             worker_id: String::from("worker-direct"),
             generation: GENERATION,
-            event_sequence: 1,
+            event_sequence: INITIAL_EVENT_SEQUENCE,
             restore_status: animus_local_daemon::RestoreStatus::Restored,
         })
     }
@@ -396,12 +462,24 @@ impl animus_local_daemon::WorkerSessionPort for FixtureWorker {
         sequence: u64,
         _maximum: u32,
     ) -> Result<Vec<animus_local_daemon::WorkerEvent>, animus_local_daemon::ServiceError> {
-        Ok(vec![animus_local_daemon::WorkerEvent {
-            root_id: String::from(root_id),
-            sequence: sequence + 1,
-            class: String::from("attached"),
-            observation_identity: String::from(HASH),
-        }])
+        let event = if sequence == INITIAL_EVENT_SEQUENCE {
+            animus_local_daemon::WorkerEvent::state_inspection(
+                animus_local_daemon::StateInspectionIdentityFacts {
+                    root_id,
+                    sequence: sequence + 1,
+                    correlation_id: HASH,
+                },
+                state_inspection(),
+            )?
+        } else {
+            animus_local_daemon::WorkerEvent::Observation {
+                root_id: String::from(root_id),
+                sequence: sequence + 1,
+                class: String::from("attached"),
+                observation_identity: String::from(HASH),
+            }
+        };
+        Ok(vec![event])
     }
 
     fn route(
@@ -438,6 +516,20 @@ impl animus_local_daemon::WorkerSessionPort for FixtureWorker {
     }
 }
 
+fn state_inspection() -> animus_local_daemon::WorkerStateInspection {
+    animus_local_daemon::WorkerStateInspection {
+        worker_generation: GENERATION,
+        restore_status: animus_local_daemon::RestoreStatus::Restored,
+        session_head_identity: String::from(HASH),
+        kernel_head_identity: String::from(HASH),
+        queue_generation: GENERATION,
+        queue_identity: String::from(HASH),
+        committed_message_count: 1,
+        queued_item_count: 0,
+        active_child_count: 0,
+    }
+}
+
 fn record(
     lifecycle: animus_local_daemon::WorkerLifecycle,
 ) -> animus_local_daemon::WorkerRegistryRecord {
@@ -452,7 +544,7 @@ fn record(
         lifecycle,
         restore_status: animus_local_daemon::RestoreStatus::Restored,
         attachments: Vec::new(),
-        event_sequence: 1,
+        event_sequence: INITIAL_EVENT_SEQUENCE,
         receipt_identity: String::from(HASH),
     }
 }

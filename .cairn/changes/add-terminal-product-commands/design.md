@@ -30,8 +30,26 @@ Using the generic `session` class would hide distinct authorization and audit me
 
 **Rationale:** Malformed or forged commands must not reach the worker-owned effect boundary.
 
+### Decision: Return inspection through the event stream
+
+**Choice:** Add a dedicated `WorkerEvent::StateInspection` variant. It carries only request and observation identities, worker and queue generations, restore status, BLAKE3 heads, and `u32` counts.
+
+**Rationale:** The existing command result is identity-only. The event stream already supplies ordered, bounded, snapshot-first delivery without granting terminal effect authority.
+
+### Decision: Keep state events exact across the wire
+
+**Choice:** Add a tagged daemon event variant and reject unknown outer or nested fields. The supervisor and terminal bind each result to its request, payload, generation, restore status, root, and ordered sequence.
+
+**Rationale:** A typed variant prevents private prompt, source, result, credential, or path fields from hiding inside a generic event class.
+
+### Decision: Render but do not receipt private state
+
+**Choice:** Store the latest validated inspection in terminal view state and render its safe fields. Terminal completion receipts remain unchanged.
+
+**Rationale:** Operators can inspect bounded state without expanding durable evidence or exposing session content.
+
 ## Risks / Trade-offs
 
 - New public enum variants require exhaustive consumers to update.
-- This change provides descriptors only. A consumer must still implement authorized effects and bounded state projection.
+- The product worker must still authorize inspection and construct truthful metadata.
 - State inspection remains a request. It does not permit private state in terminal receipts.

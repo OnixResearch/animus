@@ -2,46 +2,57 @@
 
 Date: 2026-08-20
 
-Outcome: implementation passes focused functional gates but remains blocked by existing strict Octet debt and unpublished source.
+Outcome: the focused implementation passes functional, routing, rendering, strict Clippy, Cairn, and Nix rails. Existing strict Octet debt still blocks archive completion.
 
 ## Passing evidence
 
-- The pre-change `animus-live-terminal` baseline passed all 22 focused tests in the Nix development shell.
-- `cargo test -p animus-live-terminal --all-targets --all-features --locked` passed 23 tests after the change.
-- Positive tests prove exact `kernel_clear` and `state_inspection` classes, valid BLAKE3 correlation identities, serialization, and direct-service routing.
-- Negative tests prove unknown command kinds and malformed kernel-clear correlation identities fail before worker delivery.
-- Direct and daemon routing tests prove both exact product command classes pass the existing private-payload boundary.
-- The pure control test proves descriptor construction does not alter the terminal view or execute an effect.
-- Strict focused Clippy passed with `-D warnings`.
-- `scripts/cairn/check-live-terminal-agent-host --root .` passed terminal, daemon, TUI, catalog, facade, authority, and leak checks.
+- The published base revision `1498832358a6cd960508b4709fecc4f271c4c90e` passed the pre-change focused baseline.
+- `cargo test -p animus-local-daemon -p animus-live-terminal --all-targets --all-features --locked` passed 48 tests after the change.
+- The focused host rail passed 27 terminal tests, 21 daemon tests, 162 TUI tests, strict Clippy, documentation tests, catalog checks, and runtime-facade inventory checks.
 - `nix build .#checks.x86_64-linux.live-terminal-agent-host --no-link -L` passed.
-- Cairn validation and proposal, design, and task gates passed before implementation.
+- Cairn validation and proposal, design, and task gates passed.
+- Direct and daemon tests prove the same typed state event crosses both explicit connection modes.
+- Positive tests prove exact command correlation, deterministic observation identity, metadata reduction, and terminal rendering.
+- Negative tests reject unknown wire fields, private-field smuggling, malformed identities, blocked restore, stale worker generations, restore drift, unordered batches, forged observation identities, and queue-generation regression.
+- The state observation identity binds the request correlation, root, sequence, worker state, queue state, and all bounded counts.
+- Terminal completion receipts remain unchanged and omit inspected state.
 
-## Corrected failure
+## Adversarial audit
 
-An adversarial daemon-path audit found that the wire allowlist initially omitted both new exact classes. The follow-up change adds them and routes both commands through the daemon dispatcher test. No compatibility class or generic fallback was added.
+The first metadata projection accepted a non-zero worker generation without matching it to the active generation. It also lacked request correlation and payload identity binding.
+
+The corrected design now checks worker generation and restore status against supervisor and terminal state. It enforces strict batch order and queue-generation monotonicity. It binds each state payload to its request and ordered event identity with BLAKE3.
+
+No provider, tool, Steel, session, queue, journal, persistence, credential, endpoint-discovery, or process authority moved into the terminal.
 
 ## Octet comparison
 
-The pinned package-level Octet command was run against both the published base revision `e90c55d9aae274b103196573ea7f868fd26d5114` and this change.
+The exact pinned package checks were run against both the published base revision and this change.
 
-Both runs reported the same result:
+`animus-live-terminal` reported the same result for both revisions:
 
 ```text
-Findings: 118
-Warnings: 3
-Errors: 115
-animus_live_terminal: 117
-animus_std: 1
+Findings: 121
+Warnings: 2
+Errors: 119
 Config hash: b3:4cb01362a9222b7c7606540c736888c68cac53a4282d33fda06bed3bfcf2158a
 Profile hash: b3:f4f80c7b7038fd73adcc65248aed9a23d589af3ef143a5a863abdfb02e19e736
 ```
 
-The comparison found no new Octet finding count or lint-category count. This is regression evidence only. It does not satisfy the deny-all gate.
+`animus-local-daemon` reported the same result for both revisions:
+
+```text
+Findings: 220
+Warnings: 0
+Errors: 220
+Config hash: b3:c6b638a9ecea8fb957bb09e5422e428677189aa2b0fedc83cefede3b4c3d5383
+Profile hash: b3:0b4ca52658f1d11e82ab7930dd54ef8f67d1be8a56f662811a34c0c4bf9ea6af
+```
+
+The comparison found no new finding count or lint-category count. This is regression evidence only. It does not satisfy the deny-all gate.
 
 ## Blockers and non-claims
 
-- Existing `animus-live-terminal` Octet debt blocks the strict package gate. This change does not baseline, suppress, or repair unrelated debt.
-- The change is not archived because the required deny-all gate does not pass.
-- The local branch is not published. A downstream immutable GitHub pin cannot consume it until publication is explicitly authorized.
-- This evidence does not claim full-flake acceptance, archive completion, publication, product authorization, state redaction correctness, or kernel-clear execution.
+- Existing terminal and daemon Octet debt blocks the strict package gate.
+- The change remains active because the required deny-all gate does not pass.
+- This evidence does not claim worker-side authorization correctness, kernel-clear execution, full-flake acceptance, archive completion, product readiness, production readiness, or release eligibility.

@@ -44,6 +44,22 @@ pub fn render_text_projection(view: &crate::TerminalViewState) -> String {
     if let Some((child_id, status)) = view.child_status() {
         lines.push(format!("child: {child_id} [{status}]"));
     }
+    if let Some(inspection) = view.state_inspection() {
+        lines.extend([
+            format!("worker-generation: {}", inspection.worker_generation),
+            format!("restore-status: {}", inspection.restore_status.as_str()),
+            format!("session-head: {}", inspection.session_head_identity),
+            format!("kernel-head: {}", inspection.kernel_head_identity),
+            format!(
+                "inspected-queue-generation: {}",
+                inspection.queue_generation
+            ),
+            format!("inspected-queue-head: {}", inspection.queue_identity),
+            format!("committed-messages: {}", inspection.committed_message_count),
+            format!("queued-items: {}", inspection.queued_item_count),
+            format!("active-children: {}", inspection.active_child_count),
+        ]);
+    }
     lines.push(animus_tui::render_streaming_snapshot(view.conversation()));
     lines.join("\n")
 }

@@ -18,6 +18,8 @@ const MAX_HEIGHT: u16 = 80;
 const FULL_CLEANUP_ACTIONS: u32 = 5;
 const ALTERNATE_CLEANUP_ACTIONS: u32 = 4;
 const MAX_LABEL_BYTES: usize = 256;
+const NEXT_SEQUENCE: u64 = 2;
+const ADVANCED_QUEUE_GENERATION: u64 = 2;
 
 #[test]
 fn snapshot_input_runtime_events_commands_and_receipt_are_bounded() {
@@ -192,6 +194,142 @@ fn unknown_product_control_kind_fails_closed() {
 }
 
 #[test]
+fn state_inspection_updates_only_the_metadata_projection() {
+    let mut state = state();
+    let inspection = state_inspection();
+    reduce_iteration(
+        &mut state,
+        &TerminalIteration {
+            input: None,
+            session_events: &[state_event(1, inspection.clone())],
+            cancelled: false,
+            signalled: false,
+        },
+        limits(),
+    )
+    .expect("state inspection");
+    assert_eq!(state.view().state_inspection(), Some(&inspection));
+    assert_eq!(state.view().lifecycle_status(), "state_inspection");
+}
+
+#[test]
+fn malformed_or_blocked_state_inspection_fails_before_projection() {
+    let invalid_states = [
+        animus_local_daemon::WorkerStateInspection {
+            session_head_identity: String::from("private-session-content"),
+            ..state_inspection()
+        },
+        animus_local_daemon::WorkerStateInspection {
+            restore_status: animus_local_daemon::RestoreStatus::Blocked,
+            ..state_inspection()
+        },
+    ];
+    for invalid in invalid_states {
+        let mut state = state();
+        assert_eq!(
+            reduce_iteration(
+                &mut state,
+                &TerminalIteration {
+                    input: None,
+                    session_events: &[ClientSessionEvent::StateInspection {
+                        sequence: 1,
+                        correlation_id: String::from(HASH),
+                        observation_identity: String::from(HASH),
+                        state: invalid,
+                    }],
+                    cancelled: false,
+                    signalled: false,
+                },
+                limits(),
+            ),
+            Err(TerminalCoreError::Identity)
+        );
+        assert!(state.view().state_inspection().is_none());
+    }
+}
+
+#[test]
+fn stale_or_forged_state_inspection_fails_closed() {
+    for invalid in [
+        animus_local_daemon::WorkerStateInspection {
+            worker_generation: ADVANCED_QUEUE_GENERATION,
+            ..state_inspection()
+        },
+        animus_local_daemon::WorkerStateInspection {
+            restore_status: animus_local_daemon::RestoreStatus::Fresh,
+            ..state_inspection()
+        },
+    ] {
+        let mut state = state();
+        let event = state_event(1, invalid);
+        assert_eq!(
+            reduce_iteration(
+                &mut state,
+                &TerminalIteration {
+                    input: None,
+                    session_events: &[event],
+                    cancelled: false,
+                    signalled: false,
+                },
+                limits(),
+            ),
+            Err(TerminalCoreError::Sequence)
+        );
+    }
+
+    let mut forged = state();
+    assert_eq!(
+        reduce_iteration(
+            &mut forged,
+            &TerminalIteration {
+                input: None,
+                session_events: &[ClientSessionEvent::StateInspection {
+                    sequence: 1,
+                    correlation_id: String::from(HASH),
+                    observation_identity: String::from(HASH),
+                    state: state_inspection(),
+                }],
+                cancelled: false,
+                signalled: false,
+            },
+            limits(),
+        ),
+        Err(TerminalCoreError::Identity)
+    );
+
+    let mut regressed = state();
+    let advanced = animus_local_daemon::WorkerStateInspection {
+        queue_generation: ADVANCED_QUEUE_GENERATION,
+        ..state_inspection()
+    };
+    reduce_iteration(
+        &mut regressed,
+        &TerminalIteration {
+            input: None,
+            session_events: &[state_event(1, advanced.clone())],
+            cancelled: false,
+            signalled: false,
+        },
+        limits(),
+    )
+    .expect("advanced queue state");
+    assert_eq!(
+        reduce_iteration(
+            &mut regressed,
+            &TerminalIteration {
+                input: None,
+                session_events: &[state_event(NEXT_SEQUENCE, state_inspection())],
+                cancelled: false,
+                signalled: false,
+            },
+            limits(),
+        ),
+        Err(TerminalCoreError::Sequence)
+    );
+    assert_eq!(regressed.view().state_inspection(), Some(&advanced));
+}
+
+#[test]
 fn queue_conflict_requests_fresh_snapshot_only_through_client_command() {
     let mut state = state();
     let plan = reduce_iteration(
@@ -338,6 +476,39 @@ fn overlong_event_labels_fail_before_view_projection() {
         ),
         Err(TerminalCoreError::Identity)
     );
+}
+
+fn state_event(
+    sequence: u64,
+    state: animus_local_daemon::WorkerStateInspection,
+) -> ClientSessionEvent {
+    let observation_identity = state
+        .observation_identity(animus_local_daemon::StateInspectionIdentityFacts {
+            root_id: ROOT,
+            sequence,
+            correlation_id: HASH,
+        })
+        .expect("state event identity");
+    ClientSessionEvent::StateInspection {
+        sequence,
+        correlation_id: String::from(HASH),
+        observation_identity,
+        state,
+    }
+}
+
+fn state_inspection() -> animus_local_daemon::WorkerStateInspection {
+    animus_local_daemon::WorkerStateInspection {
+        worker_generation: 1,
+        restore_status: animus_local_daemon::RestoreStatus::Restored,
+        session_head_identity: String::from(HASH),
+        kernel_head_identity: String::from(HASH),
+        queue_generation: 1,
+        queue_identity: String::from(HASH),
+        committed_message_count: 1,
+        queued_item_count: 0,
+        active_child_count: 0,
+    }
 }
 
 fn state() -> TerminalClientState {

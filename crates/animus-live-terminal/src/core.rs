@@ -252,6 +252,17 @@ pub enum ClientSessionEvent {
         /// BLAKE3 observation identity.
         observation_identity: String,
     },
+    /// Record one typed metadata-only worker state inspection.
+    StateInspection {
+        /// Monotonic event sequence.
+        sequence: u64,
+        /// BLAKE3 identity of the state-inspection request.
+        correlation_id: String,
+        /// BLAKE3 observation identity.
+        observation_identity: String,
+        /// Bounded worker state.
+        state: animus_local_daemon::WorkerStateInspection,
+    },
     /// Record one pending approval correlation.
     ApprovalRequested {
         /// Approval correlation identity.
@@ -278,6 +289,34 @@ pub enum ClientSessionEvent {
         /// Safe error class.
         class: String,
     },
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct StateInspectionObservation<'a> {
+    sequence: u64,
+    correlation_id: &'a str,
+    observation_identity: &'a str,
+    state: &'a animus_local_daemon::WorkerStateInspection,
+}
+
+impl<'a> StateInspectionObservation<'a> {
+    fn from_event(event: &'a ClientSessionEvent) -> Result<Self, TerminalCoreError> {
+        let ClientSessionEvent::StateInspection {
+            sequence,
+            correlation_id,
+            observation_identity,
+            state,
+        } = event
+        else {
+            return Err(TerminalCoreError::Identity);
+        };
+        Ok(Self {
+            sequence: *sequence,
+            correlation_id,
+            observation_identity,
+            state,
+        })
+    }
 }
 
 /// Snapshot returned before later event polling.
@@ -308,6 +347,7 @@ pub struct TerminalViewState {
     child_status: Option<(String, String)>,
     queue_conflict: Option<(u64, String)>,
     pending_approval: Option<String>,
+    state_inspection: Option<animus_local_daemon::WorkerStateInspection>,
     viewport: (u16, u16),
 }
 
@@ -322,8 +362,16 @@ impl TerminalViewState {
             child_status: None,
             queue_conflict: None,
             pending_approval: None,
+            state_inspection: None,
             viewport,
         }
+    }
+
+    fn apply_runtime_event(&mut self, event: &animus_runtime::RuntimeEvent) {
+        self.coding_session.apply_runtime_event(event);
+        self.conversation.apply_runtime_event(event);
+        self.tools.apply_runtime_event(event);
+        event.kind().as_str().clone_into(&mut self.lifecycle_status);
     }
 
     /// Returns the existing coding-session projection.
@@ -372,6 +420,12 @@ impl TerminalViewState {
             .map(|(generation, identity)| (*generation, identity.as_str()))
     }
 
+    /// Returns the latest metadata-only worker state inspection.
+    #[must_use]
+    pub const fn state_inspection(&self) -> Option<&animus_local_daemon::WorkerStateInspection> {
+        self.state_inspection.as_ref()
+    }
+
     /// Returns the current viewport.
     #[must_use]
     pub const fn viewport(&self) -> (u16, u16) {
@@ -385,6 +439,7 @@ pub struct TerminalClientState {
     root_id: String,
     worker_id: String,
     generation: u64,
+    restore_status: animus_local_daemon::RestoreStatus,
     last_sequence: u64,
     command_index: u64,
     view: TerminalViewState,
@@ -419,6 +474,7 @@ impl TerminalClientState {
             root_id: snapshot.root_id.clone(),
             worker_id: snapshot.worker_id.clone(),
             generation: snapshot.generation,
+            restore_status: snapshot.restore_status,
             last_sequence: snapshot.event_sequence,
             command_index: 0,
             view: TerminalViewState::new(viewport),
@@ -813,15 +869,7 @@ fn apply_event_batch(
     }
     for event in events {
         match event {
-            ClientSessionEvent::Runtime(runtime) => {
-                state.view.coding_session.apply_runtime_event(runtime);
-                state.view.conversation.apply_runtime_event(runtime);
-                state.view.tools.apply_runtime_event(runtime);
-                runtime
-                    .kind()
-                    .as_str()
-                    .clone_into(&mut state.view.lifecycle_status);
-            }
+            ClientSessionEvent::Runtime(runtime) => state.view.apply_runtime_event(runtime),
             ClientSessionEvent::Observation {
                 sequence,
                 class,
@@ -834,6 +882,9 @@ fn apply_event_batch(
                 validate_hash(observation_identity.as_str())?;
                 state.last_sequence = *sequence;
                 state.view.lifecycle_status.clone_from(class);
+            }
+            ClientSessionEvent::StateInspection { .. } => {
+                apply_state_inspection(state, StateInspectionObservation::from_event(event)?)?;
             }
             ClientSessionEvent::ApprovalRequested { correlation_id } => {
                 validate_label(correlation_id.as_str())?;
@@ -869,6 +920,62 @@ fn apply_event_batch(
             .checked_add(1)
             .ok_or(TerminalCoreError::Overflow)?;
         state.dirty = true;
+    }
+    Ok(())
+}
+
+fn apply_state_inspection(
+    state: &mut TerminalClientState,
+    observation: StateInspectionObservation<'_>,
+) -> Result<(), TerminalCoreError> {
+    observation
+        .state
+        .validate()
+        .map_err(|_error| TerminalCoreError::Identity)?;
+    validate_state_inspection_context(state, observation)?;
+    validate_state_inspection_identity(state.root_id.as_str(), observation)?;
+    state.last_sequence = observation.sequence;
+    state.view.state_inspection = Some(observation.state.clone());
+    state.view.lifecycle_status = String::from("state_inspection");
+    Ok(())
+}
+
+fn validate_state_inspection_context(
+    state: &TerminalClientState,
+    observation: StateInspectionObservation<'_>,
+) -> Result<(), TerminalCoreError> {
+    if observation.sequence <= state.last_sequence {
+        return Err(TerminalCoreError::Sequence);
+    }
+    if observation.state.worker_generation != state.generation
+        || observation.state.restore_status != state.restore_status
+    {
+        return Err(TerminalCoreError::Sequence);
+    }
+    if let Some(current) = state.view.state_inspection.as_ref()
+        && observation.state.queue_generation < current.queue_generation
+    {
+        return Err(TerminalCoreError::Sequence);
+    }
+    Ok(())
+}
+
+fn validate_state_inspection_identity(
+    root_id: &str,
+    observation: StateInspectionObservation<'_>,
+) -> Result<(), TerminalCoreError> {
+    validate_hash(observation.correlation_id)?;
+    validate_hash(observation.observation_identity)?;
+    let expected_identity = observation
+        .state
+        .observation_identity(animus_local_daemon::StateInspectionIdentityFacts {
+            root_id,
+            sequence: observation.sequence,
+            correlation_id: observation.correlation_id,
+        })
+        .map_err(|_error| TerminalCoreError::Identity)?;
+    if observation.observation_identity != expected_identity {
+        return Err(TerminalCoreError::Identity);
     }
     Ok(())
 }

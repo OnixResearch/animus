@@ -40,8 +40,8 @@ pub use process::{
 };
 pub use registry::{RegistryError, RegistryStore};
 pub use service::{
-    EventBatchRequest, LocalSupervisorService, ServiceError, WorkerCommand, WorkerEvent,
-    WorkerSessionPort, WorkerSnapshot,
+    EventBatchRequest, LocalSupervisorService, ServiceError, StateInspectionIdentityFacts,
+    WorkerCommand, WorkerEvent, WorkerSessionPort, WorkerSnapshot, WorkerStateInspection,
 };
 pub use transport::{
     LocalClient, LocalEndpoint, LocalListener, LocalPeerFacts, TransportError, TransportFrame,

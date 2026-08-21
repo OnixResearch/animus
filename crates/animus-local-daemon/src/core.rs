@@ -48,6 +48,18 @@ pub enum RestoreStatus {
     Blocked,
 }
 
+impl RestoreStatus {
+    /// Returns the stable metadata label.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Fresh => "fresh",
+            Self::Restored => "restored",
+            Self::Blocked => "blocked",
+        }
+    }
+}
+
 /// One client attachment lease.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Attachment {

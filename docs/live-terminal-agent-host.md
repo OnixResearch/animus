@@ -51,7 +51,13 @@ The host handles input, tick, resize, cancellation, supported signal, disconnect
 
 ## Commands and rendering
 
-Key handling and explicit controls create typed prompt, queue compare-and-swap, approval, cancellation, child, refresh, detach, stop, `kernel_clear`, and `state_inspection` descriptors. The terminal does not execute these effects. A worker must authorize and execute both product-control descriptors, and state inspection must return bounded metadata only.
+Key handling and explicit controls create typed prompt, queue compare-and-swap, approval, cancellation, child, refresh, detach, stop, `kernel_clear`, and `state_inspection` descriptors. The terminal does not execute these effects. A worker must authorize and execute both product-control descriptors.
+
+An authorized inspection returns `WorkerEvent::StateInspection` through the existing ordered event stream. This event contains only request and observation identities, worker and queue generations, restore status, session, kernel, and queue BLAKE3 heads, and bounded counts. The observation identity binds the request, root, sequence, and complete metadata payload.
+
+Direct and daemon connections produce the same terminal event. The supervisor rejects stale generations, restore drift, malformed payloads, and unordered batches. The daemon wire rejects unknown outer and nested fields. The terminal also rejects forged identities and regressed queue generations before it renders the latest inspection.
+
+State inspection cannot include prompts, Steel source, provider results, credentials, private paths, or arbitrary labels. Terminal completion receipts do not include inspected state.
 
 Snapshot-first state uses these existing projections:
 

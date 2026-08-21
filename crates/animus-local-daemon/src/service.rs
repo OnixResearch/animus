@@ -3,6 +3,10 @@
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
+const MAX_EVENT_CLASS_BYTES: usize = 256;
+const STATE_INSPECTION_IDENTITY_DOMAIN: &str = "animus.local-daemon.state-inspection.v1";
+const IDENTITY_SEPARATOR: &[u8] = b"\0";
+
 /// Safe snapshot metadata routed before event flow.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct WorkerSnapshot {
@@ -18,17 +22,217 @@ pub struct WorkerSnapshot {
     pub restore_status: crate::RestoreStatus,
 }
 
+/// Bounded metadata from one worker-owned state inspection.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct WorkerStateInspection {
+    /// Current worker generation.
+    pub worker_generation: u64,
+    /// Current durable restore status.
+    pub restore_status: crate::RestoreStatus,
+    /// BLAKE3 identity of the current session head.
+    pub session_head_identity: String,
+    /// BLAKE3 identity of the current kernel head.
+    pub kernel_head_identity: String,
+    /// Current queue generation. Zero identifies the initial empty queue.
+    pub queue_generation: u64,
+    /// BLAKE3 identity of the current queue state.
+    pub queue_identity: String,
+    /// Committed conversation message count.
+    pub committed_message_count: u32,
+    /// Current queued item count.
+    pub queued_item_count: u32,
+    /// Current active child count.
+    pub active_child_count: u32,
+}
+
+/// Exact facts that bind one state payload to an ordered worker request.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct StateInspectionIdentityFacts<'a> {
+    /// Root session identity.
+    pub root_id: &'a str,
+    /// Monotonic worker event sequence.
+    pub sequence: u64,
+    /// BLAKE3 state-inspection request identity.
+    pub correlation_id: &'a str,
+}
+
+impl WorkerStateInspection {
+    /// Validates the metadata-only inspection boundary.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ServiceError::Bound`] for zero generations, blocked restore,
+    /// or malformed BLAKE3 identities.
+    pub fn validate(&self) -> Result<(), ServiceError> {
+        if self.worker_generation == 0 || self.restore_status == crate::RestoreStatus::Blocked {
+            return Err(ServiceError::Bound);
+        }
+        validate_blake3_identity(self.session_head_identity.as_str())?;
+        validate_blake3_identity(self.kernel_head_identity.as_str())?;
+        validate_blake3_identity(self.queue_identity.as_str())
+    }
+
+    /// Computes the exact BLAKE3 identity for one ordered correlated state event.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ServiceError::Bound`] for malformed state, root, sequence, or correlation facts.
+    pub fn observation_identity(
+        &self,
+        facts: StateInspectionIdentityFacts<'_>,
+    ) -> Result<String, ServiceError> {
+        self.validate()?;
+        validate_event_class(facts.root_id)?;
+        if facts.sequence == 0 {
+            return Err(ServiceError::Bound);
+        }
+        validate_blake3_identity(facts.correlation_id)?;
+        let sequence_text = facts.sequence.to_string();
+        let worker_generation_text = self.worker_generation.to_string();
+        let queue_generation_text = self.queue_generation.to_string();
+        let committed_message_count_text = self.committed_message_count.to_string();
+        let queued_item_count_text = self.queued_item_count.to_string();
+        let active_child_count_text = self.active_child_count.to_string();
+        let mut hasher = blake3::Hasher::new();
+        for part in [
+            STATE_INSPECTION_IDENTITY_DOMAIN,
+            facts.root_id,
+            sequence_text.as_str(),
+            facts.correlation_id,
+            worker_generation_text.as_str(),
+            self.restore_status.as_str(),
+            self.session_head_identity.as_str(),
+            self.kernel_head_identity.as_str(),
+            queue_generation_text.as_str(),
+            self.queue_identity.as_str(),
+            committed_message_count_text.as_str(),
+            queued_item_count_text.as_str(),
+            active_child_count_text.as_str(),
+        ] {
+            hasher.update(part.as_bytes());
+            hasher.update(IDENTITY_SEPARATOR);
+        }
+        Ok(hasher.finalize().to_hex().to_string())
+    }
+}
+
 /// Safe bounded worker event metadata.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct WorkerEvent {
-    /// Root identity.
-    pub root_id: String,
-    /// Monotonic event sequence.
-    pub sequence: u64,
-    /// Safe event class.
-    pub class: String,
-    /// Metadata-only BLAKE3 observation identity.
-    pub observation_identity: String,
+pub enum WorkerEvent {
+    /// One safe class and observation identity.
+    Observation {
+        /// Root identity.
+        root_id: String,
+        /// Monotonic event sequence.
+        sequence: u64,
+        /// Safe event class.
+        class: String,
+        /// Metadata-only BLAKE3 observation identity.
+        observation_identity: String,
+    },
+    /// One typed metadata-only state inspection.
+    StateInspection {
+        /// Root identity.
+        root_id: String,
+        /// Monotonic event sequence.
+        sequence: u64,
+        /// BLAKE3 identity of the state-inspection request.
+        correlation_id: String,
+        /// Metadata-only BLAKE3 observation identity.
+        observation_identity: String,
+        /// Bounded worker state.
+        state: WorkerStateInspection,
+    },
+}
+
+impl WorkerEvent {
+    /// Constructs one exact correlated state-inspection event.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ServiceError::Bound`] when state or correlation facts are invalid.
+    pub fn state_inspection(
+        facts: StateInspectionIdentityFacts<'_>,
+        state: WorkerStateInspection,
+    ) -> Result<Self, ServiceError> {
+        let observation_identity = state.observation_identity(facts)?;
+        Ok(Self::StateInspection {
+            root_id: String::from(facts.root_id),
+            sequence: facts.sequence,
+            correlation_id: String::from(facts.correlation_id),
+            observation_identity,
+            state,
+        })
+    }
+
+    /// Returns the event root identity.
+    #[must_use]
+    pub fn root_id(&self) -> &str {
+        match self {
+            Self::Observation { root_id, .. } | Self::StateInspection { root_id, .. } => {
+                root_id.as_str()
+            }
+        }
+    }
+
+    /// Returns the monotonic event sequence.
+    #[must_use]
+    pub const fn sequence(&self) -> u64 {
+        match self {
+            Self::Observation { sequence, .. } | Self::StateInspection { sequence, .. } => {
+                *sequence
+            }
+        }
+    }
+
+    /// Returns the metadata-only observation identity.
+    #[must_use]
+    pub fn observation_identity(&self) -> &str {
+        match self {
+            Self::Observation {
+                observation_identity,
+                ..
+            }
+            | Self::StateInspection {
+                observation_identity,
+                ..
+            } => observation_identity.as_str(),
+        }
+    }
+
+    fn validate(
+        &self,
+        worker_generation: u64,
+        restore_status: crate::RestoreStatus,
+    ) -> Result<(), ServiceError> {
+        if self.sequence() == 0 {
+            return Err(ServiceError::Bound);
+        }
+        validate_blake3_identity(self.observation_identity())?;
+        match self {
+            Self::Observation { class, .. } => validate_event_class(class.as_str()),
+            Self::StateInspection {
+                root_id,
+                sequence,
+                correlation_id,
+                observation_identity,
+                state,
+            } => {
+                if state.worker_generation != worker_generation
+                    || state.restore_status != restore_status
+                    || state.observation_identity(StateInspectionIdentityFacts {
+                        root_id,
+                        sequence: *sequence,
+                        correlation_id,
+                    })? != *observation_identity
+                {
+                    return Err(ServiceError::WorkerIdentity);
+                }
+                Ok(())
+            }
+        }
+    }
 }
 
 /// Typed command routed to the worker-owned session service.
@@ -107,6 +311,15 @@ struct AttachedClient {
     delivery_scope_lease: crate::ClientDeliveryScopeLease,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct EventBatchValidation<'a> {
+    root_id: &'a str,
+    first_sequence: u64,
+    maximum_events: usize,
+    worker_generation: u64,
+    restore_status: crate::RestoreStatus,
+}
+
 /// Explicit local supervisor service.
 pub struct LocalSupervisorService<Worker> {
     config: crate::ValidatedLocalDaemonConfig,
@@ -157,6 +370,9 @@ impl<Worker: WorkerSessionPort> LocalSupervisorService<Worker> {
         let delivery_scope_lease = crate::plan_client_delivery_scope_lease(record, client_id)
             .map_err(|_error| ServiceError::ComponentScope)?;
         let snapshot = self.worker.snapshot(root_id)?;
+        if snapshot.restore_status != record.restore_status {
+            return Err(ServiceError::WorkerIdentity);
+        }
         if snapshot.worker_id != record.worker_id
             || snapshot.generation != record.generation
             || snapshot.restore_status == crate::RestoreStatus::Blocked
@@ -168,23 +384,22 @@ impl<Worker: WorkerSessionPort> LocalSupervisorService<Worker> {
             .events_after(root_id, snapshot.event_sequence, maximum_events)?;
         let maximum_events =
             usize::try_from(maximum_events).map_err(|_error| ServiceError::Bound)?;
-        if events.len() > maximum_events
-            || events.iter().any(|event| {
-                event.root_id != root_id
-                    || event.sequence <= snapshot.event_sequence
-                    || event.observation_identity.len() != animus_adapter_daemon::BLAKE3_HEX_CHARS
-            })
-        {
-            return Err(ServiceError::Bound);
-        }
+        let last_sequence = validate_event_batch(
+            events.as_slice(),
+            EventBatchValidation {
+                root_id,
+                first_sequence: snapshot.event_sequence,
+                maximum_events,
+                worker_generation: record.generation,
+                restore_status: record.restore_status,
+            },
+        )?;
         self.attachments.insert(
             format!("{root_id}\0{client_id}"),
             AttachedClient {
                 attachment: crate::Attachment {
                     client_id: String::from(client_id),
-                    last_sequence: events
-                        .last()
-                        .map_or(snapshot.event_sequence, |event| event.sequence),
+                    last_sequence,
                 },
                 delivery_scope_lease,
             },
@@ -204,12 +419,20 @@ impl<Worker: WorkerSessionPort> LocalSupervisorService<Worker> {
         if request.maximum_events == 0 || request.maximum_events > self.config.max_events() {
             return Err(ServiceError::Bound);
         }
+        let record = self
+            .registry
+            .find(request.root_id)
+            .ok_or(ServiceError::Decision)?;
+        let worker_generation = record.generation;
+        let restore_status = record.restore_status;
         let key = format!("{}\0{}", request.root_id, request.client_id);
         let attachment = self
             .attachments
             .get_mut(key.as_str())
             .ok_or(ServiceError::UnknownAttachment)?;
-        if attachment.attachment.last_sequence != request.sequence {
+        if attachment.attachment.last_sequence != request.sequence
+            || attachment.delivery_scope_lease.worker_generation.get() != worker_generation
+        {
             return Err(ServiceError::WorkerIdentity);
         }
         let events =
@@ -217,18 +440,16 @@ impl<Worker: WorkerSessionPort> LocalSupervisorService<Worker> {
                 .events_after(request.root_id, request.sequence, request.maximum_events)?;
         let maximum_events =
             usize::try_from(request.maximum_events).map_err(|_error| ServiceError::Bound)?;
-        if events.len() > maximum_events
-            || events.iter().any(|event| {
-                event.root_id != request.root_id
-                    || event.sequence <= request.sequence
-                    || event.observation_identity.len() != animus_adapter_daemon::BLAKE3_HEX_CHARS
-            })
-        {
-            return Err(ServiceError::Bound);
-        }
-        attachment.attachment.last_sequence = events
-            .last()
-            .map_or(request.sequence, |event| event.sequence);
+        attachment.attachment.last_sequence = validate_event_batch(
+            events.as_slice(),
+            EventBatchValidation {
+                root_id: request.root_id,
+                first_sequence: request.sequence,
+                maximum_events,
+                worker_generation,
+                restore_status,
+            },
+        )?;
         Ok(events)
     }
 
@@ -363,3 +584,44 @@ impl core::fmt::Display for ServiceError {
 }
 
 impl std::error::Error for ServiceError {}
+
+fn validate_event_batch(
+    events: &[WorkerEvent],
+    validation: EventBatchValidation<'_>,
+) -> Result<u64, ServiceError> {
+    if events.len() > validation.maximum_events {
+        return Err(ServiceError::Bound);
+    }
+    let mut previous_sequence = validation.first_sequence;
+    for event in events {
+        if event.root_id() != validation.root_id || event.sequence() <= previous_sequence {
+            return Err(ServiceError::Bound);
+        }
+        event.validate(validation.worker_generation, validation.restore_status)?;
+        previous_sequence = event.sequence();
+    }
+    Ok(previous_sequence)
+}
+
+fn validate_blake3_identity(value: &str) -> Result<(), ServiceError> {
+    if value.len() != animus_adapter_daemon::BLAKE3_HEX_CHARS
+        || !value
+            .bytes()
+            .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
+    {
+        return Err(ServiceError::Bound);
+    }
+    Ok(())
+}
+
+fn validate_event_class(value: &str) -> Result<(), ServiceError> {
+    if value.is_empty()
+        || value.len() > MAX_EVENT_CLASS_BYTES
+        || value
+            .bytes()
+            .any(|byte| byte == 0 || byte.is_ascii_control() || byte.is_ascii_whitespace())
+    {
+        return Err(ServiceError::Bound);
+    }
+    Ok(())
+}

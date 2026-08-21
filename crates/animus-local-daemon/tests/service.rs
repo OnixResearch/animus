@@ -4,20 +4,24 @@ use std::cell::Cell;
 use std::rc::Rc;
 
 use animus_local_daemon::{
-    HealthFacts, LocalSupervisorService, RestoreStatus, ServiceError, WorkerCommand, WorkerEvent,
-    WorkerLifecycle, WorkerRegistry, WorkerRegistryRecord, WorkerSessionPort, WorkerSnapshot,
-    parse_local_daemon_config,
+    HealthFacts, LocalSupervisorService, RestoreStatus, ServiceError, StateInspectionIdentityFacts,
+    WorkerCommand, WorkerEvent, WorkerLifecycle, WorkerRegistry, WorkerRegistryRecord,
+    WorkerSessionPort, WorkerSnapshot, WorkerStateInspection, parse_local_daemon_config,
 };
 
 const CONFIG: &[u8] = include_bytes!("../../../config/generated/local-daemon-supervisor.json");
 const HASH: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const MAX_WORKERS: u16 = 8;
+const SECOND_EVENT_OFFSET: u64 = 2;
 
 #[derive(Default)]
 struct FixtureWorker {
     routed: usize,
     stopped: Rc<Cell<usize>>,
     retried: usize,
+    state_inspection: Option<WorkerStateInspection>,
+    invalid_state_inspection: Option<WorkerStateInspection>,
+    unordered_events: bool,
 }
 
 impl WorkerSessionPort for FixtureWorker {
@@ -37,12 +41,49 @@ impl WorkerSessionPort for FixtureWorker {
         sequence: u64,
         _maximum: u32,
     ) -> Result<Vec<WorkerEvent>, ServiceError> {
-        Ok(vec![WorkerEvent {
-            root_id: String::from(root_id),
-            sequence: sequence + 1,
-            class: String::from("health"),
-            observation_identity: String::from(HASH),
-        }])
+        if self.unordered_events {
+            return Ok(vec![
+                WorkerEvent::Observation {
+                    root_id: String::from(root_id),
+                    sequence: sequence + SECOND_EVENT_OFFSET,
+                    class: String::from("later"),
+                    observation_identity: String::from(HASH),
+                },
+                WorkerEvent::Observation {
+                    root_id: String::from(root_id),
+                    sequence: sequence + 1,
+                    class: String::from("earlier"),
+                    observation_identity: String::from(HASH),
+                },
+            ]);
+        }
+        let event = if let Some(state) = self.invalid_state_inspection.as_ref() {
+            WorkerEvent::StateInspection {
+                root_id: String::from(root_id),
+                sequence: sequence + 1,
+                correlation_id: String::from(HASH),
+                observation_identity: String::from(HASH),
+                state: state.clone(),
+            }
+        } else if let Some(state) = self.state_inspection.as_ref() {
+            WorkerEvent::state_inspection(
+                StateInspectionIdentityFacts {
+                    root_id,
+                    sequence: sequence + 1,
+                    correlation_id: HASH,
+                },
+                state.clone(),
+            )
+            .expect("valid state inspection fixture")
+        } else {
+            WorkerEvent::Observation {
+                root_id: String::from(root_id),
+                sequence: sequence + 1,
+                class: String::from("health"),
+                observation_identity: String::from(HASH),
+            }
+        };
+        Ok(vec![event])
     }
 
     fn route(&mut self, command: &WorkerCommand) -> Result<String, ServiceError> {
@@ -77,7 +118,7 @@ fn snapshot_first_attach_detach_command_stop_and_retry_use_worker_port() {
     let mut service = LocalSupervisorService::new(config, registry, worker);
     let (snapshot, events) = service.attach("root-a", "client-a", 8).expect("attach");
     assert_eq!(snapshot.event_sequence, 4);
-    assert_eq!(events[0].sequence, 5);
+    assert_eq!(events[0].sequence(), 5);
     assert_eq!(service.attachment_count(), 1);
     let client_scope_lease = service
         .client_delivery_scope_lease("root-a", "client-a")
@@ -91,7 +132,7 @@ fn snapshot_first_attach_detach_command_stop_and_retry_use_worker_port() {
             maximum_events: 8,
         })
         .expect("later events");
-    assert_eq!(later[0].sequence, 6);
+    assert_eq!(later[0].sequence(), 6);
     service.detach("root-a", "client-a").expect("detach");
     assert_eq!(service.attachment_count(), 0);
     assert!(
@@ -176,6 +217,107 @@ fn stale_generation_duplicate_detach_and_healthy_retry_fail_closed() {
         ),
         Err(ServiceError::RetryDenied)
     );
+}
+
+#[test]
+fn metadata_only_state_inspection_routes_and_invalid_state_fails_closed() {
+    let config = parse_local_daemon_config(CONFIG).expect("config");
+    let registry =
+        WorkerRegistry::new(vec![record(WorkerLifecycle::Ready)], MAX_WORKERS).expect("registry");
+    let inspection = state_inspection();
+    let worker = FixtureWorker {
+        state_inspection: Some(inspection.clone()),
+        ..FixtureWorker::default()
+    };
+    let mut service = LocalSupervisorService::new(config, registry, worker);
+    let (_snapshot, events) = service
+        .attach("root-a", "inspection-client", 1)
+        .expect("state inspection event");
+    assert_eq!(
+        events,
+        vec![
+            WorkerEvent::state_inspection(
+                StateInspectionIdentityFacts {
+                    root_id: "root-a",
+                    sequence: 5,
+                    correlation_id: HASH,
+                },
+                inspection,
+            )
+            .expect("expected state inspection")
+        ]
+    );
+
+    let config = parse_local_daemon_config(CONFIG).expect("config");
+    let registry =
+        WorkerRegistry::new(vec![record(WorkerLifecycle::Ready)], MAX_WORKERS).expect("registry");
+    let invalid = WorkerStateInspection {
+        session_head_identity: String::from("private-session-content"),
+        ..state_inspection()
+    };
+    let worker = FixtureWorker {
+        invalid_state_inspection: Some(invalid),
+        ..FixtureWorker::default()
+    };
+    let mut service = LocalSupervisorService::new(config, registry, worker);
+    assert_eq!(
+        service.attach("root-a", "invalid-inspection-client", 1),
+        Err(ServiceError::Bound)
+    );
+}
+
+#[test]
+fn stale_state_generation_restore_and_event_order_fail_closed() {
+    for invalid in [
+        WorkerStateInspection {
+            worker_generation: SECOND_EVENT_OFFSET,
+            ..state_inspection()
+        },
+        WorkerStateInspection {
+            restore_status: RestoreStatus::Fresh,
+            ..state_inspection()
+        },
+    ] {
+        let config = parse_local_daemon_config(CONFIG).expect("config");
+        let registry = WorkerRegistry::new(vec![record(WorkerLifecycle::Ready)], MAX_WORKERS)
+            .expect("registry");
+        let worker = FixtureWorker {
+            state_inspection: Some(invalid),
+            ..FixtureWorker::default()
+        };
+        let mut service = LocalSupervisorService::new(config, registry, worker);
+        assert_eq!(
+            service.attach("root-a", "stale-inspection-client", 1),
+            Err(ServiceError::WorkerIdentity)
+        );
+    }
+
+    let config = parse_local_daemon_config(CONFIG).expect("config");
+    let registry =
+        WorkerRegistry::new(vec![record(WorkerLifecycle::Ready)], MAX_WORKERS).expect("registry");
+    let worker = FixtureWorker {
+        unordered_events: true,
+        ..FixtureWorker::default()
+    };
+    let mut service = LocalSupervisorService::new(config, registry, worker);
+    assert_eq!(
+        service.attach("root-a", "unordered-client", 1),
+        Err(ServiceError::Bound)
+    );
+}
+
+fn state_inspection() -> WorkerStateInspection {
+    WorkerStateInspection {
+        worker_generation: 1,
+        restore_status: RestoreStatus::Restored,
+        session_head_identity: String::from(HASH),
+        kernel_head_identity: String::from(HASH),
+        queue_generation: 1,
+        queue_identity: String::from(HASH),
+        committed_message_count: 1,
+        queued_item_count: 0,
+        active_child_count: 0,
+    }
 }
 
 fn record(lifecycle: WorkerLifecycle) -> WorkerRegistryRecord {

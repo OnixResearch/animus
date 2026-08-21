@@ -114,14 +114,7 @@ impl<Worker: animus_local_daemon::WorkerSessionPort> TerminalConnectionPort
             })
             .map_err(|_error| TerminalConnectionError::Rejected)?
             .into_iter()
-            .map(|event| {
-                validate_hash(event.observation_identity.as_str())?;
-                Ok(crate::ClientSessionEvent::Observation {
-                    sequence: event.sequence,
-                    class: event.class,
-                    observation_identity: event.observation_identity,
-                })
-            })
+            .map(client_event_from_worker)
             .collect()
     }
 
@@ -296,10 +289,29 @@ impl<Worker: animus_local_daemon::WorkerSessionPort> DaemonRequestDispatcher<Wor
 }
 
 fn daemon_event_from_worker(event: animus_local_daemon::WorkerEvent) -> DaemonEvent {
-    DaemonEvent {
-        sequence: event.sequence,
-        class: event.class,
-        observation_identity: event.observation_identity,
+    match event {
+        animus_local_daemon::WorkerEvent::Observation {
+            sequence,
+            class,
+            observation_identity,
+            ..
+        } => DaemonEvent::Observation {
+            sequence,
+            class,
+            observation_identity,
+        },
+        animus_local_daemon::WorkerEvent::StateInspection {
+            sequence,
+            correlation_id,
+            observation_identity,
+            state,
+            ..
+        } => DaemonEvent::StateInspection {
+            sequence,
+            correlation_id,
+            observation_identity,
+            state,
+        },
     }
 }
 
@@ -605,26 +617,67 @@ impl DaemonSnapshot {
 
 /// Daemon event wire shape.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct DaemonEvent {
-    /// Monotonic event sequence.
-    pub sequence: u64,
-    /// Safe event class.
-    pub class: String,
-    /// BLAKE3 observation identity.
-    pub observation_identity: String,
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+pub enum DaemonEvent {
+    /// One safe class and observation identity.
+    Observation {
+        /// Monotonic event sequence.
+        sequence: u64,
+        /// Safe event class.
+        class: String,
+        /// BLAKE3 observation identity.
+        observation_identity: String,
+    },
+    /// One typed metadata-only worker state inspection.
+    StateInspection {
+        /// Monotonic event sequence.
+        sequence: u64,
+        /// BLAKE3 identity of the state-inspection request.
+        correlation_id: String,
+        /// BLAKE3 observation identity.
+        observation_identity: String,
+        /// Safe bounded worker state.
+        state: animus_local_daemon::WorkerStateInspection,
+    },
 }
 
 impl DaemonEvent {
     fn into_core(self) -> Result<crate::ClientSessionEvent, TerminalConnectionError> {
-        validate_hash(self.observation_identity.as_str())?;
-        if self.sequence == 0 || self.class.is_empty() {
-            return Err(TerminalConnectionError::Protocol);
+        match self {
+            Self::Observation {
+                sequence,
+                class,
+                observation_identity,
+            } => {
+                validate_hash(observation_identity.as_str())?;
+                if sequence == 0 || class.is_empty() {
+                    return Err(TerminalConnectionError::Protocol);
+                }
+                Ok(crate::ClientSessionEvent::Observation {
+                    sequence,
+                    class,
+                    observation_identity,
+                })
+            }
+            Self::StateInspection {
+                sequence,
+                correlation_id,
+                observation_identity,
+                state,
+            } => {
+                validate_hash(correlation_id.as_str())?;
+                validate_hash(observation_identity.as_str())?;
+                if sequence == 0 || state.validate().is_err() {
+                    return Err(TerminalConnectionError::Protocol);
+                }
+                Ok(crate::ClientSessionEvent::StateInspection {
+                    sequence,
+                    correlation_id,
+                    observation_identity,
+                    state,
+                })
+            }
         }
-        Ok(crate::ClientSessionEvent::Observation {
-            sequence: self.sequence,
-            class: self.class,
-            observation_identity: self.observation_identity,
-        })
     }
 }
 
@@ -672,16 +725,48 @@ fn snapshot_from_daemon(
         restore_status: snapshot.restore_status,
         events: events
             .into_iter()
-            .map(|event| {
-                validate_hash(event.observation_identity.as_str())?;
-                Ok(crate::ClientSessionEvent::Observation {
-                    sequence: event.sequence,
-                    class: event.class,
-                    observation_identity: event.observation_identity,
-                })
-            })
+            .map(client_event_from_worker)
             .collect::<Result<_, TerminalConnectionError>>()?,
     })
+}
+
+fn client_event_from_worker(
+    event: animus_local_daemon::WorkerEvent,
+) -> Result<crate::ClientSessionEvent, TerminalConnectionError> {
+    match event {
+        animus_local_daemon::WorkerEvent::Observation {
+            sequence,
+            class,
+            observation_identity,
+            ..
+        } => {
+            validate_hash(observation_identity.as_str())?;
+            Ok(crate::ClientSessionEvent::Observation {
+                sequence,
+                class,
+                observation_identity,
+            })
+        }
+        animus_local_daemon::WorkerEvent::StateInspection {
+            sequence,
+            correlation_id,
+            observation_identity,
+            state,
+            ..
+        } => {
+            validate_hash(correlation_id.as_str())?;
+            validate_hash(observation_identity.as_str())?;
+            state
+                .validate()
+                .map_err(|_error| TerminalConnectionError::Protocol)?;
+            Ok(crate::ClientSessionEvent::StateInspection {
+                sequence,
+                correlation_id,
+                observation_identity,
+                state,
+            })
+        }
+    }
 }
 
 fn request_identity(class: &str, root_id: &str, client_id: &str, sequence: u64) -> String {
