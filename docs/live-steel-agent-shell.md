@@ -6,7 +6,7 @@ The `animus-live-steel-agent` package is a non-default headless application. It 
 
 `run_live_application` is the visible composition root. It selects these concrete parts:
 
-- the tool-capable OpenAI Responses host;
+- the tool-capable OpenAI-compatible Responses host with an exact OpenAI or OpenRouter endpoint tuple;
 - separate durable coding-session and private Steel-kernel journals;
 - `CodingSessionHost` for message and tool-loop ordering;
 - the fixed staged tool shell with no optional handlers by default;
@@ -35,11 +35,15 @@ Live provider availability and model behavior remain unresolved until a separate
 
 `config/live-steel-agent-shell.ncl` is the human-authored configuration. It defines exact component labels, provider cohort, model, credential reference, store names, authority identities, operations, skills, and finite bounds.
 
+The shell admits two provider tuples. `openai` binds the official OpenAI Responses endpoint to `brokered:injected-openai-api-key`. `openrouter` binds the OpenRouter Responses endpoint to `brokered:injected-openrouter-api-key`.
+
+The shell rejects crossed tuples, arbitrary URLs, unknown providers, credential-reference drift, discovery, OAuth, and fallback. The existing `animus-std-openai` host remains the only network adapter.
+
 `scripts/config/export-nickel-configs` writes the deterministic JSON file. Rust validates the complete file before it opens a store or contacts a provider.
 
 The binary runs the maintained composition activation preflight before it reads the credential. The library entrypoint repeats the same pure check before store or provider effects. A blocked result returns `LiveApplicationError::Activation` without an ambient fallback. See [composition activation graph](composition-activation-graph.md).
 
-The binary accepts `<store-root> <prompt>`. It reads one explicit credential value from standard input. It does not read an environment variable, provider account, current directory, or ambient credential store.
+The binary accepts `<store-root> <prompt>`. It reads one explicit credential value from standard input for the admitted provider. It does not read an environment variable, provider account, current directory, or ambient credential store.
 
 ## Durable ordering
 
