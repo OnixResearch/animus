@@ -35,7 +35,7 @@ pub use core::{
     ClientSessionEvent, ClientSnapshot, ControlIntent, LiveTerminalReceipt, SessionAction,
     TerminalClientState, TerminalCoreError, TerminalExit, TerminalInput, TerminalIteration,
     TerminalIterationPlan, TerminalLimits, TerminalReceiptFacts, TerminalViewState,
-    command_from_control, reduce_iteration,
+    command_from_control, parse_control_line, reduce_iteration,
 };
 #[cfg(feature = "live-terminal")]
 pub use host::CrosstermTerminalHost;

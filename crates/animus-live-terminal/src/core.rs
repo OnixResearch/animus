@@ -755,6 +755,16 @@ pub fn command_from_control(
     intent: ControlIntent,
     max_prompt_bytes: u32,
 ) -> Result<ClientCommand, TerminalCoreError> {
+    let command = build_control_command(state, intent)?;
+    validate_command(&command, max_prompt_bytes)?;
+    state.record_command()?;
+    Ok(command)
+}
+
+fn build_control_command(
+    state: &mut TerminalClientState,
+    intent: ControlIntent,
+) -> Result<ClientCommand, TerminalCoreError> {
     let command = match intent {
         ControlIntent::QueueEdit {
             item_id,
@@ -804,9 +814,112 @@ pub fn command_from_control(
             action,
         },
     };
-    validate_command(&command, max_prompt_bytes)?;
-    state.record_command()?;
     Ok(command)
+}
+
+/// Parses one exact slash-control line without executing effects.
+///
+/// Non-control text returns `None` and remains a private prompt.
+///
+/// # Errors
+///
+/// Returns [`TerminalCoreError`] for malformed arguments, generations, or identities.
+pub fn parse_control_line(line: &str) -> Result<Option<ControlIntent>, TerminalCoreError> {
+    if !line.starts_with('/') {
+        return Ok(None);
+    }
+    let simple = match line {
+        "/cancel" => Some(ControlIntent::Cancel),
+        "/clear" => Some(ControlIntent::KernelClear),
+        "/state" => Some(ControlIntent::StateInspection),
+        "/refresh" => Some(ControlIntent::Session(SessionAction::RefreshSnapshot)),
+        "/detach" => Some(ControlIntent::Session(SessionAction::Detach)),
+        "/stop" => Some(ControlIntent::Session(SessionAction::Stop)),
+        _other => None,
+    };
+    if simple.is_some() {
+        return Ok(simple);
+    }
+    if let Some(correlation_id) = line.strip_prefix("/approve ") {
+        return Ok(Some(ControlIntent::Approval {
+            correlation_id: required_token(correlation_id)?,
+            decision: ApprovalDecision::Approve,
+        }));
+    }
+    if let Some(correlation_id) = line.strip_prefix("/deny ") {
+        return Ok(Some(ControlIntent::Approval {
+            correlation_id: required_token(correlation_id)?,
+            decision: ApprovalDecision::Deny,
+        }));
+    }
+    if let Some(child_id) = line.strip_prefix("/child-inspect ") {
+        return Ok(Some(ControlIntent::Child {
+            child_id: required_token(child_id)?,
+            action: ChildAction::Inspect,
+        }));
+    }
+    if let Some(child_id) = line.strip_prefix("/child-cancel ") {
+        return Ok(Some(ControlIntent::Child {
+            child_id: required_token(child_id)?,
+            action: ChildAction::Cancel,
+        }));
+    }
+    parse_queue_control(line).map(Some)
+}
+
+fn parse_queue_control(line: &str) -> Result<ControlIntent, TerminalCoreError> {
+    if let Some(arguments) = line.strip_prefix("/queue-remove ") {
+        let [item_id, generation, identity] = exact_fields::<3>(arguments)?;
+        return Ok(ControlIntent::QueueRemove {
+            item_id,
+            expected_generation: parse_generation(generation.as_str())?,
+            expected_queue_identity: identity,
+        });
+    }
+    if let Some(arguments) = line.strip_prefix("/queue-edit ") {
+        let mut fields = arguments.splitn(4, ' ');
+        let item_id = required_token(fields.next().unwrap_or_default())?;
+        let generation = required_token(fields.next().unwrap_or_default())?;
+        let identity = required_token(fields.next().unwrap_or_default())?;
+        let replacement = fields.next().ok_or(TerminalCoreError::Command)?;
+        if replacement.is_empty() {
+            return Err(TerminalCoreError::Command);
+        }
+        return Ok(ControlIntent::QueueEdit {
+            item_id,
+            expected_generation: parse_generation(generation.as_str())?,
+            expected_queue_identity: identity,
+            replacement: String::from(replacement),
+        });
+    }
+    Err(TerminalCoreError::Command)
+}
+
+fn exact_fields<const COUNT: usize>(value: &str) -> Result<[String; COUNT], TerminalCoreError> {
+    let fields = value
+        .split(' ')
+        .map(required_token)
+        .collect::<Result<Vec<_>, _>>()?;
+    fields
+        .try_into()
+        .map_err(|_error| TerminalCoreError::Command)
+}
+
+fn required_token(value: &str) -> Result<String, TerminalCoreError> {
+    if value.is_empty() || value.bytes().any(|byte| byte.is_ascii_whitespace()) {
+        return Err(TerminalCoreError::Command);
+    }
+    Ok(String::from(value))
+}
+
+fn parse_generation(value: &str) -> Result<u64, TerminalCoreError> {
+    let generation = value
+        .parse::<u64>()
+        .map_err(|_error| TerminalCoreError::Command)?;
+    if generation == 0 {
+        return Err(TerminalCoreError::Command);
+    }
+    Ok(generation)
 }
 
 fn reduce_input(
@@ -862,6 +975,9 @@ fn reduce_input(
             state.dirty = true;
             if text.is_empty() {
                 return Ok(None);
+            }
+            if let Some(intent) = parse_control_line(text.as_str())? {
+                return build_control_command(state, intent).map(Some);
             }
             Ok(Some(ClientCommand::Prompt {
                 correlation_id: state.next_correlation("prompt")?,

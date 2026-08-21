@@ -4,7 +4,7 @@ use animus_live_terminal::{
     ApprovalDecision, ChildAction, CleanupObservation, ClientCommand, ClientSessionEvent,
     ClientSnapshot, ControlIntent, SessionAction, TerminalClientState, TerminalCoreError,
     TerminalExit, TerminalInput, TerminalIteration, TerminalLimits, TerminalReceiptFacts,
-    command_from_control, reduce_iteration,
+    command_from_control, parse_control_line, reduce_iteration,
 };
 
 const ROOT: &str = "root-terminal";
@@ -185,6 +185,42 @@ fn controls_emit_all_typed_descriptors_without_effect_execution() {
         assert_eq!(serialized["kind"], command.class());
         assert_eq!(command.correlation_id().len(), HASH.len());
     }
+}
+
+#[test]
+fn exact_slash_controls_parse_without_becoming_prompts() {
+    let cases = [
+        ("/state", "state_inspection"),
+        ("/clear", "kernel_clear"),
+        ("/stop", "session"),
+        ("/detach", "session"),
+        ("/child-inspect child-one", "child"),
+        ("/child-cancel child-one", "child"),
+        (
+            "/queue-remove item-one 1 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "queue_remove",
+        ),
+        (
+            "/queue-edit item-one 1 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa private replacement",
+            "queue_edit",
+        ),
+    ];
+    for (line, expected_class) in cases {
+        let intent = parse_control_line(line)
+            .expect("valid control")
+            .expect("control intent");
+        let mut state = state();
+        let command =
+            command_from_control(&mut state, intent, MAX_PROMPT_BYTES).expect("control command");
+        assert_eq!(command.class(), expected_class);
+    }
+    assert!(
+        parse_control_line("private prompt")
+            .expect("prompt parse")
+            .is_none()
+    );
+    assert!(parse_control_line("/queue-remove item 0 malformed").is_err());
+    assert!(parse_control_line("/unknown").is_err());
 }
 
 #[test]
