@@ -32,6 +32,7 @@ The package gate still fails because the existing crate has findings in untouche
 
 - Strict Octet remains red on existing `animus-live-steel-agent`, `animus-runtime`, and `animus-std` findings.
 - Repository Tracey coverage remains red on accepted requirements outside this change.
+- `nix flake check -L` reached passing focused provider checks, then failed an existing `animus-std-rlm-host` route fixture with `source_class: "bounded_exec"` in the broad `cargo-test` derivation.
 - A credentialed current-revision OpenAI or OpenRouter request was not run. Provider availability and model behavior remain non-claims.
 
 The change remains active. This evidence does not claim archive completion, integration into `main`, production readiness, or release eligibility.
