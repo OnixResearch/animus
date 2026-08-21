@@ -33,6 +33,27 @@ r[agent_harness_runtime.live_terminal_agent_host.product_commands.inspect_result
 - AND the terminal MUST validate the event before rendering it
 - AND terminal receipts MUST NOT add the inspected state.
 
+### Requirement: Private runtime events use an opaque bounded relay
+
+r[agent_harness_runtime.live_terminal_agent_host.private_events] The worker MUST bind each private runtime event to its root, sequence, class, payload size, and exact payload bytes with BLAKE3. The supervisor MUST route the bounded payload without decoding, retaining, logging, or adding it to receipts. The terminal MUST decode only the exact versioned runtime-event contract after delivery.
+
+#### Scenario: Private runtime events reach the terminal
+
+r[agent_harness_runtime.live_terminal_agent_host.private_events.render]
+- GIVEN an attached client and ordered worker runtime events
+- WHEN the worker emits bounded private payloads for conversation, tool, and session status events
+- THEN direct and daemon connections MUST produce the same typed runtime events
+- AND the terminal MUST render the decoded events through the existing reducers
+- AND supervisor metadata and receipts MUST omit the payload bytes.
+
+#### Scenario: Private runtime event is invalid
+
+r[agent_harness_runtime.live_terminal_agent_host.private_events.denied]
+- GIVEN a private event has an unknown class, empty or oversized payload, malformed codec, forged identity, stale root, or unordered sequence
+- WHEN the supervisor or terminal validates the event
+- THEN it MUST reject the event before terminal projection
+- AND it MUST NOT include the private payload in debug output or receipts.
+
 #### Scenario: Product control descriptor is malformed
 
 r[agent_harness_runtime.live_terminal_agent_host.product_commands.denied]

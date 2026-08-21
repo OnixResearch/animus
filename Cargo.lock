@@ -332,7 +332,9 @@ name = "animus-live-terminal"
 version = "0.1.0"
 dependencies = [
  "animus-adapter-daemon",
+ "animus-adapters",
  "animus-local-daemon",
+ "animus-preserves",
  "animus-runtime",
  "animus-tui",
  "blake3",

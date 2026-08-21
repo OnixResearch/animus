@@ -13,6 +13,7 @@
 mod component_scope;
 mod config;
 mod core;
+mod privateevent;
 mod process;
 mod registry;
 mod service;
@@ -33,6 +34,10 @@ pub use core::{
     RecoveryDecision, RecoveryKind, RestoreStatus, RoutingDecision, RoutingRequest, StopDecision,
     StopFacts, WorkerLifecycle, WorkerRegistry, WorkerRegistryRecord, admit_ready, decide_recovery,
     decide_routing, decide_stop, next_generation,
+};
+pub use privateevent::{
+    MAX_PRIVATE_EVENT_BYTES, PrivateEventError, PrivateEventIdentityFacts, WorkerPrivateEvent,
+    private_event_payload_identity, validate_private_event_payload,
 };
 pub use process::{
     ProcessIdentity, ProcessObservation, ProcessTreeLauncher, SpawnedWorker, WorkerLaunchRequest,

@@ -48,8 +48,34 @@ Using the generic `session` class would hide distinct authorization and audit me
 
 **Rationale:** Operators can inspect bounded state without expanding durable evidence or exposing session content.
 
+### Decision: Keep private events in the ordered worker stream
+
+**Choice:** Add a bounded opaque `WorkerPrivateEvent` to `WorkerEvent`. Bind its root, sequence, class, size, and payload bytes with BLAKE3.
+
+**Rationale:** One stream preserves snapshot-first order and attachment cursors. A separate private stream can drift from the safe event sequence.
+
+### Decision: Reuse the versioned Preserves runtime contract
+
+**Choice:** The worker encodes `RuntimeEvent` values with `animus-preserves`. The terminal admits only the `runtime_event` class and decodes after delivery.
+
+**Rationale:** The existing contract already revalidates provider, tool, stream, session, and runtime event types. A second wire DTO would duplicate these rules.
+
+### Decision: Keep the supervisor opaque
+
+**Choice:** The supervisor validates bounds, order, root, class, and payload identity. It does not decode or retain private bytes. Debug output shows only byte counts.
+
+**Rationale:** The daemon owns transport and attachment policy, not transcript, tool-output, provider, or session meaning.
+
+## Rejected alternatives
+
+- A separate private-event port was rejected because two event cursors can diverge.
+- Direct terminal access to the session store was rejected because it adds persistence authority.
+- Structured data in safe event classes was rejected because it violates safe-label and receipt boundaries.
+
 ## Risks / Trade-offs
 
 - New public enum variants require exhaustive consumers to update.
 - The product worker must still authorize inspection and construct truthful metadata.
 - State inspection remains a request. It does not permit private state in terminal receipts.
+- Local authenticated transport carries private bytes in memory and on the Unix socket.
+- The relay does not claim remote security or end-to-end encryption.

@@ -117,7 +117,7 @@ impl WorkerStateInspection {
     }
 }
 
-/// Safe bounded worker event metadata.
+/// Ordered worker event with safe metadata or one bounded opaque payload.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum WorkerEvent {
     /// One safe class and observation identity.
@@ -144,6 +144,8 @@ pub enum WorkerEvent {
         /// Bounded worker state.
         state: WorkerStateInspection,
     },
+    /// One bounded private payload that the supervisor does not parse or retain.
+    Private(crate::WorkerPrivateEvent),
 }
 
 impl WorkerEvent {
@@ -173,6 +175,7 @@ impl WorkerEvent {
             Self::Observation { root_id, .. } | Self::StateInspection { root_id, .. } => {
                 root_id.as_str()
             }
+            Self::Private(event) => event.root_id(),
         }
     }
 
@@ -183,12 +186,13 @@ impl WorkerEvent {
             Self::Observation { sequence, .. } | Self::StateInspection { sequence, .. } => {
                 *sequence
             }
+            Self::Private(event) => event.sequence(),
         }
     }
 
-    /// Returns the metadata-only observation identity.
+    /// Returns the BLAKE3 identity that binds the event payload.
     #[must_use]
-    pub fn observation_identity(&self) -> &str {
+    pub fn event_identity(&self) -> &str {
         match self {
             Self::Observation {
                 observation_identity,
@@ -198,6 +202,7 @@ impl WorkerEvent {
                 observation_identity,
                 ..
             } => observation_identity.as_str(),
+            Self::Private(event) => event.payload_identity(),
         }
     }
 
@@ -205,13 +210,20 @@ impl WorkerEvent {
         &self,
         worker_generation: u64,
         restore_status: crate::RestoreStatus,
+        maximum_private_bytes: u32,
     ) -> Result<(), ServiceError> {
         if self.sequence() == 0 {
             return Err(ServiceError::Bound);
         }
-        validate_blake3_identity(self.observation_identity())?;
         match self {
-            Self::Observation { class, .. } => validate_event_class(class.as_str()),
+            Self::Observation {
+                class,
+                observation_identity,
+                ..
+            } => {
+                validate_blake3_identity(observation_identity)?;
+                validate_event_class(class.as_str())
+            }
             Self::StateInspection {
                 root_id,
                 sequence,
@@ -219,6 +231,7 @@ impl WorkerEvent {
                 observation_identity,
                 state,
             } => {
+                validate_blake3_identity(observation_identity)?;
                 if state.worker_generation != worker_generation
                     || state.restore_status != restore_status
                     || state.observation_identity(StateInspectionIdentityFacts {
@@ -230,6 +243,14 @@ impl WorkerEvent {
                     return Err(ServiceError::WorkerIdentity);
                 }
                 Ok(())
+            }
+            Self::Private(event) => {
+                event
+                    .validate(maximum_private_bytes)
+                    .map_err(|error| match error {
+                        crate::PrivateEventError::Bound => ServiceError::Bound,
+                        crate::PrivateEventError::Identity => ServiceError::WorkerIdentity,
+                    })
             }
         }
     }
@@ -393,6 +414,7 @@ impl<Worker: WorkerSessionPort> LocalSupervisorService<Worker> {
                 worker_generation: record.generation,
                 restore_status: record.restore_status,
             },
+            self.config.max_frame_bytes(),
         )?;
         self.attachments.insert(
             format!("{root_id}\0{client_id}"),
@@ -449,6 +471,7 @@ impl<Worker: WorkerSessionPort> LocalSupervisorService<Worker> {
                 worker_generation,
                 restore_status,
             },
+            self.config.max_frame_bytes(),
         )?;
         Ok(events)
     }
@@ -588,6 +611,7 @@ impl std::error::Error for ServiceError {}
 fn validate_event_batch(
     events: &[WorkerEvent],
     validation: EventBatchValidation<'_>,
+    maximum_private_bytes: u32,
 ) -> Result<u64, ServiceError> {
     if events.len() > validation.maximum_events {
         return Err(ServiceError::Bound);
@@ -597,7 +621,11 @@ fn validate_event_batch(
         if event.root_id() != validation.root_id || event.sequence() <= previous_sequence {
             return Err(ServiceError::Bound);
         }
-        event.validate(validation.worker_generation, validation.restore_status)?;
+        event.validate(
+            validation.worker_generation,
+            validation.restore_status,
+            maximum_private_bytes,
+        )?;
         previous_sequence = event.sequence();
     }
     Ok(previous_sequence)

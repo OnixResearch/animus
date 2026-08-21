@@ -4,15 +4,18 @@ use std::cell::Cell;
 use std::rc::Rc;
 
 use animus_local_daemon::{
-    HealthFacts, LocalSupervisorService, RestoreStatus, ServiceError, StateInspectionIdentityFacts,
-    WorkerCommand, WorkerEvent, WorkerLifecycle, WorkerRegistry, WorkerRegistryRecord,
-    WorkerSessionPort, WorkerSnapshot, WorkerStateInspection, parse_local_daemon_config,
+    HealthFacts, LocalSupervisorService, PrivateEventIdentityFacts, RestoreStatus, ServiceError,
+    StateInspectionIdentityFacts, WorkerCommand, WorkerEvent, WorkerLifecycle, WorkerPrivateEvent,
+    WorkerRegistry, WorkerRegistryRecord, WorkerSessionPort, WorkerSnapshot, WorkerStateInspection,
+    parse_local_daemon_config,
 };
 
 const CONFIG: &[u8] = include_bytes!("../../../config/generated/local-daemon-supervisor.json");
 const HASH: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const MAX_WORKERS: u16 = 8;
 const SECOND_EVENT_OFFSET: u64 = 2;
+const PRIVATE_EVENT_CLASS: &str = "runtime_event";
+const PRIVATE_EVENT_CONTENT: &[u8] = b"private transcript content";
 
 #[derive(Default)]
 struct FixtureWorker {
@@ -21,6 +24,7 @@ struct FixtureWorker {
     retried: usize,
     state_inspection: Option<WorkerStateInspection>,
     invalid_state_inspection: Option<WorkerStateInspection>,
+    private_event: Option<WorkerPrivateEvent>,
     unordered_events: bool,
 }
 
@@ -57,7 +61,9 @@ impl WorkerSessionPort for FixtureWorker {
                 },
             ]);
         }
-        let event = if let Some(state) = self.invalid_state_inspection.as_ref() {
+        let event = if let Some(event) = self.private_event.as_ref() {
+            WorkerEvent::Private(event.clone())
+        } else if let Some(state) = self.invalid_state_inspection.as_ref() {
             WorkerEvent::StateInspection {
                 root_id: String::from(root_id),
                 sequence: sequence + 1,
@@ -263,6 +269,64 @@ fn metadata_only_state_inspection_routes_and_invalid_state_fails_closed() {
     assert_eq!(
         service.attach("root-a", "invalid-inspection-client", 1),
         Err(ServiceError::Bound)
+    );
+}
+
+#[test]
+fn bounded_private_event_routes_unchanged_and_debug_omits_payload() {
+    let config = parse_local_daemon_config(CONFIG).expect("config");
+    let registry =
+        WorkerRegistry::new(vec![record(WorkerLifecycle::Ready)], MAX_WORKERS).expect("registry");
+    let event = WorkerPrivateEvent::new(
+        PrivateEventIdentityFacts {
+            root_id: "root-a",
+            sequence: 5,
+            class: PRIVATE_EVENT_CLASS,
+        },
+        PRIVATE_EVENT_CONTENT.to_vec(),
+    )
+    .expect("private event");
+    let payload_identity = String::from(event.payload_identity());
+    assert!(!format!("{event:?}").contains("private transcript content"));
+    let worker = FixtureWorker {
+        private_event: Some(event),
+        ..FixtureWorker::default()
+    };
+    let mut service = LocalSupervisorService::new(config, registry, worker);
+    let (_snapshot, events) = service
+        .attach("root-a", "private-client", 1)
+        .expect("attach");
+    let WorkerEvent::Private(delivered) = &events[0] else {
+        panic!("expected private event");
+    };
+    assert_eq!(delivered.private_payload(), PRIVATE_EVENT_CONTENT);
+    assert_eq!(delivered.payload_identity(), payload_identity);
+    assert_eq!(delivered.class(), PRIVATE_EVENT_CLASS);
+
+    assert!(
+        WorkerPrivateEvent::new(
+            PrivateEventIdentityFacts {
+                root_id: "root-a",
+                sequence: 5,
+                class: PRIVATE_EVENT_CLASS,
+            },
+            Vec::new(),
+        )
+        .is_err()
+    );
+    let oversized_len = usize::try_from(animus_local_daemon::MAX_PRIVATE_EVENT_BYTES)
+        .expect("private bound")
+        .saturating_add(1);
+    assert!(
+        WorkerPrivateEvent::new(
+            PrivateEventIdentityFacts {
+                root_id: "root-a",
+                sequence: 5,
+                class: PRIVATE_EVENT_CLASS,
+            },
+            vec![0; oversized_len],
+        )
+        .is_err()
     );
 }
 

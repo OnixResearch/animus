@@ -6,7 +6,8 @@ use std::time::Duration;
 
 const TRANSPORT_VERSION: u16 = 1;
 const TRANSPORT_DEADLINE_MS: u64 = 30_000;
-const MAX_WIRE_PRIVATE_BYTES: u32 = 65_536;
+const MAX_WIRE_PRIVATE_BYTES: u32 = animus_local_daemon::MAX_PRIVATE_EVENT_BYTES;
+const PRIVATE_RUNTIME_EVENT_CLASS: &str = "runtime_event";
 
 /// Client-facing service port. Implementations route only and own no session effects.
 pub trait TerminalConnectionPort {
@@ -312,6 +313,15 @@ fn daemon_event_from_worker(event: animus_local_daemon::WorkerEvent) -> DaemonEv
             observation_identity,
             state,
         },
+        animus_local_daemon::WorkerEvent::Private(event) => {
+            let (sequence, class, payload_identity, private_payload) = event.into_wire_parts();
+            DaemonEvent::Private {
+                sequence,
+                class,
+                payload_identity,
+                private_payload,
+            }
+        }
     }
 }
 
@@ -430,7 +440,10 @@ impl TerminalConnectionPort for DaemonTerminalConnection {
         let DaemonResponse::Events { events } = response else {
             return Err(TerminalConnectionError::Protocol);
         };
-        events.into_iter().map(DaemonEvent::into_core).collect()
+        events
+            .into_iter()
+            .map(|event| event.into_core(root_id))
+            .collect()
     }
 
     fn route(
@@ -601,22 +614,23 @@ impl DaemonSnapshot {
         self,
         events: Vec<DaemonEvent>,
     ) -> Result<crate::ClientSnapshot, TerminalConnectionError> {
+        let core_events = events
+            .into_iter()
+            .map(|event| event.into_core(self.root_id.as_str()))
+            .collect::<Result<_, _>>()?;
         Ok(crate::ClientSnapshot {
             root_id: self.root_id,
             worker_id: self.worker_id,
             generation: self.generation,
             event_sequence: self.event_sequence,
             restore_status: self.restore_status,
-            events: events
-                .into_iter()
-                .map(DaemonEvent::into_core)
-                .collect::<Result<_, _>>()?,
+            events: core_events,
         })
     }
 }
 
 /// Daemon event wire shape.
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum DaemonEvent {
     /// One safe class and observation identity.
@@ -639,10 +653,24 @@ pub enum DaemonEvent {
         /// Safe bounded worker state.
         state: animus_local_daemon::WorkerStateInspection,
     },
+    /// One bounded private payload routed without supervisor decoding.
+    Private {
+        /// Monotonic event sequence.
+        sequence: u64,
+        /// Safe private event class.
+        class: String,
+        /// BLAKE3 identity of the exact payload and event facts.
+        payload_identity: String,
+        /// Opaque private payload for terminal-owned decoding.
+        private_payload: Vec<u8>,
+    },
 }
 
 impl DaemonEvent {
-    fn into_core(self) -> Result<crate::ClientSessionEvent, TerminalConnectionError> {
+    fn into_core(
+        self,
+        expected_root_id: &str,
+    ) -> Result<crate::ClientSessionEvent, TerminalConnectionError> {
         match self {
             Self::Observation {
                 sequence,
@@ -677,6 +705,61 @@ impl DaemonEvent {
                     state,
                 })
             }
+            Self::Private {
+                sequence,
+                class,
+                payload_identity,
+                private_payload,
+            } => private_client_event(
+                animus_local_daemon::PrivateEventIdentityFacts {
+                    root_id: expected_root_id,
+                    sequence,
+                    class: class.as_str(),
+                },
+                payload_identity.as_str(),
+                private_payload.as_slice(),
+            ),
+        }
+    }
+}
+
+impl core::fmt::Debug for DaemonEvent {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::Observation {
+                sequence,
+                class,
+                observation_identity,
+            } => formatter
+                .debug_struct("Observation")
+                .field("sequence", sequence)
+                .field("class", class)
+                .field("observation_identity", observation_identity)
+                .finish(),
+            Self::StateInspection {
+                sequence,
+                correlation_id,
+                observation_identity,
+                state,
+            } => formatter
+                .debug_struct("StateInspection")
+                .field("sequence", sequence)
+                .field("correlation_id", correlation_id)
+                .field("observation_identity", observation_identity)
+                .field("state", state)
+                .finish(),
+            Self::Private {
+                sequence,
+                class,
+                payload_identity,
+                private_payload,
+            } => formatter
+                .debug_struct("Private")
+                .field("sequence", sequence)
+                .field("class", class)
+                .field("payload_identity", payload_identity)
+                .field("private_payload_bytes", &private_payload.len())
+                .finish(),
         }
     }
 }
@@ -766,7 +849,39 @@ fn client_event_from_worker(
                 state,
             })
         }
+        animus_local_daemon::WorkerEvent::Private(event) => private_client_event(
+            animus_local_daemon::PrivateEventIdentityFacts {
+                root_id: event.root_id(),
+                sequence: event.sequence(),
+                class: event.class(),
+            },
+            event.payload_identity(),
+            event.private_payload(),
+        ),
     }
+}
+
+// r[impl agent_harness_runtime.live_terminal_agent_host.private_events]
+fn private_client_event(
+    facts: animus_local_daemon::PrivateEventIdentityFacts<'_>,
+    payload_identity: &str,
+    private_payload: &[u8],
+) -> Result<crate::ClientSessionEvent, TerminalConnectionError> {
+    if facts.class != PRIVATE_RUNTIME_EVENT_CLASS {
+        return Err(TerminalConnectionError::Protocol);
+    }
+    animus_local_daemon::validate_private_event_payload(
+        facts,
+        payload_identity,
+        private_payload,
+        MAX_WIRE_PRIVATE_BYTES,
+    )
+    .map_err(|_error| TerminalConnectionError::Protocol)?;
+    let event = animus_preserves::from_versioned_bytes(private_payload)
+        .map_err(|_error| TerminalConnectionError::Protocol)?
+        .try_into_runtime_event()
+        .map_err(|_error| TerminalConnectionError::Protocol)?;
+    Ok(crate::ClientSessionEvent::Runtime(event))
 }
 
 fn request_identity(class: &str, root_id: &str, client_id: &str, sequence: u64) -> String {

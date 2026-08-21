@@ -59,6 +59,12 @@ Direct and daemon connections produce the same terminal event. The supervisor re
 
 State inspection cannot include prompts, Steel source, provider results, credentials, private paths, or arbitrary labels. Terminal completion receipts do not include inspected state.
 
+Private runtime events use the same ordered stream as safe observations. The worker encodes each event with the versioned `animus-preserves` runtime contract. `WorkerPrivateEvent` binds the root, sequence, `runtime_event` class, payload size, and exact bytes with BLAKE3.
+
+The supervisor validates order, bounds, root, class, and identity. It does not decode or retain private bytes. Its debug output and receipts omit those bytes. The terminal decodes the runtime contract after direct or daemon delivery. It then uses the existing conversation, tool, and session-status reducers.
+
+The relay rejects empty or oversized payloads, unknown classes, malformed codecs, forged identities, stale roots, and unordered sequences. This local relay does not claim remote security or end-to-end encryption.
+
 Snapshot-first state uses these existing projections:
 
 - `CodingSessionRenderModel`;
@@ -66,7 +72,7 @@ Snapshot-first state uses these existing projections:
 - `ToolRenderModel`;
 - `PromptInputState`.
 
-`DaemonRequestDispatcher` binds the terminal wire protocol to `LocalSupervisorService`. The supervisor routes each private payload unchanged and does not parse or retain it.
+`DaemonRequestDispatcher` binds the terminal wire protocol to `LocalSupervisorService`. The supervisor routes private commands and events unchanged. It does not parse or retain their payloads.
 
 ## Evidence
 
@@ -74,7 +80,7 @@ Pure reducer, `TestBackend`, local Unix transport, direct-service, daemon-dispat
 
 The manual live run is a separate evidence class. See [live terminal manual evidence](live-terminal-manual-evidence.md). Automated evidence does not claim a successful real controlling-terminal run.
 
-Receipts contain BLAKE3 identities, bounded counts, viewport dimensions, connection and exit classes, complete cleanup facts, and fixed non-claims. Receipts omit prompts, queue text, provider data, tool data, Steel source, terminal input, screen buffers, credentials, paths, and private command payloads.
+Receipts contain BLAKE3 identities, bounded counts, viewport dimensions, connection and exit classes, complete cleanup facts, and fixed non-claims. Receipts omit prompts, queue text, provider data, tool data, Steel source, terminal input, screen buffers, credentials, paths, private commands, and private events.
 
 Run the focused rail:
 
