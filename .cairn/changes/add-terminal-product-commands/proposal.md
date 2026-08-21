@@ -9,6 +9,7 @@ Product hosts need these two commands without giving the terminal kernel, journa
 - Add dedicated `kernel_clear` and `state_inspection` client command descriptors.
 - Add matching explicit control intents and deterministic construction.
 - Keep execution and authorization in the worker-owned service.
+- Return the exact completed runtime-event snapshot to the worker-owned delivery path.
 - Add a bounded private-event relay for exact versioned runtime events.
 - Keep private payloads out of supervisor decoding, retention, debug output, and receipts.
 - Add positive and negative serialization, validation, routing, rendering, and authority tests.
@@ -16,7 +17,7 @@ Product hosts need these two commands without giving the terminal kernel, journa
 
 ## Impact
 
-- **Files**: `animus-live-terminal`, `animus-local-daemon`, tests, lifecycle inventory, and terminal host documentation.
+- **Files**: `animus-live-steel-agent`, `animus-live-terminal`, `animus-local-daemon`, tests, lifecycle inventory, and host documentation.
 - **Testing**: focused terminal tests, strict Clippy, formatting, Octet, Cairn gates, and relevant Nix checks.
 
 ## Non-goals

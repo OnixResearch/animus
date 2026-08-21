@@ -64,6 +64,35 @@ fn production_entrypoint_runs_prompt_tool_result_continuation_and_final_commit()
         .expect("complete tool loop");
 
     assert_eq!(output.final_text(), "3");
+    // r[verify agent_harness_runtime.live_terminal_agent_host.private_events.source]
+    assert_eq!(
+        u32::try_from(output.runtime_events().len()).expect("bounded event count"),
+        output.receipt().event_count()
+    );
+    assert!(
+        output
+            .runtime_events()
+            .iter()
+            .any(|event| matches!(event, animus_runtime::RuntimeEvent::ToolRequested { .. }))
+    );
+    assert!(
+        output
+            .runtime_events()
+            .iter()
+            .any(|event| matches!(event, animus_runtime::RuntimeEvent::ToolResponded { .. }))
+    );
+    assert!(
+        output
+            .runtime_events()
+            .iter()
+            .any(|event| matches!(event, animus_runtime::RuntimeEvent::ModelResponded { .. }))
+    );
+    assert!(
+        output
+            .runtime_events()
+            .iter()
+            .any(|event| matches!(event, animus_runtime::RuntimeEvent::FinalResponse { .. }))
+    );
     assert_eq!(
         output.receipt().committed_message_count(),
         EXPECTED_MESSAGES

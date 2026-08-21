@@ -37,6 +37,15 @@ r[agent_harness_runtime.live_terminal_agent_host.product_commands.inspect_result
 
 r[agent_harness_runtime.live_terminal_agent_host.private_events] The worker MUST bind each private runtime event to its root, sequence, class, payload size, and exact payload bytes with BLAKE3. The supervisor MUST route the bounded payload without decoding, retaining, logging, or adding it to receipts. The terminal MUST decode only the exact versioned runtime-event contract after delivery.
 
+#### Scenario: Worker receives completed run events
+
+r[agent_harness_runtime.live_terminal_agent_host.private_events.source]
+- GIVEN a bounded live Steel run completes
+- WHEN the worker reads the run output
+- THEN the output MUST expose the exact ordered runtime-event snapshot
+- AND the output event count MUST match the metadata-only receipt count
+- AND the receipt MUST omit all event payload content.
+
 #### Scenario: Private runtime events reach the terminal
 
 r[agent_harness_runtime.live_terminal_agent_host.private_events.render]

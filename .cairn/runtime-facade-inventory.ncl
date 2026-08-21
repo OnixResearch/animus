@@ -3827,7 +3827,7 @@ let entry_values = [
   live_steel_agent_record "animus-live-steel-agent::LiveSteelAgentCompositionInput" "complete injected composition inputs",
   live_steel_agent_record "animus-live-steel-agent::LiveSteelAgentConfigError" "closed configuration validation failure class",
   live_steel_agent_record "animus-live-steel-agent::LiveSteelAgentError" "safe composed run failure class",
-  live_steel_agent_record "animus-live-steel-agent::LiveSteelAgentRunOutput" "private final output plus metadata-only receipt",
+  live_steel_agent_record "animus-live-steel-agent::LiveSteelAgentRunOutput" "private final output and ordered runtime events plus metadata-only receipt",
   live_steel_agent_record "animus-live-steel-agent::LiveSteelAgentRunReceipt" "metadata-only bounded live shell receipt",
   live_steel_agent_record "animus-live-steel-agent::LiveStoreDefinitions" "owned durable policy and store descriptors",
   live_steel_agent_record "animus-live-steel-agent::LiveStoreError" "safe durable composition failure class",

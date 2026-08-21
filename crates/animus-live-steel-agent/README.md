@@ -3,6 +3,8 @@
 This non-default package owns the headless live Steel agent composition root.
 It selects the provider, durable store, coding session, Steel kernel, resumable
 bridge, RLM executor, child service, skill loader, controls, events, and receipts.
+Completed output returns the ordered private runtime-event snapshot to its worker.
+The metadata-only receipt stores only the event count.
 
 The package uses `AGPL-3.0-or-later` because it composes
 `animus-std-rlm-host`. It does not change the workspace default members.

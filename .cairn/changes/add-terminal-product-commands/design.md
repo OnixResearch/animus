@@ -54,6 +54,12 @@ Using the generic `session` class would hide distinct authorization and audit me
 
 **Rationale:** One stream preserves snapshot-first order and attachment cursors. A separate private stream can drift from the safe event sequence.
 
+### Decision: Return the completed runtime-event snapshot to the worker
+
+**Choice:** `LiveSteelAgentRunOutput` returns the exact ordered `RuntimeEvent` snapshot through a private accessor. The receipt keeps only its bounded count.
+
+**Rationale:** The product worker needs the authoritative conversation, tool, and status events before it can encode them for private delivery. Reconstructing events from final text or receipt metadata would lose meaning.
+
 ### Decision: Reuse the versioned Preserves runtime contract
 
 **Choice:** The worker encodes `RuntimeEvent` values with `animus-preserves`. The terminal admits only the `runtime_event` class and decodes after delivery.

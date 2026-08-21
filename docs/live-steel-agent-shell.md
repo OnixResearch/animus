@@ -85,7 +85,9 @@ scripts/cairn/check-live-steel-agent-shell --root .
 
 The rail runs positive and negative tool-loop, child, configuration, cancellation, host-failure, durable restart, and restore-drift checks. The composition activation rail adds startup-order and fail-loud coverage. It also runs Clippy with warnings denied.
 
-Receipts contain safe labels, counts, BLAKE3 identities, one fixed omission marker, and explicit non-claims. They omit prompts, provider bodies, tool arguments, Steel source, host results, child content, credentials, and paths.
+Completed run output exposes its exact ordered `RuntimeEvent` snapshot to the worker-owned delivery path. This private event batch is not evidence.
+
+Receipts contain safe labels, counts, BLAKE3 identities, one fixed omission marker, and explicit non-claims. They omit runtime-event payloads, prompts, provider bodies, tool arguments, Steel source, host results, child content, credentials, and paths.
 
 A real provider run is separate and opt-in. Without that current-head run, provider correctness remains a non-claim.
 

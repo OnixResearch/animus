@@ -116,6 +116,7 @@ impl std::error::Error for LiveSteelAgentError {}
 /// Completed bounded application output.
 pub struct LiveSteelAgentRunOutput {
     final_text: String,
+    runtime_events: Vec<animus_runtime::RuntimeEvent>,
     receipt: crate::LiveSteelAgentRunReceipt,
 }
 
@@ -124,6 +125,15 @@ impl LiveSteelAgentRunOutput {
     #[must_use]
     pub fn final_text(&self) -> &str {
         self.final_text.as_str()
+    }
+
+    /// Returns the ordered private runtime events for a worker-owned delivery path.
+    ///
+    /// These events are not evidence and never enter the metadata-only receipt.
+    // r[impl agent_harness_runtime.live_terminal_agent_host.private_events.source]
+    #[must_use]
+    pub fn runtime_events(&self) -> &[animus_runtime::RuntimeEvent] {
+        self.runtime_events.as_slice()
     }
 
     /// Returns the metadata-only run receipt.
@@ -294,8 +304,10 @@ where
             .ok_or(LiveSteelAgentError::Session)?;
         let committed_message_count = u32::try_from(host.message_snapshot().len())
             .map_err(|_error| LiveSteelAgentError::Receipt)?;
-        let event_count = u32::try_from(host.event_snapshot().len())
-            .map_err(|_error| LiveSteelAgentError::Receipt)?;
+        // r[impl agent_harness_runtime.live_terminal_agent_host.private_events.source]
+        let runtime_events = host.event_snapshot().to_vec();
+        let event_count =
+            u32::try_from(runtime_events.len()).map_err(|_error| LiveSteelAgentError::Receipt)?;
         let coding_host::CodingSessionHostServices {
             provider,
             tool,
@@ -339,6 +351,7 @@ where
             .map_err(|_error| LiveSteelAgentError::Tool)?;
         Ok(LiveSteelAgentRunOutput {
             final_text,
+            runtime_events,
             receipt,
         })
     }

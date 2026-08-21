@@ -10,7 +10,8 @@
 
 ## Phase 3: Private runtime relay
 
-- [x] [serial] [task:private-event-contract] [after:terminal-projection] Add a bounded opaque worker event with ordered BLAKE3 payload binding and redacted debug output. r[agent_harness_runtime.live_terminal_agent_host.private_events]
+- [x] [serial] [task:private-event-source] [after:terminal-projection] Return the exact ordered live-run event snapshot to the worker without adding payload content to receipts. r[agent_harness_runtime.live_terminal_agent_host.private_events.source]
+- [x] [serial] [task:private-event-contract] [after:private-event-source] Add a bounded opaque worker event with ordered BLAKE3 payload binding and redacted debug output. r[agent_harness_runtime.live_terminal_agent_host.private_events]
 - [x] [serial] [task:private-event-terminal] [after:private-event-contract] Route private payloads through direct and daemon modes, then decode exact versioned runtime events in the terminal. r[agent_harness_runtime.live_terminal_agent_host.private_events]
 - [x] [serial] [task:private-event-tests] [after:private-event-terminal] Cover conversation, tool, and status rendering plus unknown, malformed, forged, overbound, and debug-redaction failures. r[agent_harness_runtime.live_terminal_agent_host.private_events]
 
