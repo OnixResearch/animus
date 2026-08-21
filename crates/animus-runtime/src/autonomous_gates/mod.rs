@@ -93,6 +93,10 @@ impl LimitClass {
 }
 
 /// Explicit autonomous execution bounds.
+#[allow(
+    clippy::struct_field_names,
+    reason = "the max prefix makes each public policy ceiling explicit to callers"
+)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct AutonomousLimits {
     /// Maximum continuation count.
@@ -224,6 +228,10 @@ pub fn validate_policy(input: &AutonomousPolicyInput) -> Result<AutonomousPolicy
 }
 
 /// Returns the checked default policy fixture used by focused tests.
+///
+/// # Panics
+///
+/// Panics only when repository-owned default constants drift from the policy contract.
 #[must_use]
 pub fn default_policy() -> AutonomousPolicy {
     validate_policy(&AutonomousPolicyInput {
@@ -354,7 +362,7 @@ pub fn bound_gate_output(
     output: &str,
     max_bytes: usize,
 ) -> Result<BoundedGateOutput, AutonomousError> {
-    if max_bytes < MIN_OUTPUT_BYTES || max_bytes > MAX_OUTPUT_BYTES {
+    if !(MIN_OUTPUT_BYTES..=MAX_OUTPUT_BYTES).contains(&max_bytes) {
         return Err(AutonomousError::InvalidOutput);
     }
     if contains_leak_marker(output) {
@@ -649,7 +657,7 @@ fn validate_label(_field: &str, value: &str) -> Result<(), AutonomousError> {
     if value.is_empty()
         || value.len() > MAX_LABEL_LENGTH
         || contains_leak_marker(value)
-        || value.chars().any(|character| character.is_control())
+        || value.chars().any(char::is_control)
     {
         return Err(AutonomousError::UnsafeLabel);
     }

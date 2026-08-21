@@ -87,13 +87,9 @@ pub fn run_live_application(
     let kernel = crate::restore_or_create_kernel(&config, &kernel_persistence)
         .map_err(LiveApplicationError::Store)?;
     let provider_host = animus_std_openai::ReqwestOpenAiHost::new(
-        animus_std_openai::OpenAiHostConfig::new(
-            config.endpoint_identity(),
-            config.endpoint_url(),
-            config.provider_timeout(),
-            config.max_provider_response_bytes(),
-        )
-        .map_err(|_error| LiveApplicationError::Provider)?,
+        config
+            .provider_host_config()
+            .map_err(|_error| LiveApplicationError::Provider)?,
     )
     .map_err(|_error| LiveApplicationError::Provider)?;
     let provider = crate::LiveOpenAiProvider::new(provider_host, api_key);

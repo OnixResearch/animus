@@ -9,7 +9,10 @@ The package uses `AGPL-3.0-or-later` because it composes
 
 Configuration comes from `config/live-steel-agent-shell.ncl`. The application
 validates its deterministic JSON export before it opens a store or uses a
-credential. The live binary accepts a credential through standard input. It
-does not read environment variables, credential files, or provider accounts.
+credential. It admits only the exact OpenAI and OpenRouter Responses tuples.
+Crossed endpoints, unknown providers, arbitrary URLs, OAuth, and fallback fail
+before provider construction. The live binary accepts the selected credential
+through standard input. It does not read environment variables, credential
+files, or provider accounts.
 
 See `docs/live-steel-agent-shell.md` for the claim boundary and validation rail.

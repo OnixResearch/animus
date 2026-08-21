@@ -15,8 +15,12 @@ const COMPONENT_SKILLS: &str = "animus-steel:load_skill_modules";
 const COMPONENT_CONTROL: &str = "animus-live-steel-agent:ExplicitRunControl";
 const COMPONENT_EVENTS: &str = "animus-live-steel-agent:MetadataEventSink";
 const COMPONENT_RECEIPTS: &str = "animus-live-steel-agent:RunReceipt";
-const CREDENTIAL_REFERENCE: &str = "brokered:injected-openai-api-key";
-const PROVIDER_ID: &str = "openai";
+const OPENAI_PROVIDER_ID: &str = "openai";
+const OPENROUTER_PROVIDER_ID: &str = "openrouter";
+const OPENAI_CREDENTIAL_REFERENCE: &str = "brokered:injected-openai-api-key";
+const OPENROUTER_CREDENTIAL_REFERENCE: &str = "brokered:injected-openrouter-api-key";
+const OPENAI_CREDENTIAL_SOURCE: &str = "injected-openai-api-key";
+const OPENROUTER_CREDENTIAL_SOURCE: &str = "injected-openrouter-api-key";
 const REASONING_EFFORT: &str = "low";
 const DURABILITY: &str = "sync_all_each_commit";
 const LOCKING: &str = "exclusive_create_new";
@@ -127,6 +131,12 @@ impl ValidatedLiveSteelAgentConfig {
         self.raw.session_resume_required
     }
 
+    /// Returns the exact admitted provider identifier.
+    #[must_use]
+    pub fn provider_id(&self) -> &str {
+        self.raw.provider.provider_id.as_str()
+    }
+
     /// Returns the exact credential reference. The value is never in config.
     #[must_use]
     pub fn credential_reference(&self) -> &str {
@@ -155,6 +165,24 @@ impl ValidatedLiveSteelAgentConfig {
     #[must_use]
     pub fn endpoint_url(&self) -> &str {
         self.raw.provider.endpoint_url.as_str()
+    }
+
+    /// Builds the exact admitted OpenAI-compatible host configuration.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LiveSteelAgentConfigError::ProviderMismatch`] if the lower-level
+    /// host rejects the endpoint pair or transport bounds.
+    pub fn provider_host_config(
+        &self,
+    ) -> Result<animus_std_openai::OpenAiHostConfig, LiveSteelAgentConfigError> {
+        animus_std_openai::OpenAiHostConfig::new(
+            self.endpoint_identity(),
+            self.endpoint_url(),
+            self.provider_timeout(),
+            self.max_provider_response_bytes(),
+        )
+        .map_err(|_error| LiveSteelAgentConfigError::ProviderMismatch)
     }
 
     /// Returns the provider deadline.
@@ -548,6 +576,30 @@ fn validate_fixed_components(raw: &LiveSteelAgentConfig) -> Result<(), LiveSteel
     Ok(())
 }
 
+#[derive(Clone, Copy)]
+struct AdmittedProviderCohort {
+    provider_id: &'static str,
+    endpoint_identity: &'static str,
+    endpoint_url: &'static str,
+    credential_reference: &'static str,
+    credential_source: &'static str,
+}
+
+const OPENAI_PROVIDER_COHORT: AdmittedProviderCohort = AdmittedProviderCohort {
+    provider_id: OPENAI_PROVIDER_ID,
+    endpoint_identity: animus_std_openai::OFFICIAL_OPENAI_RESPONSES_ENDPOINT_IDENTITY,
+    endpoint_url: animus_std_openai::OFFICIAL_OPENAI_RESPONSES_URL,
+    credential_reference: OPENAI_CREDENTIAL_REFERENCE,
+    credential_source: OPENAI_CREDENTIAL_SOURCE,
+};
+const OPENROUTER_PROVIDER_COHORT: AdmittedProviderCohort = AdmittedProviderCohort {
+    provider_id: OPENROUTER_PROVIDER_ID,
+    endpoint_identity: animus_std_openai::OPENROUTER_RESPONSES_ENDPOINT_IDENTITY,
+    endpoint_url: animus_std_openai::OPENROUTER_RESPONSES_URL,
+    credential_reference: OPENROUTER_CREDENTIAL_REFERENCE,
+    credential_source: OPENROUTER_CREDENTIAL_SOURCE,
+};
+
 fn validate_provider(provider: &ProviderConfig) -> Result<(), LiveSteelAgentConfigError> {
     for label in [
         provider.provider_id.as_str(),
@@ -560,18 +612,33 @@ fn validate_provider(provider: &ProviderConfig) -> Result<(), LiveSteelAgentConf
     ] {
         validate_label(label)?;
     }
-    let admitted = provider.provider_id == PROVIDER_ID
-        && provider.endpoint_identity
-            == animus_std_openai::OFFICIAL_OPENAI_RESPONSES_ENDPOINT_IDENTITY
-        && provider.endpoint_url == animus_std_openai::OFFICIAL_OPENAI_RESPONSES_URL
-        && provider.credential_reference == CREDENTIAL_REFERENCE
-        && provider.reasoning_effort == REASONING_EFFORT
+    let _cohort = admit_provider_cohort(provider)?;
+    let is_provider_admitted = provider.reasoning_effort == REASONING_EFFORT
         && provider.tool_name == animus_std_openai::STEEL_REPL_TOOL_NAME
         && provider.tool_schema == animus_std_openai::STEEL_REPL_TOOL_SCHEMA;
-    if !admitted {
+    if !is_provider_admitted {
         return Err(LiveSteelAgentConfigError::ProviderMismatch);
     }
     Ok(())
+}
+
+fn admit_provider_cohort(
+    provider: &ProviderConfig,
+) -> Result<&'static AdmittedProviderCohort, LiveSteelAgentConfigError> {
+    // r[impl agent_harness_runtime.live_steel_agent_provider_cohort]
+    let cohort = match provider.provider_id.as_str() {
+        OPENAI_PROVIDER_ID => &OPENAI_PROVIDER_COHORT,
+        OPENROUTER_PROVIDER_ID => &OPENROUTER_PROVIDER_COHORT,
+        _unknown => return Err(LiveSteelAgentConfigError::ProviderMismatch),
+    };
+    let is_tuple_exact = provider.provider_id == cohort.provider_id
+        && provider.endpoint_identity == cohort.endpoint_identity
+        && provider.endpoint_url == cohort.endpoint_url
+        && provider.credential_reference == cohort.credential_reference;
+    if !is_tuple_exact {
+        return Err(LiveSteelAgentConfigError::ProviderMismatch);
+    }
+    Ok(cohort)
 }
 
 fn validate_store(store: &StoreConfig) -> Result<(), LiveSteelAgentConfigError> {
@@ -733,6 +800,7 @@ fn build_selected_model(
     raw: &LiveSteelAgentConfig,
 ) -> Result<animus_std::SelectedModel, LiveSteelAgentConfigError> {
     const CONTEXT_BUDGET: u32 = 128_000;
+    let cohort = admit_provider_cohort(&raw.provider)?;
     let provider_id = animus_std::ProviderId::new(raw.provider.provider_id.as_str())
         .map_err(|_error| LiveSteelAgentConfigError::ProviderMismatch)?;
     let model_id = animus_std::ModelId::new(raw.provider.model_id.as_str())
@@ -765,7 +833,7 @@ fn build_selected_model(
         endpoint,
         capabilities,
     );
-    let source = animus_std::CredentialSource::brokered("injected-openai-api-key")
+    let source = animus_std::CredentialSource::brokered(cohort.credential_source)
         .map_err(|_error| LiveSteelAgentConfigError::ProviderMismatch)?;
     let provider = animus_std::ProviderEntry::new(
         provider_id,
