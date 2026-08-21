@@ -6,8 +6,8 @@ use animus_std::coding_session_host as coding_host;
 
 const QUEUE_POLICY_LABEL: &str = "live-steel-agent-queue";
 const QUEUE_SOURCE: &str = "coding-session-host";
-const RUN_ID_PREFIX: &str = "run.live-steel-agent.";
-const ENTRY_ID_PREFIX: &str = "entry.live-steel-agent.user.";
+pub(crate) const RUN_ID_PREFIX: &str = "run.live-steel-agent.";
+pub(crate) const ENTRY_ID_PREFIX: &str = "entry.live-steel-agent.user.";
 const SUMMARY: &str = "live Steel agent summary omitted";
 const LIVE_STEEL_TOOL_EXECUTOR_BINDING: &str = "executor.live-steel-agent.steel-repl";
 const LIVE_STEEL_TOOL_LABEL: &str = "Steel REPL";
@@ -115,9 +115,9 @@ impl std::error::Error for LiveSteelAgentError {}
 
 /// Completed bounded application output.
 pub struct LiveSteelAgentRunOutput {
-    final_text: String,
-    runtime_events: Vec<animus_runtime::RuntimeEvent>,
-    receipt: crate::LiveSteelAgentRunReceipt,
+    pub(crate) final_text: String,
+    pub(crate) runtime_events: Vec<animus_runtime::RuntimeEvent>,
+    pub(crate) receipt: crate::LiveSteelAgentRunReceipt,
 }
 
 impl LiveSteelAgentRunOutput {
@@ -231,35 +231,39 @@ where
         })
     }
 
-    /// Runs one prompt through `CodingSessionHost` until a terminal result.
+    /// Opens one persistent session that keeps provider, tool, and persistence
+    /// authority inside the live shell while a worker interleaves commands.
     ///
     /// # Errors
     ///
-    /// Returns [`LiveSteelAgentError`] for provider, authority, persistence,
-    /// tool, cancellation, bounds, ordering, or receipt failures.
-    #[allow(
-        clippy::too_many_lines,
-        reason = "keep provider, snapshot, session, and kernel lease order visible in one shell"
-    )]
-    pub fn run_prompt(
-        mut self,
-        prompt: &str,
-    ) -> Result<LiveSteelAgentRunOutput, LiveSteelAgentError> {
-        // r[impl agent_harness_runtime.live_steel_agent_shell.tool_loop]
-        // r[impl agent_harness_runtime.live_steel_agent_shell.session]
+    /// Returns [`LiveSteelAgentError`] when resume or host construction fails.
+    pub fn open_session(
+        self,
+    ) -> Result<
+        crate::PersistentLiveHost<
+            Provider,
+            Executor,
+            Persistence,
+            SnapshotStore,
+            KernelPersistence,
+        >,
+        LiveSteelAgentError,
+    > {
+        // r[impl agent_harness_runtime.live_steel_agent_shell.persistent_session]
         let shared = Rc::new(RefCell::new(SharedProviderState::default()));
+        let config = Rc::new(self.config);
         let services = coding_host::CodingSessionHostServices {
             provider: ProviderAdapter {
-                provider: &mut self.provider,
-                snapshot_store: &mut self.snapshot_persistence,
-                config: &self.config,
+                provider: self.provider,
+                snapshot_store: self.snapshot_persistence,
+                config: Rc::clone(&config),
                 shared: Rc::clone(&shared),
                 dispatch_count: 0,
             },
             tool: ToolAdapter {
-                tool: &mut self.tool,
-                config: &self.config,
-                shared: Rc::clone(&shared),
+                tool: self.tool,
+                config: Rc::clone(&config),
+                shared,
                 dispatch_count: 0,
                 pending_stage: None,
             },
@@ -273,100 +277,46 @@ where
             },
             events: MetadataEventSink::default(),
         };
-        let state = new_state(&self.config)?;
+        let state = new_state(config.as_ref())?;
         let mut host = coding_host::CodingSessionHost::new(state, services)
             .map_err(|_error| LiveSteelAgentError::Session)?;
-        if self.config.session_resume_required() {
+        if config.session_resume_required() {
             host.resume()
                 .map_err(|_error| LiveSteelAgentError::Session)?;
         }
+        Ok(crate::PersistentLiveHost::new(config, host))
+    }
+
+    /// Runs one prompt through `CodingSessionHost` until a terminal result.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LiveSteelAgentError`] for provider, authority, persistence,
+    /// tool, cancellation, bounds, ordering, or receipt failures.
+    pub fn run_prompt(self, prompt: &str) -> Result<LiveSteelAgentRunOutput, LiveSteelAgentError> {
+        // r[impl agent_harness_runtime.live_steel_agent_shell.tool_loop]
+        // r[impl agent_harness_runtime.live_steel_agent_shell.session]
         let prompt_identity = blake3::hash(prompt.as_bytes()).to_hex().to_string();
-        let run_id = format!("{RUN_ID_PREFIX}{prompt_identity}");
-        let entry_id = format!("{ENTRY_ID_PREFIX}{prompt_identity}");
-        host.prompt(
-            run_id.as_str(),
-            entry_id.as_str(),
-            animus_runtime::coding_session_host::CodingSessionInput {
-                body: String::from(prompt),
-                posture: animus_runtime::coding_session_host::CodingSessionInputPosture::ExpandedAndAdmitted,
-            },
-        )
-        .map_err(|_error| LiveSteelAgentError::Session)?;
-        let final_text = host
-            .message_snapshot()
-            .iter()
-            .rev()
-            .find(|message| {
-                message.kind()
-                    == animus_runtime::coding_session_host::CodingSessionMessageKind::Assistant
-            })
-            .map(|message| String::from(message.body()))
-            .ok_or(LiveSteelAgentError::Session)?;
-        let committed_message_count = u32::try_from(host.message_snapshot().len())
-            .map_err(|_error| LiveSteelAgentError::Receipt)?;
-        // r[impl agent_harness_runtime.live_terminal_agent_host.private_events.source]
-        let runtime_events = host.event_snapshot().to_vec();
-        let event_count =
-            u32::try_from(runtime_events.len()).map_err(|_error| LiveSteelAgentError::Receipt)?;
-        let coding_host::CodingSessionHostServices {
-            provider,
-            tool,
-            persistence,
-            policy: _,
-            authority: _,
-            cancellation: _,
-            timer: _,
-            summarizer: _,
-            events: _,
-        } = host.into_services();
-        let provider_dispatch_count = provider.dispatch_count;
-        let tool_dispatch_count = tool.dispatch_count;
-        drop(provider);
-        drop(tool);
-        persistence.close()?;
-        self.snapshot_persistence.close()?;
-        let kernel_snapshot = self
-            .tool
-            .kernel()
-            .private_journal_snapshot(
-                self.config.session_identity(),
-                self.config.authority_generation(),
-            )
-            .map_err(|_error| LiveSteelAgentError::Receipt)?;
-        let host_observation_count = self.tool.host_observation_count();
-        let receipt = crate::LiveSteelAgentRunReceipt::completed(
-            &crate::receipt::LiveSteelAgentReceiptDraft {
-                config_identity: self.config.config_identity(),
-                session_identity: self.config.session_identity(),
-                committed_message_count,
-                provider_dispatch_count,
-                tool_dispatch_count,
-                host_observation_count,
-                event_count,
-                kernel_head_identity: kernel_snapshot.committed_head_identity(),
-            },
-        );
-        self.tool
-            .close()
-            .map_err(|_error| LiveSteelAgentError::Tool)?;
-        Ok(LiveSteelAgentRunOutput {
-            final_text,
-            runtime_events,
-            receipt,
-        })
+        let mut session = self.open_session()?;
+        session.begin_prompt(crate::LiveSteelPrompt {
+            correlation_id: prompt_identity.as_str(),
+            text: prompt,
+        })?;
+        session.drive_pending()?;
+        session.finish()
     }
 }
 
-struct ProviderAdapter<'a, Provider, SnapshotStore> {
-    provider: &'a mut Provider,
-    snapshot_store: &'a mut SnapshotStore,
-    config: &'a crate::ValidatedLiveSteelAgentConfig,
+pub(crate) struct ProviderAdapter<Provider, SnapshotStore> {
+    provider: Provider,
+    pub(crate) snapshot_store: SnapshotStore,
+    config: Rc<crate::ValidatedLiveSteelAgentConfig>,
     shared: Rc<RefCell<SharedProviderState>>,
-    dispatch_count: u32,
+    pub(crate) dispatch_count: u32,
 }
 
 impl<Provider, SnapshotStore> coding_host::CodingSessionProviderService
-    for ProviderAdapter<'_, Provider, SnapshotStore>
+    for ProviderAdapter<Provider, SnapshotStore>
 where
     Provider: crate::ProviderStreamService,
     SnapshotStore: animus_std::model_request_snapshot_host::ModelRequestSnapshotStorePort,
@@ -388,7 +338,7 @@ where
             (model_call_id, shared.pending().is_some(), correlation_id)
         };
         let planned = crate::provider::plan_request(
-            self.config,
+            self.config.as_ref(),
             request,
             continuation,
             correlation_id.as_deref(),
@@ -406,7 +356,7 @@ where
                 .map_err(service_issue)?
         };
         let prepared = prepare_live_model_request_snapshot(
-            self.config,
+            self.config.as_ref(),
             request,
             &planned.canonical,
             &planned.plan,
@@ -425,7 +375,7 @@ where
                 })
             };
         let outcome = animus_std::model_request_snapshot_host::dispatch_initial_model_request(
-            self.snapshot_store,
+            &mut self.snapshot_store,
             &mut provider_effect,
             prepared,
         )
@@ -536,16 +486,16 @@ fn prepare_live_model_request_snapshot(
     )
 }
 
-struct ToolAdapter<'a, Executor, Persistence> {
-    tool: &'a mut crate::SteelToolService<Executor, Persistence>,
-    config: &'a crate::ValidatedLiveSteelAgentConfig,
+pub(crate) struct ToolAdapter<Executor, Persistence> {
+    pub(crate) tool: crate::SteelToolService<Executor, Persistence>,
+    config: Rc<crate::ValidatedLiveSteelAgentConfig>,
     shared: Rc<RefCell<SharedProviderState>>,
-    dispatch_count: u32,
+    pub(crate) dispatch_count: u32,
     pending_stage: Option<animus_std::tool_execution_stage_host::PendingStagedToolExecution>,
 }
 
 impl<Executor, Persistence> coding_host::CodingSessionToolService
-    for ToolAdapter<'_, Executor, Persistence>
+    for ToolAdapter<Executor, Persistence>
 where
     Executor: animus_runtime::rlm_kernel::RlmKernelHostExecutor,
     Persistence: crate::tool::KernelSafePointPersistence,
@@ -570,7 +520,7 @@ where
         if request.request().correlation_id() != correlation {
             return Err(animus_runtime::coding_session_host::CodingSessionServiceIssue::Stale);
         }
-        let catalog = live_steel_tool_catalog(request.request(), self.config)?;
+        let catalog = live_steel_tool_catalog(request.request(), self.config.as_ref())?;
         let capabilities = live_steel_tool_capabilities()?;
         let executor_bindings = [animus_runtime::tool_executor_kit::ToolExecutorBinding::new(
             LIVE_STEEL_TOOL_EXECUTOR_BINDING,
@@ -579,9 +529,10 @@ where
         .map_err(|_error| {
             animus_runtime::coding_session_host::CodingSessionServiceIssue::Malformed
         })?];
-        let authority = crate::build_expected_authority(self.config).map_err(|_error| {
-            animus_runtime::coding_session_host::CodingSessionServiceIssue::Denied
-        })?;
+        let authority =
+            crate::build_expected_authority(self.config.as_ref()).map_err(|_error| {
+                animus_runtime::coding_session_host::CodingSessionServiceIssue::Denied
+            })?;
         let commit_owner =
             animus_runtime::tool_execution_stages::coding_session_tool_commit_owner_identity();
         let stage_input = animus_std::tool_execution_stage_host::StagedToolExecutionInput {
@@ -597,7 +548,9 @@ where
             handlers: &[],
         };
         let mut stage_services = live_noop_stage_services();
-        let mut executor = LiveSteelToolKitExecutor { tool: self.tool };
+        let mut executor = LiveSteelToolKitExecutor {
+            tool: &mut self.tool,
+        };
         let pending = animus_std::tool_execution_stage_host::execute_staged_tool(
             &mut executor,
             &mut stage_services,
@@ -785,7 +738,7 @@ struct SteelArguments {
 }
 
 #[derive(Default)]
-struct MetadataEventSink {
+pub(crate) struct MetadataEventSink {
     count: u32,
 }
 

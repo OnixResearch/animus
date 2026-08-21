@@ -19,6 +19,7 @@ mod config;
 mod host;
 mod provider;
 mod receipt;
+mod session;
 mod shell;
 mod store;
 mod tool;
@@ -39,6 +40,11 @@ pub use host::{
 };
 pub use provider::{FixtureStreamProvider, LiveOpenAiProvider, ProviderStreamService};
 pub use receipt::{LIVE_SHELL_NON_CLAIMS, LiveSteelAgentRunReceipt};
+pub use session::{
+    LiveSteelEventRead, LiveSteelPrompt, LiveSteelQueueEdit, LiveSteelQueueRemoval,
+    LiveSteelQueuedInput, MAX_LIVE_SESSION_EVENT_BATCH, PersistentLiveHost, PersistentStatus,
+    PrivateEventBatch,
+};
 pub use shell::{
     LiveSteelAgentComposition, LiveSteelAgentCompositionInput, LiveSteelAgentError,
     LiveSteelAgentRunOutput, SessionPersistence, SnapshotPersistence,

@@ -6,6 +6,11 @@ bridge, RLM executor, child service, skill loader, controls, events, and receipt
 Completed output returns the ordered private runtime-event snapshot to its worker.
 The metadata-only receipt stores only the event count.
 
+`LiveSteelAgentComposition::open_session` moves all live resources into one
+persistent worker-owned session. The worker can begin exact commands, drive one
+pending effect, read bounded private event batches, and close every lease.
+Queue edits and removals require the current generation and BLAKE3 queue identity.
+
 The package uses `AGPL-3.0-or-later` because it composes
 `animus-std-rlm-host`. It does not change the workspace default members.
 

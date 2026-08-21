@@ -15,8 +15,14 @@
 - [x] [serial] [task:private-event-terminal] [after:private-event-contract] Route private payloads through direct and daemon modes, then decode exact versioned runtime events in the terminal. r[agent_harness_runtime.live_terminal_agent_host.private_events]
 - [x] [serial] [task:private-event-tests] [after:private-event-terminal] Cover conversation, tool, and status rendering plus unknown, malformed, forged, overbound, and debug-redaction failures. r[agent_harness_runtime.live_terminal_agent_host.private_events]
 
-## Phase 4: Verification
+## Phase 4: Persistent live session
+
+- [x] [serial] [task:persistent-session] [after:private-event-source] Move provider, tool, snapshot, session, and kernel resources into one persistent live-session owner. r[agent_harness_runtime.live_steel_agent_shell.persistent_session]
+- [x] [serial] [task:persistent-controls] [after:persistent-session] Add one-effect driving, prompt, follow-up, steering, queue-CAS, cancellation, bounded event cursors, and explicit close. r[agent_harness_runtime.live_steel_agent_shell.persistent_session.controls]
+- [x] [serial] [task:persistent-session-tests] [after:persistent-controls] Add positive incremental completion and interleaving tests plus malformed, stale, zero, and over-bound failures. r[agent_harness_runtime.live_steel_agent_shell.persistent_session.failure]
+
+## Phase 5: Verification
 
 - [x] [serial] [task:positive-tests] [after:terminal-projection] Add positive construction, serialization, routing, reduction, and rendering tests. r[agent_harness_runtime.live_terminal_agent_host.product_commands]
 - [x] [serial] [task:negative-tests] [after:terminal-projection] Add negative malformed-correlation, unknown-command, no-effect, malformed-metadata, blocked-restore, stale-generation, unordered-event, forged-identity, queue-regression, and private-field tests. r[agent_harness_runtime.live_terminal_agent_host.product_commands]
-- [ ] [serial] [task:gates] [after:docs] [after:positive-tests] [after:negative-tests] [after:private-event-tests] Run focused terminal, strict Clippy, formatting, Octet, Cairn, and relevant Nix gates. r[agent_harness_runtime.live_terminal_agent_host.product_commands]
+- [ ] [serial] [task:gates] [after:docs] [after:positive-tests] [after:negative-tests] [after:private-event-tests] [after:persistent-session-tests] Run focused terminal, strict Clippy, formatting, Octet, Cairn, and relevant Nix gates. r[agent_harness_runtime.live_terminal_agent_host.product_commands]

@@ -1,14 +1,14 @@
 # Evidence
 
-Date: 2026-08-20
+Date: 2026-08-21
 
-Outcome: the focused implementation passes functional, routing, rendering, strict Clippy, Cairn, and Nix rails. Existing strict Octet debt still blocks archive completion.
+Outcome: exact terminal controls, private event relay, and the persistent live-session shell pass focused functional, routing, rendering, strict Clippy, Cairn, and Nix rails. Existing strict Octet debt still blocks archive completion.
 
 ## Passing evidence
 
 - The published base revision `1498832358a6cd960508b4709fecc4f271c4c90e` passed the pre-change focused baseline.
 - `cargo test -p animus-local-daemon -p animus-live-terminal --all-targets --all-features --locked` passed 49 tests after the private relay change.
-- `cargo test -p animus-live-steel-agent --all-targets --all-features --locked` passed 22 tests after the private event-source change.
+- `cargo test -p animus-live-steel-agent --all-targets --all-features --locked` passed 25 tests after the persistent live-session change.
 - The live Steel and terminal focused host rails passed tests, strict Clippy, documentation tests, catalog checks, and runtime-facade inventory checks.
 - `nix build .#checks.x86_64-linux.live-steel-agent-shell --no-link -L` passed.
 - `nix build .#checks.x86_64-linux.live-terminal-agent-host --no-link -L` passed.
@@ -23,6 +23,12 @@ Outcome: the focused implementation passes functional, routing, rendering, stric
 - The supervisor validates private payload bounds, root, order, class, and BLAKE3 identity without decoding or retaining payload bytes.
 - Negative tests reject empty and oversized payloads, unknown classes, malformed codecs, forged identities, stale roots, and unordered sequences.
 - `WorkerPrivateEvent` and daemon-event debug output report byte counts only.
+- `LiveSteelAgentComposition::open_session` moves the provider, snapshot store, coding-session store, Steel tool, kernel persistence, and validated configuration into one owner.
+- Positive tests drive a complete tool continuation one effect at a time and produce the same private runtime events and metadata-only receipt.
+- Interleaving tests queue and edit a follow-up while a provider effect remains pending, then cancel through the existing coding-session effect.
+- Negative tests reject malformed correlations, stale queue generation and identity guards, zero event bounds, over-bound event batches, and stale cursors.
+- The persistent host, private prompt DTOs, and event batch have no debug projection that can expose private content.
+- `finish` and `close` attempt every session, snapshot, and kernel lease release before returning a close or projection error.
 
 ## Adversarial audit
 
@@ -32,7 +38,7 @@ The corrected design now checks worker generation and restore status against sup
 
 No provider, tool, Steel, session, queue, journal, persistence, credential, endpoint-discovery, or process authority moved into the terminal.
 
-A separate private stream was rejected because its cursor can drift from safe events. Direct terminal store access was rejected because it adds persistence authority. The accepted design uses the existing ordered worker stream and versioned Preserves runtime contract.
+A separate private stream was rejected because its cursor can drift from safe events. Direct terminal store access was rejected because it adds persistence authority. Rebuilding the live host for each command was rejected because it loses pending effects. The accepted design uses one persistent owner, the existing ordered worker stream, and the versioned Preserves runtime contract.
 
 The first relay file name added two Octet findings. Renaming `private_event.rs` to `privateevent.rs` and adding explicit post-validation assertions restored both focused package counts to the published baseline.
 
@@ -60,22 +66,25 @@ Config hash: b3:c6b638a9ecea8fb957bb09e5422e428677189aa2b0fedc83cefede3b4c3d5383
 Profile hash: b3:0b4ca52658f1d11e82ab7930dd54ef8f67d1be8a56f662811a34c0c4bf9ea6af
 ```
 
-`animus-live-steel-agent` also reported the same result on `f6d2bbb253bc1f5c8bc1ee6bad4cf887cc1d5f9d` and this change:
+The current package-focused Octet run reports the same 372 `animus_live_steel_agent` errors as the checked base. No finding points into `session.rs`, `session/control.rs`, or `session/lifecycle.rs`:
 
 ```text
-Findings: 372
-Warnings: 0
+Findings: 373
+Warnings: 1
 Errors: 372
+animus_live_steel_agent: 372
+animus_std: 1
 Config hash: b3:28969e21d70c877cbbac8e231282e8c319c4f71655d0967ffed087a1a2d10c1d
 Profile hash: b3:da16b91cfb1614bba9194b9b5f9390a3a324a05152235a4c3df7e403f4c4a312
 ```
 
-The comparisons found no new finding count or lint-category count. This is regression evidence only. It does not satisfy the deny-all gate.
+The one warning is an unrelated `animus_std` unknown-lint diagnostic. The persistent-session source adds no focused package finding. This is regression evidence only. It does not satisfy the deny-all gate.
 
 ## Blockers and non-claims
 
 - Existing live Steel, terminal, and daemon Octet debt blocks the strict package gate.
 - The change remains active because the required deny-all gate does not pass.
-- This evidence does not claim worker-side authorization correctness, kernel-clear execution, full-flake acceptance, archive completion, product readiness, production readiness, or release eligibility.
+- This evidence does not claim product worker authorization correctness, approval or child-control composition, kernel-clear execution, full-flake acceptance, archive completion, product readiness, production readiness, or release eligibility.
+- Provider and tool calls remain synchronous effects. The worker can interleave commands between effects, not inside one adapter call.
 - The private relay does not claim remote security, end-to-end encryption, or protection from a compromised local process.
 - The current standalone Cairn CLI rejected the repository's locked policy field `task_marker_policy.markers`; the repository-pinned Cairn CLI passed validation and all three change gates.

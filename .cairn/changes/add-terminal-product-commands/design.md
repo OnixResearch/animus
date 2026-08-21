@@ -72,10 +72,30 @@ Using the generic `session` class would hide distinct authorization and audit me
 
 **Rationale:** The daemon owns transport and attachment policy, not transcript, tool-output, provider, or session meaning.
 
+### Decision: Keep live resources inside one persistent session owner
+
+**Choice:** `LiveSteelAgentComposition::open_session` moves the provider, snapshot store, coding-session persistence, Steel tool, kernel persistence, and validated configuration into one owning session.
+
+**Rationale:** An owning value avoids self-references and prevents the product worker from reconstructing provider, tool, or durable-ordering policy.
+
+### Decision: Separate command reduction from effect progress
+
+**Choice:** The persistent session begins exact prompt, follow-up, steering, queue-CAS, and cancellation commands without driving. `drive_one` executes at most one existing `CodingSessionHost` effect.
+
+**Rationale:** A worker can interleave private commands between effects while all core policy, authority, commit, and cancellation checks remain unchanged.
+
+### Decision: Bound private incremental snapshots
+
+**Choice:** Event reads require a monotonic cursor and a non-zero maximum no larger than `MAX_LIVE_SESSION_EVENT_BATCH`. The returned batch has no `Debug` implementation.
+
+**Rationale:** Workers can relay exact ordered events without adding content to receipts, logs, or safe metadata.
+
 ## Rejected alternatives
 
 - A separate private-event port was rejected because two event cursors can diverge.
 - Direct terminal access to the session store was rejected because it adds persistence authority.
+- Rebuilding a `CodingSessionHost` for every private command was rejected because pending effects and queue state would lose one owner.
+- A product-owned copy of live provider and tool adapters was rejected because it duplicates Animus authority and durable ordering.
 - Structured data in safe event classes was rejected because it violates safe-label and receipt boundaries.
 
 ## Risks / Trade-offs
@@ -85,3 +105,4 @@ Using the generic `session` class would hide distinct authorization and audit me
 - State inspection remains a request. It does not permit private state in terminal receipts.
 - Local authenticated transport carries private bytes in memory and on the Unix socket.
 - The relay does not claim remote security or end-to-end encryption.
+- One provider or tool effect remains synchronous. External commands are admitted between effects, not inside an adapter call.

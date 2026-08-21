@@ -63,6 +63,35 @@ r[agent_harness_runtime.live_terminal_agent_host.private_events.denied]
 - THEN it MUST reject the event before terminal projection
 - AND it MUST NOT include the private payload in debug output or receipts.
 
+### Requirement: Live Steel sessions support bounded incremental worker control
+
+r[agent_harness_runtime.live_steel_agent_shell.persistent_session] The live Steel shell MUST keep provider, tool, snapshot, session, and kernel authority inside one persistent session owner. It MUST let an authorized worker submit exact commands, drive at most one pending effect, read bounded private event batches, and close all leases.
+
+#### Scenario: Worker drives one live prompt incrementally
+
+r[agent_harness_runtime.live_steel_agent_shell.persistent_session]
+- GIVEN a validated live composition with explicit provider, executor, and persistence services
+- WHEN the worker starts one correlated prompt and drives one pending effect at a time
+- THEN the shell MUST preserve normal `CodingSessionHost` ordering and authority checks
+- AND it MUST return the same private runtime events and metadata-only completion receipt as the bounded synchronous path.
+
+#### Scenario: Worker interleaves queue and cancellation controls
+
+r[agent_harness_runtime.live_steel_agent_shell.persistent_session.controls]
+- GIVEN an active run with an effect pending
+- WHEN the worker queues a follow-up, applies an exact generation-and-identity queue edit or removal, or requests cancellation
+- THEN the shell MUST reduce the command through the existing coding-session core without driving unrelated effects
+- AND stale queue guards, malformed correlations, missing runs, or reducer conflicts MUST fail closed
+- AND cancellation MUST use the existing coding-session cancellation effect.
+
+#### Scenario: Incremental private event request is invalid
+
+r[agent_harness_runtime.live_steel_agent_shell.persistent_session.failure]
+- GIVEN an event cursor or maximum is stale, zero, or over the fixed batch bound
+- WHEN the worker requests incremental private events
+- THEN the shell MUST reject the request without exposing event content in receipts or debug output
+- AND closing an idle, cancelled, or failed session MUST still attempt every owned lease release.
+
 #### Scenario: Product control descriptor is malformed
 
 r[agent_harness_runtime.live_terminal_agent_host.product_commands.denied]

@@ -57,6 +57,10 @@ Provider continuation cannot observe the result before that transition completes
 
 The session and kernel stores use separate journals and exclusive leases. The shell releases both leases after the final safe point.
 
+`LiveSteelAgentComposition::open_session` keeps the provider, model-request snapshot store, coding-session store, Steel tool, and kernel persistence inside one owning session. It begins commands without driving unrelated effects. `drive_one` executes at most one existing `CodingSessionHost` effect.
+
+Workers can queue follow-up or steering input, apply queue edits or removals with exact generation-and-identity guards, request active-run cancellation, and read bounded private event batches. Stale guards, malformed correlations, zero bounds, over-bound batches, and stale cursors fail closed.
+
 A present kernel snapshot must restore exactly. Policy or journal drift fails closed. Interrupted-cell restore returns the prior committed kernel and does not replay an observed host effect.
 
 ## Child and host authority
@@ -83,7 +87,7 @@ The deterministic fixture rail is:
 scripts/cairn/check-live-steel-agent-shell --root .
 ```
 
-The rail runs positive and negative tool-loop, child, configuration, cancellation, host-failure, durable restart, and restore-drift checks. The composition activation rail adds startup-order and fail-loud coverage. It also runs Clippy with warnings denied.
+The rail runs positive and negative tool-loop, persistent-session, incremental-drive, queue-control, cancellation, child, configuration, host-failure, durable restart, and restore-drift checks. The composition activation rail adds startup-order and fail-loud coverage. It also runs Clippy with warnings denied.
 
 Completed run output exposes its exact ordered `RuntimeEvent` snapshot to the worker-owned delivery path. This private event batch is not evidence.
 
