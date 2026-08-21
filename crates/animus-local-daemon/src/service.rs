@@ -476,6 +476,43 @@ impl<Worker: WorkerSessionPort> LocalSupervisorService<Worker> {
         Ok(events)
     }
 
+    /// Refreshes one existing attachment from a coherent snapshot and later events.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ServiceError`] for an unknown attachment, stale worker, or event bound failure.
+    pub fn refresh(
+        &mut self,
+        root_id: &str,
+        client_id: &str,
+        maximum_events: u32,
+    ) -> Result<(WorkerSnapshot, Vec<WorkerEvent>), ServiceError> {
+        let key = format!("{root_id}\0{client_id}");
+        let sequence = self
+            .attachments
+            .get(key.as_str())
+            .ok_or(ServiceError::UnknownAttachment)?
+            .attachment
+            .last_sequence;
+        let mut snapshot = self.worker.snapshot(root_id)?;
+        let record = self.registry.find(root_id).ok_or(ServiceError::Decision)?;
+        if snapshot.worker_id != record.worker_id
+            || snapshot.generation != record.generation
+            || snapshot.restore_status != record.restore_status
+            || snapshot.restore_status == crate::RestoreStatus::Blocked
+        {
+            return Err(ServiceError::WorkerIdentity);
+        }
+        snapshot.event_sequence = sequence;
+        let events = self.events_after(EventBatchRequest {
+            root_id,
+            client_id,
+            sequence,
+            maximum_events,
+        })?;
+        Ok((snapshot, events))
+    }
+
     /// Detaches one client lease without stopping worker execution.
     ///
     /// # Errors

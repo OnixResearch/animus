@@ -490,6 +490,31 @@ impl TerminalClientState {
         Ok(state)
     }
 
+    /// Applies one generation-stable refreshed snapshot to the existing view.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TerminalCoreError`] for identity drift, cursor drift, blocked restore,
+    /// or malformed refreshed events.
+    pub fn apply_refresh(
+        &mut self,
+        snapshot: &ClientSnapshot,
+        maximum_events: u32,
+    ) -> Result<(), TerminalCoreError> {
+        if snapshot.root_id != self.root_id
+            || snapshot.worker_id != self.worker_id
+            || snapshot.generation != self.generation
+            || snapshot.event_sequence != self.last_sequence
+            || snapshot.restore_status == animus_local_daemon::RestoreStatus::Blocked
+        {
+            return Err(TerminalCoreError::Snapshot);
+        }
+        self.restore_status = snapshot.restore_status;
+        apply_event_batch(self, snapshot.events.as_slice(), maximum_events)?;
+        self.dirty = true;
+        Ok(())
+    }
+
     /// Returns the current view projection.
     #[must_use]
     pub const fn view(&self) -> &TerminalViewState {

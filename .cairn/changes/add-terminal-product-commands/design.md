@@ -90,11 +90,31 @@ Using the generic `session` class would hide distinct authorization and audit me
 
 **Rationale:** Workers can relay exact ordered events without adding content to receipts, logs, or safe metadata.
 
+### Decision: Delegate executor controls through the persistent owner
+
+**Choice:** Add a narrow executor-control port for approval and child status or cancellation. `PersistentLiveHost` delegates through its existing `CodingSessionHost` tool owner.
+
+**Rationale:** The terminal and product shell must not acquire provider, tool, child, or session authority.
+
+### Decision: Keep lifecycle commands out of worker-private routing
+
+**Choice:** Refresh, detach, and stop use explicit connection methods. Daemon requests carry these operations as distinct protocol variants.
+
+**Rationale:** Attachment and worker lifecycle belong to the selected connection and supervisor, not the private worker command decoder.
+
+### Decision: Bound the daemon request loop
+
+**Choice:** One server loop accepts an explicit finite client and request count. It authenticates each peer, applies frame deadlines, and detaches on disconnect.
+
+**Rationale:** A bounded shell composes existing transport and supervisor services without adding discovery, fallback, or session effects.
+
 ## Rejected alternatives
 
 - A separate private-event port was rejected because two event cursors can diverge.
 - Direct terminal access to the session store was rejected because it adds persistence authority.
 - Rebuilding a `CodingSessionHost` for every private command was rejected because pending effects and queue state would lose one owner.
+- Decoding lifecycle commands inside the supervisor was rejected because the supervisor must keep private command payloads opaque.
+- Letting the terminal call child or approval services directly was rejected because it would duplicate worker authority.
 - A product-owned copy of live provider and tool adapters was rejected because it duplicates Animus authority and durable ordering.
 - Structured data in safe event classes was rejected because it violates safe-label and receipt boundaries.
 

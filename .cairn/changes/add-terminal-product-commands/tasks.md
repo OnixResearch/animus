@@ -21,8 +21,15 @@
 - [x] [serial] [task:persistent-controls] [after:persistent-session] Add one-effect driving, prompt, follow-up, steering, queue-CAS, cancellation, bounded event cursors, and explicit close. r[agent_harness_runtime.live_steel_agent_shell.persistent_session.controls]
 - [x] [serial] [task:persistent-session-tests] [after:persistent-controls] Add positive incremental completion and interleaving tests plus malformed, stale, zero, and over-bound failures. r[agent_harness_runtime.live_steel_agent_shell.persistent_session.failure]
 
-## Phase 5: Verification
+## Phase 5: Product control authority
+
+- [ ] [serial] [task:executor-controls] [after:persistent-controls] Add explicit persistent executor approval and child-control delegation without moving authority into the terminal. r[agent_harness_runtime.live_steel_agent_shell.persistent_session.controls]
+- [x] [serial] [task:lifecycle-routing] [after:terminal-projection] Route refresh, detach, and stop through explicit connection APIs instead of worker-private command bytes. r[agent_harness_runtime.live_terminal_agent_host.product_commands]
+- [x] [serial] [task:daemon-loop] [after:lifecycle-routing] Add a bounded authenticated local daemon request loop with deterministic disconnect cleanup. r[agent_harness_runtime.live_terminal_agent_host.product_commands]
+- [x] [serial] [task:control-tests] [after:executor-controls] [after:daemon-loop] Cover accepted controls and stale, missing, malformed, over-bound, and disconnect failures. r[agent_harness_runtime.live_terminal_agent_host.product_commands]
+
+## Phase 6: Verification
 
 - [x] [serial] [task:positive-tests] [after:terminal-projection] Add positive construction, serialization, routing, reduction, and rendering tests. r[agent_harness_runtime.live_terminal_agent_host.product_commands]
 - [x] [serial] [task:negative-tests] [after:terminal-projection] Add negative malformed-correlation, unknown-command, no-effect, malformed-metadata, blocked-restore, stale-generation, unordered-event, forged-identity, queue-regression, and private-field tests. r[agent_harness_runtime.live_terminal_agent_host.product_commands]
-- [ ] [serial] [task:gates] [after:docs] [after:positive-tests] [after:negative-tests] [after:private-event-tests] [after:persistent-session-tests] Run focused terminal, strict Clippy, formatting, Octet, Cairn, and relevant Nix gates. r[agent_harness_runtime.live_terminal_agent_host.product_commands]
+- [ ] [serial] [task:gates] [after:docs] [after:positive-tests] [after:negative-tests] [after:private-event-tests] [after:persistent-session-tests] [after:control-tests] Run focused terminal, strict Clippy, formatting, Octet, Cairn, and relevant Nix gates. r[agent_harness_runtime.live_terminal_agent_host.product_commands]

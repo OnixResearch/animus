@@ -18,7 +18,8 @@ const GENERATION: u64 = 1;
 const INITIAL_EVENT_SEQUENCE: u64 = 1;
 const FIRST_EVENT_SEQUENCE: u64 = 2;
 const SECOND_EVENT_SEQUENCE: u64 = 3;
-const DAEMON_REQUEST_COUNT: usize = 4;
+const THIRD_EVENT_SEQUENCE: u64 = 4;
+const DAEMON_REQUEST_COUNT: usize = 6;
 const PRIVATE_DAEMON_REQUEST_COUNT: usize = 1;
 const STATE_EVENT_FIELD_COUNT: usize = 5;
 const PRIVATE_RUNTIME_EVENT_CLASS: &str = "runtime_event";
@@ -42,6 +43,10 @@ const MAX_VIEWPORT_WIDTH: u16 = 512;
 const MAX_VIEWPORT_HEIGHT: u16 = 256;
 
 #[test]
+#[allow(
+    clippy::too_many_lines,
+    reason = "one end-to-end protocol case proves the complete explicit client lifecycle"
+)]
 fn explicit_daemon_client_routes_typed_private_command_without_discovery_or_fallback() {
     let directory = tempfile::tempdir().expect("endpoint directory");
     let endpoint = animus_local_daemon::LocalEndpoint::new(directory.path(), "terminal.sock")
@@ -110,13 +115,24 @@ fn explicit_daemon_client_routes_typed_private_command_without_discovery_or_fall
         Err(TerminalConnectionError::Rejected)
     );
     assert_client_state_inspection(&snapshot.events[0], FIRST_EVENT_SEQUENCE);
+    let refreshed = connection
+        .refresh("root-direct", "client-daemon", MAX_EVENTS)
+        .expect("daemon refresh");
+    assert_eq!(refreshed.generation, GENERATION);
+    assert!(matches!(
+        refreshed.events[0],
+        animus_live_terminal::ClientSessionEvent::Observation {
+            sequence: SECOND_EVENT_SEQUENCE,
+            ..
+        }
+    ));
     let later = connection
-        .events_after("root-direct", FIRST_EVENT_SEQUENCE, MAX_EVENTS)
+        .events_after("root-direct", SECOND_EVENT_SEQUENCE, MAX_EVENTS)
         .expect("later daemon events");
     assert!(matches!(
         later[0],
         animus_live_terminal::ClientSessionEvent::Observation {
-            sequence: SECOND_EVENT_SEQUENCE,
+            sequence: THIRD_EVENT_SEQUENCE,
             ..
         }
     ));
@@ -130,6 +146,9 @@ fn explicit_daemon_client_routes_typed_private_command_without_discovery_or_fall
             .expect("route"),
         HASH
     );
+    connection
+        .stop("root-direct", GENERATION)
+        .expect("generation-fenced daemon stop");
     connection
         .detach("root-direct", "client-daemon")
         .expect("detach only");
@@ -172,6 +191,10 @@ fn injected_direct_service_receives_private_payload_only_when_route_is_called() 
         .attach("root-direct", "client-direct", MAX_EVENTS)
         .expect("direct attach");
     assert_eq!(snapshot.events.len(), 1);
+    let refreshed = connection
+        .refresh("root-direct", "client-direct", MAX_EVENTS)
+        .expect("direct refresh");
+    assert_eq!(refreshed.generation, GENERATION);
     assert!(payloads.lock().expect("payload lock").is_empty());
     let forged = ClientCommand::Prompt {
         correlation_id: String::from("forged"),
@@ -230,9 +253,21 @@ fn injected_direct_service_receives_private_payload_only_when_route_is_called() 
             .map(|command| command.class().to_owned())
             .collect::<Vec<_>>()
     );
+    drop(payloads);
+    connection
+        .stop("root-direct", GENERATION)
+        .expect("generation-fenced direct stop");
+    assert_eq!(
+        connection.stop("root-direct", GENERATION.saturating_add(1)),
+        Err(TerminalConnectionError::Rejected)
+    );
 }
 
 #[test]
+#[allow(
+    clippy::too_many_lines,
+    reason = "one exhaustive dispatcher case proves all attachment lifecycle variants"
+)]
 fn daemon_dispatcher_uses_the_supervisor_service_and_tracks_one_attachment() {
     let payloads = Arc::new(Mutex::new(Vec::new()));
     let worker = FixtureWorker {
@@ -253,12 +288,41 @@ fn daemon_dispatcher_uses_the_supervisor_service_and_tracks_one_attachment() {
         maximum_events: MAX_EVENTS,
     });
     assert_daemon_state_inspection(&attached, FIRST_EVENT_SEQUENCE);
-    let events = dispatcher.dispatch(DaemonRequest::EventsAfter {
+    let refreshed = dispatcher.dispatch(DaemonRequest::Refresh {
         root_id: String::from("root-direct"),
-        sequence: FIRST_EVENT_SEQUENCE,
+        client_id: String::from("client-dispatch"),
         maximum_events: MAX_EVENTS,
     });
-    assert_daemon_observation(&events, SECOND_EVENT_SEQUENCE);
+    assert!(matches!(
+        refreshed,
+        DaemonResponse::Snapshot { ref events, .. }
+            if matches!(&events[0], animus_live_terminal::DaemonEvent::Observation {
+                sequence: SECOND_EVENT_SEQUENCE,
+                ..
+            })
+    ));
+    assert_eq!(
+        dispatcher.dispatch(DaemonRequest::Stop {
+            root_id: String::from("root-direct"),
+            generation: GENERATION.saturating_add(1),
+        }),
+        DaemonResponse::Failed {
+            class: String::from("rejected"),
+        }
+    );
+    assert_eq!(
+        dispatcher.dispatch(DaemonRequest::Stop {
+            root_id: String::from("root-direct"),
+            generation: GENERATION,
+        }),
+        DaemonResponse::Stopped
+    );
+    let events = dispatcher.dispatch(DaemonRequest::EventsAfter {
+        root_id: String::from("root-direct"),
+        sequence: SECOND_EVENT_SEQUENCE,
+        maximum_events: MAX_EVENTS,
+    });
+    assert_daemon_observation(&events, THIRD_EVENT_SEQUENCE);
     assert_eq!(
         dispatcher.dispatch(DaemonRequest::Command {
             root_id: String::from("root-direct"),

@@ -133,10 +133,41 @@ where
             )
             .map_err(TerminalHostError::Core)?;
             if let Some(command) = &plan.command {
-                request
-                    .connection
-                    .route(request.config.root_id(), generation, command)
-                    .map_err(TerminalHostError::Connection)?;
+                match command {
+                    crate::ClientCommand::Session {
+                        action: crate::SessionAction::RefreshSnapshot,
+                        ..
+                    } => {
+                        let refreshed = request
+                            .connection
+                            .refresh(
+                                request.config.root_id(),
+                                request.config.client_id(),
+                                request.config.max_event_batch(),
+                            )
+                            .map_err(TerminalHostError::Connection)?;
+                        state
+                            .apply_refresh(&refreshed, request.config.max_event_batch())
+                            .map_err(TerminalHostError::Core)?;
+                    }
+                    crate::ClientCommand::Session {
+                        action: crate::SessionAction::Detach,
+                        ..
+                    } => {}
+                    crate::ClientCommand::Session {
+                        action: crate::SessionAction::Stop,
+                        ..
+                    } => request
+                        .connection
+                        .stop(request.config.root_id(), generation)
+                        .map_err(TerminalHostError::Connection)?,
+                    _other => {
+                        request
+                            .connection
+                            .route(request.config.root_id(), generation, command)
+                            .map_err(TerminalHostError::Connection)?;
+                    }
+                }
             }
             if plan.render {
                 request.host.render(state.view())?;

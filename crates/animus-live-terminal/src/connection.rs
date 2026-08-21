@@ -23,6 +23,18 @@ pub trait TerminalConnectionPort {
         maximum_events: u32,
     ) -> Result<crate::ClientSnapshot, TerminalConnectionError>;
 
+    /// Refreshes one existing attachment snapshot before returning later events.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TerminalConnectionError`] when the attachment is stale or unavailable.
+    fn refresh(
+        &mut self,
+        root_id: &str,
+        client_id: &str,
+        maximum_events: u32,
+    ) -> Result<crate::ClientSnapshot, TerminalConnectionError>;
+
     /// Returns later events after the supplied sequence under a finite count.
     ///
     /// # Errors
@@ -46,6 +58,13 @@ pub trait TerminalConnectionPort {
         generation: u64,
         command: &crate::ClientCommand,
     ) -> Result<String, TerminalConnectionError>;
+
+    /// Requests a generation-fenced worker stop through the supervisor.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TerminalConnectionError`] when the worker identity is stale or stop fails.
+    fn stop(&mut self, root_id: &str, generation: u64) -> Result<(), TerminalConnectionError>;
 
     /// Removes only this client attachment lease.
     ///
@@ -91,6 +110,24 @@ impl<Worker: animus_local_daemon::WorkerSessionPort> TerminalConnectionPort
         self.attached_root = Some(String::from(root_id));
         self.attached_client = Some(String::from(client_id));
         Ok(core)
+    }
+
+    fn refresh(
+        &mut self,
+        root_id: &str,
+        client_id: &str,
+        maximum_events: u32,
+    ) -> Result<crate::ClientSnapshot, TerminalConnectionError> {
+        if self.attached_root.as_deref() != Some(root_id)
+            || self.attached_client.as_deref() != Some(client_id)
+        {
+            return Err(TerminalConnectionError::Rejected);
+        }
+        let (snapshot, events) = self
+            .service
+            .refresh(root_id, client_id, maximum_events)
+            .map_err(|_error| TerminalConnectionError::Rejected)?;
+        snapshot_from_daemon(snapshot, events)
     }
 
     fn events_after(
@@ -143,6 +180,15 @@ impl<Worker: animus_local_daemon::WorkerSessionPort> TerminalConnectionPort
             .map_err(|_error| TerminalConnectionError::Rejected)
     }
 
+    fn stop(&mut self, root_id: &str, generation: u64) -> Result<(), TerminalConnectionError> {
+        if self.attached_root.as_deref() != Some(root_id) {
+            return Err(TerminalConnectionError::Rejected);
+        }
+        self.service
+            .stop(root_id, generation)
+            .map_err(|_error| TerminalConnectionError::Rejected)
+    }
+
     fn detach(&mut self, root_id: &str, client_id: &str) -> Result<(), TerminalConnectionError> {
         if self.attached_root.as_deref() != Some(root_id)
             || self.attached_client.as_deref() != Some(client_id)
@@ -174,6 +220,20 @@ impl<Worker: animus_local_daemon::WorkerSessionPort> DaemonRequestDispatcher<Wor
         }
     }
 
+    /// Removes the current connection attachment after disconnect.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TerminalConnectionError`] when the recorded lease cannot be removed.
+    pub fn disconnect(&mut self) -> Result<(), TerminalConnectionError> {
+        let Some((root_id, client_id)) = self.attachment.take() else {
+            return Ok(());
+        };
+        self.service
+            .detach(root_id.as_str(), client_id.as_str())
+            .map_err(|_error| TerminalConnectionError::Rejected)
+    }
+
     /// Dispatches one bounded protocol request without executing worker-owned session effects.
     #[must_use]
     pub fn dispatch(&mut self, request: DaemonRequest) -> DaemonResponse {
@@ -183,6 +243,10 @@ impl<Worker: animus_local_daemon::WorkerSessionPort> DaemonRequestDispatcher<Wor
             })
     }
 
+    #[allow(
+        clippy::too_many_lines,
+        reason = "one exhaustive protocol match keeps every request variant fail-closed"
+    )]
     fn try_dispatch(
         &mut self,
         request: DaemonRequest,
@@ -212,6 +276,29 @@ impl<Worker: animus_local_daemon::WorkerSessionPort> DaemonRequestDispatcher<Wor
                 };
                 self.attachment = Some((root_id, client_id));
                 Ok(response)
+            }
+            DaemonRequest::Refresh {
+                root_id,
+                client_id,
+                maximum_events,
+            } => {
+                if self.attachment.as_ref() != Some(&(root_id.clone(), client_id.clone())) {
+                    return Err(TerminalConnectionError::Rejected);
+                }
+                let (snapshot, events) = self
+                    .service
+                    .refresh(root_id.as_str(), client_id.as_str(), maximum_events)
+                    .map_err(|_error| TerminalConnectionError::Rejected)?;
+                Ok(DaemonResponse::Snapshot {
+                    snapshot: DaemonSnapshot {
+                        root_id: snapshot.root_id,
+                        worker_id: snapshot.worker_id,
+                        generation: snapshot.generation,
+                        event_sequence: snapshot.event_sequence,
+                        restore_status: snapshot.restore_status,
+                    },
+                    events: events.into_iter().map(daemon_event_from_worker).collect(),
+                })
             }
             DaemonRequest::EventsAfter {
                 root_id,
@@ -274,6 +361,22 @@ impl<Worker: animus_local_daemon::WorkerSessionPort> DaemonRequestDispatcher<Wor
                 Ok(DaemonResponse::CommandAccepted {
                     safe_response_identity,
                 })
+            }
+            DaemonRequest::Stop {
+                root_id,
+                generation,
+            } => {
+                let (attached_root, _client_id) = self
+                    .attachment
+                    .as_ref()
+                    .ok_or(TerminalConnectionError::Rejected)?;
+                if attached_root != &root_id {
+                    return Err(TerminalConnectionError::Rejected);
+                }
+                self.service
+                    .stop(root_id.as_str(), generation)
+                    .map_err(|_error| TerminalConnectionError::Rejected)?;
+                Ok(DaemonResponse::Stopped)
             }
             DaemonRequest::Detach { root_id, client_id } => {
                 if self.attachment.as_ref() != Some(&(root_id.clone(), client_id.clone())) {
@@ -419,6 +522,32 @@ impl TerminalConnectionPort for DaemonTerminalConnection {
         Ok(core)
     }
 
+    fn refresh(
+        &mut self,
+        root_id: &str,
+        client_id: &str,
+        maximum_events: u32,
+    ) -> Result<crate::ClientSnapshot, TerminalConnectionError> {
+        if self.attached_root.as_deref() != Some(root_id)
+            || self.attached_client.as_deref() != Some(client_id)
+        {
+            return Err(TerminalConnectionError::Rejected);
+        }
+        let correlation_id = request_identity("refresh", root_id, client_id, 0);
+        let response = self.transact(
+            correlation_id.as_str(),
+            &DaemonRequest::Refresh {
+                root_id: String::from(root_id),
+                client_id: String::from(client_id),
+                maximum_events,
+            },
+        )?;
+        let DaemonResponse::Snapshot { snapshot, events } = response else {
+            return Err(TerminalConnectionError::Protocol);
+        };
+        snapshot.into_core(events)
+    }
+
     fn events_after(
         &mut self,
         root_id: &str,
@@ -478,6 +607,24 @@ impl TerminalConnectionPort for DaemonTerminalConnection {
         Ok(safe_response_identity)
     }
 
+    fn stop(&mut self, root_id: &str, generation: u64) -> Result<(), TerminalConnectionError> {
+        if self.attached_root.as_deref() != Some(root_id) {
+            return Err(TerminalConnectionError::Rejected);
+        }
+        let correlation_id = request_identity("stop", root_id, "terminal", generation);
+        let response = self.transact(
+            correlation_id.as_str(),
+            &DaemonRequest::Stop {
+                root_id: String::from(root_id),
+                generation,
+            },
+        )?;
+        if response != DaemonResponse::Stopped {
+            return Err(TerminalConnectionError::Rejected);
+        }
+        Ok(())
+    }
+
     fn detach(&mut self, root_id: &str, client_id: &str) -> Result<(), TerminalConnectionError> {
         if self.attached_root.as_deref() != Some(root_id)
             || self.attached_client.as_deref() != Some(client_id)
@@ -533,6 +680,15 @@ pub enum DaemonRequest {
         /// Maximum initial events.
         maximum_events: u32,
     },
+    /// Refresh one existing snapshot-first attachment.
+    Refresh {
+        /// Root identity.
+        root_id: String,
+        /// Existing client identity.
+        client_id: String,
+        /// Maximum later events.
+        maximum_events: u32,
+    },
     /// Request later events.
     EventsAfter {
         /// Root identity.
@@ -554,6 +710,13 @@ pub enum DaemonRequest {
         class: String,
         /// Private typed command payload for the worker-owned session service.
         private_payload: Vec<u8>,
+    },
+    /// Request generation-fenced worker stop.
+    Stop {
+        /// Root identity.
+        root_id: String,
+        /// Expected worker generation.
+        generation: u64,
     },
     /// Remove one client attachment lease.
     Detach {
@@ -585,6 +748,8 @@ pub enum DaemonResponse {
         /// BLAKE3 identity of safe response metadata.
         safe_response_identity: String,
     },
+    /// Worker stop was accepted by its current generation.
+    Stopped,
     /// Client lease was removed without stopping worker execution.
     Detached,
     /// Typed bounded failure.

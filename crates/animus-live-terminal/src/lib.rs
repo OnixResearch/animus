@@ -19,6 +19,7 @@ mod host;
 mod lifecycle;
 #[cfg(feature = "live-terminal")]
 mod render;
+mod server;
 
 pub use activation::preflight_live_terminal_activation;
 pub use config::{
@@ -49,3 +50,4 @@ pub use lifecycle::{
 };
 #[cfg(feature = "live-terminal")]
 pub use render::{render_terminal_view, render_text_projection};
+pub use server::{DaemonServerError, DaemonServerLimits, DaemonServerOutcome, run_bounded_daemon};

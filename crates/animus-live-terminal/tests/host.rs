@@ -83,13 +83,8 @@ fn queue_conflict_signal_disconnect_and_backend_errors_keep_typed_exit_paths() {
     })
     .expect("conflict flow");
     assert_eq!(exit, TerminalExit::Normal);
-    assert!(matches!(
-        conflict_connection.commands[0],
-        ClientCommand::Session {
-            action: animus_live_terminal::SessionAction::RefreshSnapshot,
-            ..
-        }
-    ));
+    assert!(conflict_connection.refreshed);
+    assert!(conflict_connection.commands.is_empty());
 
     let mut signal_connection = FixtureConnection::new(vec![Vec::new()]);
     let mut signal_host = FixtureHost::new([None]);
@@ -285,6 +280,8 @@ impl TerminalHostPort for FixtureHost {
 struct FixtureConnection {
     event_batches: VecDeque<Vec<ClientSessionEvent>>,
     commands: Vec<ClientCommand>,
+    refreshed: bool,
+    stopped: bool,
     detached: bool,
 }
 
@@ -293,6 +290,8 @@ impl FixtureConnection {
         Self {
             event_batches: VecDeque::from(event_batches),
             commands: Vec::new(),
+            refreshed: false,
+            stopped: false,
             detached: false,
         }
     }
@@ -305,6 +304,23 @@ impl TerminalConnectionPort for FixtureConnection {
         _client_id: &str,
         _maximum_events: u32,
     ) -> Result<ClientSnapshot, TerminalConnectionError> {
+        Ok(ClientSnapshot {
+            root_id: String::from(root_id),
+            worker_id: String::from("worker-host"),
+            generation: 1,
+            event_sequence: 0,
+            restore_status: animus_local_daemon::RestoreStatus::Restored,
+            events: Vec::new(),
+        })
+    }
+
+    fn refresh(
+        &mut self,
+        root_id: &str,
+        _client_id: &str,
+        _maximum_events: u32,
+    ) -> Result<ClientSnapshot, TerminalConnectionError> {
+        self.refreshed = true;
         Ok(ClientSnapshot {
             root_id: String::from(root_id),
             worker_id: String::from("worker-host"),
@@ -332,6 +348,11 @@ impl TerminalConnectionPort for FixtureConnection {
     ) -> Result<String, TerminalConnectionError> {
         self.commands.push(command.clone());
         Ok(String::from(HASH))
+    }
+
+    fn stop(&mut self, _root_id: &str, _generation: u64) -> Result<(), TerminalConnectionError> {
+        self.stopped = true;
+        Ok(())
     }
 
     fn detach(&mut self, _root_id: &str, _client_id: &str) -> Result<(), TerminalConnectionError> {
