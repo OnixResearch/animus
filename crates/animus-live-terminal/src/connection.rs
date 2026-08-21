@@ -694,7 +694,15 @@ fn request_identity(class: &str, root_id: &str, client_id: &str, sequence: u64) 
 fn valid_command_class(class: &str) -> bool {
     matches!(
         class,
-        "prompt" | "queue_edit" | "queue_remove" | "approval" | "cancel" | "child" | "session"
+        "prompt"
+            | "queue_edit"
+            | "queue_remove"
+            | "approval"
+            | "cancel"
+            | "kernel_clear"
+            | "state_inspection"
+            | "child"
+            | "session"
     )
 }
 

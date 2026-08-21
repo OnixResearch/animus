@@ -251,24 +251,34 @@ fn daemon_dispatcher_uses_the_supervisor_service_and_tracks_one_attachment() {
         }
     );
     assert!(payloads.lock().expect("payload lock").is_empty());
-    let command = ClientCommand::Prompt {
-        correlation_id: String::from(HASH),
-        text: String::from("private dispatcher prompt"),
-    };
-    let routed = dispatcher.dispatch(DaemonRequest::Command {
-        root_id: String::from("root-direct"),
-        generation: GENERATION,
-        correlation_id: String::from(command.correlation_id()),
-        class: String::from(command.class()),
-        private_payload: serde_json::to_vec(&command).expect("typed command"),
-    });
-    assert_eq!(
-        routed,
-        DaemonResponse::CommandAccepted {
-            safe_response_identity: String::from(HASH),
-        }
-    );
-    assert_eq!(payloads.lock().expect("payload lock").len(), 1);
+    let commands = [
+        ClientCommand::Prompt {
+            correlation_id: String::from(HASH),
+            text: String::from("private dispatcher prompt"),
+        },
+        ClientCommand::KernelClear {
+            correlation_id: String::from(HASH),
+        },
+        ClientCommand::StateInspection {
+            correlation_id: String::from(HASH),
+        },
+    ];
+    for command in &commands {
+        let routed = dispatcher.dispatch(DaemonRequest::Command {
+            root_id: String::from("root-direct"),
+            generation: GENERATION,
+            correlation_id: String::from(command.correlation_id()),
+            class: String::from(command.class()),
+            private_payload: serde_json::to_vec(command).expect("typed command"),
+        });
+        assert_eq!(
+            routed,
+            DaemonResponse::CommandAccepted {
+                safe_response_identity: String::from(HASH),
+            }
+        );
+    }
+    assert_eq!(payloads.lock().expect("payload lock").len(), commands.len());
     assert_eq!(
         dispatcher.dispatch(DaemonRequest::Detach {
             root_id: String::from("root-direct"),

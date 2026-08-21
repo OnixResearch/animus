@@ -10,11 +10,16 @@ Outcome: implementation passes focused functional gates but remains blocked by e
 - `cargo test -p animus-live-terminal --all-targets --all-features --locked` passed 23 tests after the change.
 - Positive tests prove exact `kernel_clear` and `state_inspection` classes, valid BLAKE3 correlation identities, serialization, and direct-service routing.
 - Negative tests prove unknown command kinds and malformed kernel-clear correlation identities fail before worker delivery.
+- Direct and daemon routing tests prove both exact product command classes pass the existing private-payload boundary.
 - The pure control test proves descriptor construction does not alter the terminal view or execute an effect.
 - Strict focused Clippy passed with `-D warnings`.
 - `scripts/cairn/check-live-terminal-agent-host --root .` passed terminal, daemon, TUI, catalog, facade, authority, and leak checks.
 - `nix build .#checks.x86_64-linux.live-terminal-agent-host --no-link -L` passed.
 - Cairn validation and proposal, design, and task gates passed before implementation.
+
+## Corrected failure
+
+An adversarial daemon-path audit found that the wire allowlist initially omitted both new exact classes. The follow-up change adds them and routes both commands through the daemon dispatcher test. No compatibility class or generic fallback was added.
 
 ## Octet comparison
 
