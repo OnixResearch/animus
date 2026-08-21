@@ -35,6 +35,7 @@ const MAX_SKILLS: usize = 64;
 const MAX_ITEMS: usize = 64;
 const MAX_NON_CLAIMS: usize = 32;
 const REQUIRED_OPERATIONS: &[&str] = &["context_read", "subagent"];
+const ALLOWED_OPERATIONS: &[&str] = &["context_read", "subagent", "tool"];
 const REQUIRED_NON_CLAIMS: &[&str] = &[
     "provider_correctness",
     "tool_correctness",
@@ -376,7 +377,7 @@ pub fn parse_live_steel_agent_config(
     validate_services(&raw.services)?;
     validate_bounds(raw.bounds)?;
     validate_authority(&raw.authority)?;
-    exact_sorted_set(&raw.admitted_operations, REQUIRED_OPERATIONS)?;
+    validate_operations(&raw.admitted_operations)?;
     validate_labels(&raw.admitted_child_profiles, MAX_ITEMS, false)?;
     validate_labels(&raw.command_profiles, MAX_ITEMS, true)?;
     exact_sorted_set(&raw.tool_bindings, &["steel_repl:animus.steel-repl.v1"])?;
@@ -752,6 +753,7 @@ fn build_rlm_policy(
         .map(|operation| match operation.as_str() {
             "context_read" => Ok(animus_adapter_rlm_kernel::HostOperationClass::ContextRead),
             "subagent" => Ok(animus_adapter_rlm_kernel::HostOperationClass::Subagent),
+            "tool" => Ok(animus_adapter_rlm_kernel::HostOperationClass::Tool),
             _other => Err(LiveSteelAgentConfigError::InvalidCollection),
         })
         .collect::<Result<Vec<_>, _>>()?;
@@ -893,6 +895,18 @@ fn build_skill_modules(
         modules.push(descriptor);
     }
     Ok(modules)
+}
+
+fn validate_operations(actual: &[String]) -> Result<(), LiveSteelAgentConfigError> {
+    // r[impl agent_harness_runtime.pueue_host.live_shell_tool_route]
+    validate_labels(actual, MAX_ITEMS, false)?;
+    let actual = actual.iter().map(String::as_str).collect::<BTreeSet<_>>();
+    let required = REQUIRED_OPERATIONS.iter().copied().collect::<BTreeSet<_>>();
+    let allowed = ALLOWED_OPERATIONS.iter().copied().collect::<BTreeSet<_>>();
+    if !required.is_subset(&actual) || !actual.is_subset(&allowed) {
+        return Err(LiveSteelAgentConfigError::InvalidCollection);
+    }
+    Ok(())
 }
 
 fn exact_sorted_set(actual: &[String], expected: &[&str]) -> Result<(), LiveSteelAgentConfigError> {

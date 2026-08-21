@@ -54,6 +54,12 @@ A caller-owned supervisor starts and stops `pueued`. The host runs a bounded hea
 
 **Rationale:** Model-visible use must retain Animus schema, capability, staged-execution, and receipt gates.
 
+### Decision: Keep live-shell tool admission optional
+
+**Choice:** Live-agent configuration accepts the exact `tool` host operation in addition to its required context and child operations.
+
+**Rationale:** A consumer can compose pueue through the existing RLM tool route without making any host tool a live-agent default.
+
 ## Functional Core / Imperative Shell
 
 The existing queue DTO validation and process-job profile resolution remain pure. The new crate owns process calls, daemon observations, cancellation, and output parsing.

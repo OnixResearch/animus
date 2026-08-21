@@ -39,6 +39,8 @@ The shell admits two provider tuples. `openai` binds the official OpenAI Respons
 
 The shell rejects crossed tuples, arbitrary URLs, unknown providers, credential-reference drift, discovery, OAuth, and fallback. The existing `animus-std-openai` host remains the only network adapter.
 
+A product can also admit the exact `tool` host operation. The operation remains unavailable unless the product injects a matching route, executor-kit binding, capability, and durable commit service.
+
 `scripts/config/export-nickel-configs` writes the deterministic JSON file. Rust validates the complete file before it opens a store or contacts a provider.
 
 The binary runs the maintained composition activation preflight before it reads the credential. The library entrypoint repeats the same pure check before store or provider effects. A blocked result returns `LiveApplicationError::Activation` without an ambient fallback. See [composition activation graph](composition-activation-graph.md).

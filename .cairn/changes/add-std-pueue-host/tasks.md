@@ -10,6 +10,7 @@
 - [x] [parallel] [task:projection] [after:process] Parse bounded backend output into existing Animus queue responses and failure classes. r[agent_harness_runtime.pueue_host.projection]
 - [x] [parallel] [task:isolation] [after:process] Enforce one explicit capability-scoped namespace without ambient fallback. r[agent_harness_runtime.pueue_host.isolation]
 - [x] [serial] [task:tool] [after:projection] Add the pueue tool definition and `ToolExecutorService` adapter. r[agent_harness_runtime.pueue_host.tool]
+- [x] [serial] [task:live-shell-tool] [after:tool] Admit the exact optional host-tool operation in live-agent configuration. r[agent_harness_runtime.pueue_host.live_shell_tool_route]
 
 ## Phase 3: Evidence and publication
 

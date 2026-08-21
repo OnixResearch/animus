@@ -129,6 +129,24 @@ r[agent_harness_runtime.pueue_host.tool.denied]
 - WHEN final admission runs
 - THEN the adapter MUST NOT call pueue
 
+### Requirement: Optional live-shell tool route
+
+r[agent_harness_runtime.pueue_host.live_shell_tool_route] The live Steel agent configuration MUST admit the exact `tool` host operation only when a product selects it. Unknown host operations MUST remain denied.
+
+#### Scenario: Product selects the host tool route
+
+r[agent_harness_runtime.pueue_host.live_shell_tool_route.valid]
+- GIVEN a product configures the required context and child routes plus the exact tool operation
+- WHEN live-agent configuration admission runs
+- THEN the checked RLM policy MUST admit the tool operation
+
+#### Scenario: Product selects an unknown host operation
+
+r[agent_harness_runtime.pueue_host.live_shell_tool_route.unknown]
+- GIVEN a product configures an operation outside the closed context, child, and tool cohort
+- WHEN live-agent configuration admission runs
+- THEN admission MUST fail before route or backend construction
+
 ### Requirement: Published component contract
 
 r[agent_harness_runtime.pueue_host.publication] Animus MUST publish the pueue component, feature, configuration contract, component catalog entry, focused rail, and claim boundaries from one immutable revision.

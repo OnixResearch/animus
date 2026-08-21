@@ -60,6 +60,34 @@ fn exact_openrouter_configuration_selects_the_matching_host_and_credential() {
 }
 
 #[test]
+fn exact_host_tool_operation_is_optional_and_unknown_operations_fail_closed() {
+    // r[verify agent_harness_runtime.pueue_host.live_shell_tool_route]
+    let mut tool: Value = serde_json::from_slice(CONFIG).expect("JSON");
+    tool["admitted_operations"]
+        .as_array_mut()
+        .expect("operation array")
+        .push(Value::from("tool"));
+    let bytes = serde_json::to_vec(&tool).expect("tool operation fixture");
+    let config = parse_live_steel_agent_config(bytes.as_slice()).expect("tool operation config");
+    assert!(
+        config
+            .admitted_operations()
+            .iter()
+            .any(|value| value == "tool")
+    );
+
+    let mut unknown: Value = serde_json::from_slice(CONFIG).expect("JSON");
+    unknown["admitted_operations"]
+        .as_array_mut()
+        .expect("operation array")
+        .push(Value::from("shell"));
+    assert_eq!(
+        parse_value(&unknown),
+        Err(LiveSteelAgentConfigError::InvalidCollection)
+    );
+}
+
+#[test]
 fn missing_component_unknown_field_and_zero_bound_fail_before_effects() {
     // r[verify agent_harness_runtime.live_steel_agent_shell.configuration.missing]
     let mut missing: Value = serde_json::from_slice(CONFIG).expect("JSON");
