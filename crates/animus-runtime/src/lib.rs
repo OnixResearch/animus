@@ -76,6 +76,7 @@ pub mod capability_conditional;
 /// Pure bounded session branch projection, control planning, comparison, and evidence.
 pub use animus_session_core::branch_explorer;
 mod capmap;
+#[path = "caps/core.rs"]
 mod caps;
 mod checkpoint;
 #[path = "childsession.rs"]
