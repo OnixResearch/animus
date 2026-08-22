@@ -4,10 +4,13 @@ use animus_live_steel_agent::{LiveSteelAgentConfigError, parse_live_steel_agent_
 use serde_json::Value;
 
 const CONFIG: &[u8] = include_bytes!("../../../config/generated/live-steel-agent-shell.json");
+const LOCAL_DSPARK_PROVIDER: &str = "local-dspark";
 const OPENAI_PROVIDER: &str = "openai";
 const OPENROUTER_PROVIDER: &str = "openrouter";
+const LOCAL_DSPARK_CREDENTIAL_REFERENCE: &str = "brokered:injected-local-dspark-api-key";
 const OPENAI_CREDENTIAL_REFERENCE: &str = "brokered:injected-openai-api-key";
 const OPENROUTER_CREDENTIAL_REFERENCE: &str = "brokered:injected-openrouter-api-key";
+const LOCAL_DSPARK_MODEL: &str = "deepseek-v4-flash-0731-ablit-100";
 const OPENROUTER_MODEL: &str = "deepseek/deepseek-v4-flash-0731";
 
 #[test]
@@ -56,6 +59,38 @@ fn exact_openrouter_configuration_selects_the_matching_host_and_credential() {
     assert_eq!(
         host.endpoint_url(),
         animus_std_openai::OPENROUTER_RESPONSES_URL
+    );
+}
+
+#[test]
+fn exact_local_dspark_configuration_requires_disabled_reasoning() {
+    // r[verify agent_harness_runtime.local_dspark_responses.endpoint.pass]
+    // r[verify agent_harness_runtime.local_dspark_responses.reasoning.pass]
+    let value = local_dspark_value();
+    let bytes = serde_json::to_vec(&value).expect("encode local-dspark fixture");
+    let config = parse_live_steel_agent_config(bytes.as_slice()).expect("local-dspark config");
+
+    assert_eq!(config.provider_id(), LOCAL_DSPARK_PROVIDER);
+    assert_eq!(config.model_id(), LOCAL_DSPARK_MODEL);
+    assert_eq!(
+        config.credential_reference(),
+        LOCAL_DSPARK_CREDENTIAL_REFERENCE
+    );
+    let host = config.provider_host_config().expect("local host config");
+    assert_eq!(
+        host.endpoint_identity(),
+        animus_std_openai::LOCAL_DSPARK_RESPONSES_ENDPOINT_IDENTITY
+    );
+    assert_eq!(
+        host.endpoint_url(),
+        animus_std_openai::LOCAL_DSPARK_RESPONSES_URL
+    );
+
+    let mut reasoning_drift = value;
+    reasoning_drift["provider"]["reasoning_effort"] = Value::from("low");
+    assert_eq!(
+        parse_value(&reasoning_drift),
+        Err(LiveSteelAgentConfigError::ProviderMismatch)
     );
 }
 
@@ -185,6 +220,18 @@ fn endpoint_credential_and_evidence_drift_fail_closed() {
         parse_value(&evidence),
         Err(LiveSteelAgentConfigError::EvidenceMismatch)
     );
+}
+
+fn local_dspark_value() -> Value {
+    let mut value: Value = serde_json::from_slice(CONFIG).expect("JSON");
+    value["provider"]["provider_id"] = Value::from(LOCAL_DSPARK_PROVIDER);
+    value["provider"]["model_id"] = Value::from(LOCAL_DSPARK_MODEL);
+    value["provider"]["endpoint_identity"] =
+        Value::from(animus_std_openai::LOCAL_DSPARK_RESPONSES_ENDPOINT_IDENTITY);
+    value["provider"]["endpoint_url"] = Value::from(animus_std_openai::LOCAL_DSPARK_RESPONSES_URL);
+    value["provider"]["credential_reference"] = Value::from(LOCAL_DSPARK_CREDENTIAL_REFERENCE);
+    value["provider"]["reasoning_effort"] = Value::from("none");
+    value
 }
 
 fn openrouter_value() -> Value {

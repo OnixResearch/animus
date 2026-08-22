@@ -15,13 +15,17 @@ const COMPONENT_SKILLS: &str = "animus-steel:load_skill_modules";
 const COMPONENT_CONTROL: &str = "animus-live-steel-agent:ExplicitRunControl";
 const COMPONENT_EVENTS: &str = "animus-live-steel-agent:MetadataEventSink";
 const COMPONENT_RECEIPTS: &str = "animus-live-steel-agent:RunReceipt";
+const LOCAL_DSPARK_PROVIDER_ID: &str = "local-dspark";
 const OPENAI_PROVIDER_ID: &str = "openai";
 const OPENROUTER_PROVIDER_ID: &str = "openrouter";
+const LOCAL_DSPARK_CREDENTIAL_REFERENCE: &str = "brokered:injected-local-dspark-api-key";
 const OPENAI_CREDENTIAL_REFERENCE: &str = "brokered:injected-openai-api-key";
 const OPENROUTER_CREDENTIAL_REFERENCE: &str = "brokered:injected-openrouter-api-key";
+const LOCAL_DSPARK_CREDENTIAL_SOURCE: &str = "injected-local-dspark-api-key";
 const OPENAI_CREDENTIAL_SOURCE: &str = "injected-openai-api-key";
 const OPENROUTER_CREDENTIAL_SOURCE: &str = "injected-openrouter-api-key";
-const REASONING_EFFORT: &str = "low";
+const DISABLED_REASONING_EFFORT: &str = "none";
+const LOW_REASONING_EFFORT: &str = "low";
 const DURABILITY: &str = "sync_all_each_commit";
 const LOCKING: &str = "exclusive_create_new";
 const PRIVACY: &str = "replay_private";
@@ -584,14 +588,24 @@ struct AdmittedProviderCohort {
     endpoint_url: &'static str,
     credential_reference: &'static str,
     credential_source: &'static str,
+    reasoning_effort: &'static str,
 }
 
+const LOCAL_DSPARK_PROVIDER_COHORT: AdmittedProviderCohort = AdmittedProviderCohort {
+    provider_id: LOCAL_DSPARK_PROVIDER_ID,
+    endpoint_identity: animus_std_openai::LOCAL_DSPARK_RESPONSES_ENDPOINT_IDENTITY,
+    endpoint_url: animus_std_openai::LOCAL_DSPARK_RESPONSES_URL,
+    credential_reference: LOCAL_DSPARK_CREDENTIAL_REFERENCE,
+    credential_source: LOCAL_DSPARK_CREDENTIAL_SOURCE,
+    reasoning_effort: DISABLED_REASONING_EFFORT,
+};
 const OPENAI_PROVIDER_COHORT: AdmittedProviderCohort = AdmittedProviderCohort {
     provider_id: OPENAI_PROVIDER_ID,
     endpoint_identity: animus_std_openai::OFFICIAL_OPENAI_RESPONSES_ENDPOINT_IDENTITY,
     endpoint_url: animus_std_openai::OFFICIAL_OPENAI_RESPONSES_URL,
     credential_reference: OPENAI_CREDENTIAL_REFERENCE,
     credential_source: OPENAI_CREDENTIAL_SOURCE,
+    reasoning_effort: LOW_REASONING_EFFORT,
 };
 const OPENROUTER_PROVIDER_COHORT: AdmittedProviderCohort = AdmittedProviderCohort {
     provider_id: OPENROUTER_PROVIDER_ID,
@@ -599,6 +613,7 @@ const OPENROUTER_PROVIDER_COHORT: AdmittedProviderCohort = AdmittedProviderCohor
     endpoint_url: animus_std_openai::OPENROUTER_RESPONSES_URL,
     credential_reference: OPENROUTER_CREDENTIAL_REFERENCE,
     credential_source: OPENROUTER_CREDENTIAL_SOURCE,
+    reasoning_effort: LOW_REASONING_EFFORT,
 };
 
 fn validate_provider(provider: &ProviderConfig) -> Result<(), LiveSteelAgentConfigError> {
@@ -613,8 +628,8 @@ fn validate_provider(provider: &ProviderConfig) -> Result<(), LiveSteelAgentConf
     ] {
         validate_label(label)?;
     }
-    let _cohort = admit_provider_cohort(provider)?;
-    let is_provider_admitted = provider.reasoning_effort == REASONING_EFFORT
+    let cohort = admit_provider_cohort(provider)?;
+    let is_provider_admitted = provider.reasoning_effort == cohort.reasoning_effort
         && provider.tool_name == animus_std_openai::STEEL_REPL_TOOL_NAME
         && provider.tool_schema == animus_std_openai::STEEL_REPL_TOOL_SCHEMA;
     if !is_provider_admitted {
@@ -628,6 +643,7 @@ fn admit_provider_cohort(
 ) -> Result<&'static AdmittedProviderCohort, LiveSteelAgentConfigError> {
     // r[impl agent_harness_runtime.live_steel_agent_provider_cohort]
     let cohort = match provider.provider_id.as_str() {
+        LOCAL_DSPARK_PROVIDER_ID => &LOCAL_DSPARK_PROVIDER_COHORT,
         OPENAI_PROVIDER_ID => &OPENAI_PROVIDER_COHORT,
         OPENROUTER_PROVIDER_ID => &OPENROUTER_PROVIDER_COHORT,
         _unknown => return Err(LiveSteelAgentConfigError::ProviderMismatch),

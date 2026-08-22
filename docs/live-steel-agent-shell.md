@@ -6,7 +6,7 @@ The `animus-live-steel-agent` package is a non-default headless application. It 
 
 `run_live_application` is the visible composition root. It selects these concrete parts:
 
-- the tool-capable OpenAI-compatible Responses host with an exact OpenAI or OpenRouter endpoint tuple;
+- the tool-capable OpenAI-compatible Responses host with an exact OpenAI, OpenRouter, or private local-dspark endpoint tuple;
 - separate durable coding-session and private Steel-kernel journals;
 - `CodingSessionHost` for message and tool-loop ordering;
 - the fixed staged tool shell with no optional handlers by default;
@@ -35,9 +35,9 @@ Live provider availability and model behavior remain unresolved until a separate
 
 `config/live-steel-agent-shell.ncl` is the human-authored configuration. It defines exact component labels, provider cohort, model, credential reference, store names, authority identities, operations, skills, and finite bounds.
 
-The shell admits two provider tuples. `openai` binds the official OpenAI Responses endpoint to `brokered:injected-openai-api-key`. `openrouter` binds the OpenRouter Responses endpoint to `brokered:injected-openrouter-api-key`.
+The shell admits three provider tuples. `openai` binds the official OpenAI Responses endpoint to `brokered:injected-openai-api-key`. `openrouter` binds the OpenRouter Responses endpoint to `brokered:injected-openrouter-api-key`. `local-dspark` binds the exact private Responses endpoint to `brokered:injected-local-dspark-api-key` and requires disabled reasoning.
 
-The shell rejects crossed tuples, arbitrary URLs, unknown providers, credential-reference drift, discovery, OAuth, and fallback. The existing `animus-std-openai` host remains the only network adapter.
+The shell rejects crossed tuples, arbitrary URLs, unknown providers, credential-reference drift, reasoning drift, discovery, OAuth, and fallback. The existing `animus-std-openai` host remains the only network adapter.
 
 A product can also admit the exact `tool` host operation. The operation remains unavailable unless the product injects a matching route, executor-kit binding, capability, and durable commit service.
 
