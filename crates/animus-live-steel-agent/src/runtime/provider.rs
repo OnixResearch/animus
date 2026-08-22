@@ -7,6 +7,8 @@ const TOOL_SCHEMA_JSON: &[u8] = br#"{
   "required": ["code"],
   "additionalProperties": false
 }"#;
+const DISABLED_REASONING_EFFORT: &str = "none";
+const LOW_REASONING_EFFORT: &str = "low";
 const MODEL_CALL_PREFIX: &str = "live-steel-call-";
 const FIRST_CALL: u64 = 1;
 const CALL_INCREMENT: u64 = 1;
@@ -300,11 +302,7 @@ pub(crate) fn plan_request(
                 stream: true,
             },
             response_format: animus_adapters::CanonicalModelResponseFormatIntentDraft::Text,
-            reasoning: animus_adapters::CanonicalModelReasoningRequestDraft {
-                enabled: true,
-                effort: animus_adapters::CanonicalModelReasoningEffort::Low,
-                summary_label: None,
-            },
+            reasoning: project_reasoning_request(config.reasoning_effort())?,
             provenance: &[],
         },
     )
@@ -347,6 +345,27 @@ pub(crate) fn plan_request(
     })
     .map_err(|_error| ProviderStreamError::Planning)?;
     Ok(PlannedProviderRequest { plan, canonical })
+}
+
+fn project_reasoning_request(
+    effort: &str,
+) -> Result<animus_adapters::CanonicalModelReasoningRequestDraft<'static>, ProviderStreamError> {
+    // r[impl agent_harness_runtime.local_dspark_reasoning_planning.policy]
+    if effort == DISABLED_REASONING_EFFORT {
+        Ok(animus_adapters::CanonicalModelReasoningRequestDraft {
+            enabled: false,
+            effort: animus_adapters::CanonicalModelReasoningEffort::None,
+            summary_label: None,
+        })
+    } else if effort == LOW_REASONING_EFFORT {
+        Ok(animus_adapters::CanonicalModelReasoningRequestDraft {
+            enabled: true,
+            effort: animus_adapters::CanonicalModelReasoningEffort::Low,
+            summary_label: None,
+        })
+    } else {
+        Err(ProviderStreamError::Canonical)
+    }
 }
 
 pub(crate) fn final_text(
@@ -402,4 +421,37 @@ fn tool_schemas() -> Result<Vec<animus_std_openai::OpenAiToolSchemaBinding>, Pro
         )
         .map_err(|_error| ProviderStreamError::ToolCohort)?,
     ])
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn reasoning_projection_preserves_disabled_and_low_policy() {
+        // r[verify agent_harness_runtime.local_dspark_reasoning_planning.policy.none]
+        // r[verify agent_harness_runtime.local_dspark_reasoning_planning.policy.low]
+        let disabled = super::project_reasoning_request(super::DISABLED_REASONING_EFFORT)
+            .expect("disabled reasoning must project");
+        assert!(!disabled.enabled);
+        assert_eq!(
+            disabled.effort,
+            animus_adapters::CanonicalModelReasoningEffort::None
+        );
+
+        let low = super::project_reasoning_request(super::LOW_REASONING_EFFORT)
+            .expect("low reasoning must project");
+        assert!(low.enabled);
+        assert_eq!(
+            low.effort,
+            animus_adapters::CanonicalModelReasoningEffort::Low
+        );
+    }
+
+    #[test]
+    fn unknown_reasoning_projection_fails_closed() {
+        // r[verify agent_harness_runtime.local_dspark_reasoning_planning.policy.failure]
+        assert!(matches!(
+            super::project_reasoning_request("medium"),
+            Err(super::ProviderStreamError::Canonical)
+        ));
+    }
 }

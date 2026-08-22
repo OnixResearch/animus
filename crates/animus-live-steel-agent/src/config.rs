@@ -148,6 +148,12 @@ impl ValidatedLiveSteelAgentConfig {
         self.raw.provider.credential_reference.as_str()
     }
 
+    /// Returns the validated provider reasoning effort.
+    #[must_use]
+    pub fn reasoning_effort(&self) -> &str {
+        self.raw.provider.reasoning_effort.as_str()
+    }
+
     /// Returns the exact selected model.
     #[must_use]
     pub const fn selected_model(&self) -> &animus_std::SelectedModel {

@@ -37,7 +37,7 @@ Live provider availability and model behavior remain unresolved until a separate
 
 The shell admits three provider tuples. `openai` binds the official OpenAI Responses endpoint to `brokered:injected-openai-api-key`. `openrouter` binds the OpenRouter Responses endpoint to `brokered:injected-openrouter-api-key`. `local-dspark` binds the exact private Responses endpoint to `brokered:injected-local-dspark-api-key` and requires disabled reasoning.
 
-The shell rejects crossed tuples, arbitrary URLs, unknown providers, credential-reference drift, reasoning drift, discovery, OAuth, and fallback. The existing `animus-std-openai` host remains the only network adapter.
+The shell rejects crossed tuples, arbitrary URLs, unknown providers, credential-reference drift, reasoning drift, discovery, OAuth, and fallback. Live request planning preserves the validated `none` or `low` reasoning setting. The existing `animus-std-openai` host remains the only network adapter.
 
 A product can also admit the exact `tool` host operation. The operation remains unavailable unless the product injects a matching route, executor-kit binding, capability, and durable commit service.
 
