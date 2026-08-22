@@ -11,4 +11,4 @@
 
 ## Phase 3: Lifecycle closeout
 
-- [ ] [serial] Record evidence, sync the accepted spec, archive the change, and publish the verified revision linked to r[agent_harness_runtime.local_dspark_responses.verification].
+- [x] [serial] Record evidence, sync the accepted spec, archive the change, and publish the verified revision linked to r[agent_harness_runtime.local_dspark_responses.verification].
