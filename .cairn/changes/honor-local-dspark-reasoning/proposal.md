@@ -7,9 +7,10 @@ The live session planner hard-codes `low` reasoning even after the exact local-d
 - Expose the validated reasoning effort as metadata from the live configuration.
 - Project `none` as disabled canonical reasoning and preserve `low` for existing cohorts.
 - Reject every unsupported reasoning value before provider contact.
-- Add positive and negative planning tests.
+- Preserve daemon event sequence on decoded private runtime events so terminal polling remains coherent.
+- Add positive and negative planning and cursor tests.
 
 ## Impact
 
-- **Files**: live-agent configuration, provider planning, tests, docs, and lifecycle evidence
+- **Files**: live-agent configuration, provider planning, terminal event projection, tests, docs, and lifecycle evidence
 - **Testing**: focused live-agent tests, strict Clippy, formatting, focused Nix checks, and downstream zero-finding product verification

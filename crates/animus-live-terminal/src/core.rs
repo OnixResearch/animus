@@ -241,8 +241,13 @@ pub enum ControlIntent {
 /// Safe event projected from the selected session API.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ClientSessionEvent {
-    /// Apply one existing runtime event through accepted TUI reducers.
-    Runtime(animus_runtime::RuntimeEvent),
+    /// Apply one sequence-bearing private runtime event through accepted TUI reducers.
+    Runtime {
+        /// Monotonic daemon event sequence.
+        sequence: u64,
+        /// Decoded private runtime event.
+        event: animus_runtime::RuntimeEvent,
+    },
     /// Record safe metadata from a daemon worker event.
     Observation {
         /// Monotonic event sequence.
@@ -1010,7 +1015,18 @@ fn apply_event_batch(
     }
     for event in events {
         match event {
-            ClientSessionEvent::Runtime(runtime) => state.view.apply_runtime_event(runtime),
+            ClientSessionEvent::Runtime { sequence, event } => {
+                // r[impl agent_harness_runtime.local_dspark_reasoning_planning.private_cursor]
+                let expected = state
+                    .last_sequence
+                    .checked_add(1)
+                    .ok_or(TerminalCoreError::Overflow)?;
+                if *sequence != expected {
+                    return Err(TerminalCoreError::Sequence);
+                }
+                state.last_sequence = *sequence;
+                state.view.apply_runtime_event(event);
+            }
             ClientSessionEvent::Observation {
                 sequence,
                 class,

@@ -25,9 +25,27 @@ r[agent_harness_runtime.local_dspark_reasoning_planning.policy.failure]
 - WHEN reasoning projection runs
 - THEN planning fails before credential use or provider contact
 
+### Requirement: Private runtime events advance the terminal cursor
+
+r[agent_harness_runtime.local_dspark_reasoning_planning.private_cursor] Every decoded private runtime event MUST retain its daemon sequence, and terminal state MUST validate and advance that sequence before the next event request.
+
+#### Scenario: Ordered private event advances polling
+
+r[agent_harness_runtime.local_dspark_reasoning_planning.private_cursor.pass]
+- GIVEN the daemon delivers a valid private runtime event after the terminal cursor
+- WHEN the terminal applies the event
+- THEN it updates the cursor to that exact sequence and preserves the decoded private runtime event
+
+#### Scenario: Stale or skipped private sequence fails closed
+
+r[agent_harness_runtime.local_dspark_reasoning_planning.private_cursor.failure]
+- GIVEN a private runtime event repeats or skips the expected sequence
+- WHEN the terminal applies the event batch
+- THEN it returns a sequence error before the next daemon request
+
 ### Requirement: Reasoning planning has bounded verification
 
-r[agent_harness_runtime.local_dspark_reasoning_planning.verification] Verification MUST include positive disabled and low projections, a negative unknown projection, strict Clippy, formatting, focused Nix checks, and downstream live product evidence.
+r[agent_harness_runtime.local_dspark_reasoning_planning.verification] Verification MUST include positive disabled and low projections, a negative unknown projection, positive and negative private cursor cases, strict Clippy, formatting, focused Nix checks, and downstream live product evidence.
 
 #### Scenario: Downstream product no longer fails on hidden reasoning
 

@@ -10,6 +10,7 @@ use std::collections::VecDeque;
 
 const CONFIG: &[u8] = include_bytes!("../../../config/generated/live-terminal-agent-host.json");
 const HASH: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const FIRST_SEQUENCE: u64 = 1;
 const MAXIMUM_ITERATIONS: u64 = 16;
 const INITIAL_WIDTH: u16 = 80;
 const INITIAL_HEIGHT: u16 = 24;
@@ -20,14 +21,15 @@ const RESIZED_HEIGHT: u16 = 30;
 fn input_resize_streaming_commands_and_detach_are_bounded() {
     let config = direct_config();
     let mut connection = FixtureConnection::new(vec![
-        vec![ClientSessionEvent::Runtime(
-            animus_runtime::RuntimeEvent::SessionStateChanged {
+        vec![ClientSessionEvent::Runtime {
+            sequence: FIRST_SEQUENCE,
+            event: animus_runtime::RuntimeEvent::SessionStateChanged {
                 session_id: String::from("session-host"),
                 run_id: Some(String::from("run-host")),
                 status: String::from("streaming"),
                 queue_count: 1,
             },
-        )],
+        }],
         Vec::new(),
         Vec::new(),
         Vec::new(),

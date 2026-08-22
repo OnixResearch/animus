@@ -16,7 +16,14 @@ Endpoint and request-body admission already support explicit local reasoning dis
 
 **Rationale:** A fallback could re-enable hidden reasoning or widen provider behavior.
 
+### Decision: Keep private runtime events sequence-bearing
+
+**Choice:** Change the terminal runtime-event projection to carry the daemon sequence beside the private decoded event. Validate and advance the cursor before applying the runtime event.
+
+**Rationale:** The daemon lease advances when it delivers private events. If the terminal drops their sequence, its next request reuses a stale cursor and the supervisor correctly rejects it.
+
 ## Risks / Trade-offs
 
 - Future reasoning levels require an explicit reviewed mapping.
 - The fix does not weaken hidden-reasoning rejection in the stream parser.
+- The `ClientSessionEvent::Runtime` shape changes for terminal consumers. The change keeps payload privacy and adds required ordering metadata.

@@ -18,24 +18,27 @@ const MAX_HEIGHT: u16 = 80;
 const FULL_CLEANUP_ACTIONS: u32 = 5;
 const ALTERNATE_CLEANUP_ACTIONS: u32 = 4;
 const MAX_LABEL_BYTES: usize = 256;
+const FIRST_SEQUENCE: u64 = 1;
 const NEXT_SEQUENCE: u64 = 2;
 const ADVANCED_QUEUE_GENERATION: u64 = 2;
 
 #[test]
 fn snapshot_input_runtime_events_commands_and_receipt_are_bounded() {
+    // r[verify agent_harness_runtime.local_dspark_reasoning_planning.private_cursor.pass]
     let mut state = state();
     let plan = reduce_iteration(
         &mut state,
         &TerminalIteration {
             input: Some(TerminalInput::Character('h')),
-            session_events: &[ClientSessionEvent::Runtime(
-                animus_runtime::RuntimeEvent::SessionStateChanged {
+            session_events: &[ClientSessionEvent::Runtime {
+                sequence: FIRST_SEQUENCE,
+                event: animus_runtime::RuntimeEvent::SessionStateChanged {
                     session_id: String::from("session-terminal"),
                     run_id: Some(String::from("run-terminal")),
                     status: String::from("streaming"),
                     queue_count: 1,
                 },
-            )],
+            }],
             cancelled: false,
             signalled: false,
         },
@@ -45,6 +48,7 @@ fn snapshot_input_runtime_events_commands_and_receipt_are_bounded() {
     assert!(plan.command.is_none());
     assert!(plan.render);
     assert_eq!(state.view().coding_session().state().queue_count, 1);
+    assert_eq!(state.last_sequence(), FIRST_SEQUENCE);
     assert_eq!(state.view().prompt().content(), "h");
 
     reduce_iteration(
@@ -390,6 +394,34 @@ fn queue_conflict_requests_fresh_snapshot_only_through_client_command() {
         })
     ));
     assert!(state.view().queue_conflict().is_none());
+}
+
+#[test]
+fn stale_and_skipped_private_runtime_sequences_fail_closed() {
+    // r[verify agent_harness_runtime.local_dspark_reasoning_planning.private_cursor.failure]
+    for sequence in [0, NEXT_SEQUENCE] {
+        let mut state = state();
+        let error = reduce_iteration(
+            &mut state,
+            &TerminalIteration {
+                input: None,
+                session_events: &[ClientSessionEvent::Runtime {
+                    sequence,
+                    event: animus_runtime::RuntimeEvent::SessionStateChanged {
+                        session_id: String::from("session-terminal"),
+                        run_id: Some(String::from("run-terminal")),
+                        status: String::from("streaming"),
+                        queue_count: 1,
+                    },
+                }],
+                cancelled: false,
+                signalled: false,
+            },
+            limits(),
+        )
+        .expect_err("stale or skipped sequence must fail");
+        assert_eq!(error, TerminalCoreError::Sequence);
+    }
 }
 
 #[test]

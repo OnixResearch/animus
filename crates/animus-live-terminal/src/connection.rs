@@ -1046,7 +1046,10 @@ fn private_client_event(
         .map_err(|_error| TerminalConnectionError::Protocol)?
         .try_into_runtime_event()
         .map_err(|_error| TerminalConnectionError::Protocol)?;
-    Ok(crate::ClientSessionEvent::Runtime(event))
+    Ok(crate::ClientSessionEvent::Runtime {
+        sequence: facts.sequence,
+        event,
+    })
 }
 
 fn request_identity(class: &str, root_id: &str, client_id: &str, sequence: u64) -> String {

@@ -10,6 +10,8 @@ use animus_live_terminal::{
 const WIDTH: u16 = 80;
 const HEIGHT: u16 = 24;
 const HASH: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const RUNTIME_SEQUENCE: u64 = 1;
+const STATE_SEQUENCE: u64 = 2;
 
 #[test]
 fn test_backend_renders_snapshot_first_streaming_and_child_state() {
@@ -21,12 +23,15 @@ fn test_backend_renders_snapshot_first_streaming_and_child_state() {
             event_sequence: 0,
             restore_status: animus_local_daemon::RestoreStatus::Restored,
             events: vec![
-                ClientSessionEvent::Runtime(animus_runtime::RuntimeEvent::SessionStateChanged {
-                    session_id: String::from("session-render"),
-                    run_id: Some(String::from("run-render")),
-                    status: String::from("streaming"),
-                    queue_count: 2,
-                }),
+                ClientSessionEvent::Runtime {
+                    sequence: RUNTIME_SEQUENCE,
+                    event: animus_runtime::RuntimeEvent::SessionStateChanged {
+                        session_id: String::from("session-render"),
+                        run_id: Some(String::from("run-render")),
+                        status: String::from("streaming"),
+                        queue_count: 2,
+                    },
+                },
                 ClientSessionEvent::ChildState {
                     child_id: String::from("child-render"),
                     status: String::from("running"),
@@ -69,12 +74,12 @@ fn state_event() -> ClientSessionEvent {
     let observation_identity = state
         .observation_identity(animus_local_daemon::StateInspectionIdentityFacts {
             root_id: "root-render",
-            sequence: 1,
+            sequence: STATE_SEQUENCE,
             correlation_id: HASH,
         })
         .expect("state event identity");
     ClientSessionEvent::StateInspection {
-        sequence: 1,
+        sequence: STATE_SEQUENCE,
         correlation_id: String::from(HASH),
         observation_identity,
         state,

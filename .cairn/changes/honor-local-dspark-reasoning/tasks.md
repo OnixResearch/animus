@@ -2,6 +2,7 @@
 
 - [ ] [serial] Expose and project the validated reasoning setting linked to r[agent_harness_runtime.local_dspark_reasoning_planning.policy].
 - [ ] [serial] Add positive and negative pure tests linked to r[agent_harness_runtime.local_dspark_reasoning_planning.verification].
+- [ ] [serial] Preserve and validate private runtime-event cursor sequences linked to r[agent_harness_runtime.local_dspark_reasoning_planning.private_cursor].
 
 ## Phase 2: Verification and closeout
 
