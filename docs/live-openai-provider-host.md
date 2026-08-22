@@ -1,17 +1,20 @@
 # Live OpenAI-compatible provider host
 
-`animus-std-openai` is a non-default host for reviewed OpenAI-compatible Responses HTTPS endpoints. It requires explicit network and credential authority.
+`animus-std-openai` is a non-default host for reviewed OpenAI-compatible Responses endpoints. It requires explicit network and credential authority.
 
 The root text-only feature is `openai-provider-host`. The tool-capable feature is `openai-tool-provider-host`. Direct users can enable `reqwest-client` or `tool-streaming` on `animus-std-openai`.
 
 ## Endpoint cohorts
 
-The host admits two exact endpoint pairs:
+The host admits three exact endpoint pairs:
 
-- `openai-responses` with `https://api.openai.com/v1/responses`; and
-- `openrouter-responses` with `https://openrouter.ai/api/v1/responses`.
+- `openai-responses` with `https://api.openai.com/v1/responses`;
+- `openrouter-responses` with `https://openrouter.ai/api/v1/responses`; and
+- `local-dspark-responses` with the reviewed private HTTP Responses URL.
 
-Crossed pairs and arbitrary URLs fail before credential use or network contact.
+Crossed pairs and arbitrary URLs fail before credential use or network contact. HTTPS remains mandatory for OpenAI and OpenRouter. Cleartext HTTP is allowed only for the exact private local-dspark pair.
+
+The local cohort must use model `deepseek-v4-flash-0731-ablit-100` at the product or packaged-smoke boundary. Its request projection sends explicit `reasoning.effort = "none"`. Without this field, the server emits hidden-reasoning events that the common parser rejects.
 
 The text-only cohort supports non-streaming text and refusal responses. It supports system, developer, user, and assistant messages. It also supports bounded usage, reasoning effort, output-token controls, temperature controls, and safe metadata.
 
@@ -75,7 +78,7 @@ The parser projects its accepted frames into the existing runtime retry stream s
 
 `build_openai_request_body`, `build_tool_capable_openai_request_body`, `normalize_openai_response`, and the SSE parser are deterministic over explicit inputs. They do not read the environment or contact a network.
 
-`ReqwestOpenAiHost` owns HTTPS transport. It uses explicit configuration, credentials, dispatch plans, cancellation, and byte bounds. The client disables redirects, ambient proxies, discovery, fallback, and hidden retry.
+`ReqwestOpenAiHost` owns transport. It uses explicit configuration, credentials, dispatch plans, cancellation, and byte bounds. The client disables redirects, ambient proxies, discovery, fallback, and hidden retry. It permits cleartext transport only after exact local-dspark pair validation.
 
 The streaming transport is behind an injected reader seam. Deterministic tests use the same request admission and parser loop as the live client.
 
@@ -107,7 +110,18 @@ cargo run -q -p animus-std-openai \
   --credential-stdin < /run/credentials/openrouter-api-key
 ```
 
-The binaries read a bounded API key from standard input. Their evidence omits prompts, credentials, model output, tool arguments, tool output, and raw responses.
+For the exact private local-dspark endpoint:
+
+```sh
+model_id='deepseek-v4-flash-0731-ablit-100'
+printf '%s\n' 'local' | cargo run -q -p animus-std-openai \
+  --features reqwest-client \
+  --bin animus-live-local-dspark-smoke -- \
+  --model "${model_id}" \
+  --credential-stdin
+```
+
+The binaries read a bounded API key from standard input. Their evidence omits prompts, credentials, model output, reasoning, tool arguments, tool output, and raw responses.
 
 ## Validation
 

@@ -4,12 +4,20 @@ use std::time::Duration;
 
 #[cfg(feature = "reqwest-client")]
 use crate::{
-    CancellationState, OFFICIAL_OPENAI_RESPONSES_URL, OPENROUTER_RESPONSES_URL, OpenAiHostConfig,
+    CancellationState, LOCAL_DSPARK_RESPONSES_URL, OFFICIAL_OPENAI_RESPONSES_URL,
+    OPENROUTER_RESPONSES_URL, OpenAiHostConfig,
 };
 use crate::{
-    HostError, OFFICIAL_OPENAI_RESPONSES_ENDPOINT_IDENTITY, OPENROUTER_RESPONSES_ENDPOINT_IDENTITY,
+    HostError, LOCAL_DSPARK_RESPONSES_ENDPOINT_IDENTITY,
+    OFFICIAL_OPENAI_RESPONSES_ENDPOINT_IDENTITY, OPENROUTER_RESPONSES_ENDPOINT_IDENTITY,
 };
 
+const LOCAL_DSPARK_CREDENTIAL_SOURCE: &str = "animus-live-local-dspark-smoke-stdin";
+const LOCAL_DSPARK_CREDENTIAL_LABEL: &str = "brokered:animus-live-local-dspark-smoke-stdin";
+const LOCAL_DSPARK_PROVIDER_ID: &str = "local-dspark";
+const LOCAL_DSPARK_STATUS: &str = "LIVE_LOCAL_DSPARK_SMOKE status=passed";
+/// Exact reviewed model for every packaged live `local-dspark` smoke.
+pub const LOCAL_DSPARK_SMOKE_MODEL_ID: &str = "deepseek-v4-flash-0731-ablit-100";
 const OPENAI_CREDENTIAL_SOURCE: &str = "animus-live-openai-smoke-stdin";
 const OPENAI_CREDENTIAL_LABEL: &str = "brokered:animus-live-openai-smoke-stdin";
 const OPENAI_PROVIDER_ID: &str = "openai";
@@ -21,7 +29,7 @@ const OPENROUTER_STATUS: &str = "LIVE_OPENROUTER_SMOKE status=passed";
 /// Exact reviewed model for every packaged live `OpenRouter` smoke.
 pub const OPENROUTER_SMOKE_MODEL_ID: &str = "deepseek/deepseek-v4-flash-0731";
 const PROMPT: &str = "Reply with the single word READY.";
-#[cfg(feature = "reqwest-client")]
+#[cfg(any(feature = "reqwest-client", test))]
 const TIMEOUT_SECONDS: u64 = 60;
 #[cfg(any(feature = "reqwest-client", test))]
 const MAX_RESPONSE_BYTES: u64 = 262_144;
@@ -60,6 +68,18 @@ const OPENAI_COHORT: SmokeCohort = SmokeCohort {
     deadline_label: "deadline-packaged-live-openai-smoke",
     cancellation_label: "cancel-packaged-live-openai-smoke",
     status: OPENAI_STATUS,
+};
+
+const LOCAL_DSPARK_COHORT: SmokeCohort = SmokeCohort {
+    provider_id: LOCAL_DSPARK_PROVIDER_ID,
+    endpoint_identity: LOCAL_DSPARK_RESPONSES_ENDPOINT_IDENTITY,
+    #[cfg(feature = "reqwest-client")]
+    endpoint_url: LOCAL_DSPARK_RESPONSES_URL,
+    credential_source: LOCAL_DSPARK_CREDENTIAL_SOURCE,
+    credential_label: LOCAL_DSPARK_CREDENTIAL_LABEL,
+    deadline_label: "deadline-packaged-live-local-dspark-smoke",
+    cancellation_label: "cancel-packaged-live-local-dspark-smoke",
+    status: LOCAL_DSPARK_STATUS,
 };
 
 const OPENROUTER_COHORT: SmokeCohort = SmokeCohort {
@@ -141,6 +161,19 @@ pub fn plan_live_openrouter_smoke(
     plan_live_responses_smoke(model, OPENROUTER_COHORT)
 }
 
+/// Builds the fixed packaged `local-dspark` smoke dispatch plan.
+///
+/// # Errors
+///
+/// Returns [`LiveOpenAiSmokeError`] when the exact model or fixed plan is not admitted.
+pub fn plan_live_local_dspark_smoke(
+    model: &str,
+) -> Result<animus_std::ProviderDispatchPlan, LiveOpenAiSmokeError> {
+    // r[impl agent_harness_runtime.local_dspark_responses.verification]
+    validate_local_dspark_smoke_model(model)?;
+    plan_live_responses_smoke(model, LOCAL_DSPARK_COHORT)
+}
+
 /// Renders metadata-only evidence for one supported live `OpenAI` smoke outcome.
 #[must_use]
 pub fn render_live_openai_smoke_evidence(outcome: &animus_std::ProviderDispatchOutcome) -> String {
@@ -155,6 +188,14 @@ pub fn render_live_openrouter_smoke_evidence(
 ) -> String {
     // r[impl agent_harness_runtime.packaged_live_openrouter_smoke.contract.evidence]
     render_live_responses_smoke_evidence(outcome, OPENROUTER_COHORT)
+}
+
+/// Renders metadata-only evidence for one supported live `local-dspark` smoke outcome.
+#[must_use]
+pub fn render_live_local_dspark_smoke_evidence(
+    outcome: &animus_std::ProviderDispatchOutcome,
+) -> String {
+    render_live_responses_smoke_evidence(outcome, LOCAL_DSPARK_COHORT)
 }
 
 /// Executes one packaged live `OpenAI` smoke from explicit model and credential values.
@@ -185,6 +226,28 @@ pub fn run_packaged_live_openrouter_smoke(
     // r[impl agent_harness_runtime.packaged_live_openrouter_smoke.binary.pass]
     validate_openrouter_smoke_model(model)?;
     run_packaged_live_responses_smoke(model, api_key, OPENROUTER_COHORT)
+}
+
+/// Executes one packaged live `local-dspark` smoke from explicit values.
+///
+/// # Errors
+///
+/// Returns [`LiveOpenAiSmokeError`] when planning, credential admission, transport, or response normalization fails.
+#[cfg(feature = "reqwest-client")]
+pub fn run_packaged_live_local_dspark_smoke(
+    model: &str,
+    api_key: String,
+) -> Result<String, LiveOpenAiSmokeError> {
+    validate_local_dspark_smoke_model(model)?;
+    run_packaged_live_responses_smoke(model, api_key, LOCAL_DSPARK_COHORT)
+}
+
+fn validate_local_dspark_smoke_model(model: &str) -> Result<(), LiveOpenAiSmokeError> {
+    if model == LOCAL_DSPARK_SMOKE_MODEL_ID {
+        Ok(())
+    } else {
+        Err(LiveOpenAiSmokeError::InvalidModel)
+    }
 }
 
 fn validate_openrouter_smoke_model(model: &str) -> Result<(), LiveOpenAiSmokeError> {
@@ -384,6 +447,16 @@ mod tests {
                     as fn(&animus_std::ProviderDispatchOutcome) -> String,
             ),
             (
+                plan_live_local_dspark_smoke(LOCAL_DSPARK_SMOKE_MODEL_ID)
+                    .expect("reviewed local-dspark model must produce plan"),
+                LOCAL_DSPARK_STATUS,
+                LOCAL_DSPARK_PROVIDER_ID,
+                LOCAL_DSPARK_RESPONSES_ENDPOINT_IDENTITY,
+                LOCAL_DSPARK_SMOKE_MODEL_ID,
+                render_live_local_dspark_smoke_evidence
+                    as fn(&animus_std::ProviderDispatchOutcome) -> String,
+            ),
+            (
                 plan_live_openrouter_smoke(OPENROUTER_SMOKE_MODEL_ID)
                     .expect("reviewed OpenRouter model must produce plan"),
                 OPENROUTER_STATUS,
@@ -426,6 +499,25 @@ mod tests {
     }
 
     #[test]
+    fn local_disabled_reasoning_is_explicit_in_text_projection() {
+        // r[verify agent_harness_runtime.local_dspark_responses.reasoning.pass]
+        let plan = plan_live_local_dspark_smoke(LOCAL_DSPARK_SMOKE_MODEL_ID)
+            .expect("reviewed local model must produce plan");
+        let config = crate::OpenAiHostConfig::new(
+            crate::LOCAL_DSPARK_RESPONSES_ENDPOINT_IDENTITY,
+            crate::LOCAL_DSPARK_RESPONSES_URL,
+            std::time::Duration::from_secs(TIMEOUT_SECONDS),
+            MAX_RESPONSE_BYTES,
+        )
+        .expect("exact local endpoint must be admitted");
+        let body =
+            crate::build_openai_request_body(&config, &plan).expect("local request must project");
+        let value: serde_json::Value =
+            serde_json::from_slice(body.as_slice()).expect("projected JSON must parse");
+        assert_eq!(value["reasoning"]["effort"], "none");
+    }
+
+    #[test]
     fn negative_invalid_model_fails_before_host_execution() {
         // r[verify agent_harness_runtime.packaged_live_openai_smoke.binary.failure]
         // r[verify agent_harness_runtime.packaged_live_openrouter_smoke.binary.failure]
@@ -436,6 +528,14 @@ mod tests {
         );
         assert_eq!(
             plan_live_openrouter_smoke(invalid_model),
+            Err(LiveOpenAiSmokeError::InvalidModel)
+        );
+        assert_eq!(
+            plan_live_local_dspark_smoke(invalid_model),
+            Err(LiveOpenAiSmokeError::InvalidModel)
+        );
+        assert_eq!(
+            plan_live_local_dspark_smoke(SUBSTITUTED_OPENROUTER_MODEL_ID),
             Err(LiveOpenAiSmokeError::InvalidModel)
         );
         // r[verify agent_harness_runtime.packaged_live_openrouter_smoke.reviewed_model.failure]

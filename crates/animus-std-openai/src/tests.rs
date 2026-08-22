@@ -315,13 +315,30 @@ fn endpoint_pairs_credentials_and_debug_output_fail_closed() {
     // r[verify agent_harness_runtime.live_openai_provider_host.boundary]
     // r[verify agent_harness_runtime.packaged_live_openrouter_smoke.endpoint.pass]
     // r[verify agent_harness_runtime.packaged_live_openrouter_smoke.endpoint.failure]
-    OpenAiHostConfig::new(
+    let openrouter = OpenAiHostConfig::new(
         OPENROUTER_RESPONSES_ENDPOINT_IDENTITY,
         OPENROUTER_RESPONSES_URL,
         Duration::from_secs(TIMEOUT_SECONDS),
         MAX_RESPONSE_BYTES,
     )
     .expect("exact OpenRouter endpoint pair must be admitted");
+    // r[verify agent_harness_runtime.local_dspark_responses.endpoint.pass]
+    // r[verify agent_harness_runtime.local_dspark_responses.transport.pass]
+    // r[verify agent_harness_runtime.local_dspark_responses.reasoning.pass]
+    // r[verify agent_harness_runtime.local_dspark_responses.reasoning.isolation]
+    let local = OpenAiHostConfig::new(
+        LOCAL_DSPARK_RESPONSES_ENDPOINT_IDENTITY,
+        LOCAL_DSPARK_RESPONSES_URL,
+        Duration::from_secs(TIMEOUT_SECONDS),
+        MAX_RESPONSE_BYTES,
+    )
+    .expect("exact local-dspark endpoint pair must be admitted");
+    assert!(!local.https_only());
+    assert_eq!(local.projected_reasoning_effort("none"), Some("none"));
+    assert!(openrouter.https_only());
+    assert_eq!(openrouter.projected_reasoning_effort("none"), None);
+    // r[verify agent_harness_runtime.local_dspark_responses.endpoint.failure]
+    // r[verify agent_harness_runtime.local_dspark_responses.transport.failure]
     for (endpoint_identity, endpoint_url) in [
         ("other-endpoint", OFFICIAL_OPENAI_RESPONSES_URL),
         (
@@ -335,6 +352,14 @@ fn endpoint_pairs_credentials_and_debug_output_fail_closed() {
         (
             OPENROUTER_RESPONSES_ENDPOINT_IDENTITY,
             "https://example.invalid/v1/responses",
+        ),
+        (
+            LOCAL_DSPARK_RESPONSES_ENDPOINT_IDENTITY,
+            "http://192.168.1.244:8889/v1/responses",
+        ),
+        (
+            OFFICIAL_OPENAI_RESPONSES_ENDPOINT_IDENTITY,
+            LOCAL_DSPARK_RESPONSES_URL,
         ),
     ] {
         assert!(matches!(

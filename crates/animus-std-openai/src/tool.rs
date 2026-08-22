@@ -633,7 +633,7 @@ pub fn build_tool_capable_openai_request_body(
         parallel_tool_calls: dispatch.policy().parallel_tool_calls(),
         stream: true,
         previous_response_id,
-        reasoning: project_reasoning(request.reasoning_effort()),
+        reasoning: project_reasoning(config, request.reasoning_effort()),
         max_output_tokens: request.max_output_tokens(),
         temperature: request
             .temperature_millis()
@@ -869,15 +869,14 @@ fn project_tool_choice(
     }
 }
 
-fn project_reasoning(effort: &str) -> Option<WireReasoning> {
-    if effort == REASONING_NONE {
-        None
-    } else {
-        Some(WireReasoning {
-            effort: String::from(effort),
+fn project_reasoning(config: &crate::OpenAiHostConfig, effort: &str) -> Option<WireReasoning> {
+    debug_assert!(effort == REASONING_NONE || !effort.is_empty());
+    config
+        .projected_reasoning_effort(effort)
+        .map(|projected| WireReasoning {
+            effort: String::from(projected),
             summary: "auto",
         })
-    }
 }
 
 fn project_metadata(

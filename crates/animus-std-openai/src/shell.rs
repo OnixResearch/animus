@@ -153,7 +153,7 @@ pub(crate) fn execute_tool_stream_with_transport<T: StreamingTransport>(
         .map_err(|source| HostError::Stream { source })
 }
 
-/// One explicit blocking HTTPS client for the admitted `OpenAI` Responses endpoint.
+/// One explicit blocking client for an admitted Responses endpoint.
 #[cfg(feature = "reqwest-client")]
 pub struct ReqwestOpenAiHost {
     config: OpenAiHostConfig,
@@ -162,17 +162,17 @@ pub struct ReqwestOpenAiHost {
 
 #[cfg(feature = "reqwest-client")]
 impl ReqwestOpenAiHost {
-    /// Builds the exact bounded HTTPS client without redirects or retries.
+    /// Builds the exact bounded client without redirects or retries.
     ///
     /// # Errors
     ///
-    /// Returns [`HostError`] when the HTTPS client cannot be constructed.
+    /// Returns [`HostError`] when the client cannot be constructed.
     pub fn new(config: OpenAiHostConfig) -> Result<Self, HostError> {
         let client = reqwest::blocking::Client::builder()
             .timeout(config.timeout())
             .redirect(reqwest::redirect::Policy::none())
             .no_proxy()
-            .https_only(true)
+            .https_only(config.https_only())
             .build()
             .map_err(|_error| HostError::Transport {
                 class: TransportErrorClass::ClientConfiguration,

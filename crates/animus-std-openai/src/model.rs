@@ -12,6 +12,10 @@ pub const OFFICIAL_OPENAI_RESPONSES_URL: &str = "https://api.openai.com/v1/respo
 pub const OPENROUTER_RESPONSES_ENDPOINT_IDENTITY: &str = "openrouter-responses";
 /// Exact HTTPS URL admitted by the `OpenRouter` Responses cohort.
 pub const OPENROUTER_RESPONSES_URL: &str = "https://openrouter.ai/api/v1/responses";
+/// Exact endpoint identity admitted by the private `local-dspark` cohort.
+pub const LOCAL_DSPARK_RESPONSES_ENDPOINT_IDENTITY: &str = "local-dspark-responses";
+/// Exact private HTTP URL admitted by the `local-dspark` cohort.
+pub const LOCAL_DSPARK_RESPONSES_URL: &str = "http://192.168.1.244:8888/v1/responses";
 
 #[cfg(any(feature = "reqwest-client", test))]
 const MAX_API_KEY_CHARS: usize = 4_096;
@@ -27,6 +31,7 @@ const LONG_API_KEY_REASON: &str = "OpenAI API key exceeds the supported length";
 const UNSAFE_API_KEY_REASON: &str = "OpenAI API key contains whitespace or control characters";
 #[cfg(any(feature = "reqwest-client", test))]
 const EMPTY_CREDENTIAL_LABEL_REASON: &str = "credential source label must be non-empty";
+const DISABLED_REASONING_EFFORT: &str = "none";
 const ENDPOINT_IDENTITY_REASON: &str = "Responses endpoint identity is not admitted";
 const ENDPOINT_URL_REASON: &str = "Responses endpoint URL does not match its identity";
 const TIMEOUT_REASON: &str = "OpenAI timeout must be non-zero";
@@ -44,7 +49,7 @@ pub enum CancellationState {
 /// Safe transport failure class without provider bodies or credentials.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TransportErrorClass {
-    /// The HTTPS client could not be constructed.
+    /// The admitted endpoint client could not be constructed.
     ClientConfiguration,
     /// The explicit deadline expired.
     Timeout,
@@ -78,7 +83,7 @@ pub enum HostError {
     },
     /// Deterministic request JSON encoding failed.
     RequestEncoding,
-    /// The HTTPS shell failed without exposing raw transport data.
+    /// The transport shell failed without exposing raw transport data.
     Transport {
         /// Safe transport failure class.
         class: TransportErrorClass,
@@ -198,10 +203,24 @@ impl OpenAiHostConfig {
         self.endpoint_identity.as_str()
     }
 
-    /// Returns the exact HTTPS endpoint URL.
+    /// Returns the exact endpoint URL.
     #[must_use]
     pub fn endpoint_url(&self) -> &str {
         self.endpoint_url.as_str()
+    }
+
+    pub(crate) fn https_only(&self) -> bool {
+        self.endpoint_identity != LOCAL_DSPARK_RESPONSES_ENDPOINT_IDENTITY
+    }
+
+    pub(crate) fn projected_reasoning_effort<'a>(&self, effort: &'a str) -> Option<&'a str> {
+        if effort == DISABLED_REASONING_EFFORT
+            && self.endpoint_identity != LOCAL_DSPARK_RESPONSES_ENDPOINT_IDENTITY
+        {
+            None
+        } else {
+            Some(effort)
+        }
     }
 
     /// Returns the explicit request timeout.
@@ -292,9 +311,12 @@ fn validate_config(
     max_response_bytes: u64,
 ) -> Result<(), HostError> {
     // r[impl agent_harness_runtime.packaged_live_openrouter_smoke.endpoint]
+    // r[impl agent_harness_runtime.local_dspark_responses.endpoint]
+    // r[impl agent_harness_runtime.local_dspark_responses.transport]
     let expected_url = match endpoint_identity {
         OFFICIAL_OPENAI_RESPONSES_ENDPOINT_IDENTITY => OFFICIAL_OPENAI_RESPONSES_URL,
         OPENROUTER_RESPONSES_ENDPOINT_IDENTITY => OPENROUTER_RESPONSES_URL,
+        LOCAL_DSPARK_RESPONSES_ENDPOINT_IDENTITY => LOCAL_DSPARK_RESPONSES_URL,
         _unsupported => {
             return Err(HostError::InvalidConfiguration {
                 reason: ENDPOINT_IDENTITY_REASON,

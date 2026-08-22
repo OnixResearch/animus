@@ -123,7 +123,7 @@ pub fn build_openai_request_body(
     let body = RequestBody {
         model: String::from(request.model()),
         input: project_messages(request)?,
-        reasoning: project_reasoning(request.reasoning_effort()),
+        reasoning: project_reasoning(config, request.reasoning_effort()),
         stream: false,
         max_output_tokens: request.max_output_tokens(),
         temperature: request
@@ -266,14 +266,13 @@ fn project_content(
     }
 }
 
-fn project_reasoning(effort: &str) -> Option<RequestReasoning> {
-    if effort == REASONING_NONE {
-        None
-    } else {
-        Some(RequestReasoning {
-            effort: String::from(effort),
+fn project_reasoning(config: &OpenAiHostConfig, effort: &str) -> Option<RequestReasoning> {
+    debug_assert!(effort == REASONING_NONE || !effort.is_empty());
+    config
+        .projected_reasoning_effort(effort)
+        .map(|projected| RequestReasoning {
+            effort: String::from(projected),
         })
-    }
 }
 
 fn project_metadata(

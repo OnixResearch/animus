@@ -27,7 +27,7 @@ const REQUIRED_SOURCE_MARKERS: &[&str] = &[
     "CancellationState::Cancelled",
     "redirect(reqwest::redirect::Policy::none())",
     ".no_proxy()",
-    ".https_only(true)",
+    ".https_only(config.https_only())",
     ".checked_add(1)",
     "ResponseTooLarge",
     "CredentialBindingMismatch",
@@ -89,6 +89,10 @@ fn validate_contract(root: &Path) -> Result<(), String> {
     // r[verify agent_harness_runtime.live_openai_provider_host.boundary.explicit_feature]
     // r[verify agent_harness_runtime.live_openai_provider_host.evidence]
     // r[verify agent_harness_runtime.live_openai_provider_host.evidence.non_claim]
+    // r[verify agent_harness_runtime.local_dspark_responses.endpoint.pass]
+    // r[verify agent_harness_runtime.local_dspark_responses.endpoint.failure]
+    // r[verify agent_harness_runtime.local_dspark_responses.transport.pass]
+    // r[verify agent_harness_runtime.local_dspark_responses.transport.failure]
     let root_manifest = read(root, ROOT_MANIFEST)?;
     let host_manifest = read(root, HOST_MANIFEST)?;
     let source = read_tree(root.join(HOST_SOURCE).as_path())?;
@@ -152,11 +156,21 @@ fn validate_contract(root: &Path) -> Result<(), String> {
         "literal OpenAI Responses SSE fixtures are incomplete",
     )?;
     require(
+        source.contains("LOCAL_DSPARK_RESPONSES_ENDPOINT_IDENTITY")
+            && source.contains("LOCAL_DSPARK_RESPONSES_URL")
+            && source.contains("projected_reasoning_effort")
+            && source.contains("run_packaged_live_local_dspark_smoke")
+            && host_manifest.contains("name = \"animus-live-local-dspark-smoke\""),
+        "exact local-dspark cohort or packaged smoke is incomplete",
+    )?;
+    require(
         docs.contains("Without a separately run current-head live smoke, live availability remains a non-claim")
             && docs.contains("does not discover providers")
             && docs.contains("does not prove provider reliability")
             && docs.contains("OpenAI OpenAPI document")
-            && docs.contains("openai-python"),
+            && docs.contains("openai-python")
+            && docs.contains("deepseek-v4-flash-0731-ablit-100")
+            && docs.contains("Cleartext HTTP is allowed only"),
         "live evidence, provenance, or non-claims are incomplete",
     )?;
     require(

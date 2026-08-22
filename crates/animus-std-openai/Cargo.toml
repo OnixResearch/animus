@@ -35,6 +35,11 @@ name = "animus-live-openrouter-smoke"
 path = "src/bin/animus-live-openrouter-smoke.rs"
 required-features = ["reqwest-client"]
 
+[[bin]]
+name = "animus-live-local-dspark-smoke"
+path = "src/bin/animus-live-local-dspark-smoke.rs"
+required-features = ["reqwest-client"]
+
 [[test]]
 name = "live-openai"
 path = "tests/live-openai.rs"
