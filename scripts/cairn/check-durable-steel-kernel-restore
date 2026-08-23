@@ -25,7 +25,7 @@ cd "${root}"
 readonly DEFAULT_CARGO_TARGET_DIR="${PWD}/target/durable-steel-kernel-restore-cargo"
 export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-${DEFAULT_CARGO_TARGET_DIR}}
 
-for tool in cargo grep b3sum; do
+for tool in cargo grep b3sum sed; do
   if ! command -v "${tool}" >/dev/null 2>&1; then
     printf 'error: %s is required for the durable Steel kernel restore rail\n' "${tool}" >&2
     exit "${FAILURE}"
@@ -47,8 +47,9 @@ if grep -R -E 'std::fs|std::process|Command::new|std::env|TcpStream|UdpSocket|Sy
   printf '%s\n' 'error: the authority-free restore contracts gained ambient host authority' >&2
   exit "${FAILURE}"
 fi
-if grep -E '^    (source|result|prompt|credential|private_path|raw_diagnostic): String' \
-  "${JOURNAL_SOURCE}" >/dev/null 2>&1; then
+if sed -n '/^pub struct SteelKernelRestoreReceipt {$/,/^}$/p' "${JOURNAL_SOURCE}" \
+  | grep -E '^    (source|result|prompt|credential|private_path|raw_diagnostic): String' \
+    >/dev/null 2>&1; then
   printf '%s\n' 'error: the safe restore receipt stores private body fields' >&2
   exit "${FAILURE}"
 fi
