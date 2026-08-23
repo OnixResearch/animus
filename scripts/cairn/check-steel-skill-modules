@@ -3,7 +3,7 @@
 set -eu
 
 readonly FAILURE=1
-readonly CONTRACT_SOURCE='crates/animus-adapter-rlm-kernel/src/skill_module.rs'
+readonly CONTRACT_SOURCE='crates/animus-adapter-rlm-kernel/src/skillmodule.rs'
 readonly POLICY_SOURCE='config/steel-skill-module-policy.ncl'
 readonly GENERATED_POLICY='config/generated/steel-skill-module-policy.json'
 readonly POLICY_TEST='crates/animus-adapter-rlm-kernel/tests/skill_module_policy_json.rs'
