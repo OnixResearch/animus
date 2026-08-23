@@ -73,6 +73,32 @@ fn generated_policy_and_file_host_match_fake_recovery_across_restart() {
 }
 
 #[test]
+fn duplicate_entry_ids_fail_before_append() {
+    let root = TestRoot::new("duplicate-entry");
+    let policy = policy();
+    let descriptor = descriptor();
+    let first = transaction(&policy, &descriptor);
+    let mut store = open_store(
+        (&root.dir, &policy, &descriptor),
+        (FIRST_LEASE, TestSynchronizer::passing()),
+    )
+    .expect("open");
+    store.commit(&first).expect("first commit");
+    let bytes_before = read_raw(&root.dir);
+    let duplicate = duplicate_transaction(&policy, &descriptor, first.commit().commit_hash());
+
+    let error = store.commit(&duplicate).expect_err("duplicate rejected");
+
+    assert_eq!(error.issue(), DurableSessionHostIssue::Validation);
+    assert_eq!(read_raw(&root.dir), bytes_before, "journal stays unchanged");
+    assert_eq!(
+        store.recovery().committed_head_hash(),
+        first.commit().commit_hash()
+    );
+    store.close().expect("close");
+}
+
+#[test]
 fn conflicting_and_stale_writer_leases_fail_before_append() {
     // r[verify agent_harness_runtime.durable_session_store.locking]
     let root = TestRoot::new("locks");
@@ -345,6 +371,33 @@ fn transaction(
         },
     )
     .expect("transaction")
+}
+
+fn duplicate_transaction(
+    policy: &DurableSessionStorePolicy,
+    descriptor: &DurableSessionStoreDescriptor,
+    prior_head_hash: &str,
+) -> DurableSessionTransaction {
+    let entries = [
+        animus_runtime::durable_session_store::DurableSessionPrivateEntryDraft {
+            entry_id: "entry.user",
+            parent_id: Some("entry.assistant"),
+            kind: animus_runtime::durable_session_store::DurableSessionRecordKind::User,
+            payload: b"duplicate user entry",
+        },
+    ];
+    animus_runtime::durable_session_store::plan_durable_session_transaction(
+        policy,
+        &animus_runtime::durable_session_store::DurableSessionTransactionDraft {
+            descriptor,
+            prior_head_hash,
+            prior_active_leaf_id: Some("entry.assistant"),
+            first_sequence: THIRD_SEQUENCE,
+            active_leaf_id: "entry.user",
+            entries: &entries,
+        },
+    )
+    .expect("duplicate transaction fixture")
 }
 
 fn next_transaction(

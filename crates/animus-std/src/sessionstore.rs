@@ -368,6 +368,11 @@ where
                 DurableSessionHostIssue::StaleHead,
             ));
         }
+        if transaction_has_duplicate_entries(&self.recovery, transaction) {
+            return Err(DurableSessionHostError::new(
+                DurableSessionHostIssue::Validation,
+            ));
+        }
         let bytes = animus_runtime::durable_session_store::encode_durable_session_transaction(
             self.policy,
             transaction,
@@ -458,6 +463,25 @@ pub fn read_durable_session_snapshot(
         .open(journal_name)
         .map_err(|_error| DurableSessionHostError::new(DurableSessionHostIssue::IoFailure))?;
     read_and_recover(policy, descriptor, &mut file)
+}
+
+fn transaction_has_duplicate_entries(
+    recovery: &animus_runtime::durable_session_store::DurableSessionRecoveryReport,
+    transaction: &animus_runtime::durable_session_store::DurableSessionTransaction,
+) -> bool {
+    for (candidate_index, candidate) in transaction.frames().iter().enumerate() {
+        let duplicates_committed = recovery
+            .committed_frames()
+            .iter()
+            .any(|existing| existing.entry_id() == candidate.entry_id());
+        let duplicates_pending = transaction.frames()[..candidate_index]
+            .iter()
+            .any(|existing| existing.entry_id() == candidate.entry_id());
+        if duplicates_committed || duplicates_pending {
+            return true;
+        }
+    }
+    false
 }
 
 fn validate_open_request(

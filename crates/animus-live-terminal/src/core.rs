@@ -481,7 +481,12 @@ impl TerminalClientState {
             generation: snapshot.generation,
             restore_status: snapshot.restore_status,
             last_sequence: snapshot.event_sequence,
-            command_index: 0,
+            // Correlation identities must survive terminal reattachment. A
+            // zero-based counter repeats the same command IDs in every new
+            // client, which then repeats durable entry IDs and poisons the
+            // journal on the next restart. Seed from the durable daemon event
+            // sequence instead.
+            command_index: snapshot.event_sequence,
             view: TerminalViewState::new(viewport),
             dirty: true,
             shutdown_requested: false,

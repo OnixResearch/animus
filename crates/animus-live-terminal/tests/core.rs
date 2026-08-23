@@ -192,6 +192,29 @@ fn controls_emit_all_typed_descriptors_without_effect_execution() {
 }
 
 #[test]
+fn correlation_identity_advances_across_terminal_reattachments() {
+    let mut first = state_at_sequence(0);
+    let mut second = state_at_sequence(10);
+    let first_command =
+        command_from_control(&mut first, ControlIntent::StateInspection, MAX_PROMPT_BYTES)
+            .expect("first command");
+    let second_command = command_from_control(
+        &mut second,
+        ControlIntent::StateInspection,
+        MAX_PROMPT_BYTES,
+    )
+    .expect("second command");
+
+    assert_eq!(first_command.class(), second_command.class());
+    assert_ne!(
+        first_command.correlation_id(),
+        second_command.correlation_id()
+    );
+    assert_eq!(first_command.correlation_id().len(), HASH.len());
+    assert_eq!(second_command.correlation_id().len(), HASH.len());
+}
+
+#[test]
 fn exact_slash_controls_parse_without_becoming_prompts() {
     let cases = [
         ("/state", "state_inspection"),
@@ -580,12 +603,16 @@ fn state_inspection() -> animus_local_daemon::WorkerStateInspection {
 }
 
 fn state() -> TerminalClientState {
+    state_at_sequence(0)
+}
+
+fn state_at_sequence(event_sequence: u64) -> TerminalClientState {
     TerminalClientState::from_snapshot(
         &ClientSnapshot {
             root_id: String::from(ROOT),
             worker_id: String::from(WORKER),
             generation: 1,
-            event_sequence: 0,
+            event_sequence,
             restore_status: animus_local_daemon::RestoreStatus::Restored,
             events: Vec::new(),
         },
