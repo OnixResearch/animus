@@ -744,8 +744,8 @@ pub(super) fn hash_fields(domain: &str, fields: &[&[u8]]) -> String {
 }
 
 fn hash_field(hasher: &mut blake3::Hasher, field: &[u8]) {
-    let length = u64::try_from(field.len()).unwrap_or(u64::MAX);
-    hasher.update(&length.to_le_bytes());
+    let canonical_length = field.len() as u64;
+    hasher.update(&canonical_length.to_le_bytes());
     hasher.update(field);
 }
 

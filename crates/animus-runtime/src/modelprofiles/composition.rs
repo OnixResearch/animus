@@ -225,6 +225,13 @@ impl ModelSkillPlanEntry {
 ///
 /// Returns [`animus_adapter_rlm_kernel::SteelSkillModuleError`] when module
 /// resolution, dependency, bounds, or capability intersection fails.
+#[cfg_attr(
+    animus_octet,
+    allow(
+        tigerstyle::assertion_density,
+        reason = "module selection propagates the capability resolver's typed errors instead of asserting on caller data"
+    )
+)]
 pub fn select_steel_skill_modules(
     skill_plan: &[ModelSkillPlanEntry],
     candidates: &[animus_adapter_rlm_kernel::SteelSkillModuleDescriptor],

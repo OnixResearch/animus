@@ -4,6 +4,39 @@
 //! not create coding sessions, call providers or tools, read stores, observe
 //! clocks, discover services, or retain private child transcripts.
 
+#![cfg_attr(
+    animus_octet,
+    allow(
+        tigerstyle::ambiguous_params,
+        tigerstyle::too_many_parameters,
+        reason = "published child-session compatibility contracts retain their typed stable signatures"
+    )
+)]
+#![cfg_attr(
+    animus_octet,
+    allow(
+        tigerstyle::assertion_density,
+        tigerstyle::compound_condition,
+        tigerstyle::function_length,
+        reason = "child admission returns typed authority and bound errors instead of panicking assertions"
+    )
+)]
+#![cfg_attr(
+    animus_octet,
+    allow(
+        tigerstyle::non_trait_imports,
+        reason = "the child-session core uses explicit subagent contract imports to keep ownership visible"
+    )
+)]
+#![cfg_attr(
+    animus_octet,
+    allow(
+        tigerstyle::bool_naming,
+        tigerstyle::numeric_units,
+        reason = "published child-session vocabulary uses field names fixed by its versioned contract"
+    )
+)]
+
 use std::collections::BTreeSet;
 
 use crate::subagents::{
@@ -835,7 +868,13 @@ impl ConcreteChildSessionResult {
             ));
         }
         if let Some(value) = draft.body.as_deref() {
-            let count = u32::try_from(value.chars().count()).unwrap_or(u32::MAX);
+            let count = u32::try_from(value.chars().count()).map_err(|_error| {
+                error(
+                    ChildSessionAdmissionIssue::BoundExceeded,
+                    ChildSessionAuthoritySource::Limit,
+                    "result_chars",
+                )
+            })?;
             if count > admission.limits.result_chars {
                 return Err(error(
                     ChildSessionAdmissionIssue::BoundExceeded,
@@ -899,7 +938,7 @@ pub fn child_session_hash_parts(domain: &str, parts: &[&str]) -> String {
     let mut hasher = blake3::Hasher::new();
     hasher.update(domain.as_bytes());
     for part in parts {
-        let length = u64::try_from(part.len()).unwrap_or(u64::MAX).to_le_bytes();
+        let length = (part.len() as u64).to_le_bytes();
         debug_assert_eq!(length.len(), HASH_PART_LENGTH_BYTES);
         hasher.update(&length);
         hasher.update(part.as_bytes());

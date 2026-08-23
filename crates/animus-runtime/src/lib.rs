@@ -71,8 +71,12 @@ mod background;
 #[allow(excessive_file_length)]
 mod batch;
 mod boundary;
+#[path = "capabilityconditional.rs"]
+mod capabilityconditional;
 /// Pure capability-conditional prompt composition invariant.
-pub mod capability_conditional;
+pub mod capability_conditional {
+    pub use super::capabilityconditional::*;
+}
 /// Pure bounded session branch projection, control planning, comparison, and evidence.
 pub use animus_session_core::branch_explorer;
 mod capmap;
@@ -80,8 +84,11 @@ mod capmap;
 mod caps;
 mod checkpoint;
 #[path = "childsession.rs"]
+mod childsession;
 /// Pure concrete child-session admission, lifecycle, result, and persistence contracts.
-pub mod child_session_service;
+pub mod child_session_service {
+    pub use super::childsession::*;
+}
 /// Pure generation-fenced component registration, resolution, and teardown.
 pub use animus_session_core::component_scope;
 /// Pure composition-activation graph validation, preflight, and safe inspection.
@@ -202,9 +209,12 @@ mod tool_admission;
 pub mod tool_executor_kit {
     pub use crate::executionkit::*;
 }
-/// Fixed monotonic stages around authoritative tool admission, execution, and commit owners.
 #[path = "toolexecutionstages/mod.rs"]
-pub mod tool_execution_stages;
+mod toolexecutionstages;
+/// Fixed monotonic stages around authoritative tool admission, execution, and commit owners.
+pub mod tool_execution_stages {
+    pub use super::toolexecutionstages::*;
+}
 #[path = "toolexecutorpacks.rs"]
 pub mod tool_executor_packs;
 mod transition;

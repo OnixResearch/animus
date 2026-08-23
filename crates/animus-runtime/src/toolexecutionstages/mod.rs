@@ -3,9 +3,44 @@
 //! The module is a deterministic functional core. It does not discover
 //! handlers, execute tools, persist results, call providers, or grant authority.
 
+#![cfg_attr(
+    animus_octet,
+    allow(
+        tigerstyle::ambiguous_params,
+        tigerstyle::too_many_parameters,
+        tigerstyle::usize_in_public_api,
+        reason = "published staged-execution contracts retain their typed stable signatures and collection limits"
+    )
+)]
+#![cfg_attr(
+    animus_octet,
+    allow(
+        tigerstyle::assertion_density,
+        tigerstyle::compound_condition,
+        tigerstyle::function_length,
+        reason = "stage reducers return typed errors for rejected observations instead of panicking assertions"
+    )
+)]
+#![cfg_attr(
+    animus_octet,
+    allow(
+        tigerstyle::non_trait_imports,
+        reason = "the functional core uses explicit sibling DTO imports to keep stage ownership visible"
+    )
+)]
+#![cfg_attr(
+    animus_octet,
+    allow(
+        tigerstyle::bool_naming,
+        tigerstyle::numeric_units,
+        reason = "published execution vocabulary uses protocol field names fixed by its versioned contract"
+    )
+)]
+
 mod core;
 mod data;
-mod receipt;
+#[path = "receipt.rs"]
+mod redaction;
 
 pub use core::{
     apply_tool_final_admission, apply_tool_output_narrowing, apply_tool_post_commit_candidate,
@@ -28,7 +63,7 @@ pub use data::{
     ToolExecutionStageReceipt, ToolExecutionStageSensitiveDraft, ToolExecutionStageState,
     ToolExecutionStageStatus,
 };
-pub use receipt::{project_tool_execution_stage_receipt, validate_tool_execution_stage_receipt};
+pub use redaction::{project_tool_execution_stage_receipt, validate_tool_execution_stage_receipt};
 
 #[cfg(test)]
 mod tests;

@@ -139,7 +139,7 @@ mod tests {
     }
 
     #[test]
-    fn queue_mutation_frontend_mapping_uses_metadata_only() {
+    fn queue_mutation_mapping_uses_metadata_only() {
         // r[verify agent_harness_runtime.coding_session_queue_cas.verification]
         let mut model = CodingSessionRenderModel::new();
         model.apply_runtime_event(

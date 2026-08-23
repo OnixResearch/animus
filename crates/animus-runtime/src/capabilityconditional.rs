@@ -6,6 +6,29 @@
 //! unresolvable capability inputs fail closed before any prompt is emitted.
 
 #![allow(unknown_lints)]
+#![cfg_attr(
+    animus_octet,
+    allow(
+        tigerstyle::assertion_density,
+        tigerstyle::function_length,
+        reason = "capability composition rejects untrusted labels with typed errors instead of panicking assertions"
+    )
+)]
+#![cfg_attr(
+    animus_octet,
+    allow(
+        tigerstyle::non_trait_imports,
+        reason = "the pure composition core uses an explicit ordered-set dependency for deterministic identities"
+    )
+)]
+#![cfg_attr(
+    animus_octet,
+    allow(
+        tigerstyle::bool_naming,
+        tigerstyle::numeric_units,
+        reason = "published capability vocabulary uses field names fixed by its versioned contract"
+    )
+)]
 
 use std::collections::BTreeSet;
 

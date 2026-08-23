@@ -5,6 +5,23 @@
 //! tool, store, timer, policy service, cancellation handle, summarizer, terminal,
 //! filesystem, network, process, clock, or credential source.
 
+#![cfg_attr(
+    animus_octet,
+    allow(
+        tigerstyle::assertion_density,
+        tigerstyle::function_length,
+        reason = "session reducers and adversarial fixtures return typed transition errors instead of panicking on untrusted facts"
+    )
+)]
+#![cfg_attr(
+    animus_octet,
+    allow(
+        tigerstyle::bool_naming,
+        tigerstyle::numeric_units,
+        reason = "published session and queue vocabulary uses field names fixed by its versioned contract"
+    )
+)]
+
 mod core;
 mod data;
 #[path = "receipt.rs"]

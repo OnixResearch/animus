@@ -1,3 +1,13 @@
+#![cfg_attr(
+    animus_octet,
+    allow(
+        tigerstyle::assertion_density,
+        tigerstyle::function_length,
+        tigerstyle::renamed_imports,
+        reason = "dense table-driven stage fixtures keep the established kit alias and grouped outcome assertions"
+    )
+)]
+
 use super::*;
 use crate::tool_executor_kit as kit;
 
@@ -14,7 +24,7 @@ const RAW_OUTPUT_BYTES: u64 = 12;
 const RAW_OUTPUT_CHARS: u64 = 12;
 const NARROWED_OUTPUT_BYTES: u64 = 8;
 const NARROWED_OUTPUT_CHARS: u64 = 8;
-const WIDENED_OUTPUT_CHARS: u32 = OUTPUT_VISIBLE_CHARS + 1;
+const WIDENED_OUTPUT_CHARS: u32 = OUTPUT_VISIBLE_CHARS.saturating_add(1);
 
 struct Fixture {
     catalog: kit::ToolCatalog,
@@ -366,7 +376,7 @@ fn output_growth_failure_to_success_and_redaction_removal_are_rejected() {
         ToolExecutionStageDisposition::Admitted,
     );
     let mut growth = output_observation(candidate);
-    growth.output_byte_count = RAW_OUTPUT_BYTES + 1;
+    growth.output_byte_count = RAW_OUTPUT_BYTES.saturating_add(1);
     assert_eq!(
         apply_tool_output_narrowing(&plan, &state, &growth)
             .expect_err("output grew")
