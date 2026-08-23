@@ -125,7 +125,7 @@ fn output_flood_respects_retention_bound() {
 fn clear_environment_still_starts() {
     let service = BoundedExecAgentProcessService;
     let outcome = service
-        .run(&request("/bin/true", &[], TIMEOUT_MS, OUTPUT_BOUND))
+        .run(&request(SH, &["-c", ":"], TIMEOUT_MS, OUTPUT_BOUND))
         .expect("process starts");
     assert!(matches!(
         outcome,
