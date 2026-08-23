@@ -507,8 +507,7 @@
           octetDylintLibPath = "${octetDylintLibDir}/lib/${octetDllPrefix}octet@${octetRustupToolchain}${octetSharedLibSuffix}";
 
           cargoLock = builtins.fromTOML (builtins.readFile ./Cargo.lock);
-          renderCargoLockPackage =
-            package:
+          renderCargoLockPackage = package:
             let
               renderField = name: "${name} = ${builtins.toJSON package.${name}}";
               scalarFields = builtins.filter (name: builtins.hasAttr name package) [
@@ -519,9 +518,7 @@
               ];
               dependencyField = pkgs.lib.optional (package ? dependencies) ''
                 dependencies = [
-                ${pkgs.lib.concatMapStringsSep "\n" (
-                  dependency: " ${builtins.toJSON dependency},"
-                ) package.dependencies}
+                ${pkgs.lib.concatMapStringsSep "\n" (dependency: " ${builtins.toJSON dependency},") package.dependencies}
                 ]'';
             in
             pkgs.lib.concatStringsSep "\n" (
@@ -634,27 +631,24 @@
               };
             }
           ];
-          linkCargoDependencyGroup =
-            group:
-            ''
-              mkdir -p "$out/${group.name}"
-              for crate in ${group.deps}/*; do
-                crate_name="$(basename "$crate")"
-                if [ "$crate_name" != "Cargo.lock" ]; then
-                  ln -s "$crate" "$out/${group.name}/$crate_name"
-                fi
-              done
-            ''
-            + pkgs.lib.optionalString (group.name != "registry") ''
-              sed -n '/^\[source\."git+/,$p' ${group.deps}/.cargo/config.toml \
-                | sed 's/replace-with = "vendored-sources"/replace-with = "animus-${group.name}"/' \
-                >> "$out/.cargo/config.toml"
-              cat >> "$out/.cargo/config.toml" <<EOF
+          linkCargoDependencyGroup = group: ''
+            mkdir -p "$out/${group.name}"
+            for crate in ${group.deps}/*; do
+              crate_name="$(basename "$crate")"
+              if [ "$crate_name" != "Cargo.lock" ]; then
+                ln -s "$crate" "$out/${group.name}/$crate_name"
+              fi
+            done
+          '' + pkgs.lib.optionalString (group.name != "registry") ''
+            sed -n '/^\[source\."git+/,$p' ${group.deps}/.cargo/config.toml \
+              | sed 's/replace-with = "vendored-sources"/replace-with = "animus-${group.name}"/' \
+              >> "$out/.cargo/config.toml"
+            cat >> "$out/.cargo/config.toml" <<EOF
 
-              [source.animus-${group.name}]
-              directory = "cargo-vendor-dir/${group.name}"
-              EOF
-            '';
+            [source.animus-${group.name}]
+            directory = "cargo-vendor-dir/${group.name}"
+            EOF
+          '';
           cargoDeps = pkgs.runCommand "cargo-vendor-dir" { } ''
             mkdir -p "$out/.cargo"
             ln -s ${./Cargo.lock} "$out/Cargo.lock"
@@ -791,16 +785,13 @@
             sh scripts/cairn/check-adapter-family-crates --root .
           '';
 
-          ast-grep-agent-boundary-audits =
-            cargoCheck "animus-ast-grep-agent-boundary-audits"
-              [
-                pkgs.ast-grep
-                pkgs.b3sum
-                pkgs.nickel
-              ]
-              ''
-                sh scripts/cairn/check-ast-grep-agent-boundary-audits --root .
-              '';
+          ast-grep-agent-boundary-audits = cargoCheck "animus-ast-grep-agent-boundary-audits" [
+            pkgs.ast-grep
+            pkgs.b3sum
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-ast-grep-agent-boundary-audits --root .
+          '';
 
           cargo-runtime-feature = cargoCheck "animus-cargo-runtime-feature" [ ] ''
             cargo check -p animus --features runtime --locked
@@ -843,28 +834,20 @@
             sh scripts/cairn/check-harbor-atif-adapter --root .
           '';
 
-          basalt-authority-adapter =
-            cargoCheck "animus-basalt-authority-adapter" [ pkgs.clippy pkgs.nickel ]
-              ''
-                ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
-                export ANIMUS_BASALT_SKIP_NICKEL=1
-                export ANIMUS_BASALT_SKIP_CONNECTED=1
-                sh scripts/cairn/check-basalt-authority-adapter --root .
-              '';
+          basalt-authority-adapter = cargoCheck "animus-basalt-authority-adapter" [ pkgs.clippy pkgs.nickel ] ''
+            ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
+            export ANIMUS_BASALT_SKIP_NICKEL=1
+            export ANIMUS_BASALT_SKIP_CONNECTED=1
+            sh scripts/cairn/check-basalt-authority-adapter --root .
+          '';
 
           pijul-vcs-adapter = cargoCheck "animus-pijul-vcs-adapter" [ pkgs.clippy pkgs.nickel ] ''
             ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
-            test "$(${
-              self.packages.${pkgs.stdenv.hostPlatform.system}.pijul-cli-adapter
-            }/bin/animus-pijul-cli --version)" = "pijul 1.0.0-beta.18"
-            if ${
-              self.packages.${pkgs.stdenv.hostPlatform.system}.pijul-cli-adapter
-            }/bin/animus-pijul-cli --repository /tmp/repository pull >/dev/null 2>&1; then
+            test "$(${self.packages.${pkgs.stdenv.hostPlatform.system}.pijul-cli-adapter}/bin/animus-pijul-cli --version)" = "pijul 1.0.0-beta.18"
+            if ${self.packages.${pkgs.stdenv.hostPlatform.system}.pijul-cli-adapter}/bin/animus-pijul-cli --repository /tmp/repository pull >/dev/null 2>&1; then
               exit 1
             fi
-            if ${
-              self.packages.${pkgs.stdenv.hostPlatform.system}.pijul-cli-adapter
-            }/bin/animus-pijul-cli --repository /tmp/repository channel switch main >/dev/null 2>&1; then
+            if ${self.packages.${pkgs.stdenv.hostPlatform.system}.pijul-cli-adapter}/bin/animus-pijul-cli --repository /tmp/repository channel switch main >/dev/null 2>&1; then
               exit 1
             fi
             export ANIMUS_PIJUL_SKIP_NICKEL=1
@@ -872,16 +855,14 @@
             sh scripts/cairn/check-pijul-vcs-adapter --root .
           '';
 
-          secretspec-host-resolution =
-            cargoCheck "animus-secretspec-host-resolution" [ pkgs.clippy pkgs.nickel ]
-              ''
-                test -f ${secretspec}/secretspec/Cargo.toml
-                test -f ${bounded-exec}/crates/bounded-exec/Cargo.toml
-                ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
-                export ANIMUS_SECRETSPEC_SKIP_NICKEL=1
-                export ANIMUS_SECRETSPEC_SKIP_CONNECTED=1
-                sh scripts/cairn/check-secretspec-host-resolution --root .
-              '';
+          secretspec-host-resolution = cargoCheck "animus-secretspec-host-resolution" [ pkgs.clippy pkgs.nickel ] ''
+            test -f ${secretspec}/secretspec/Cargo.toml
+            test -f ${bounded-exec}/crates/bounded-exec/Cargo.toml
+            ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
+            export ANIMUS_SECRETSPEC_SKIP_NICKEL=1
+            export ANIMUS_SECRETSPEC_SKIP_CONNECTED=1
+            sh scripts/cairn/check-secretspec-host-resolution --root .
+          '';
 
           skill-source-lifecycle = cargoCheck "animus-skill-source-lifecycle" [ pkgs.clippy pkgs.nickel ] ''
             ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
@@ -889,89 +870,69 @@
             sh scripts/cairn/check-skill-source-lifecycle --root .
           '';
 
-          drain-evidence-guard =
-            pkgs.runCommand "animus-drain-evidence-guard"
-              {
-                nativeBuildInputs = [
-                  pkgs.rustc
-                  pkgs.stdenv.cc
-                ];
-              }
-              ''
-                rustc --edition=2021 ${source}/scripts/check-drain-evidence-guard.rs -o check-drain-evidence-guard
-                ./check-drain-evidence-guard --self-test
-                touch "$out"
-              '';
+          drain-evidence-guard = pkgs.runCommand "animus-drain-evidence-guard" {
+            nativeBuildInputs = [
+              pkgs.rustc
+              pkgs.stdenv.cc
+            ];
+          } ''
+            rustc --edition=2021 ${source}/scripts/check-drain-evidence-guard.rs -o check-drain-evidence-guard
+            ./check-drain-evidence-guard --self-test
+            touch "$out"
+          '';
 
-          trajectory-transcript-adapter =
-            cargoCheck "animus-trajectory-transcript-adapter"
-              [
-                pkgs.b3sum
-                pkgs.clippy
-                pkgs.nickel
-                pkgs.nodejs_22
-              ]
-              ''
-                ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
-                export ANIMUS_TRAJECTORY_SKIP_NICKEL=1
-                export ANIMUS_TRAJECTORY_SOURCE=${trajectory}
-                export ANIMUS_TRAJECTORY_HELPER=${
-                  self.packages.${pkgs.stdenv.hostPlatform.system}.trajectory-helper
-                }/bin/animus-trajectory-helper
-                export ANIMUS_TRAJECTORY_NODE=${pkgs.nodejs_22}/bin/node
-                sh scripts/cairn/check-trajectory-transcript-adapter --root .
-              '';
+          trajectory-transcript-adapter = cargoCheck "animus-trajectory-transcript-adapter" [
+            pkgs.b3sum
+            pkgs.clippy
+            pkgs.nickel
+            pkgs.nodejs_22
+          ] ''
+            ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
+            export ANIMUS_TRAJECTORY_SKIP_NICKEL=1
+            export ANIMUS_TRAJECTORY_SOURCE=${trajectory}
+            export ANIMUS_TRAJECTORY_HELPER=${self.packages.${pkgs.stdenv.hostPlatform.system}.trajectory-helper}/bin/animus-trajectory-helper
+            export ANIMUS_TRAJECTORY_NODE=${pkgs.nodejs_22}/bin/node
+            sh scripts/cairn/check-trajectory-transcript-adapter --root .
+          '';
 
-          native-evaluation-core =
-            cargoCheck "animus-native-evaluation-core" [ pkgs.b3sum pkgs.clippy pkgs.nickel ]
-              ''
-                ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
-                export ANIMUS_NATIVE_EVAL_SKIP_NICKEL=1
-                sh scripts/cairn/check-native-evaluation-core --root .
-              '';
+          native-evaluation-core = cargoCheck "animus-native-evaluation-core" [ pkgs.b3sum pkgs.clippy pkgs.nickel ] ''
+            ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
+            export ANIMUS_NATIVE_EVAL_SKIP_NICKEL=1
+            sh scripts/cairn/check-native-evaluation-core --root .
+          '';
 
-          evaluation-adapter-family =
-            cargoCheck "animus-evaluation-adapter-family" [ pkgs.b3sum pkgs.clippy pkgs.nickel ]
-              ''
-                sh scripts/cairn/check-evaluation-adapter-family --root .
-              '';
+          evaluation-adapter-family = cargoCheck "animus-evaluation-adapter-family" [ pkgs.b3sum pkgs.clippy pkgs.nickel ] ''
+            sh scripts/cairn/check-evaluation-adapter-family --root .
+          '';
 
-          remora-adapter-families =
-            cargoCheck "animus-remora-adapter-families" [ pkgs.b3sum pkgs.clippy pkgs.nickel pkgs.rustfmt ]
-              ''
-                sh scripts/cairn/check-remora-adapter-families --root .
-              '';
+          remora-adapter-families = cargoCheck "animus-remora-adapter-families" [ pkgs.b3sum pkgs.clippy pkgs.nickel pkgs.rustfmt ] ''
+            sh scripts/cairn/check-remora-adapter-families --root .
+          '';
 
-          std-evaluation-host =
-            cargoCheck "animus-std-evaluation-host" [ pkgs.b3sum pkgs.clippy pkgs.nickel ]
-              ''
-                ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
-                export ANIMUS_STD_EVAL_SKIP_NICKEL=1
-                sh scripts/cairn/check-std-evaluation-host --root .
-              '';
+          std-evaluation-host = cargoCheck "animus-std-evaluation-host" [ pkgs.b3sum pkgs.clippy pkgs.nickel ] ''
+            ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
+            export ANIMUS_STD_EVAL_SKIP_NICKEL=1
+            sh scripts/cairn/check-std-evaluation-host --root .
+          '';
 
-          evaluation-composition-conformance =
-            cargoCheck "animus-evaluation-composition-conformance" [ pkgs.b3sum pkgs.clippy pkgs.nickel ]
-              ''
-                ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
-                export ANIMUS_EVAL_CONFORMANCE_SKIP_NICKEL=1
-                export ANIMUS_EVAL_CONFORMANCE_SKIP_CONNECTED=1
-                sh scripts/cairn/check-evaluation-composition-conformance --root .
-                cargo check -p animus --no-default-features --features evaluation-conformance --locked
-              '';
+          evaluation-composition-conformance = cargoCheck "animus-evaluation-composition-conformance" [ pkgs.b3sum pkgs.clippy pkgs.nickel ] ''
+            ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
+            export ANIMUS_EVAL_CONFORMANCE_SKIP_NICKEL=1
+            export ANIMUS_EVAL_CONFORMANCE_SKIP_CONNECTED=1
+            sh scripts/cairn/check-evaluation-composition-conformance --root .
+            cargo check -p animus --no-default-features --features evaluation-conformance --locked
+          '';
 
           host-control-extraction = cargoCheck "animus-host-control-extraction" [ ] ''
             ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
             sh scripts/cairn/check-host-control-extraction --root .
           '';
 
-          spacewasm-compat =
-            cargoCheck "animus-spacewasm-compat" [ pkgs.clippy pkgs.wasm-tools pkgs.b3sum pkgs.lld ]
-              ''
-                ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
-                export ANIMUS_SPACEWASM_SKIP_NICKEL=1
-                sh scripts/cairn/check-spacewasm-compat --root .
-              '';
+          spacewasm-compat = cargoCheck "animus-spacewasm-compat" [ pkgs.clippy pkgs.wasm-tools pkgs.b3sum pkgs.lld ] ''
+            ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
+            export ANIMUS_SPACEWASM_SKIP_NICKEL=1
+            sh scripts/cairn/check-spacewasm-compat --root .
+          '';
 
           safe-receipts-artifacts = cargoCheck "animus-safe-receipts-artifacts" [ ] ''
             sh scripts/cairn/check-safe-receipts-artifacts --root .
@@ -989,570 +950,414 @@
             sh scripts/cairn/check-steel-runtime-policy --root .
           '';
 
-          rlm-kernel =
-            cargoCheck "animus-rlm-kernel"
-              [
-                pkgs.b3sum
-                pkgs.diffutils
-                pkgs.nickel
-              ]
-              ''
-                sh scripts/cairn/check-rlm-kernel --root .
-              '';
+          rlm-kernel = cargoCheck "animus-rlm-kernel" [
+            pkgs.b3sum
+            pkgs.diffutils
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-rlm-kernel --root .
+          '';
 
-          steel-host-bridge =
-            cargoCheck "animus-steel-host-bridge"
-              [
-                pkgs.b3sum
-                pkgs.diffutils
-                pkgs.nickel
-              ]
-              ''
-                sh scripts/cairn/check-steel-host-bridge --root .
-              '';
+          steel-host-bridge = cargoCheck "animus-steel-host-bridge" [
+            pkgs.b3sum
+            pkgs.diffutils
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-steel-host-bridge --root .
+          '';
 
-          steel-skill-modules =
-            cargoCheck "animus-steel-skill-modules"
-              [
-                pkgs.clippy
-                pkgs.nickel
-              ]
-              ''
-                sh scripts/cairn/check-steel-skill-modules --root .
-              '';
+          steel-skill-modules = cargoCheck "animus-steel-skill-modules" [
+            pkgs.clippy
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-steel-skill-modules --root .
+          '';
 
-          nickel-policy-contracts =
-            cargoCheck "animus-nickel-policy-contracts"
-              [
-                pkgs.nickel
-                pkgs.b3sum
-              ]
-              ''
-                sh scripts/cairn/check-nickel-policy-contracts --root .
-              '';
+          nickel-policy-contracts = cargoCheck "animus-nickel-policy-contracts" [
+            pkgs.nickel
+            pkgs.b3sum
+          ] ''
+            sh scripts/cairn/check-nickel-policy-contracts --root .
+          '';
 
-          continual-harness =
-            cargoCheck "animus-continual-harness"
-              [
-                pkgs.nickel
-                pkgs.b3sum
-                pkgs.diffutils
-              ]
-              ''
-                sh scripts/cairn/check-continual-harness --root .
-              '';
+          continual-harness = cargoCheck "animus-continual-harness" [
+            pkgs.nickel
+            pkgs.b3sum
+            pkgs.diffutils
+          ] ''
+            sh scripts/cairn/check-continual-harness --root .
+          '';
 
-          daemon-workers =
-            cargoCheck "animus-daemon-workers"
-              [
-                pkgs.nickel
-                pkgs.diffutils
-              ]
-              ''
-                sh scripts/cairn/check-daemon-workers --root .
-              '';
+          daemon-workers = cargoCheck "animus-daemon-workers" [
+            pkgs.nickel
+            pkgs.diffutils
+          ] ''
+            sh scripts/cairn/check-daemon-workers --root .
+          '';
 
-          messaging-receipts =
-            cargoCheck "animus-messaging-receipts"
-              [
-                pkgs.nickel
-                pkgs.diffutils
-              ]
-              ''
-                sh scripts/cairn/check-messaging-receipts --root .
-              '';
+          messaging-receipts = cargoCheck "animus-messaging-receipts" [
+            pkgs.nickel
+            pkgs.diffutils
+          ] ''
+            sh scripts/cairn/check-messaging-receipts --root .
+          '';
 
-          persistent-goals =
-            cargoCheck "animus-persistent-goals"
-              [
-                pkgs.nickel
-                pkgs.diffutils
-              ]
-              ''
-                sh scripts/cairn/check-persistent-goals --root .
-              '';
+          persistent-goals = cargoCheck "animus-persistent-goals" [
+            pkgs.nickel
+            pkgs.diffutils
+          ] ''
+            sh scripts/cairn/check-persistent-goals --root .
+          '';
 
-          schedule-reliability =
-            cargoCheck "animus-schedule-reliability"
-              [
-                pkgs.nickel
-                pkgs.diffutils
-              ]
-              ''
-                sh scripts/cairn/check-schedule-reliability --root .
-              '';
+          schedule-reliability = cargoCheck "animus-schedule-reliability" [
+            pkgs.nickel
+            pkgs.diffutils
+          ] ''
+            sh scripts/cairn/check-schedule-reliability --root .
+          '';
 
-          session-event-replay =
-            cargoCheck "animus-session-event-replay"
-              [
-                pkgs.nickel
-                pkgs.diffutils
-                pkgs.clippy
-              ]
-              ''
-                sh scripts/cairn/check-session-event-replay --root .
-              '';
+          session-event-replay = cargoCheck "animus-session-event-replay" [
+            pkgs.nickel
+            pkgs.diffutils
+            pkgs.clippy
+          ] ''
+            sh scripts/cairn/check-session-event-replay --root .
+          '';
 
-          execution-backend-selection =
-            cargoCheck "animus-execution-backend-selection"
-              [
-                pkgs.nickel
-                pkgs.diffutils
-                pkgs.clippy
-              ]
-              ''
-                sh scripts/cairn/check-execution-backend-selection --root .
-              '';
+          execution-backend-selection = cargoCheck "animus-execution-backend-selection" [
+            pkgs.nickel
+            pkgs.diffutils
+            pkgs.clippy
+          ] ''
+            sh scripts/cairn/check-execution-backend-selection --root .
+          '';
 
-          provider-video-payloads =
-            cargoCheck "animus-provider-video-payloads"
-              [
-                pkgs.nickel
-                pkgs.diffutils
-                pkgs.clippy
-              ]
-              ''
-                sh scripts/cairn/check-provider-video-payloads --root .
-              '';
+          provider-video-payloads = cargoCheck "animus-provider-video-payloads" [
+            pkgs.nickel
+            pkgs.diffutils
+            pkgs.clippy
+          ] ''
+            sh scripts/cairn/check-provider-video-payloads --root .
+          '';
 
-          terminal-image-protocols =
-            cargoCheck "animus-terminal-image-protocols"
-              [
-                pkgs.nickel
-                pkgs.diffutils
-                pkgs.clippy
-              ]
-              ''
-                sh scripts/cairn/check-terminal-image-protocols --root .
-              '';
+          terminal-image-protocols = cargoCheck "animus-terminal-image-protocols" [
+            pkgs.nickel
+            pkgs.diffutils
+            pkgs.clippy
+          ] ''
+            sh scripts/cairn/check-terminal-image-protocols --root .
+          '';
 
-          terminal-video-playback =
-            cargoCheck "animus-terminal-video-playback"
-              [
-                pkgs.nickel
-                pkgs.diffutils
-                pkgs.clippy
-              ]
-              ''
-                sh scripts/cairn/check-terminal-video-playback --root .
-              '';
+          terminal-video-playback = cargoCheck "animus-terminal-video-playback" [
+            pkgs.nickel
+            pkgs.diffutils
+            pkgs.clippy
+          ] ''
+            sh scripts/cairn/check-terminal-video-playback --root .
+          '';
 
-          model-runtime-profiles =
-            cargoCheck "animus-model-runtime-profiles"
-              [
-                pkgs.nickel
-                pkgs.b3sum
-                pkgs.diffutils
-              ]
-              ''
-                sh scripts/cairn/check-model-runtime-profiles --root .
-              '';
+          model-runtime-profiles = cargoCheck "animus-model-runtime-profiles" [
+            pkgs.nickel
+            pkgs.b3sum
+            pkgs.diffutils
+          ] ''
+            sh scripts/cairn/check-model-runtime-profiles --root .
+          '';
 
-          agent-role-profiles =
-            cargoCheck "animus-agent-role-profiles"
-              [
-                pkgs.nickel
-                pkgs.b3sum
-                pkgs.diffutils
-              ]
-              ''
-                sh scripts/cairn/check-agent-role-profiles --root .
-              '';
+          agent-role-profiles = cargoCheck "animus-agent-role-profiles" [
+            pkgs.nickel
+            pkgs.b3sum
+            pkgs.diffutils
+          ] ''
+            sh scripts/cairn/check-agent-role-profiles --root .
+          '';
 
-          aeneas-proof-campaign =
-            cargoCheck "animus-aeneas-proof-campaign"
-              [
-                pkgs.nickel
-                pkgs.b3sum
-                pkgs.diffutils
-              ]
-              ''
-                sh scripts/cairn/check-aeneas-proof-campaign --root .
-              '';
+          aeneas-proof-campaign = cargoCheck "animus-aeneas-proof-campaign" [
+            pkgs.nickel
+            pkgs.b3sum
+            pkgs.diffutils
+          ] ''
+            sh scripts/cairn/check-aeneas-proof-campaign --root .
+          '';
 
-          authoritative-agent-completion =
-            cargoCheck "animus-authoritative-agent-completion"
-              [
-                pkgs.nickel
-                pkgs.b3sum
-                pkgs.diffutils
-              ]
-              ''
-                export CAIRN_COMPLETION_MODE=saved
-                sh scripts/cairn/check-authoritative-agent-completion --root .
-              '';
+          authoritative-agent-completion = cargoCheck "animus-authoritative-agent-completion" [
+            pkgs.nickel
+            pkgs.b3sum
+            pkgs.diffutils
+          ] ''
+            export CAIRN_COMPLETION_MODE=saved
+            sh scripts/cairn/check-authoritative-agent-completion --root .
+          '';
 
-          active-turn-recovery =
-            cargoCheck "animus-active-turn-recovery"
-              [
-                pkgs.b3sum
-                pkgs.clippy
-                pkgs.nickel
-              ]
-              ''
-                sh scripts/cairn/check-active-turn-recovery --root .
-              '';
+          active-turn-recovery = cargoCheck "animus-active-turn-recovery" [
+            pkgs.b3sum
+            pkgs.clippy
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-active-turn-recovery --root .
+          '';
 
           pending-input-vault = cargoCheck "animus-pending-input-vault" [ pkgs.b3sum ] ''
             sh scripts/cairn/check-pending-input-vault --root .
           '';
 
-          transactional-daemon-handoff =
-            cargoCheck "animus-transactional-daemon-handoff"
-              [
-                pkgs.b3sum
-                pkgs.clippy
-              ]
-              ''
-                sh scripts/cairn/check-transactional-daemon-handoff --root .
-              '';
+          transactional-daemon-handoff = cargoCheck "animus-transactional-daemon-handoff" [
+            pkgs.b3sum
+            pkgs.clippy
+          ] ''
+            sh scripts/cairn/check-transactional-daemon-handoff --root .
+          '';
 
-          revision-gated-workspace-edit-host =
-            cargoCheck "animus-revision-gated-workspace-edit-host"
-              [
-                pkgs.b3sum
-                pkgs.clippy
-                pkgs.nickel
-              ]
-              ''
-                sh scripts/cairn/check-revision-gated-workspace-edit-host --root .
-              '';
+          revision-gated-workspace-edit-host = cargoCheck "animus-revision-gated-workspace-edit-host" [
+            pkgs.b3sum
+            pkgs.clippy
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-revision-gated-workspace-edit-host --root .
+          '';
 
-          concrete-mcp-client-host =
-            cargoCheck "animus-concrete-mcp-client-host"
-              [
-                pkgs.b3sum
-                pkgs.clippy
-                pkgs.nickel
-              ]
-              ''
-                sh scripts/cairn/check-concrete-mcp-client-host --root .
-              '';
+          concrete-mcp-client-host = cargoCheck "animus-concrete-mcp-client-host" [
+            pkgs.b3sum
+            pkgs.clippy
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-concrete-mcp-client-host --root .
+          '';
 
-          pueue-host =
-            cargoCheck "animus-pueue-host"
-              [
-                pkgs.b3sum
-                pkgs.clippy
-                pkgs.coreutils
-                pkgs.diffutils
-                pkgs.nickel
-                pkgs.pueue
-              ]
-              ''
-                sh scripts/cairn/check-pueue-host --root .
-              '';
+          pueue-host = cargoCheck "animus-pueue-host" [
+            pkgs.b3sum
+            pkgs.clippy
+            pkgs.coreutils
+            pkgs.diffutils
+            pkgs.nickel
+            pkgs.pueue
+          ] ''
+            sh scripts/cairn/check-pueue-host --root .
+          '';
 
-          conversation-projection =
-            cargoCheck "animus-conversation-projection"
-              [
-                pkgs.b3sum
-                pkgs.clippy
-                pkgs.nickel
-              ]
-              ''
-                sh scripts/cairn/check-conversation-projection --root .
-              '';
+          conversation-projection = cargoCheck "animus-conversation-projection" [
+            pkgs.b3sum
+            pkgs.clippy
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-conversation-projection --root .
+          '';
 
-          session-branch-explorer =
-            cargoCheck "animus-session-branch-explorer"
-              [
-                pkgs.b3sum
-                pkgs.clippy
-                pkgs.nickel
-              ]
-              ''
-                sh scripts/cairn/check-session-branch-explorer --root .
-              '';
+          session-branch-explorer = cargoCheck "animus-session-branch-explorer" [
+            pkgs.b3sum
+            pkgs.clippy
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-session-branch-explorer --root .
+          '';
 
-          interrupted-tool-repair =
-            cargoCheck "animus-interrupted-tool-repair"
-              [
-                pkgs.b3sum
-                pkgs.nickel
-              ]
-              ''
-                sh scripts/cairn/check-interrupted-tool-repair --root .
-              '';
+          interrupted-tool-repair = cargoCheck "animus-interrupted-tool-repair" [
+            pkgs.b3sum
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-interrupted-tool-repair --root .
+          '';
 
-          provider-retry =
-            cargoCheck "animus-provider-retry"
-              [
-                pkgs.b3sum
-                pkgs.clippy
-                pkgs.nickel
-              ]
-              ''
-                sh scripts/cairn/check-provider-retry --root .
-              '';
+          provider-retry = cargoCheck "animus-provider-retry" [
+            pkgs.b3sum
+            pkgs.clippy
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-provider-retry --root .
+          '';
 
-          session-tree-export =
-            cargoCheck "animus-session-tree-export"
-              [
-                pkgs.b3sum
-                pkgs.clippy
-                pkgs.diffutils
-                pkgs.nickel
-              ]
-              ''
-                sh scripts/cairn/check-session-tree-export --root .
-              '';
+          session-tree-export = cargoCheck "animus-session-tree-export" [
+            pkgs.b3sum
+            pkgs.clippy
+            pkgs.diffutils
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-session-tree-export --root .
+          '';
 
-          bounded-execution-evaluation =
-            cargoCheck "animus-bounded-execution-evaluation"
-              [
-                pkgs.b3sum
-                pkgs.nickel
-              ]
-              ''
-                sh scripts/cairn/check-bounded-execution-evaluation --root .
-              '';
+          bounded-execution-evaluation = cargoCheck "animus-bounded-execution-evaluation" [
+            pkgs.b3sum
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-bounded-execution-evaluation --root .
+          '';
 
-          application-host-binding =
-            cargoCheck "animus-application-host-binding"
-              [
-                pkgs.b3sum
-                pkgs.clippy
-                pkgs.diffutils
-                pkgs.nickel
-              ]
-              ''
-                sh scripts/cairn/check-application-host-binding --root .
-              '';
+          application-host-binding = cargoCheck "animus-application-host-binding" [
+            pkgs.b3sum
+            pkgs.clippy
+            pkgs.diffutils
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-application-host-binding --root .
+          '';
 
-          sandlock-host =
-            cargoCheck "animus-sandlock-host"
-              [
-                pkgs.b3sum
-                pkgs.clippy
-              ]
-              ''
-                unset ANIMUS_SANDLOCK_LINUX_LIVE
-                sh scripts/cairn/check-sandlock-host --root .
-              '';
+          sandlock-host = cargoCheck "animus-sandlock-host" [
+            pkgs.b3sum
+            pkgs.clippy
+          ] ''
+            unset ANIMUS_SANDLOCK_LINUX_LIVE
+            sh scripts/cairn/check-sandlock-host --root .
+          '';
 
-          agent-guardrail =
-            cargoCheck "animus-agent-guardrail"
-              [
-                pkgs.b3sum
-                pkgs.bubblewrap
-                pkgs.clippy
-                pkgs.nickel
-              ]
-              ''
-                export ANIMUS_GUARDRAIL_LINUX_LIVE=1
-                export ANIMUS_GUARDRAIL_BWRAP=${pkgs.bubblewrap}/bin/bwrap
-                sh scripts/cairn/check-agent-guardrail --root .
-              '';
+          agent-guardrail = cargoCheck "animus-agent-guardrail" [
+            pkgs.b3sum
+            pkgs.bubblewrap
+            pkgs.clippy
+            pkgs.nickel
+          ] ''
+            export ANIMUS_GUARDRAIL_LINUX_LIVE=1
+            export ANIMUS_GUARDRAIL_BWRAP=${pkgs.bubblewrap}/bin/bwrap
+            sh scripts/cairn/check-agent-guardrail --root .
+          '';
 
-          durable-session-store =
-            cargoCheck "animus-durable-session-store"
-              [
-                pkgs.b3sum
-                pkgs.clippy
-                pkgs.diffutils
-                pkgs.nickel
-              ]
-              ''
-                sh scripts/cairn/check-durable-session-store --root .
-              '';
+          durable-session-store = cargoCheck "animus-durable-session-store" [
+            pkgs.b3sum
+            pkgs.clippy
+            pkgs.diffutils
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-durable-session-store --root .
+          '';
 
-          durable-steel-kernel-restore =
-            cargoCheck "animus-durable-steel-kernel-restore"
-              [
-                pkgs.b3sum
-                pkgs.clippy
-              ]
-              ''
-                sh scripts/cairn/check-durable-steel-kernel-restore --root .
-              '';
+          durable-steel-kernel-restore = cargoCheck "animus-durable-steel-kernel-restore" [
+            pkgs.b3sum
+            pkgs.clippy
+          ] ''
+            sh scripts/cairn/check-durable-steel-kernel-restore --root .
+          '';
 
-          rlm-host-effect-executor =
-            cargoCheck "animus-rlm-host-effect-executor"
-              [
-                pkgs.b3sum
-                pkgs.clippy
-              ]
-              ''
-                export ANIMUS_RLM_HOST_PROCESS_FIXTURE=${pkgs.coreutils}/bin/printf
-                sh scripts/cairn/check-rlm-host-effect-executor --root .
-              '';
+          rlm-host-effect-executor = cargoCheck "animus-rlm-host-effect-executor" [
+            pkgs.b3sum
+            pkgs.clippy
+          ] ''
+            export ANIMUS_RLM_HOST_PROCESS_FIXTURE=${pkgs.coreutils}/bin/printf
+            sh scripts/cairn/check-rlm-host-effect-executor --root .
+          '';
 
-          coding-session-host =
-            cargoCheck "animus-coding-session-host"
-              [
-                pkgs.b3sum
-              ]
-              ''
-                sh scripts/cairn/check-coding-session-host --root .
-              '';
+          coding-session-host = cargoCheck "animus-coding-session-host" [
+            pkgs.b3sum
+          ] ''
+            sh scripts/cairn/check-coding-session-host --root .
+          '';
 
-          concrete-child-session-service =
-            cargoCheck "animus-concrete-child-session-service"
-              [
-                pkgs.b3sum
-                pkgs.clippy
-              ]
-              ''
-                sh scripts/cairn/check-concrete-child-session-service --root .
-              '';
+          concrete-child-session-service = cargoCheck "animus-concrete-child-session-service" [
+            pkgs.b3sum
+            pkgs.clippy
+          ] ''
+            sh scripts/cairn/check-concrete-child-session-service --root .
+          '';
 
-          coding-session-queue-cas =
-            cargoCheck "animus-coding-session-queue-cas"
-              [
-                pkgs.b3sum
-              ]
-              ''
-                sh scripts/cairn/check-coding-session-queue-cas --root .
-              '';
+          coding-session-queue-cas = cargoCheck "animus-coding-session-queue-cas" [
+            pkgs.b3sum
+          ] ''
+            sh scripts/cairn/check-coding-session-queue-cas --root .
+          '';
 
-          agent-control =
-            cargoCheck "animus-agent-control"
-              [
-                pkgs.b3sum
-              ]
-              ''
-                sh scripts/cairn/check-agent-control --root .
-              '';
+          agent-control = cargoCheck "animus-agent-control" [
+            pkgs.b3sum
+          ] ''
+            sh scripts/cairn/check-agent-control --root .
+          '';
 
-          acp-stdio-host =
-            cargoCheck "animus-acp-stdio-host"
-              [
-                pkgs.b3sum
-                pkgs.clippy
-              ]
-              ''
-                sh scripts/cairn/check-acp-stdio-host --root .
-              '';
+          acp-stdio-host = cargoCheck "animus-acp-stdio-host" [
+            pkgs.b3sum
+            pkgs.clippy
+          ] ''
+            sh scripts/cairn/check-acp-stdio-host --root .
+          '';
 
-          live-openai-provider-host =
-            cargoCheck "animus-live-openai-provider-host"
-              [
-                pkgs.clippy
-              ]
-              ''
-                sh scripts/cairn/check-live-openai-provider-host --root .
-              '';
+          live-openai-provider-host = cargoCheck "animus-live-openai-provider-host" [
+            pkgs.clippy
+          ] ''
+            sh scripts/cairn/check-live-openai-provider-host --root .
+          '';
 
-          live-steel-agent-shell =
-            cargoCheck "animus-live-steel-agent-shell"
-              [
-                pkgs.clippy
-                pkgs.nickel
-              ]
-              ''
-                sh scripts/cairn/check-live-steel-agent-shell --root .
-              '';
+          live-steel-agent-shell = cargoCheck "animus-live-steel-agent-shell" [
+            pkgs.clippy
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-live-steel-agent-shell --root .
+          '';
 
-          local-daemon-supervisor-host =
-            cargoCheck "animus-local-daemon-supervisor-host"
-              [
-                pkgs.clippy
-                pkgs.diffutils
-                pkgs.nickel
-              ]
-              ''
-                sh scripts/cairn/check-local-daemon-supervisor-host --root .
-              '';
+          local-daemon-supervisor-host = cargoCheck "animus-local-daemon-supervisor-host" [
+            pkgs.clippy
+            pkgs.diffutils
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-local-daemon-supervisor-host --root .
+          '';
 
-          live-terminal-agent-host =
-            cargoCheck "animus-live-terminal-agent-host"
-              [
-                pkgs.clippy
-                pkgs.diffutils
-                pkgs.nickel
-              ]
-              ''
-                sh scripts/cairn/check-live-terminal-agent-host --root .
-              '';
+          live-terminal-agent-host = cargoCheck "animus-live-terminal-agent-host" [
+            pkgs.clippy
+            pkgs.diffutils
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-live-terminal-agent-host --root .
+          '';
 
-          packaged-live-openai-smoke =
-            cargoCheck "animus-packaged-live-openai-smoke"
-              [
-                pkgs.clippy
-                pkgs.nickel
-              ]
-              ''
-                sh scripts/cairn/check-packaged-live-openai-smoke --root .
-              '';
+          packaged-live-openai-smoke = cargoCheck "animus-packaged-live-openai-smoke" [
+            pkgs.clippy
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-packaged-live-openai-smoke --root .
+          '';
 
-          packaged-live-openrouter-smoke =
-            cargoCheck "animus-packaged-live-openrouter-smoke"
-              [
-                pkgs.clippy
-                pkgs.nickel
-              ]
-              ''
-                sh scripts/cairn/check-packaged-live-openrouter-smoke --root .
-              '';
+          packaged-live-openrouter-smoke = cargoCheck "animus-packaged-live-openrouter-smoke" [
+            pkgs.clippy
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-packaged-live-openrouter-smoke --root .
+          '';
 
-          codebase-tool-host =
-            cargoCheck "animus-codebase-tool-host"
-              [
-                pkgs.clippy
-              ]
-              ''
-                sh scripts/cairn/check-codebase-tool-host --root .
-              '';
+          codebase-tool-host = cargoCheck "animus-codebase-tool-host" [
+            pkgs.clippy
+          ] ''
+            sh scripts/cairn/check-codebase-tool-host --root .
+          '';
 
-          acp-nominal-identities =
-            cargoCheck "animus-acp-nominal-identities"
-              [
-                pkgs.b3sum
-                pkgs.clippy
-                pkgs.nickel
-                pkgs.rustfmt
-              ]
-              ''
-                sh scripts/cairn/check-acp-nominal-identities --root .
-              '';
+          acp-nominal-identities = cargoCheck "animus-acp-nominal-identities" [
+            pkgs.b3sum
+            pkgs.clippy
+            pkgs.nickel
+            pkgs.rustfmt
+          ] ''
+            sh scripts/cairn/check-acp-nominal-identities --root .
+          '';
 
-          lean4-loop-fabric =
-            cargoCheck "animus-lean4-loop-fabric"
-              [
-                pkgs.b3sum
-                pkgs.clippy
-                pkgs.gcc
-                pkgs.lean4
-                pkgs.nickel
-              ]
-              ''
-                sh scripts/cairn/check-lean4-loop-fabric --root .
-              '';
+          lean4-loop-fabric = cargoCheck "animus-lean4-loop-fabric" [
+            pkgs.b3sum
+            pkgs.clippy
+            pkgs.gcc
+            pkgs.lean4
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-lean4-loop-fabric --root .
+          '';
 
-          session-authority-profile =
-            cargoCheck "animus-session-authority-profile"
-              [
-                pkgs.b3sum
-                pkgs.diffutils
-                pkgs.nickel
-              ]
-              ''
-                sh scripts/cairn/check-session-authority-profile --root .
-              '';
+          session-authority-profile = cargoCheck "animus-session-authority-profile" [
+            pkgs.b3sum
+            pkgs.diffutils
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-session-authority-profile --root .
+          '';
 
-          runtime-authority-seal =
-            cargoCheck "animus-runtime-authority-seal"
-              [
-                pkgs.b3sum
-                pkgs.clippy
-                pkgs.rustfmt
-              ]
-              ''
-                sh scripts/cairn/check-runtime-authority-seal --root .
-              '';
+          runtime-authority-seal = cargoCheck "animus-runtime-authority-seal" [
+            pkgs.b3sum
+            pkgs.clippy
+            pkgs.rustfmt
+          ] ''
+            sh scripts/cairn/check-runtime-authority-seal --root .
+          '';
 
-          rejected-attempt-context =
-            cargoCheck "animus-rejected-attempt-context"
-              [
-                pkgs.b3sum
-                pkgs.clippy
-                pkgs.nickel
-                pkgs.rustfmt
-              ]
-              ''
-                sh scripts/cairn/check-rejected-attempt-context --root .
-              '';
+          rejected-attempt-context = cargoCheck "animus-rejected-attempt-context" [
+            pkgs.b3sum
+            pkgs.clippy
+            pkgs.nickel
+            pkgs.rustfmt
+          ] ''
+            sh scripts/cairn/check-rejected-attempt-context --root .
+          '';
 
           exec-policy = cargoCheck "animus-exec-policy" [ pkgs.nickel ] ''
             sh scripts/cairn/check-exec-policy --root .
@@ -1566,12 +1371,10 @@
             sh scripts/cairn/check-composition-conformance --root .
           '';
 
-          composition-activation-graph =
-            cargoCheck "animus-composition-activation-graph" [ pkgs.b3sum pkgs.nickel ]
-              ''
-                export ANIMUS_ACTIVATION_STATIC_ONLY=1
-                sh scripts/cairn/check-composition-activation-graph --root .
-              '';
+          composition-activation-graph = cargoCheck "animus-composition-activation-graph" [ pkgs.b3sum pkgs.nickel ] ''
+            export ANIMUS_ACTIVATION_STATIC_ONLY=1
+            sh scripts/cairn/check-composition-activation-graph --root .
+          '';
 
           component-scopes =
             pkgs.runCommand "animus-component-scopes"
@@ -1751,17 +1554,13 @@
             sh scripts/cairn/check-multi-role-host-smoke --root .
           '';
 
-          authoritative-completion-host-smoke =
-            cargoCheck "animus-authoritative-completion-host-smoke" [ pkgs.b3sum ]
-              ''
-                sh scripts/cairn/check-authoritative-completion-host-smoke --root .
-              '';
+          authoritative-completion-host-smoke = cargoCheck "animus-authoritative-completion-host-smoke" [ pkgs.b3sum ] ''
+            sh scripts/cairn/check-authoritative-completion-host-smoke --root .
+          '';
 
-          real-check-completion-host-smoke =
-            cargoCheck "animus-real-check-completion-host-smoke" [ pkgs.b3sum ]
-              ''
-                sh scripts/cairn/check-real-check-completion-host-smoke --root .
-              '';
+          real-check-completion-host-smoke = cargoCheck "animus-real-check-completion-host-smoke" [ pkgs.b3sum ] ''
+            sh scripts/cairn/check-real-check-completion-host-smoke --root .
+          '';
 
           plugin-manifest-runtime-neutral =
             pkgs.runCommand "animus-plugin-manifest-runtime-neutral"
