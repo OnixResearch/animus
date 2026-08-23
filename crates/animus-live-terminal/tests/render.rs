@@ -58,9 +58,9 @@ fn test_backend_renders_snapshot_first_streaming_and_child_state() {
         .collect::<Vec<_>>()
         .join("\n");
     assert!(rendered.contains("Animus Live Terminal"));
-    assert!(rendered.contains("session: streaming"));
-    assert!(rendered.contains("queue: 2"));
-    assert!(rendered.contains("child: child-render [running]"));
+    assert!(rendered.contains("session streaming"));
+    assert!(rendered.contains("queue 2"));
+    assert!(rendered.contains("child child-render is running"));
     let text_projection = render_text_projection(state.view());
     assert!(text_projection.contains("restore-status: restored"));
     assert!(text_projection.contains(HASH));

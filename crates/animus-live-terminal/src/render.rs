@@ -205,7 +205,7 @@ fn entry_lines(entry: &animus_tui::TranscriptEntry) -> Vec<Line<'static>> {
         animus_tui::TranscriptEntry::SystemMessage { content } => {
             labelled_lines(" ● system › ", Color::Blue, content)
         }
-        _unknown => Vec::new(),
+        animus_tui::TranscriptEntry::Unknown { .. } => Vec::new(),
     }
 }
 
