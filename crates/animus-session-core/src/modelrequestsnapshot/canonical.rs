@@ -781,8 +781,10 @@ pub(super) fn update_u32(hasher: &mut Hasher, value: u32) {
 }
 
 fn update_usize(hasher: &mut Hasher, value: usize) {
-    let value = u64::try_from(value).unwrap_or(u64::MAX);
-    update_u64(hasher, value);
+    // Every supported Animus target has a usize width no greater than the
+    // canonical u64 frame width.
+    let canonical_value = value as u64;
+    update_u64(hasher, canonical_value);
 }
 
 fn update_bool(hasher: &mut Hasher, value: bool) {

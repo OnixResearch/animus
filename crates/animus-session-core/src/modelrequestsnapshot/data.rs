@@ -62,7 +62,7 @@ pub const MODEL_REQUEST_SNAPSHOT_NON_CLAIMS: &[&str] = &[
 
 pub(crate) const MAX_SNAPSHOT_LABEL_BYTES: usize = 256;
 pub(crate) const MAX_SNAPSHOT_IDENTITIES: usize = 256;
-pub(crate) const MAX_PRIVATE_PAYLOAD_BYTES: usize = 8 * 1024 * 1024;
+pub(crate) const MAX_PRIVATE_PAYLOAD_BYTES: usize = 8_388_608;
 pub(crate) const BLAKE3_HEX_LENGTH: usize = 64;
 
 /// Exact selected provider-neutral model route.

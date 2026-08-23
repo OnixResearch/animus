@@ -2,7 +2,7 @@ use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use blake3::Hasher;
 
-use super::canonical::{update_str, update_u32};
+use super::codec::{update_str, update_u32};
 use super::data::{
     MODEL_REQUEST_SNAPSHOT_NON_CLAIMS, MODEL_REQUEST_SNAPSHOT_RECEIPT_IDENTITY_DOMAIN,
     MODEL_REQUEST_SNAPSHOT_RECEIPT_SCHEMA, MODEL_REQUEST_SNAPSHOT_REDACTION, ModelRequestSnapshot,

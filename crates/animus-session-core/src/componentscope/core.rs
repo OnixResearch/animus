@@ -308,7 +308,7 @@ pub fn fail_component_scope_cleanup(
         .requested_effect_count
         .checked_add(1)
         .ok_or(ComponentScopeError::BoundExceeded)?;
-    let receipt = super::receipt::project_component_scope_receipt(&next)?;
+    let receipt = super::redaction::project_component_scope_receipt(&next)?;
     next.terminal_receipt_identity = Some(receipt.identity.clone());
     let effect = ScopeEffectRequest::CommitTerminalReceipt {
         scope_id: next.scope_id.clone(),
@@ -465,7 +465,7 @@ fn reduce_member_released(
         .requested_effect_count
         .checked_add(1)
         .ok_or(ComponentScopeError::BoundExceeded)?;
-    let receipt = super::receipt::project_component_scope_receipt(&next)?;
+    let receipt = super::redaction::project_component_scope_receipt(&next)?;
     next.terminal_receipt_identity = Some(receipt.identity.clone());
     let effect = ScopeEffectRequest::CommitTerminalReceipt {
         scope_id: next.scope_id.clone(),
@@ -851,7 +851,7 @@ fn validate_non_claims(non_claims: &[String]) -> Result<(), ComponentScopeError>
         return Err(ComponentScopeError::UnsafeEvidence);
     }
     for non_claim in non_claims {
-        super::receipt::validate_component_scope_evidence_text(non_claim.as_str())?;
+        super::redaction::validate_component_scope_evidence_text(non_claim.as_str())?;
     }
     if REQUIRED_SCOPE_NON_CLAIMS.iter().any(|required| {
         !non_claims
@@ -872,7 +872,7 @@ pub(crate) fn validate_label(value: &str) -> Result<(), ComponentScopeError> {
     {
         return Err(ComponentScopeError::InvalidIdentity);
     }
-    super::receipt::validate_component_scope_evidence_text(value)
+    super::redaction::validate_component_scope_evidence_text(value)
 }
 
 pub(crate) fn validate_hash(value: &str) -> Result<(), ComponentScopeError> {

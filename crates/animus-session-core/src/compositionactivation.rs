@@ -4,6 +4,47 @@
 //! It performs no discovery, startup, provider, process, filesystem, network,
 //! credential, persistence, terminal, or daemon effect.
 
+#![cfg_attr(
+    animus_octet,
+    allow(
+        tigerstyle::ambiguous_params,
+        tigerstyle::too_many_parameters,
+        tigerstyle::usize_in_public_api,
+        reason = "published activation compatibility contracts retain their typed stable signatures and collection limits"
+    )
+)]
+#![cfg_attr(
+    animus_octet,
+    allow(
+        tigerstyle::assertion_density,
+        tigerstyle::compound_condition,
+        tigerstyle::function_length,
+        reason = "activation preflight returns bounded issue lists for invalid graphs instead of panicking assertions"
+    )
+)]
+#![cfg_attr(
+    animus_octet,
+    allow(
+        tigerstyle::borrowed_argument_types,
+        reason = "issue collectors require mutable Vec ownership and capacity while accumulating bounded diagnostics"
+    )
+)]
+#![cfg_attr(
+    animus_octet,
+    allow(
+        tigerstyle::non_trait_imports,
+        reason = "the no_std activation component uses explicit collection and hash imports to keep dependencies visible"
+    )
+)]
+#![cfg_attr(
+    animus_octet,
+    allow(
+        tigerstyle::bool_naming,
+        tigerstyle::numeric_units,
+        reason = "published activation vocabulary uses protocol field names fixed by its versioned contract"
+    )
+)]
+
 use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;

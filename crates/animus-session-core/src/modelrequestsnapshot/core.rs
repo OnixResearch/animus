@@ -3,7 +3,7 @@ use alloc::format;
 use alloc::string::{String, ToString};
 use blake3::Hasher;
 
-use super::canonical::{
+use super::codec::{
     domain_hash, model_request_budget_identity, model_request_canonical_identity,
     model_request_output_control_identity, model_request_route_identity,
     model_request_tool_schema_set_identity, private_snapshot_payload, update_str, update_u32,

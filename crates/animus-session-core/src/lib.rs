@@ -40,17 +40,26 @@ pub mod active_turn_recovery;
 /// Pure bounded session branch projection, control planning, comparison, and evidence.
 pub mod branch_explorer;
 #[path = "componentscope/mod.rs"]
+mod componentscope;
 /// Pure generation-fenced component registration, resolution, and teardown.
-pub mod component_scope;
+pub mod component_scope {
+    pub use super::componentscope::*;
+}
 #[path = "compositionactivation.rs"]
+mod compositionactivation;
 /// Pure composition-activation graph validation, preflight, and safe inspection.
-pub mod composition_activation_graph;
+pub mod composition_activation_graph {
+    pub use super::compositionactivation::*;
+}
 #[path = "conversationprojection.rs"]
 /// Pure canonical conversation projection and cache reconciliation.
 pub mod conversation_projection;
 #[path = "modelrequestsnapshot/mod.rs"]
+mod modelrequestsnapshot;
 /// Pure private model-request snapshots, dispatch binding, recovery, and safe evidence.
-pub mod model_request_snapshot;
+pub mod model_request_snapshot {
+    pub use super::modelrequestsnapshot::*;
+}
 #[path = "interrupted_tool_repair/mod.rs"]
 mod session_recovery;
 /// Pure active-branch diagnosis and append-only interrupted tool-call repair.
