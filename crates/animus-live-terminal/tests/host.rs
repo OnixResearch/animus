@@ -12,6 +12,11 @@ const CONFIG: &[u8] = include_bytes!("../../../config/generated/live-terminal-ag
 const HASH: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const FIRST_SEQUENCE: u64 = 1;
 const MAXIMUM_ITERATIONS: u64 = 16;
+const IDLE_BATCH_TEST_ITERATIONS: u64 = 25;
+const IDLE_BATCH_TEST_INPUT_COUNT: usize = 25;
+const EXPECTED_IDLE_EVENT_POLLS: u64 = 2;
+const INPUT_POLL_TEST_ITERATIONS: u64 = 2;
+const EXPECTED_INPUT_EVENT_POLLS: u64 = 2;
 const INITIAL_WIDTH: u16 = 80;
 const INITIAL_HEIGHT: u16 = 24;
 const RESIZED_WIDTH: u16 = 100;
@@ -180,6 +185,46 @@ fn event_flood_and_iteration_exhaustion_fail_closed_without_automatic_mode_switc
 }
 
 #[test]
+fn idle_terminal_batches_event_polls() {
+    let config = direct_config();
+    let mut connection = FixtureConnection::new(Vec::new());
+    let inputs: [Option<TerminalInput>; IDLE_BATCH_TEST_INPUT_COUNT] =
+        std::array::from_fn(|_index| None);
+    let mut host = FixtureHost::new(inputs);
+
+    let result = run_attached_terminal(LiveTerminalRequest {
+        config: &config,
+        connection: &mut connection,
+        host: &mut host,
+        maximum_iterations: IDLE_BATCH_TEST_ITERATIONS,
+    });
+
+    assert!(matches!(result, Err(TerminalHostError::IterationLimit)));
+    assert_eq!(host.poll_count, IDLE_BATCH_TEST_ITERATIONS);
+    assert_eq!(connection.event_poll_count, EXPECTED_IDLE_EVENT_POLLS);
+    assert!(connection.detached);
+}
+
+#[test]
+fn local_input_forces_an_immediate_event_poll() {
+    let config = direct_config();
+    let mut connection = FixtureConnection::new(Vec::new());
+    let mut host = FixtureHost::new([None, Some(TerminalInput::Character('x'))]);
+
+    let result = run_attached_terminal(LiveTerminalRequest {
+        config: &config,
+        connection: &mut connection,
+        host: &mut host,
+        maximum_iterations: INPUT_POLL_TEST_ITERATIONS,
+    });
+
+    assert!(matches!(result, Err(TerminalHostError::IterationLimit)));
+    assert_eq!(host.poll_count, INPUT_POLL_TEST_ITERATIONS);
+    assert_eq!(connection.event_poll_count, EXPECTED_INPUT_EVENT_POLLS);
+    assert!(connection.detached);
+}
+
+#[test]
 fn blocked_activation_calls_no_terminal_or_connection_effect() {
     // r[verify agent_harness_runtime.composition_activation_graph.fail_loud]
     let config = direct_config();
@@ -282,6 +327,7 @@ impl TerminalHostPort for FixtureHost {
 struct FixtureConnection {
     event_batches: VecDeque<Vec<ClientSessionEvent>>,
     commands: Vec<ClientCommand>,
+    event_poll_count: u64,
     refreshed: bool,
     stopped: bool,
     detached: bool,
@@ -292,6 +338,7 @@ impl FixtureConnection {
         Self {
             event_batches: VecDeque::from(event_batches),
             commands: Vec::new(),
+            event_poll_count: 0,
             refreshed: false,
             stopped: false,
             detached: false,
@@ -339,6 +386,7 @@ impl TerminalConnectionPort for FixtureConnection {
         _sequence: u64,
         _maximum_events: u32,
     ) -> Result<Vec<ClientSessionEvent>, TerminalConnectionError> {
+        self.event_poll_count = self.event_poll_count.saturating_add(1);
         Ok(self.event_batches.pop_front().unwrap_or_default())
     }
 

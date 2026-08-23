@@ -1,5 +1,11 @@
 //! Bounded live-terminal orchestration over injected shell ports.
 
+/// Idle event refresh cadence in terminal input iterations.
+///
+/// At the configured 25 ms input poll interval this is one daemon request per
+/// 500 ms. Active sessions and local input still poll immediately.
+const IDLE_EVENT_POLL_INTERVAL: u64 = 20;
+
 /// Terminal input, time, cancellation, and rendering port.
 pub trait TerminalHostPort {
     /// Returns the current admitted viewport.
@@ -110,17 +116,19 @@ where
             .map_err(TerminalHostError::Core)?;
         request.host.render(state.view())?;
         state.record_rendered().map_err(TerminalHostError::Core)?;
+        let mut idle_iterations_since_poll = IDLE_EVENT_POLL_INTERVAL;
 
         for _iteration in 0..request.maximum_iterations {
             let input = request.host.poll_input(request.config.poll_interval_ms())?;
-            let events = request
-                .connection
-                .events_after(
-                    request.config.root_id(),
-                    state.last_sequence(),
-                    request.config.max_event_batch(),
-                )
-                .map_err(TerminalHostError::Connection)?;
+            let events = poll_session_events(
+                &mut EventPollContext {
+                    config: request.config,
+                    connection: &mut *request.connection,
+                },
+                &state,
+                input.is_some(),
+                &mut idle_iterations_since_poll,
+            )?;
             let plan = crate::reduce_iteration(
                 &mut state,
                 &crate::TerminalIteration {
@@ -184,6 +192,46 @@ where
         .detach(request.config.root_id(), request.config.client_id())
         .map_err(TerminalHostError::Connection)?;
     result
+}
+
+struct EventPollContext<'a, Connection> {
+    config: &'a crate::ValidatedTerminalConfig,
+    connection: &'a mut Connection,
+}
+
+fn poll_session_events<Connection: crate::TerminalConnectionPort>(
+    context: &mut EventPollContext<'_, Connection>,
+    state: &crate::TerminalClientState,
+    input_present: bool,
+    idle_iterations_since_poll: &mut u64,
+) -> Result<Vec<crate::ClientSessionEvent>, TerminalHostError> {
+    let should_poll_events = input_present
+        || session_is_active(state.view())
+        || *idle_iterations_since_poll >= IDLE_EVENT_POLL_INTERVAL;
+    if should_poll_events {
+        *idle_iterations_since_poll = 0;
+        context
+            .connection
+            .events_after(
+                context.config.root_id(),
+                state.last_sequence(),
+                context.config.max_event_batch(),
+            )
+            .map_err(TerminalHostError::Connection)
+    } else {
+        *idle_iterations_since_poll = idle_iterations_since_poll.saturating_add(1);
+        Ok(Vec::new())
+    }
+}
+
+fn session_is_active(view: &crate::TerminalViewState) -> bool {
+    let lifecycle = view.coding_session().state().lifecycle_status.as_str();
+    let tool = view.tools().status().as_str();
+    !matches!(lifecycle, "idle" | "completed" | "cancelled" | "blocked")
+        || matches!(
+            tool,
+            "running" | "waiting_for_approval" | "waiting_for_completion_evidence"
+        )
 }
 
 fn limits_from_config(config: &crate::ValidatedTerminalConfig) -> crate::TerminalLimits {
