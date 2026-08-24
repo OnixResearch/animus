@@ -443,6 +443,7 @@
                 || baseName == "check-evidence-safety"
                 || baseName == "check-model-catalog"
                 || baseName == "check-model-catalog-hygiene"
+                || baseName == "check-response-ownership"
                 || baseName == "check-model-runtime-profiles"
                 || baseName == "check-agent-role-profiles"
                 || baseName == "check-aeneas-proof-campaign"
@@ -1168,6 +1169,13 @@
             pkgs.nickel
           ] ''
             sh scripts/cairn/check-interrupted-tool-repair --root .
+          '';
+
+          response-ownership = cargoCheck "animus-response-ownership" [
+            pkgs.b3sum
+            pkgs.clippy
+          ] ''
+            sh scripts/cairn/check-response-ownership --root .
           '';
 
           provider-retry = cargoCheck "animus-provider-retry" [

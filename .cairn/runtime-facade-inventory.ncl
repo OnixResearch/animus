@@ -2853,6 +2853,7 @@ let entry_values = [
   entry "animus-runtime::branch_explorer" "animus-runtime" session_core reusable none stable "pure bounded branch topology annotation selection comparison equivalence port and receipt contracts re-exported by the runtime facade",
   entry "animus-runtime::conversation_projection" "animus-runtime" session_core reusable none stable "pure snapshot-first conversation projection cursor rebuild heal cache and receipt contracts re-exported by the runtime facade",
   entry "animus-runtime::request_context" "animus-runtime" runtime reusable none stable "pure bounded contribution reduction exact model and skill-turn binding finite lifetimes retention denial and metadata-only receipts",
+  entry "animus-runtime::response_ownership" "animus-runtime" runtime reusable none stable "pure generation-scoped response connection ownership and poison transitions",
   entry "animus-runtime::pending_input_vault" "animus-runtime" runtime reusable none stable "pure conversation-scoped pending-entry validation exact ordering corruption disposition recovery-control and metadata-only receipt contracts",
   entry "animus-runtime::active_turn_recovery" "animus-runtime" session_core reusable none stable "pure durable acceptance, checkpoint replacement, steering, recovery, no-rerun, and metadata-only receipt contracts re-exported by the runtime facade",
   entry "animus-runtime::provider_retry" "animus-runtime" runtime reusable none stable "pure bounded same-plan provider retry classification, planning, timer gating, events, and metadata-only receipts",

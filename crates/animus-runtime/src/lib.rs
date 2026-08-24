@@ -170,6 +170,9 @@ mod provider_hardening;
 pub mod request_context;
 #[path = "resilience/mod.rs"]
 mod resilience;
+/// Pure generation-scoped ownership for reusable response connections.
+#[path = "responseownership.rs"]
+pub mod response_ownership;
 /// Pure validation and existing-owner projection for optional transcript normalization.
 #[cfg(feature = "trajectory-transcript-adapter")]
 pub mod trajectory;

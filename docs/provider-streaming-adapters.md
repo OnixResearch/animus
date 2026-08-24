@@ -25,6 +25,14 @@ Required credentials and injected streaming service readiness are checked before
 
 Provider-exposed reasoning, thinking, or summary chunks map to `ThoughtDelta` frames with redacted default visibility. Default final-response assembly includes only assistant-visible content deltas. Reasoning chunks must not become assistant-visible final text, receipt bodies, dataset rows, review report bodies, or logs unless a host policy creates a safe projection.
 
+## Generation-scoped response ownership
+
+`animus_runtime::response_ownership` gives each reusable response connection one active generation owner. A concurrent claim fails closed. Frames and terminal observations must name the active generation.
+
+Interruption, malformed framing, or return before the admitted terminal frame poisons the connection. The host must close or discard a poisoned transport. Only an exact terminal observation releases ownership for reuse.
+
+This state machine does not prove frame authenticity, exactly-once delivery, transport isolation, provider correctness, or safe replay.
+
 ## Verification and non-claims
 
 Fixture-backed evidence covers positive OpenAI/Anthropic chunk parsing, fragmented content deltas, thought/reasoning deltas, tool-call deltas, usage records, successful finish records, malformed records, missing finish, terminal-not-last records, truncated chunks, provider error records, cancellation records, unknown channels, capability-gate rejection/downgrade, missing credentials, missing services, and runtime stream projection through existing runtime tests.

@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+set -eu
+root='.'
+if [ "${1:-}" = '--root' ]; then root=${2:-.}; fi
+cd "${root}"
+for tool in cargo b3sum; do command -v "${tool}" >/dev/null 2>&1 || exit 1; done
+cargo test -p animus-runtime --locked response_ownership
+cargo clippy -p animus-runtime --all-targets --locked -- -D warnings
+grep -F 'ResponseConnectionOwnership' crates/animus-runtime/src/responseownership.rs >/dev/null
+grep -F 'Only an exact terminal observation releases ownership' docs/provider-streaming-adapters.md >/dev/null
+mkdir -p target/cairn/focused-rails
+cat > target/cairn/focused-rails/response-ownership.md <<EOF
+schema: animus.focused-rail-receipt.v1
+rail: response-ownership
+status: pass
+source_blake3: $(b3sum crates/animus-runtime/src/responseownership.rs | cut -d ' ' -f 1)
+claims: generation-ownership,concurrent-claim-denial,poison-on-uncertainty,terminal-only-release
+non_claims: frame-authenticity,exactly-once-delivery,transport-isolation,provider-correctness,safe-replay
+EOF
+printf '%s\n' 'focused rail response-ownership: pass'
