@@ -5,6 +5,8 @@ mod catalog;
 mod choice;
 mod concrete;
 mod identity;
+#[cfg(feature = "model-catalog")]
+mod model_catalog;
 #[cfg(feature = "models-dev-catalog")]
 mod models_dev;
 mod reason;
@@ -36,6 +38,13 @@ pub use concrete::{
     validate_provider_dispatch_receipt, validate_provider_dispatch_shared_field_matrix,
 };
 pub use identity::{ModelId, ProviderId};
+#[cfg(feature = "model-catalog")]
+pub use model_catalog::{
+    MODEL_CATALOG_SCHEMA, ModelCatalog, ModelCatalogConnection, ModelCatalogConnectionClass,
+    ModelCatalogConnectionDraft, ModelCatalogDraft, ModelCatalogEntry, ModelCatalogEntryDraft,
+    ModelCatalogError, ModelCatalogIssue, ModelCatalogSelectionMode, SelectedModelCatalogEntry,
+    load_model_catalog, merge_model_catalogs, parse_model_catalog_json, select_model_catalog_entry,
+};
 #[cfg(feature = "models-dev-catalog")]
 pub use models_dev::{
     MAX_MODELS_DEV_SNAPSHOT_BYTES, MODELS_DEV_API_URL, MODELS_DEV_SOURCE_LABEL,

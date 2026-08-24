@@ -156,6 +156,7 @@ harbor-eval = ["std", "evaluation-adapters", "harbor-atif", "animus-runtime/harb
 harbor-atif = ["dep:animus-adapter-atif", "animus-adapters/harbor-atif"]
 harbor-atif-json = ["harbor-atif", "animus-adapter-atif/json-codec", "animus-adapters/harbor-atif-json"]
 mesh-provider = ["std", "animus-std/mesh-provider"]
+model-catalog = ["std", "animus-std/model-catalog"]
 models-dev-catalog = ["std", "animus-std/models-dev-catalog"]
 spacewasm-diagnostic = ["std", "animus-std/spacewasm-diagnostic"]
 std = ["dep:animus-std"]

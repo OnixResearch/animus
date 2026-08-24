@@ -332,6 +332,13 @@ pub use providers::{
     ModelsDevIngestError, ModelsDevIngestReport, ModelsDevJsonErrorKind, ModelsDevProviderBinding,
     ModelsDevProviderBindingDraft, ingest_models_dev_api_json,
 };
+#[cfg(feature = "model-catalog")]
+pub use providers::{
+    MODEL_CATALOG_SCHEMA, ModelCatalog, ModelCatalogConnection, ModelCatalogConnectionClass,
+    ModelCatalogConnectionDraft, ModelCatalogDraft, ModelCatalogEntry, ModelCatalogEntryDraft,
+    ModelCatalogError, ModelCatalogIssue, ModelCatalogSelectionMode, SelectedModelCatalogEntry,
+    load_model_catalog, merge_model_catalogs, parse_model_catalog_json, select_model_catalog_entry,
+};
 #[cfg(feature = "session-tree-export")]
 pub use redactedwriter::{
     SessionTreeExportConfigError, SessionTreeExportJsonErrorKind, SessionTreeExportWriteCall,

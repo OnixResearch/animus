@@ -9,6 +9,7 @@ repo_root=${ANIMUS_REPO_ROOT:-${default_repo_root}}
 target_root=${1:-${repo_root}}
 source_file=${repo_root}/config/repo.ncl
 recipe_source_file=${repo_root}/config/recipe-workflows.ncl
+model_catalog_source_file=${repo_root}/config/model-catalog.ncl
 model_profile_source_file=${repo_root}/config/model-runtime-profiles.ncl
 agent_role_source_file=${repo_root}/config/agent-role-profiles.ncl
 aeneas_proof_campaign_source_file=${repo_root}/config/aeneas-proof-campaign.ncl
@@ -69,6 +70,7 @@ nickel export --format toml --field dylint_config "${source_file}" > "${target_r
 nickel export --format yaml --field pre_commit_config "${source_file}" > "${target_root}/.pre-commit-config.yaml"
 nickel export --format json --field agent_check_registry "${source_file}" > "${target_root}/config/generated/agent-check-registry.json"
 nickel export --format json --field recipe_workflow_catalog "${recipe_source_file}" > "${target_root}/policy/recipe-workflows/generated/recipe-workflows.json"
+nickel export --format json --field model_catalog "${model_catalog_source_file}" > "${target_root}/config/generated/model-catalog.json"
 nickel export --format json --field model_runtime_profile_set "${model_profile_source_file}" > "${target_root}/config/generated/model-runtime-profiles.json"
 nickel export --format json --field agent_role_catalog "${agent_role_source_file}" > "${target_root}/config/generated/agent-role-profiles.json"
 nickel export --format json --field aeneas_proof_campaign_bundle "${aeneas_proof_campaign_source_file}" > "${target_root}/config/generated/aeneas-proof-campaign.json"

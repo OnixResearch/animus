@@ -116,6 +116,7 @@ The catalog names Lego-style Animus components, application-owned capability sea
 | `std.iroh-agent-comms-shell` | `shell-adapter` | `animus-std` | `iroh-host` | `shell-owned` | `std-shell` | `cargo test -p animus-std --features iroh-host iroh --locked<br>cargo check -p animus --features iroh-host --locked` | `animus_std::{IrohAgentCommsAdapter, IrohAgentTransport}` |
 | `std.syndicate-turn-shell` | `shell-adapter` | `animus-std` | `syndicate-host` | `shell-owned` | `preserves` | `cargo test -p animus-std --features syndicate-host syndicate --locked<br>cargo check -p animus --features syndicate-host --locked` | `animus_std::{SyndicateProtocolAdapter, SyndicatePacketTransport}` |
 | `std.iroh-syndicate-shell` | `shell-adapter` | `animus-std` | `iroh-syndicate-host` | `shell-owned` | `preserves` | `cargo test -p animus-std --features iroh-syndicate-host irohsyndicate --locked<br>cargo check -p animus --features iroh-syndicate-host --locked` | `animus_std::{IrohSyndicatePacketSession, IrohSyndicatePacketTransport}` |
+| `std.model-catalog-loader` | `shell-adapter` | `animus-std` | `model-catalog` | `shell-owned` | `model` | `cargo test -p animus-std --features model-catalog model_catalog --locked<br>scripts/cairn/check-model-catalog-hygiene --root .` | `animus_std::{ModelCatalog, load_model_catalog, merge_model_catalogs, select_model_catalog_entry}` |
 | `std.model-profile-loader` | `shell-adapter` | `animus-std` | `model-runtime-profiles` | `shell-owned` | `model` | `cargo test -p animus-std --features model-runtime-profiles modelprofiles --locked<br>scripts/cairn/check-model-runtime-profiles --root .` | `animus_std::{load_model_runtime_profiles, parse_model_runtime_profiles_json}` |
 | `std.agent-role-loader` | `shell-adapter` | `animus-std` | `agent-role-profiles` | `shell-owned` | `agent-role` | `cargo test -p animus-std --features agent-role-profiles agentroles --locked<br>scripts/cairn/check-agent-role-profiles --root .` | `animus_std::{load_agent_role_profiles, parse_agent_role_profiles_json}` |
 | `std.session-branch-explorer-host` | `shell-adapter` | `animus-std` | `session-branch-explorer` | `shell-owned` | `std-shell` | `cargo test -p animus-std --features session-branch-explorer sessionbranchexplorer --locked<br>scripts/cairn/check-session-branch-explorer --root .` | `animus_std::SessionBranchMemoryHost` |
@@ -293,6 +294,7 @@ The catalog names Lego-style Animus components, application-owned capability sea
 | `std.iroh-agent-comms-shell` | `std.host-authority-catalog` | - |
 | `std.syndicate-turn-shell` | `preserves.syndicate-turn-bridge`, `std.host-authority-catalog` | - |
 | `std.iroh-syndicate-shell` | `preserves.syndicate-turn-bridge`, `std.host-authority-catalog` | `std.iroh-agent-comms-shell`, `std.syndicate-turn-shell` |
+| `std.model-catalog-loader` | `std.host-authority-catalog` | - |
 | `std.model-profile-loader` | `runtime.model-profile-composition`, `std.host-authority-catalog` | - |
 | `std.agent-role-loader` | `runtime.agent-role-profiles`, `std.host-authority-catalog` | - |
 | `std.session-branch-explorer-host` | `runtime.session-branch-explorer`, `std.host-authority-catalog` | - |

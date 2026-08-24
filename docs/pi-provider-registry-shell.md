@@ -15,6 +15,10 @@ Animus adapts Pi-style provider/model registry behavior only at the `animus-std`
 
 The selected metadata is not a network client. The shell remains responsible for creating any concrete provider client and injecting it behind the model adapter boundary.
 
+## Versioned shipped and user catalogs
+
+The non-default `model-catalog` feature adds deterministic shipped and user catalog admission above the provider registry. It uses stable model IDs, complete replace-by-ID merge, environment-variable credential references, fail-loud source and field diagnostics, and manual-only custom connections. See [versioned model catalog hygiene](model-catalog-hygiene.md).
+
 ## Models.dev snapshot ingest
 
 The non-default `models-dev-catalog` feature parses caller-fetched [`https://models.dev/api.json`](https://models.dev/api.json) bytes at the `animus-std` boundary.

@@ -153,6 +153,7 @@
               diff -u ${./.pre-commit-config.yaml} "$tmp_dir/.pre-commit-config.yaml"
               diff -u ${./config/generated/agent-check-registry.json} "$tmp_dir/config/generated/agent-check-registry.json"
               diff -u ${./policy/recipe-workflows/generated/recipe-workflows.json} "$tmp_dir/policy/recipe-workflows/generated/recipe-workflows.json"
+              diff -u ${./config/generated/model-catalog.json} "$tmp_dir/config/generated/model-catalog.json"
               diff -u ${./config/generated/model-runtime-profiles.json} "$tmp_dir/config/generated/model-runtime-profiles.json"
               diff -u ${./config/generated/agent-role-profiles.json} "$tmp_dir/config/generated/agent-role-profiles.json"
               diff -u ${./config/generated/aeneas-proof-campaign.json} "$tmp_dir/config/generated/aeneas-proof-campaign.json"
@@ -440,6 +441,8 @@
                 || baseName == "check-skill-source-lifecycle"
                 || baseName == "check-trajectory-transcript-adapter"
                 || baseName == "check-evidence-safety"
+                || baseName == "check-model-catalog"
+                || baseName == "check-model-catalog-hygiene"
                 || baseName == "check-model-runtime-profiles"
                 || baseName == "check-agent-role-profiles"
                 || baseName == "check-aeneas-proof-campaign"
@@ -1054,6 +1057,15 @@
             pkgs.clippy
           ] ''
             sh scripts/cairn/check-terminal-video-playback --root .
+          '';
+
+          model-catalog-hygiene = cargoCheck "animus-model-catalog-hygiene" [
+            pkgs.nickel
+            pkgs.b3sum
+            pkgs.diffutils
+            pkgs.clippy
+          ] ''
+            sh scripts/cairn/check-model-catalog-hygiene --root .
           '';
 
           model-runtime-profiles = cargoCheck "animus-model-runtime-profiles" [

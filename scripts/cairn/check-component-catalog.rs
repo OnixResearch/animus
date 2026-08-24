@@ -109,6 +109,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "harbor-atif",
     "basalt-authority-adapter",
     "spacewasm-diagnostic",
+    "model-catalog",
     "model-runtime-profiles",
     "openai-provider-host",
     "live-provider",

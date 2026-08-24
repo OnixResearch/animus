@@ -1,0 +1,38 @@
+#!/usr/bin/env sh
+set -eu
+
+readonly FAILURE=1
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
+source_file=${repo_root}/config/model-catalog.ncl
+generated_file=${repo_root}/config/generated/model-catalog.json
+fixture_dir=${repo_root}/config/model-catalog-fixtures
+
+if ! command -v nickel >/dev/null 2>&1; then
+  printf '%s\n' 'error: nickel is required to check model catalog config' >&2
+  exit "${FAILURE}"
+fi
+
+tmp_file=$(mktemp "${TMPDIR:-/tmp}/animus-model-catalog.XXXXXX")
+trap 'rm -f "${tmp_file}"' EXIT HUP INT TERM
+nickel export --format json --field model_catalog "${source_file}" > "${tmp_file}"
+cmp "${generated_file}" "${tmp_file}"
+
+positive_count=1
+negative_count=0
+for fixture in "${fixture_dir}"/*.ncl; do
+  if nickel export --format json --field model_catalog "${fixture}" >/dev/null 2>&1; then
+    printf 'error: negative model catalog fixture unexpectedly passed: %s\n' "${fixture}" >&2
+    exit "${FAILURE}"
+  fi
+  negative_count=$((negative_count + 1))
+  printf 'negative model catalog fixture ok: %s\n' "$(basename -- "${fixture}")"
+done
+
+if [ "${negative_count}" -eq 0 ]; then
+  printf '%s\n' 'error: model catalog requires negative fixtures' >&2
+  exit "${FAILURE}"
+fi
+
+printf 'model catalog Nickel check: pass positive=%s negative=%s\n' \
+  "${positive_count}" "${negative_count}"

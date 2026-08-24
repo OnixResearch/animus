@@ -1,0 +1,58 @@
+#!/usr/bin/env sh
+# r[verify animus.catalog.verification]
+# r[verify animus.catalog.verification.matrix]
+set -eu
+
+readonly FAILURE=1
+readonly RAIL='model-catalog-hygiene'
+root='.'
+if [ "${1:-}" = '--root' ]; then
+  root=${2:-.}
+fi
+cd "${root}"
+
+if ! command -v cargo >/dev/null 2>&1 \
+  || ! command -v nickel >/dev/null 2>&1 \
+  || ! command -v b3sum >/dev/null 2>&1
+then
+  printf '%s\n' 'error: cargo, nickel, and b3sum are required' >&2
+  exit "${FAILURE}"
+fi
+
+sh scripts/config/check-model-catalog
+cargo test -p animus-std --locked --features model-catalog model_catalog
+cargo check -p animus --locked --features model-catalog
+
+source_file='crates/animus-std/src/providers/model_catalog.rs'
+doc_file='docs/model-catalog-hygiene.md'
+for marker in \
+  'merge_model_catalogs' \
+  'select_model_catalog_entry' \
+  'parse_model_catalog_json' \
+  'credential_value' \
+  'AutomaticCustomConnection'
+do
+  grep -F "${marker}" "${source_file}" >/dev/null
+ done
+for marker in \
+  'replace-by-ID' \
+  'manual-only' \
+  'environment-variable' \
+  'does not prove endpoint availability'
+do
+  grep -F "${marker}" "${doc_file}" >/dev/null
+ done
+
+mkdir -p target/cairn/focused-rails
+receipt=target/cairn/focused-rails/${RAIL}.md
+cat > "${receipt}" <<EOF
+schema: animus.focused-rail-receipt.v1
+rail: ${RAIL}
+status: pass
+source_blake3: $(b3sum "${source_file}" | cut -d ' ' -f 1)
+config_blake3: $(b3sum config/model-catalog.ncl | cut -d ' ' -f 1)
+claims: versioned-catalog,replace-by-id,credential-reference-only,fail-loud-json,manual-only-custom-connections
+non_claims: endpoint-availability,provider-identity,model-identity,credential-validity,billing-correctness,transport-safety
+EOF
+printf '%s\n' 'focused rail model-catalog-hygiene: pass'
+printf 'receipt: %s\n' "${receipt}"
