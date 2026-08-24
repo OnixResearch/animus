@@ -29,6 +29,8 @@
 )]
 #![forbid(unsafe_code)]
 
+extern crate alloc;
+
 /// Pure autonomous continuation, quality-gate, fingerprint, and receipt contracts.
 #[cfg(feature = "autonomous-gates")]
 pub mod autonomous_gates;
@@ -135,6 +137,8 @@ mod fresh_context_tasks;
 #[cfg(feature = "native-evaluation")]
 pub use animus_eval_core as native_evaluation;
 
+/// Binding contracts for typed results, history, silence, cycles, and telemetry.
+pub mod convergence;
 /// Pure optional Harbor-compatible evaluation planning and evidence projection.
 #[cfg(feature = "harbor-eval")]
 #[path = "harbor/eval.rs"]

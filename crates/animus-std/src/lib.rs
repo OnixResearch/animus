@@ -52,6 +52,9 @@ pub mod coding_session_host {
 }
 mod config;
 mod context;
+/// Host-owned real-parallel execution and post-join commit for supervised cycles.
+#[cfg(feature = "harness-convergence")]
+pub mod convergencehost;
 #[cfg(feature = "conversation-view-projection")]
 mod conversationprojection;
 #[cfg(feature = "daemon-handoff")]

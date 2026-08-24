@@ -1,0 +1,76 @@
+#!/usr/bin/env sh
+# r[verify animus.convergence.typed_results.projections]
+# r[verify animus.convergence.typed_results.string]
+# r[verify animus.convergence.size.fold]
+# r[verify animus.convergence.size.silent]
+# r[verify animus.convergence.handles.resolve]
+# r[verify animus.convergence.history.render]
+# r[verify animus.convergence.silence.detach]
+# r[verify animus.convergence.silence.dump]
+# r[verify animus.convergence.cycle.split]
+# r[verify animus.convergence.cycle.park]
+# r[verify animus.convergence.cycle.guard]
+# r[verify animus.convergence.telemetry.visible]
+# r[verify animus.convergence.verification.matrix]
+set -eu
+
+readonly FAILURE=1
+readonly RAIL_NAME='agent-harness-convergence'
+readonly CORE_DIR='crates/animus-runtime/src/convergence'
+readonly HOST_DIR='crates/animus-std/src/convergencehost'
+readonly DOC='docs/agent-harness-convergence.md'
+
+root='.'
+if [ "${1:-}" = '--root' ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  root=$2
+fi
+cd "${root}"
+
+for command in b3sum cargo grep; do
+  if ! command -v "${command}" >/dev/null 2>&1; then
+    printf 'error: %s is required\n' "${command}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+for marker in 'DatumDraft' 'project_model' 'StorePort' 'render_history' 'plan_silence' 'project_suspension_dump' 'prepare_cycle' 'commit_cycle' 'ResourceTelemetry'; do
+  grep -R -F "${marker}" "${CORE_DIR}" >/dev/null || {
+    printf 'error: missing convergence marker: %s\n' "${marker}" >&2
+    exit "${FAILURE}"
+  }
+done
+
+grep -R -F 'std::thread::scope' "${HOST_DIR}" >/dev/null
+grep -R -F 'guard_released: true' "${HOST_DIR}" >/dev/null
+grep -F 'Parking is not finishing.' "${DOC}" >/dev/null
+grep -F 'Rendering cannot rerun a tool.' "${DOC}" >/dev/null
+
+cargo test -p animus-runtime convergence --locked
+cargo test -p animus-std --features harness-convergence convergencehost --locked
+cargo clippy -p animus-runtime --all-targets --locked -- -D warnings
+cargo clippy -p animus-std --all-targets --features harness-convergence --locked -- -D warnings
+cargo check -p animus-runtime --no-default-features --target wasm32-unknown-unknown --locked
+sh scripts/cairn/check-component-catalog --root .
+sh scripts/cairn/check-runtime-facade-inventory --root .
+
+mkdir -p target/cairn/focused-rails
+core_hash=$(find "${CORE_DIR}" -type f -name '*.rs' -print0 | LC_ALL=C sort -z | xargs -0 b3sum | b3sum | cut -d ' ' -f 1)
+host_hash=$(find "${HOST_DIR}" -type f -name '*.rs' -print0 | LC_ALL=C sort -z | xargs -0 b3sum | b3sum | cut -d ' ' -f 1)
+receipt_path=target/cairn/focused-rails/${RAIL_NAME}.md
+cat > "${receipt_path}" <<EOF
+schema: animus.focused-rail-receipt.v1
+rail: ${RAIL_NAME}
+status: pass
+core_source_blake3: ${core_hash}
+host_source_blake3: ${host_hash}
+doc_blake3: $(b3sum "${DOC}" | cut -d ' ' -f 1)
+claims: typed-result-projections,honest-omission,store-typed-resolution,data-first-history,detach-with-handle,suspension-dump,real-parallel-batch,post-join-commit,park-not-finish,bounded-telemetry
+non_claims: tool-correctness,result-freshness,authorization,provider-correctness,model-quality,sandboxing,production-readiness,release-eligibility
+EOF
+
+printf '%s\n' 'focused rail agent-harness-convergence: pass'
+printf 'receipt: %s\n' "${receipt_path}"

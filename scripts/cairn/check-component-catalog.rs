@@ -129,6 +129,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "branchfs-host",
     "coding-session-host",
     "tool-execution-stages",
+    "harness-convergence",
     "child-session-host",
     "codebase-graph-host",
     "codebase-tool-host",

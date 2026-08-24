@@ -35,6 +35,7 @@ durable-steel-kernel-restore = [
   "animus-steel/rlm-kernel",
 ]
 harbor-eval = ["dep:animus-runtime", "animus-runtime/harbor-eval", "animus-adapters/evaluation", "dep:serde_json"]
+harness-convergence = ["dep:animus-runtime"]
 native-evaluation-profile = ["dep:animus-eval-core", "dep:serde", "dep:serde_json"]
 mesh-provider = ["dep:serde", "dep:serde_json"]
 model-catalog = ["dep:serde", "dep:serde_json"]

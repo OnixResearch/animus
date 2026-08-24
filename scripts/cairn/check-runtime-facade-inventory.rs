@@ -136,6 +136,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "steel-skill-modules",
     "rlm-host-executor",
     "tool-execution-stages",
+    "harness-convergence",
     "durable-steel-kernel-restore",
     "loop",
     "policy",

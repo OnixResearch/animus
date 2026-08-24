@@ -446,6 +446,7 @@
                 || baseName == "check-model-catalog-hygiene"
                 || baseName == "check-response-ownership"
                 || baseName == "check-tool-result-cache"
+                || baseName == "check-agent-harness-convergence"
                 || baseName == "check-persist-before-process-gateway"
                 || baseName == "check-model-runtime-profiles"
                 || baseName == "check-agent-role-profiles"
@@ -1199,6 +1200,14 @@
             pkgs.nickel
           ] ''
             sh scripts/cairn/check-tool-result-cache --root .
+          '';
+
+          agent-harness-convergence = cargoCheck "animus-agent-harness-convergence" [
+            pkgs.b3sum
+            pkgs.clippy
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-agent-harness-convergence --root .
           '';
 
           persist-before-process-gateway = cargoCheck "animus-persist-before-process-gateway" [
