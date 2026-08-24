@@ -13,10 +13,12 @@ mod types;
 mod validation;
 
 pub use binding::{
-    ModelInvocationIdentitySnapshot, ModelInvocationTransitionDecision,
-    ModelInvocationTransitionKind, ModelInvocationTransitionRequest, ModelToolCallBinding,
-    ModelToolCallBindingDraft, ProfileBoundModelDispatchPlan, bind_model_dispatch_plan,
-    evaluate_model_invocation_transition, validate_model_tool_call_binding,
+    ModelDialectTransitionPlan, ModelDialectTransitionRequest, ModelInvocationIdentitySnapshot,
+    ModelInvocationTransitionDecision, ModelInvocationTransitionKind,
+    ModelInvocationTransitionRequest, ModelToolCallBinding, ModelToolCallBindingDraft,
+    ModelTransportDialectAdmissionDraft, ProfileBoundModelDispatchPlan, bind_model_dispatch_plan,
+    evaluate_model_dialect_transition, evaluate_model_invocation_transition,
+    validate_model_tool_call_binding,
 };
 pub use composition::{
     ModelInvocationAuthority, ModelInvocationCompositionInput, ModelInvocationDiagnostic,

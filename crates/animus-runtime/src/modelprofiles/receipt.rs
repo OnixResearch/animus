@@ -132,7 +132,9 @@ impl ModelInvocationToolReceiptEntry {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ModelInvocationReceipt {
     provider_id: String,
+    provider_transport_id: String,
     model_id: String,
+    model_dialect_id: String,
     router_role: Option<String>,
     target_hash: String,
     profile_id: String,
@@ -168,10 +170,22 @@ impl ModelInvocationReceipt {
         self.provider_id.as_str()
     }
 
+    /// Returns the safe versioned provider-transport ID.
+    #[must_use]
+    pub fn provider_transport_id(&self) -> &str {
+        self.provider_transport_id.as_str()
+    }
+
     /// Returns the safe model ID.
     #[must_use]
     pub fn model_id(&self) -> &str {
         self.model_id.as_str()
+    }
+
+    /// Returns the safe versioned model-facing dialect ID.
+    #[must_use]
+    pub fn model_dialect_id(&self) -> &str {
+        self.model_dialect_id.as_str()
     }
 
     /// Returns the optional router role.
@@ -377,7 +391,9 @@ pub fn project_model_invocation_receipt(
     });
     let receipt = ModelInvocationReceipt {
         provider_id: plan.target().provider_id().to_string(),
+        provider_transport_id: plan.target().provider_transport_id().to_string(),
         model_id: plan.target().model_id().to_string(),
+        model_dialect_id: plan.target().model_dialect_id().to_string(),
         router_role: plan.target().router_role().map(str::to_string),
         target_hash: plan.target().target_hash().to_string(),
         profile_id: plan.profile_id().to_string(),

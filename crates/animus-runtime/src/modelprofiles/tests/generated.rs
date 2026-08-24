@@ -32,6 +32,7 @@ struct GeneratedToolset {
 #[derive(Clone, Debug, Deserialize)]
 struct GeneratedProfile {
     profile_id: String,
+    dialect_id: String,
     binding: GeneratedBinding,
     source_scope: String,
     trust_status: String,
@@ -244,6 +245,7 @@ fn generated_profile_draft<'a>(
 ) -> ModelRuntimeProfileDraft<'a> {
     ModelRuntimeProfileDraft {
         profile_id: profile.profile_id.as_str(),
+        dialect_id: profile.dialect_id.as_str(),
         binding: parse_binding(&profile.binding),
         source_scope: parse_source_scope(profile.source_scope.as_str()),
         trust_status: parse_trust(profile.trust_status.as_str()),

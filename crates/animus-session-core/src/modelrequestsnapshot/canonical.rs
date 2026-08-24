@@ -42,13 +42,20 @@ pub fn model_request_canonical_identity(
     ))
 }
 
-/// Computes the selected provider/model route identity.
+/// Computes the selected provider, transport, model, and dialect route identity.
 #[must_use]
-pub fn model_request_route_identity(provider_id: &str, model_id: &str) -> String {
+pub fn model_request_route_identity(
+    provider_id: &str,
+    provider_transport_id: &str,
+    model_id: &str,
+    model_dialect_id: &str,
+) -> String {
     let mut hasher = Hasher::new();
     update_str(&mut hasher, MODEL_REQUEST_ROUTE_IDENTITY_DOMAIN);
     update_str(&mut hasher, provider_id);
+    update_str(&mut hasher, provider_transport_id);
     update_str(&mut hasher, model_id);
+    update_str(&mut hasher, model_dialect_id);
     hasher.finalize().to_hex().to_string()
 }
 
@@ -128,7 +135,9 @@ pub(super) fn private_snapshot_payload(
     push_u64(&mut payload, draft.request_sequence)?;
     push_str(&mut payload, canonical_request_identity)?;
     push_str(&mut payload, draft.route.provider_id)?;
+    push_str(&mut payload, draft.route.provider_transport_id)?;
     push_str(&mut payload, draft.route.model_id)?;
+    push_str(&mut payload, draft.route.model_dialect_id)?;
     push_str(&mut payload, draft.route.route_identity)?;
     push_str(&mut payload, draft.model_invocation_identity)?;
     push_str(&mut payload, draft.request_context_plan_identity)?;
@@ -321,7 +330,9 @@ pub fn decode_model_request_snapshot_private_payload(
     let request_sequence = cursor.read_u64()?;
     let encoded_canonical_identity = cursor.read_string()?;
     let provider_id = cursor.read_string()?;
+    let provider_transport_id = cursor.read_string()?;
     let model_id = cursor.read_string()?;
+    let model_dialect_id = cursor.read_string()?;
     let route_identity = cursor.read_string()?;
     let model_invocation_identity = cursor.read_string()?;
     let request_context_plan_identity = cursor.read_string()?;
@@ -350,7 +361,9 @@ pub fn decode_model_request_snapshot_private_payload(
         canonical_request: &canonical_request,
         route: super::data::ModelRequestRouteDraft {
             provider_id: provider_id.as_str(),
+            provider_transport_id: provider_transport_id.as_str(),
             model_id: model_id.as_str(),
+            model_dialect_id: model_dialect_id.as_str(),
             route_identity: route_identity.as_str(),
         },
         model_invocation_identity: model_invocation_identity.as_str(),

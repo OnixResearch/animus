@@ -22,6 +22,7 @@ use super::types::{
 const FIELD_SCHEMA: &str = "schema";
 const FIELD_PROFILE_SET: &str = "profiles";
 const FIELD_PROFILE_ID: &str = "profile_id";
+const FIELD_DIALECT_ID: &str = "dialect_id";
 const FIELD_PROFILE_BINDING: &str = "binding";
 const FIELD_PROFILE_HASH: &str = "profile_hash";
 const FIELD_POLICY_HASH: &str = "policy_hash";
@@ -252,6 +253,7 @@ fn validate_profile_fields(
     validate_project_profile_admission(draft)?;
     let profile = ModelRuntimeProfile {
         profile_id: safe_label(ModelProfileField(FIELD_PROFILE_ID), draft.profile_id)?,
+        dialect_id: safe_label(ModelProfileField(FIELD_DIALECT_ID), draft.dialect_id)?,
         binding: validate_binding(draft.binding)?,
         source_scope: draft.source_scope,
         trust_status: draft.trust_status,
@@ -567,6 +569,7 @@ pub(super) fn profile_content_hash(profile: &ModelRuntimeProfile) -> String {
     let mut parts = vec![
         MODEL_RUNTIME_PROFILE_SCHEMA.to_string(),
         profile.profile_id.clone(),
+        profile.dialect_id.clone(),
         binding_material(&profile.binding),
         profile.source_scope.as_str().to_string(),
         profile.trust_status.as_str().to_string(),

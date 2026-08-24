@@ -12,7 +12,9 @@ const SESSION_ID: &str = "session.snapshot";
 const BRANCH_ID: &str = "branch.main";
 const ACTIVE_LEAF_ID: &str = "entry.user";
 const PROVIDER_ID: &str = "openai";
+const PROVIDER_TRANSPORT_ID: &str = "openai-responses-v1";
 const MODEL_ID: &str = "gpt-snapshot";
+const MODEL_DIALECT_ID: &str = "codex-responses-v1";
 const SYSTEM_TEXT: &str = "Follow the admitted system contract.";
 const USER_TEXT: &str = "Inspect the durable request.";
 const TOOL_SCHEMA: &str = "schema.steel.v1";
@@ -31,11 +33,17 @@ struct DraftIdentities {
 #[test]
 fn exact_snapshot_reconstructs_ordered_model_visible_request() {
     // r[verify agent_harness_runtime.model_request_snapshot.projection]
+    // r[verify animus.dialect.binding]
     // r[verify agent_harness_runtime.model_request_snapshot.verification]
     let request = canonical_request(false);
     let first_identities = identities(&request);
     let first_snapshot = snapshot(&request, &first_identities);
     assert_eq!(first_snapshot.canonical_request(), &request);
+    assert_eq!(
+        first_snapshot.provider_transport_id(),
+        PROVIDER_TRANSPORT_ID
+    );
+    assert_eq!(first_snapshot.model_dialect_id(), MODEL_DIALECT_ID);
     assert_eq!(first_snapshot.message_count(), 2);
     assert_eq!(first_snapshot.system_section_count(), 1);
     assert_eq!(first_snapshot.tool_count(), 1);
@@ -87,6 +95,16 @@ fn missing_sections_tool_drift_duplicates_and_unsupported_fields_fail_closed() {
     assert_eq!(
         validate_model_request_snapshot(&tool_drift)
             .expect_err("tool drift")
+            .issue(),
+        ModelRequestSnapshotIssue::IdentityMismatch
+    );
+
+    // r[verify animus.dialect.binding.leak]
+    let mut dialect_drift = draft(&request, &identities);
+    dialect_drift.route.model_dialect_id = "generic-responses-v1";
+    assert_eq!(
+        validate_model_request_snapshot(&dialect_drift)
+            .expect_err("dialect drift")
             .issue(),
         ModelRequestSnapshotIssue::IdentityMismatch
     );
@@ -358,7 +376,12 @@ fn canonical_request(reverse_messages: bool) -> animus_adapters::CanonicalModelR
 
 fn identities(request: &animus_adapters::CanonicalModelRequest) -> DraftIdentities {
     DraftIdentities {
-        route: model_request_route_identity(PROVIDER_ID, MODEL_ID),
+        route: model_request_route_identity(
+            PROVIDER_ID,
+            PROVIDER_TRANSPORT_ID,
+            MODEL_ID,
+            MODEL_DIALECT_ID,
+        ),
         tools: model_request_tool_schema_set_identity(request),
         output: model_request_output_control_identity(request),
         budget: model_request_budget_identity(request),
@@ -379,7 +402,9 @@ fn draft<'input>(
         canonical_request: request,
         route: ModelRequestRouteDraft {
             provider_id: PROVIDER_ID,
+            provider_transport_id: PROVIDER_TRANSPORT_ID,
             model_id: MODEL_ID,
+            model_dialect_id: MODEL_DIALECT_ID,
             route_identity: identities.route.as_str(),
         },
         model_invocation_identity: HASH_A,

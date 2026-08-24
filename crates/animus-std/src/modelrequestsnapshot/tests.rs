@@ -11,7 +11,9 @@ const SESSION_ID: &str = "session.host";
 const BRANCH_ID: &str = "branch.main";
 const ACTIVE_LEAF_ID: &str = "entry.user";
 const PROVIDER_ID: &str = "openai";
+const PROVIDER_TRANSPORT_ID: &str = "openai-responses-v1";
 const MODEL_ID: &str = "gpt-host";
+const MODEL_DIALECT_ID: &str = "codex-responses-v1";
 const TURN_GENERATION: u64 = 5;
 const REQUEST_SEQUENCE: u64 = 1;
 const DURABLE_CURSOR: u64 = 9;
@@ -447,7 +449,12 @@ impl CodingSessionModelRequestSnapshotComposer for CodingComposer {
         .map_err(|_error| {
             animus_runtime::coding_session_host::CodingSessionServiceIssue::Malformed
         })?;
-        let route = snapshot::model_request_route_identity(PROVIDER_ID, MODEL_ID);
+        let route = snapshot::model_request_route_identity(
+            PROVIDER_ID,
+            PROVIDER_TRANSPORT_ID,
+            MODEL_ID,
+            MODEL_DIALECT_ID,
+        );
         let tools = snapshot::model_request_tool_schema_set_identity(&canonical);
         let output = snapshot::model_request_output_control_identity(&canonical);
         let budget = snapshot::model_request_budget_identity(&canonical);
@@ -462,7 +469,9 @@ impl CodingSessionModelRequestSnapshotComposer for CodingComposer {
                 canonical_request: &canonical,
                 route: snapshot::ModelRequestRouteDraft {
                     provider_id: PROVIDER_ID,
+                    provider_transport_id: PROVIDER_TRANSPORT_ID,
                     model_id: MODEL_ID,
+                    model_dialect_id: MODEL_DIALECT_ID,
                     route_identity: route.as_str(),
                 },
                 model_invocation_identity: HASH_A,
@@ -505,7 +514,12 @@ fn authority_profile() -> animus_runtime::session_authority_profile::SessionRunt
 
 fn prepared() -> PreparedModelRequestSnapshot {
     let request = canonical_request();
-    let route_identity = snapshot::model_request_route_identity(PROVIDER_ID, MODEL_ID);
+    let route_identity = snapshot::model_request_route_identity(
+        PROVIDER_ID,
+        PROVIDER_TRANSPORT_ID,
+        MODEL_ID,
+        MODEL_DIALECT_ID,
+    );
     let tool_identity = snapshot::model_request_tool_schema_set_identity(&request);
     let output_identity = snapshot::model_request_output_control_identity(&request);
     let budget_identity = snapshot::model_request_budget_identity(&request);
@@ -520,7 +534,9 @@ fn prepared() -> PreparedModelRequestSnapshot {
             canonical_request: &request,
             route: snapshot::ModelRequestRouteDraft {
                 provider_id: PROVIDER_ID,
+                provider_transport_id: PROVIDER_TRANSPORT_ID,
                 model_id: MODEL_ID,
+                model_dialect_id: MODEL_DIALECT_ID,
                 route_identity: route_identity.as_str(),
             },
             model_invocation_identity: HASH_A,

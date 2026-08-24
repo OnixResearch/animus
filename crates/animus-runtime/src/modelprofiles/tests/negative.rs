@@ -95,6 +95,7 @@ fn contract_rejects_stale_duplicate_unsafe_and_unadmitted_profiles() {
 #[test]
 fn required_resolution_has_no_ambient_fallback_and_rejects_stale_capabilities() {
     // r[verify agent_harness_runtime.model_runtime_profiles.resolution.missing]
+    // r[verify animus.dialect.target.unknown]
     let set = composition_profile_set(
         NativeToolCallingMode::Disabled,
         ModelSkillResourcePosture::MetadataOnly,
@@ -103,7 +104,9 @@ fn required_resolution_has_no_ambient_fallback_and_rejects_stale_capabilities() 
         &set,
         ModelRuntimeTargetDraft {
             provider_id: "unknown",
+            provider_transport_id: ALTERNATE_PROVIDER_TRANSPORT_ID,
             model_id: "unknown-model",
+            model_dialect_id: MODEL_DIALECT_ID,
             router_role: None,
             capability_identity: CAPABILITY_HASH,
         },
@@ -117,9 +120,21 @@ fn required_resolution_has_no_ambient_fallback_and_rejects_stale_capabilities() 
         },
     )
     .expect_err("stale capability binding");
+    let unknown_dialect = resolve_model_runtime_profile(
+        &set,
+        ModelRuntimeTargetDraft {
+            model_dialect_id: ALTERNATE_MODEL_DIALECT_ID,
+            ..target(None)
+        },
+    )
+    .expect_err("unknown model dialect");
 
     assert_eq!(missing.issue(), ModelRuntimeProfileIssue::MissingProfile);
     assert_eq!(stale.issue(), ModelRuntimeProfileIssue::StaleBinding);
+    assert_eq!(
+        unknown_dialect.issue(),
+        ModelRuntimeProfileIssue::StaleBinding
+    );
 }
 
 #[test]
@@ -295,6 +310,76 @@ fn stale_retry_cross_target_resume_and_carried_identity_are_rejected() {
     assert_eq!(stale_memory.issue(), ModelRuntimeProfileIssue::StaleBinding);
     assert_eq!(
         cross_target.issue(),
+        ModelRuntimeProfileIssue::RecompositionRequired
+    );
+}
+
+#[test]
+fn provider_transition_rejects_missing_compatibility_and_dialect_substitution() {
+    // r[verify animus.dialect.binding.leak]
+    // r[verify animus.dialect.transition.incompatible]
+    let current_set = resolver_profile_set();
+    let current =
+        resolve_model_runtime_profile(&current_set, target(None)).expect("current target");
+    let next_same_dialect = resolve_model_runtime_profile(
+        &current_set,
+        ModelRuntimeTargetDraft {
+            provider_transport_id: ALTERNATE_PROVIDER_TRANSPORT_ID,
+            ..target(None)
+        },
+    )
+    .expect("next transport target");
+    let ModelRuntimeProfileResolution::Resolved(current) = current else {
+        panic!("current profile must resolve");
+    };
+    let ModelRuntimeProfileResolution::Resolved(next_same_dialect) = next_same_dialect else {
+        panic!("next profile must resolve");
+    };
+    let missing = evaluate_model_dialect_transition(ModelDialectTransitionRequest {
+        current_target: current.target(),
+        next_target: next_same_dialect.target(),
+        admitted_pairs: &[],
+    })
+    .expect_err("missing compatibility pair");
+
+    let alternate_provisional = ModelRuntimeProfileDraft {
+        dialect_id: ALTERNATE_MODEL_DIALECT_ID,
+        ..composition_profile_draft(NativeToolCallingMode::Disabled, &[], &[], ZERO_HASH)
+    };
+    let alternate_hash = blake3_model_runtime_profile_identity(&alternate_provisional)
+        .expect("alternate dialect hash");
+    let alternate_profile = ModelRuntimeProfileDraft {
+        profile_hash: alternate_hash.as_str(),
+        ..alternate_provisional
+    };
+    let alternate_set =
+        validate_set_result(&[alternate_profile], None).expect("alternate dialect profile set");
+    let alternate = resolve_model_runtime_profile(
+        &alternate_set,
+        ModelRuntimeTargetDraft {
+            provider_transport_id: ALTERNATE_PROVIDER_TRANSPORT_ID,
+            model_dialect_id: ALTERNATE_MODEL_DIALECT_ID,
+            ..target(None)
+        },
+    )
+    .expect("alternate dialect target");
+    let ModelRuntimeProfileResolution::Resolved(alternate) = alternate else {
+        panic!("alternate profile must resolve");
+    };
+    let admitted = [ModelTransportDialectAdmissionDraft {
+        provider_transport_id: ALTERNATE_PROVIDER_TRANSPORT_ID,
+        model_dialect_id: ALTERNATE_MODEL_DIALECT_ID,
+    }];
+    let substitution = evaluate_model_dialect_transition(ModelDialectTransitionRequest {
+        current_target: current.target(),
+        next_target: alternate.target(),
+        admitted_pairs: &admitted,
+    })
+    .expect_err("dialect substitution");
+
+    assert_eq!(missing.issue(), ModelRuntimeProfileIssue::StaleBinding);
+    assert_eq!(
+        substitution.issue(),
         ModelRuntimeProfileIssue::RecompositionRequired
     );
 }

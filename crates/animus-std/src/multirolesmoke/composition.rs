@@ -16,7 +16,9 @@ use super::{domain_hash, error};
 const ERROR_MODEL_PROFILE: &str = "model-profile";
 const ERROR_MODEL_COMPOSITION: &str = "model-composition";
 const PROVIDER_ID: &str = "mock";
+const PROVIDER_TRANSPORT_ID: &str = "mock-responses-v1";
 const MODEL_ID: &str = "mock-text";
+const MODEL_DIALECT_ID: &str = "mock-text-v1";
 const REVIEWER_ROLE: &str = "reviewer";
 const BALANCED_ROUTER_ROLE: &str = "balanced";
 const POLICY_HASH: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -145,7 +147,9 @@ fn resolve_profile(
         profiles,
         ModelRuntimeTargetDraft {
             provider_id: PROVIDER_ID,
+            provider_transport_id: PROVIDER_TRANSPORT_ID,
             model_id: MODEL_ID,
+            model_dialect_id: MODEL_DIALECT_ID,
             router_role,
             capability_identity,
         },

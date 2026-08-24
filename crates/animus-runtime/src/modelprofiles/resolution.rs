@@ -18,6 +18,8 @@ use super::validation::{ModelProfileField, blake3_parts, error, lowercase_blake3
 
 const TARGET_HASH_DOMAIN: &str = "animus.model-runtime-target.v1";
 const FIELD_PROFILE: &str = "profile";
+const FIELD_PROVIDER_TRANSPORT_ID: &str = "provider_transport_id";
+const FIELD_MODEL_DIALECT_ID: &str = "model_dialect_id";
 const FIELD_CAPABILITY_IDENTITY: &str = "capability_identity";
 const FIELD_BUDGET_POLICY: &str = "budget_policy";
 const FIELD_TOOLSET: &str = "toolset";
@@ -69,11 +71,27 @@ pub fn resolve_model_runtime_profile(
     Ok(ModelRuntimeProfileResolution::Resolved(Box::new(resolved)))
 }
 
+// r[impl animus.dialect.target]
+#[cfg_attr(
+    animus_octet,
+    allow(
+        tigerstyle::numeric_units,
+        reason = "provider transport identifiers are labels, not numeric ports or quantities"
+    )
+)]
 fn validate_target(
     draft: ModelRuntimeTargetDraft<'_>,
 ) -> Result<ModelRuntimeTarget, ModelRuntimeProfileError> {
     let provider_id = safe_label(ModelProfileField("provider_id"), draft.provider_id)?;
+    let provider_transport_id = safe_label(
+        ModelProfileField(FIELD_PROVIDER_TRANSPORT_ID),
+        draft.provider_transport_id,
+    )?;
     let model_id = safe_label(ModelProfileField("model_id"), draft.model_id)?;
+    let model_dialect_id = safe_label(
+        ModelProfileField(FIELD_MODEL_DIALECT_ID),
+        draft.model_dialect_id,
+    )?;
     let router_role = draft
         .router_role
         .map(|role| safe_label(ModelProfileField("router_role"), role))
@@ -86,14 +104,18 @@ fn validate_target(
         TARGET_HASH_DOMAIN,
         &[
             provider_id.clone(),
+            provider_transport_id.clone(),
             model_id.clone(),
+            model_dialect_id.clone(),
             router_role.clone().unwrap_or_else(|| String::from("none")),
             capability_identity.clone(),
         ],
     );
     let target = ModelRuntimeTarget {
         provider_id,
+        provider_transport_id,
         model_id,
+        model_dialect_id,
         router_role,
         capability_identity,
         target_hash,
@@ -194,6 +216,8 @@ fn select_explicit_default(
     Ok((profile, ModelProfileSpecificity::ExplicitDefault))
 }
 
+// r[impl animus.dialect.ownership]
+// r[impl animus.dialect.ownership.dialect]
 fn validate_selected_profile(
     profile: &ModelRuntimeProfile,
     target: &ModelRuntimeTarget,
@@ -219,6 +243,13 @@ fn validate_selected_profile(
             ModelRuntimeProfileIssue::StaleBinding,
             FIELD_CAPABILITY_IDENTITY,
             "selected exact profile has stale model-capability identity",
+        ));
+    }
+    if profile.dialect_id() != target.model_dialect_id() {
+        return Err(error(
+            ModelRuntimeProfileIssue::StaleBinding,
+            FIELD_MODEL_DIALECT_ID,
+            "selected profile dialect does not match the exact target dialect",
         ));
     }
     assert_eq!(profile.trust_status(), ModelProfileTrustStatus::Trusted);

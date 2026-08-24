@@ -56,6 +56,8 @@ const RESPONSE_FORMAT_LABEL: &str = "text";
 const REASONING_LABEL: &str = "none";
 const STREAM_LABEL: &str = "non-streaming";
 const CREDENTIAL_CLASS_LABEL: &str = "fake-no-credential";
+const PROVIDER_TRANSPORT_ID: &str = "mock-responses-v1";
+const MODEL_DIALECT_ID: &str = "mock-text-v1";
 const HASH_SEPARATOR: &str = "|";
 const FIRST_ATTEMPT_COUNT: u32 = 1;
 const SECOND_ATTEMPT_COUNT: u32 = 2;
@@ -338,7 +340,9 @@ fn resolve_exact_profile(
         profiles,
         ModelRuntimeTargetDraft {
             provider_id: target.provider_id,
+            provider_transport_id: PROVIDER_TRANSPORT_ID,
             model_id: target.model_id,
+            model_dialect_id: MODEL_DIALECT_ID,
             router_role: target.router_role,
             capability_identity,
         },

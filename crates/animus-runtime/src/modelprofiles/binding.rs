@@ -9,12 +9,15 @@
 use super::composition::ModelInvocationPlan;
 use super::types::{
     ModelProfileEnablementPolicy, ModelRuntimeProfileError, ModelRuntimeProfileIssue,
+    ModelRuntimeTarget,
 };
-use super::validation::{ModelProfileField, error, lowercase_blake3, safe_label};
+use super::validation::{ModelProfileField, blake3_parts, error, lowercase_blake3, safe_label};
 
 const FIELD_DISPATCH: &str = "model_dispatch";
 const FIELD_TRANSITION: &str = "invocation_transition";
+const FIELD_DIALECT_TRANSITION: &str = "dialect_transition";
 const FIELD_TOOL_CALL: &str = "model_tool_call";
+const DIALECT_TRANSITION_HASH_DOMAIN: &str = "animus.model-dialect-transition.v1";
 
 /// Model dispatch admitted with an explicit per-model profile posture.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -181,6 +184,123 @@ pub enum ModelInvocationTransitionDecision {
         /// New target identity that must be resolved.
         target_hash: String,
     },
+}
+
+/// Explicit provider-transport and model-dialect compatibility declaration.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ModelTransportDialectAdmissionDraft<'a> {
+    /// Exact versioned provider-transport identity.
+    pub provider_transport_id: &'a str,
+    /// Exact versioned model-facing dialect identity.
+    pub model_dialect_id: &'a str,
+}
+
+/// Provider transition input for exact dialect retention.
+#[derive(Clone, Copy, Debug)]
+pub struct ModelDialectTransitionRequest<'a> {
+    /// Current validated target.
+    pub current_target: &'a ModelRuntimeTarget,
+    /// Explicit next validated target.
+    pub next_target: &'a ModelRuntimeTarget,
+    /// Exact admitted transport and dialect pairs.
+    pub admitted_pairs: &'a [ModelTransportDialectAdmissionDraft<'a>],
+}
+
+/// Admitted provider transition that retains one exact dialect.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ModelDialectTransitionPlan {
+    provider_transport_id: String,
+    model_dialect_id: String,
+    transition_hash: String,
+}
+
+impl ModelDialectTransitionPlan {
+    /// Returns the next provider-transport identity.
+    #[must_use]
+    pub fn provider_transport_id(&self) -> &str {
+        self.provider_transport_id.as_str()
+    }
+
+    /// Returns the retained model-facing dialect identity.
+    #[must_use]
+    pub fn model_dialect_id(&self) -> &str {
+        self.model_dialect_id.as_str()
+    }
+
+    /// Returns the deterministic transition identity.
+    #[must_use]
+    pub fn transition_hash(&self) -> &str {
+        self.transition_hash.as_str()
+    }
+}
+
+/// Admits a provider transition only when the next transport declares the exact current dialect.
+///
+/// # Errors
+///
+/// Returns [`ModelRuntimeProfileError`] when the transition substitutes a dialect,
+/// contains malformed compatibility facts, or lacks an exact admitted pair.
+///
+/// # Panics
+///
+/// Panics if deterministic transition identity construction returns empty text.
+// r[impl animus.dialect.transition]
+#[cfg_attr(
+    animus_octet,
+    allow(
+        tigerstyle::numeric_units,
+        reason = "provider transport identifiers are labels, not numeric ports or quantities"
+    )
+)]
+pub fn evaluate_model_dialect_transition(
+    request: ModelDialectTransitionRequest<'_>,
+) -> Result<ModelDialectTransitionPlan, ModelRuntimeProfileError> {
+    if request.current_target.model_dialect_id() != request.next_target.model_dialect_id() {
+        return Err(error(
+            ModelRuntimeProfileIssue::RecompositionRequired,
+            FIELD_DIALECT_TRANSITION,
+            "provider transition cannot substitute a model-facing dialect",
+        ));
+    }
+    let next_transport = request.next_target.provider_transport_id();
+    let dialect = request.next_target.model_dialect_id();
+    let mut is_exact_pair_admitted = false;
+    for pair in request.admitted_pairs {
+        let pair_transport = safe_label(
+            ModelProfileField("provider_transport_id"),
+            pair.provider_transport_id,
+        )?;
+        let pair_dialect =
+            safe_label(ModelProfileField("model_dialect_id"), pair.model_dialect_id)?;
+        if pair_transport == next_transport && pair_dialect == dialect {
+            is_exact_pair_admitted = true;
+        }
+    }
+    if !is_exact_pair_admitted {
+        return Err(error(
+            ModelRuntimeProfileIssue::StaleBinding,
+            FIELD_DIALECT_TRANSITION,
+            "next provider transport does not admit the exact model-facing dialect",
+        ));
+    }
+    let transition_hash = blake3_parts(
+        DIALECT_TRANSITION_HASH_DOMAIN,
+        &[
+            request.current_target.target_hash().to_string(),
+            request.next_target.target_hash().to_string(),
+            next_transport.to_string(),
+            dialect.to_string(),
+        ],
+    );
+    let plan = ModelDialectTransitionPlan {
+        provider_transport_id: next_transport.to_string(),
+        model_dialect_id: dialect.to_string(),
+        transition_hash,
+    };
+    assert_eq!(plan.provider_transport_id(), next_transport);
+    assert_eq!(plan.model_dialect_id(), dialect);
+    assert!(!plan.transition_hash().is_empty());
+    Ok(plan)
 }
 
 /// Evaluates fallback and same-target reuse without carrying model-specific state.

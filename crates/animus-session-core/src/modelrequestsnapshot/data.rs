@@ -2,20 +2,20 @@ use alloc::string::String;
 use alloc::vec::Vec;
 
 /// Stable validated snapshot schema.
-pub const MODEL_REQUEST_SNAPSHOT_SCHEMA: &str = "animus.model-request-snapshot.v1";
+pub const MODEL_REQUEST_SNAPSHOT_SCHEMA: &str = "animus.model-request-snapshot.v2";
 /// Stable private durable-entry schema.
 pub const MODEL_REQUEST_SNAPSHOT_ENTRY_SCHEMA: &str =
-    "animus.model-request-snapshot-private-entry.v1";
+    "animus.model-request-snapshot-private-entry.v2";
 /// Stable metadata-only receipt schema.
-pub const MODEL_REQUEST_SNAPSHOT_RECEIPT_SCHEMA: &str = "animus.model-request-snapshot-receipt.v1";
+pub const MODEL_REQUEST_SNAPSHOT_RECEIPT_SCHEMA: &str = "animus.model-request-snapshot-receipt.v2";
 /// Stable snapshot identity domain.
 pub const MODEL_REQUEST_SNAPSHOT_IDENTITY_DOMAIN: &str =
-    "animus.model-request-snapshot.identity.v1";
+    "animus.model-request-snapshot.identity.v2";
 /// Stable canonical request identity domain.
 pub const MODEL_REQUEST_CANONICAL_IDENTITY_DOMAIN: &str =
     "animus.model-request-snapshot.canonical-request.v1";
 /// Stable model-route identity domain.
-pub const MODEL_REQUEST_ROUTE_IDENTITY_DOMAIN: &str = "animus.model-request-snapshot.route.v1";
+pub const MODEL_REQUEST_ROUTE_IDENTITY_DOMAIN: &str = "animus.model-request-snapshot.route.v2";
 /// Stable tool-schema-set identity domain.
 pub const MODEL_REQUEST_TOOL_SET_IDENTITY_DOMAIN: &str =
     "animus.model-request-snapshot.tool-set.v1";
@@ -25,7 +25,7 @@ pub const MODEL_REQUEST_OUTPUT_IDENTITY_DOMAIN: &str = "animus.model-request-sna
 pub const MODEL_REQUEST_BUDGET_IDENTITY_DOMAIN: &str = "animus.model-request-snapshot.budget.v1";
 /// Stable private payload domain.
 pub const MODEL_REQUEST_PRIVATE_PAYLOAD_DOMAIN: &str =
-    "animus.model-request-snapshot.private-payload.v1";
+    "animus.model-request-snapshot.private-payload.v2";
 /// Stable commit-plan identity domain.
 pub const MODEL_REQUEST_COMMIT_PLAN_IDENTITY_DOMAIN: &str =
     "animus.model-request-snapshot.commit-plan.v1";
@@ -68,10 +68,14 @@ pub(crate) const BLAKE3_HEX_LENGTH: usize = 64;
 /// Exact selected provider-neutral model route.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ModelRequestRouteDraft<'input> {
-    /// Selected provider ID.
+    /// Selected provider account or service ID.
     pub provider_id: &'input str,
+    /// Selected versioned provider-transport ID.
+    pub provider_transport_id: &'input str,
     /// Selected model ID.
     pub model_id: &'input str,
+    /// Selected versioned model-facing dialect ID.
+    pub model_dialect_id: &'input str,
     /// Recomputed route identity expected by the caller.
     pub route_identity: &'input str,
 }
@@ -144,7 +148,9 @@ pub struct ModelRequestSnapshot {
     pub(super) canonical_request: animus_adapters::CanonicalModelRequest,
     pub(super) canonical_request_identity: String,
     pub(super) provider_id: String,
+    pub(super) provider_transport_id: String,
     pub(super) model_id: String,
+    pub(super) model_dialect_id: String,
     pub(super) route_identity: String,
     pub(super) model_invocation_identity: String,
     pub(super) request_context_plan_identity: String,
@@ -213,10 +219,22 @@ impl ModelRequestSnapshot {
         self.provider_id.as_str()
     }
 
+    /// Returns the selected versioned provider-transport ID.
+    #[must_use]
+    pub fn provider_transport_id(&self) -> &str {
+        self.provider_transport_id.as_str()
+    }
+
     /// Returns the selected model ID.
     #[must_use]
     pub fn model_id(&self) -> &str {
         self.model_id.as_str()
+    }
+
+    /// Returns the selected versioned model-facing dialect ID.
+    #[must_use]
+    pub fn model_dialect_id(&self) -> &str {
+        self.model_dialect_id.as_str()
     }
 
     /// Returns the route identity.

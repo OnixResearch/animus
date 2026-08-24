@@ -2,7 +2,9 @@
 
 r[impl agent_harness_runtime.model_runtime_profiles.verification]
 
-Animus binds each selected provider/model target to one reviewed prompt, skill, memory, and native-tool posture before provider dispatch. The binding is deterministic policy input, not authority: every requested resource is intersected with existing validated objects, active host policy, verified grants, agent/project ceilings, model capabilities, approvals, executor readiness, and named budgets.
+Animus binds each selected provider/model target to one versioned provider transport, one versioned model-facing dialect, and one reviewed prompt, skill, memory, and native-tool posture before provider dispatch. Provider hosts own authentication, billing, transport, streamed wire decoding, and provider-native continuation. Dialect profiles own prompt assembly, tool surfaces, schema conventions, project-instruction formatting, and subagent protocol.
+
+The binding is deterministic policy input, not authority: every requested resource is intersected with existing validated objects, active host policy, verified grants, agent/project ceilings, model capabilities, approvals, executor readiness, and named budgets.
 
 ## Configuration and identity
 
@@ -10,6 +12,7 @@ Animus binds each selected provider/model target to one reviewed prompt, skill, 
 
 A profile set declares:
 
+- exact versioned dialect identities for every profile;
 - exact provider/model bindings with an optional exact router role, plus at most one explicitly named default;
 - trusted/admitted host or explicitly admitted project provenance;
 - prompt-mode and prompt-source references;
@@ -20,13 +23,15 @@ A profile set declares:
 - finite named context, tool-call, and parallelism budget policies; and
 - policy, model-capability, and canonical BLAKE3 profile identities.
 
-Nickel rejects malformed schemas, duplicate IDs or bindings, dangling budget/toolset references, contradictory disabled-tool profiles, unsafe labels, invalid defaults, and unadmitted project profiles. Rust revalidates the exported DTOs and recomputes each canonical profile identity, so a well-shaped but stale hash still fails closed.
+Schema `animus.model-runtime-profiles.v2` adds an exact dialect identity to each profile. Nickel rejects malformed schemas, duplicate IDs or bindings, dangling budget/toolset references, contradictory disabled-tool profiles, unsafe labels, invalid defaults, and unadmitted project profiles. Rust revalidates the exported DTOs and recomputes each canonical profile identity, so a well-shaped but stale hash still fails closed.
 
 A resumable coding-session may include that admitted model-profile identity as one component of its separate [session runtime authority profile](session-runtime-authority-profile.md). The session profile records only the identity and cannot load, select, authorize, or widen a model profile.
 
 ## Resolution
 
-`resolve_model_runtime_profile` uses exactly three specificity tiers:
+`resolve_model_runtime_profile` requires explicit provider-account, provider-transport, model, and model-dialect identities. Provider transport and model dialect resolve independently, so one transport can serve several model families without flattening their prompt or tool semantics. The selected profile dialect must match the target dialect exactly.
+
+Resolution uses exactly three specificity tiers:
 
 1. exact provider/model plus router role;
 2. exact provider/model without role refinement; and
@@ -64,13 +69,13 @@ Role-bound native tool calls pass `validate_model_tool_call_binding` first and a
 
 ## Dispatch, fallback, and returned calls
 
-`bind_model_dispatch_plan` requires both existing provider-neutral dispatch admission and a composed invocation plan in required mode. Router fallback returns `RecomposeForTarget`; the host must resolve and compose the new target from current explicit inputs. [Provider retry](provider-retry-execution.md) may reuse only an exact immutable provider/model/request/profile/prompt/tool/format/reasoning/stream/credential/policy snapshot before semantic stream commitment. Resume and replay remain separate contracts. Any target, profile, prompt, skill, memory, capability, tool catalog, tool plan, policy, or plan identity change requires explicit recomposition.
+`bind_model_dispatch_plan` requires both existing provider-neutral dispatch admission and a composed invocation plan in required mode. Router fallback returns `RecomposeForTarget`; the host must resolve and compose the new target from current explicit inputs. `evaluate_model_dialect_transition` retains a dialect only when the next versioned transport explicitly admits that exact dialect. Missing compatibility or dialect substitution fails closed before provider contact. [Provider retry](provider-retry-execution.md) may reuse only an exact immutable provider/model/request/profile/prompt/tool/format/reasoning/stream/credential/policy snapshot before semantic stream commitment. Resume and replay remain separate contracts. Any target, profile, prompt, skill, memory, capability, tool catalog, tool plan, policy, or plan identity change requires explicit recomposition.
 
 `validate_model_tool_call_binding` checks every returned native call against the exact advertised tool and all invocation-plan identities before the existing tool executor kit performs final argument, capability, approval, mutation, timeout, output, and executor admission.
 
 ## Evidence boundary
 
-`project_model_invocation_receipt` records bounded provider/model labels, router role, specificity, profile and policy identities, prompt/skill/memory/tool plan hashes, memory policy and access metadata, safe skill names and body hashes, tool names and schema identities, omission classes, a redaction marker, and a BLAKE3 receipt identity.
+`project_model_invocation_receipt` records bounded provider, provider-transport, model, and model-dialect labels, router role, specificity, profile and policy identities, prompt/skill/memory/tool plan hashes, memory policy and access metadata, safe skill names and body hashes, tool names and schema identities, omission classes, a redaction marker, and a BLAKE3 receipt identity.
 
 Receipt candidates containing raw prompts, hidden directives, skill bodies, scripts/assets, memory bodies or generated candidates, tool arguments/output, provider payloads, credentials, environment values, private/full paths, endpoints, hidden reasoning, or unbounded traces are rejected.
 

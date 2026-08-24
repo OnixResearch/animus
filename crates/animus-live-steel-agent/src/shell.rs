@@ -16,6 +16,8 @@ const LIVE_STEEL_TOOL_PROMPT: &str = "Use steel_repl for one bounded Steel expre
 const LIVE_STEEL_TOOL_GUIDELINE: &str = "Supply one code argument.";
 const LIVE_STEEL_TOOL_PROVENANCE: &str = "maintained-live-composition";
 const LIVE_STEEL_TOOL_RESULT_SHAPE: &str = "bounded-text.v1";
+const LIVE_PROVIDER_TRANSPORT_ID: &str = "openai-responses-sse-v1";
+const LIVE_MODEL_DIALECT_ID: &str = "openai-responses-tools-v1";
 const MAX_UTF8_BYTES_PER_CHAR: u64 = 4;
 
 /// Coding-session persistence with explicit lease release.
@@ -423,6 +425,7 @@ where
     }
 }
 
+// r[impl animus.dialect.ownership.provider]
 fn prepare_live_model_request_snapshot(
     config: &crate::ValidatedLiveSteelAgentConfig,
     request: &animus_runtime::coding_session_host::CodingSessionProviderRequest,
@@ -436,7 +439,9 @@ fn prepare_live_model_request_snapshot(
 
     let route_identity = snapshot::model_request_route_identity(
         provider_plan.provider_id(),
+        LIVE_PROVIDER_TRANSPORT_ID,
         provider_plan.model_id(),
+        LIVE_MODEL_DIALECT_ID,
     );
     let tool_identity = snapshot::model_request_tool_schema_set_identity(canonical);
     let output_identity = snapshot::model_request_output_control_identity(canonical);
@@ -461,7 +466,9 @@ fn prepare_live_model_request_snapshot(
             canonical_request: canonical,
             route: snapshot::ModelRequestRouteDraft {
                 provider_id: provider_plan.provider_id(),
+                provider_transport_id: LIVE_PROVIDER_TRANSPORT_ID,
                 model_id: provider_plan.model_id(),
+                model_dialect_id: LIVE_MODEL_DIALECT_ID,
                 route_identity: route_identity.as_str(),
             },
             model_invocation_identity: model_invocation_identity.as_str(),

@@ -17,8 +17,12 @@ pub(super) const ALTERNATE_HASH: &str =
 pub(super) const ZERO_HASH: &str =
     "0000000000000000000000000000000000000000000000000000000000000000";
 pub(super) const PROVIDER_ID: &str = "mock";
+pub(super) const PROVIDER_TRANSPORT_ID: &str = "mock-responses-v1";
 pub(super) const MODEL_ID: &str = "mock-tools";
+pub(super) const MODEL_DIALECT_ID: &str = "mock-tools-v1";
+pub(super) const ALTERNATE_MODEL_DIALECT_ID: &str = "generic-responses-v1";
 pub(super) const ALTERNATE_PROVIDER_ID: &str = "other";
+pub(super) const ALTERNATE_PROVIDER_TRANSPORT_ID: &str = "other-responses-v1";
 pub(super) const ALTERNATE_MODEL_ID: &str = "other-model";
 pub(super) const ALTERNATE_TARGET_LABEL: &str = "other:other-model";
 pub(super) const ROUTER_ROLE: &str = "balanced";
@@ -103,6 +107,7 @@ pub(super) fn composition_profile_draft<'a>(
 ) -> ModelRuntimeProfileDraft<'a> {
     ModelRuntimeProfileDraft {
         profile_id: PROFILE_ID,
+        dialect_id: MODEL_DIALECT_ID,
         binding: ModelRuntimeBindingDraft::Exact {
             provider_id: PROVIDER_ID,
             model_id: MODEL_ID,
@@ -174,6 +179,7 @@ fn resolver_profile_draft<'a>(
 ) -> ModelRuntimeProfileDraft<'a> {
     ModelRuntimeProfileDraft {
         profile_id,
+        dialect_id: MODEL_DIALECT_ID,
         binding,
         source_scope: ModelProfileSourceScope::Host,
         trust_status: ModelProfileTrustStatus::Trusted,
@@ -224,7 +230,9 @@ pub(super) fn validate_set_result(
 pub(super) fn target(router_role: Option<&str>) -> ModelRuntimeTargetDraft<'_> {
     ModelRuntimeTargetDraft {
         provider_id: PROVIDER_ID,
+        provider_transport_id: PROVIDER_TRANSPORT_ID,
         model_id: MODEL_ID,
+        model_dialect_id: MODEL_DIALECT_ID,
         router_role,
         capability_identity: CAPABILITY_HASH,
     }

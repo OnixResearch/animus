@@ -9,9 +9,11 @@ The imperative shell is `animus_std::model_request_snapshot_host`.
 
 ## Source reference
 
-The design adapts one invariant from DeepSeek Harness.
+The design adapts the model-visible-state invariant from DeepSeek Harness.
 The source revision is `47f943859bef60e4160492346772ded9b24f765a`.
 The source declares the MIT license and developer-preview status.
+
+The route binding also adapts provider-transport and model-dialect separation from [`digitallyinduced/haskell-agent`](https://github.com/digitallyinduced/haskell-agent). Animus retains its Rust, authority, snapshot, BLAKE3, and receipt contracts.
 
 Animus selects the model-visible-state invariant only.
 Animus keeps its existing ledger, request-context, model-profile, authority, retry, and provider owners.
@@ -26,7 +28,7 @@ It does not adopt Cordis, TypeScript plugins, ambient lookup, or provider-native
 - ordered selected request-context contribution identities;
 - native tool declarations and schema values;
 - output format, reasoning controls, streaming posture, and budgets;
-- the selected provider and model route;
+- the selected provider account, versioned provider transport, model, and versioned model-dialect route;
 - the model-invocation plan identity;
 - the request-context plan identity;
 - the runtime-authority seal identity;
@@ -35,6 +37,8 @@ It does not adopt Cordis, TypeScript plugins, ambient lookup, or provider-native
 
 The canonical request remains provider-neutral.
 Credentials, transport headers, provider SDK objects, endpoints, and hidden defaults remain outside it.
+
+Schema `animus.model-request-snapshot.v2` adds exact provider-transport and model-dialect fields. Version 1 private snapshots do not receive inferred identities. They fail closed and require a newly composed snapshot.
 
 ## Canonical identity
 
@@ -55,7 +59,7 @@ The validator recomputes these identities:
 - public receipt.
 
 A changed message order creates a different snapshot.
-A changed tool schema, output control, budget, route, context, authority seal, or adapter cohort blocks reuse.
+A changed provider transport, model dialect, tool schema, output control, budget, route, context, authority seal, or adapter cohort blocks reuse.
 
 ## Functional core and shell
 

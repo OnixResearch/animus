@@ -28,6 +28,7 @@ const INITIAL_ATTEMPT_NUMBER: u32 = 1;
 const FIRST_RETRY_ATTEMPT_NUMBER: u32 = 2;
 
 // r[impl agent_harness_runtime.model_request_snapshot.projection]
+// r[impl animus.dialect.binding]
 /// Validates one complete provider-neutral private model-request snapshot.
 ///
 /// # Errors
@@ -41,7 +42,13 @@ pub fn validate_model_request_snapshot(
     let canonical_request_identity = model_request_canonical_identity(draft.canonical_request)?;
     validate_exact_identity(
         draft.route.route_identity,
-        model_request_route_identity(draft.route.provider_id, draft.route.model_id).as_str(),
+        model_request_route_identity(
+            draft.route.provider_id,
+            draft.route.provider_transport_id,
+            draft.route.model_id,
+            draft.route.model_dialect_id,
+        )
+        .as_str(),
         "model_route",
     )?;
     validate_exact_identity(
@@ -74,7 +81,9 @@ pub fn validate_model_request_snapshot(
         canonical_request: draft.canonical_request.clone(),
         canonical_request_identity,
         provider_id: String::from(draft.route.provider_id),
+        provider_transport_id: String::from(draft.route.provider_transport_id),
         model_id: String::from(draft.route.model_id),
+        model_dialect_id: String::from(draft.route.model_dialect_id),
         route_identity: String::from(draft.route.route_identity),
         model_invocation_identity: String::from(draft.model_invocation_identity),
         request_context_plan_identity: String::from(draft.request_context_plan_identity),
@@ -404,7 +413,9 @@ fn validate_snapshot_draft(
     validate_label(draft.branch_id, "branch_id")?;
     validate_label(draft.active_leaf_id, "active_leaf_id")?;
     validate_label(draft.route.provider_id, "provider_id")?;
+    validate_label(draft.route.provider_transport_id, "provider_transport_id")?;
     validate_label(draft.route.model_id, "model_id")?;
+    validate_label(draft.route.model_dialect_id, "model_dialect_id")?;
     if draft.turn_generation == 0 || draft.request_sequence == 0 {
         return Err(error(
             ModelRequestSnapshotIssue::MissingSection,
