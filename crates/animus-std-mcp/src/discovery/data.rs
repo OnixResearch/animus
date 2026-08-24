@@ -4,6 +4,7 @@ pub struct DiscoveredTool {
     pub(crate) mapping: animus_adapters::McpToolMapping,
     pub(crate) definition: animus_adapters::tool::Definition,
     pub(crate) description_identity: String,
+    pub(crate) read_only_hint: crate::ReadOnlyHint,
 }
 
 impl DiscoveredTool {
@@ -23,6 +24,12 @@ impl DiscoveredTool {
     #[must_use]
     pub fn description_identity(&self) -> &str {
         self.description_identity.as_str()
+    }
+
+    /// Returns the untrusted read-only annotation classification.
+    #[must_use]
+    pub const fn read_only_hint(&self) -> crate::ReadOnlyHint {
+        self.read_only_hint
     }
 }
 

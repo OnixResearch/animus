@@ -155,7 +155,23 @@ fn map_tool(
         mapping,
         definition,
         description_identity,
+        read_only_hint: classify_read_only_hint(object),
     })
+}
+
+fn classify_read_only_hint(object: &serde_json::Map<String, Value>) -> crate::ReadOnlyHint {
+    let Some(annotations) = object.get("annotations") else {
+        return crate::ReadOnlyHint::Missing;
+    };
+    let Some(annotations) = annotations.as_object() else {
+        return crate::ReadOnlyHint::Unknown;
+    };
+    match annotations.get("readOnlyHint") {
+        Some(Value::Bool(true)) => crate::ReadOnlyHint::DeclaredTrue,
+        Some(Value::Bool(false)) => crate::ReadOnlyHint::DeclaredFalse,
+        Some(_) => crate::ReadOnlyHint::Malformed,
+        None => crate::ReadOnlyHint::Missing,
+    }
 }
 
 fn admit_schemas(

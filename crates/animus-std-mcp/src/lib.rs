@@ -10,6 +10,7 @@ mod config;
 mod context;
 mod discovery;
 mod evidence;
+mod exposure;
 mod host;
 mod lifecycle;
 mod process;
@@ -30,6 +31,12 @@ pub use discovery::{
 pub use evidence::{
     CancellationReceiptState, McpHostReceipt, McpHostReceiptDraft, ReceiptError, ReceiptLeakClass,
     project_receipt,
+};
+pub use exposure::{
+    BuiltInToolSource, ChildToolAuthority, ExactMutationAuthority, ExposedMcpTool,
+    ExposureCollision, ExposureDenial, McpExposureCatalog, McpExposureDescriptor,
+    McpExposureReceipt, McpExposureRequest, ReadOnlyHint, RejectedExposure,
+    project_child_mcp_exposure, reduce_mcp_exposure,
 };
 pub use host::{
     CallOutput, CredentialService, CredentialServiceError, HostError, HostErrorKind,

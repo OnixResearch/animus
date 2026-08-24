@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+set -eu
+root='.'
+if [ "${1:-}" = '--root' ]; then root=${2:-.}; fi
+cd "$root"
+for tool in cargo b3sum grep; do command -v "$tool" >/dev/null 2>&1 || exit 1; done
+cargo test -p animus-std-mcp --test exposure --locked
+cargo clippy -p animus-std-mcp --all-targets --locked -- -D warnings
+grep -F 'claims_side_effect_freedom: false' crates/animus-std-mcp/src/exposure.rs >/dev/null
+grep -F 'They never claim that a declared read-only tool has no side effects.' docs/mcp-client-host.md >/dev/null
+mkdir -p target/cairn/focused-rails
+cat > target/cairn/focused-rails/mcp-readonly-exposure.md <<EOF
+schema: animus.focused-rail-receipt.v1
+rail: mcp-readonly-exposure
+status: pass
+source_blake3: $(b3sum crates/animus-std-mcp/src/exposure.rs | cut -d ' ' -f 1)
+claims: default-readonly-exposure,exact-mutation-authority,collision-denial,child-intersection
+non_claims: side-effect-freedom,server-integrity,sandboxing,successful-execution
+EOF
+printf '%s\n' 'focused rail mcp-readonly-exposure: pass'

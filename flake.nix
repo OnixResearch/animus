@@ -453,6 +453,7 @@
                 || baseName == "check-transactional-daemon-handoff"
                 || baseName == "check-revision-gated-workspace-edit-host"
                 || baseName == "check-concrete-mcp-client-host"
+                || baseName == "check-mcp-readonly-exposure"
                 || baseName == "check-pueue-host"
                 || baseName == "check-process-job-profiles"
                 || baseName == "check-conversation-projection"
@@ -1135,6 +1136,13 @@
             pkgs.nickel
           ] ''
             sh scripts/cairn/check-concrete-mcp-client-host --root .
+          '';
+
+          mcp-readonly-exposure = cargoCheck "animus-mcp-readonly-exposure" [
+            pkgs.b3sum
+            pkgs.clippy
+          ] ''
+            sh scripts/cairn/check-mcp-readonly-exposure --root .
           '';
 
           pueue-host = cargoCheck "animus-pueue-host" [

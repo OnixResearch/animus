@@ -58,6 +58,14 @@ Each call must pass the existing Animus MCP bridge and these current bindings:
 
 The host resolves the credential snapshot again before dispatch. Stale authority or credentials stop the effect before transport dispatch.
 
+## Model-facing exposure
+
+Discovery classifies `annotations.readOnlyHint` as untrusted metadata. Only an exact boolean `true` permits default read-only exposure. Missing, false, malformed, and unknown values stay hidden unless exact host and Basalt authority admit mutation.
+
+The exposure reducer preserves tool names. It rejects every conflicting descriptor when an MCP name collides with another server or a built-in tool. A child receives only the current-generation intersection of root exposure and its authority profile.
+
+Exposure receipts report aggregate admission facts. They never claim that a declared read-only tool has no side effects.
+
 ## Instructions
 
 Server instructions are untrusted input. The host admits them only through the request-context contribution contract with these fixed properties:
