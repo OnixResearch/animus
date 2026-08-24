@@ -17,4 +17,4 @@
 - [x] [parallel] [task:positive-tests] [after:tool] Add positive fake-process and isolated real-daemon tests for every admitted operation. r[agent_harness_runtime.pueue_host.verification]
 - [x] [parallel] [task:negative-tests] [after:tool] Add negative tests for raw commands, implicit targets, ambient state, malformed output, timeout, cancellation, and leaks. r[agent_harness_runtime.pueue_host.verification]
 - [x] [serial] [task:catalog] [after:positive-tests] [after:negative-tests] Update component, contract, runtime facade, and conformance catalogs. r[agent_harness_runtime.pueue_host.publication]
-- [ ] [serial] [task:gates] [after:catalog] Run formatting, crate tests, workspace checks, Clippy, Octet, Cairn gates, and focused Nix checks. r[agent_harness_runtime.pueue_host.verification]
+- [x] [serial] [task:gates] [after:catalog] Run formatting, crate tests, workspace checks, Clippy, Octet, Cairn gates, and focused Nix checks. r[agent_harness_runtime.pueue_host.verification]
