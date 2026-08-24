@@ -79,6 +79,22 @@ Animus does not hash the old or new value. A provider success does not prove fre
 
 Do not place decrypted files, old values, provider credentials, or raw provider diagnostics in rollback evidence.
 
+## Interactive path-only entry
+
+`animus-std-secretspec` also provides an authority-gated interactive flow. An approved terminal reads the value through masked input. The secret host writes it below the admitted session scratch directory and returns only the path.
+
+The host uses owner-only file mode and exclusive creation. It rejects unsafe request identities, symlink scratch roots, path escape, and existing targets. It tracks each issued path until early consumption or runtime close.
+
+Headless and child sessions fail before prompting unless separate reviewed authority admits them. Terminal approval and secret-host approval are both required.
+
+Path-only delivery does not provide host-user isolation, process sandboxing, secure erasure, credential validation, or protection from processes with equivalent operating-system authority.
+
+Run the focused rail:
+
+```sh
+nix develop -c scripts/cairn/check-secret-path-entry --root .
+```
+
 ## Material and evidence rules
 
 `ResolvedCredential` is non-cloneable, non-debuggable, non-serializable, and non-hashable. Its bytes are held in a zeroizing container. A caller can borrow the bytes only during one delivery call. The representative provider sink does not change pure provider-planning logic.

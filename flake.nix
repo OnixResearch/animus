@@ -438,6 +438,7 @@
                 || baseName == "check-basalt-authority-adapter"
                 || baseName == "check-pijul-vcs-adapter"
                 || baseName == "check-secretspec-host-resolution"
+                || baseName == "check-secret-path-entry"
                 || baseName == "check-skill-source-lifecycle"
                 || baseName == "check-trajectory-transcript-adapter"
                 || baseName == "check-evidence-safety"
@@ -868,6 +869,10 @@
             export ANIMUS_SECRETSPEC_SKIP_NICKEL=1
             export ANIMUS_SECRETSPEC_SKIP_CONNECTED=1
             sh scripts/cairn/check-secretspec-host-resolution --root .
+          '';
+
+          secret-path-entry = cargoCheck "animus-secret-path-entry" [ pkgs.b3sum pkgs.clippy ] ''
+            sh scripts/cairn/check-secret-path-entry --root .
           '';
 
           skill-source-lifecycle = cargoCheck "animus-skill-source-lifecycle" [ pkgs.clippy pkgs.nickel ] ''

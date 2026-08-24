@@ -11,6 +11,7 @@
 #![allow(clippy::module_name_repetitions)]
 #![forbid(unsafe_code)]
 
+mod interactive;
 mod material;
 mod policy;
 mod protocol;
@@ -23,6 +24,11 @@ pub mod worker;
 
 /// Authority-free request, admission, plan, and injected-service contracts.
 pub use animus_adapters::secret_resolution;
+pub use interactive::{
+    InteractiveSecretFileHost, MaskedSecretInput, SecretCleanupFailure, SecretEntryAuthority,
+    SecretEntryError, SecretEntryRequest, SecretEntrySessionClass, SecretPathResult,
+    validate_path_only_record,
+};
 pub use material::{CredentialOrigin, ProviderCredentialSink, ResolvedCredential};
 pub use policy::{
     BOUNDED_EXEC_COMMIT, PolicyError, ProfilePolicy, RESOLVER_IDENTITY, SECRETSPEC_COMMIT,
