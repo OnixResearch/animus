@@ -444,6 +444,7 @@
                 || baseName == "check-model-catalog"
                 || baseName == "check-model-catalog-hygiene"
                 || baseName == "check-response-ownership"
+                || baseName == "check-persist-before-process-gateway"
                 || baseName == "check-model-runtime-profiles"
                 || baseName == "check-agent-role-profiles"
                 || baseName == "check-aeneas-proof-campaign"
@@ -1184,6 +1185,13 @@
             pkgs.clippy
           ] ''
             sh scripts/cairn/check-response-ownership --root .
+          '';
+
+          persist-before-process-gateway = cargoCheck "animus-persist-before-process-gateway" [
+            pkgs.b3sum
+            pkgs.clippy
+          ] ''
+            sh scripts/cairn/check-persist-before-process-gateway --root .
           '';
 
           provider-retry = cargoCheck "animus-provider-retry" [

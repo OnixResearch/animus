@@ -54,6 +54,8 @@ pub mod composition_activation_graph {
 #[path = "conversationprojection.rs"]
 /// Pure canonical conversation projection and cache reconciliation.
 pub mod conversation_projection;
+/// Pure persist-before-process gateway admission, ordering, recovery, and authority.
+pub mod gateway;
 #[path = "modelrequestsnapshot/mod.rs"]
 mod modelrequestsnapshot;
 /// Pure private model-request snapshots, dispatch binding, recovery, and safe evidence.

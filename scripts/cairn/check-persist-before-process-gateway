@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+set -eu
+root='.'
+if [ "${1:-}" = '--root' ]; then root=${2:-.}; fi
+cd "$root"
+for tool in cargo b3sum grep; do command -v "$tool" >/dev/null 2>&1 || exit 1; done
+cargo test -p animus-session-core --locked gateway
+cargo clippy -p animus-session-core --all-targets --locked -- -D warnings
+grep -F 'An initial admission plan never authorizes an effect.' docs/persist-before-process-gateway.md >/dev/null
+grep -F 'transport_authenticated' crates/animus-session-core/src/gateway.rs >/dev/null
+mkdir -p target/cairn/focused-rails
+cat > target/cairn/focused-rails/persist-before-process-gateway.md <<EOF
+schema: animus.focused-rail-receipt.v1
+rail: persist-before-process-gateway
+status: pass
+source_blake3: $(b3sum crates/animus-session-core/src/gateway.rs | cut -d ' ' -f 1)
+claims: durable-admission,per-conversation-order,bounded-concurrency,recovery-uncertainty,exact-mutation-authority
+non_claims: remote-identity,transport-authentication,exactly-once-delivery,tool-safety
+EOF
+printf '%s\n' 'focused rail persist-before-process-gateway: pass'
