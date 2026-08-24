@@ -32,6 +32,16 @@ Runtime code does not read retry configuration, evaluate Nickel, inspect environ
 
 Provider-native classification happens at the host boundary. Only a bounded provider-family label, mapping version, and native-class label enter the reusable core. Unknown mappings become `unknown`, which is terminal. Authentication, authorization, entitlement, policy, capability, invalid-request, malformed, unsafe, missing-service, and unsupported failures remain terminal because policy does not list them as retryable.
 
+## Cooldown and billing transitions
+
+`plan_provider_failover` consumes explicit host observations and returns a pure transition plan. It skips accounts in cooldown and records each skipped provider. Clocks, account probes, and cooldown refresh remain shell-owned.
+
+A subscription-to-pay-per-use transition requires explicit `MeteredSpendAuthority::Admitted`. The plan records the prior tier, selected tier, and stable reason before provider contact. Missing authority fails closed instead of converting subscription failure into unexpected spending.
+
+The plan binds the durable session, pending turn, pending-turn BLAKE3, and prior durable session head. It cannot drop or duplicate a turn by substituting transition metadata. The shell must commit this plan before it contacts the selected provider.
+
+These supplied facts do not prove account status, billing accuracy, provider acceptance, or permission beyond the exact transition.
+
 ## Exact invocation identity
 
 Automatic retry is valid only for the identical admitted invocation. The exact plan identity binds:
@@ -102,4 +112,4 @@ Run the focused rail from the repository development shell:
 nix develop -c scripts/cairn/check-provider-retry --root .
 ```
 
-The rail checks Nickel drift and positive/negative fixtures, ambient-authority exclusions, focused runtime and std tests, Clippy, exact-plan and stream behavior, injected timer/dispatch gates, progress projection, receipt safety, and a BLAKE3-bound focused receipt. Live-provider smoke remains optional and is not part of fixture-scoped evidence.
+The rail checks Nickel drift and positive/negative fixtures, ambient-authority exclusions, focused runtime and std tests, Clippy, cooldown filtering, billing-tier authority, pending-turn preservation, exact-plan and stream behavior, injected timer/dispatch gates, progress projection, receipt safety, and a BLAKE3-bound focused receipt. Live-provider smoke remains optional and is not part of fixture-scoped evidence.

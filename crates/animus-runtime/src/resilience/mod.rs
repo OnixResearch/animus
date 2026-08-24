@@ -6,11 +6,18 @@
 //! observations, and projects safe progress and receipts. It owns no clocks,
 //! sleeps, network clients, credentials, provider discovery, or router fallback.
 
+mod billing;
 mod core;
 mod data;
 #[path = "receipt.rs"]
 mod evidence;
 
+pub use billing::{
+    MeteredSpendAuthority, ProviderAccountAvailability, ProviderBillingTier, ProviderCooldownSkip,
+    ProviderFailoverCandidateDraft, ProviderFailoverError, ProviderFailoverIssue,
+    ProviderFailoverPlan, ProviderFailoverTransitionDraft, ProviderTierTransition,
+    plan_provider_failover,
+};
 pub use core::{
     advance_provider_retry_attempt, classify_provider_retry_failure, evaluate_provider_retry_timer,
     observe_provider_retry_model_frame, observe_provider_retry_stream, plan_provider_retry,

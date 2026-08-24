@@ -42,7 +42,8 @@ for marker in \
   'evaluate_provider_retry_timer' \
   'advance_provider_retry_attempt' \
   'validate_provider_retry_progress_event' \
-  'project_provider_retry_receipt'
+  'project_provider_retry_receipt' \
+  'plan_provider_failover'
 do
   if ! grep -R -F "${marker}" "${RUNTIME_SOURCE}" --include='*.rs' >/dev/null; then
     printf 'error: provider-retry marker is missing: %s\n' "${marker}" >&2
@@ -100,6 +101,7 @@ source_hash=$(
     "${POLICY_FIXTURES}"/*.ncl \
     "${GENERATED_POLICY}" \
     "${RUNTIME_SOURCE}/mod.rs" \
+    "${RUNTIME_SOURCE}/billing.rs" \
     "${RUNTIME_SOURCE}/data.rs" \
     "${RUNTIME_SOURCE}/core.rs" \
     "${RUNTIME_SOURCE}/receipt.rs" \
@@ -121,7 +123,7 @@ schema: ${RECEIPT_SCHEMA}
 rail: ${RAIL_NAME}
 status: pass
 source_blake3: ${source_hash}
-claims: generated-policy-revalidation,versioned-safe-classification,bounded-same-plan-retry,semantic-stream-stop,threaded-cancellable-wait,exact-dispatch-gate,provider-neutral-progress,metadata-only-receipt
+claims: generated-policy-revalidation,versioned-safe-classification,bounded-same-plan-retry,cooldown-aware-failover,visible-tier-transition,pending-turn-preservation,semantic-stream-stop,threaded-cancellable-wait,exact-dispatch-gate,provider-neutral-progress,metadata-only-receipt
 non_claims: provider-behavior,provider-availability,exactly-once-effects,timer-correctness,delivery,completion,production-readiness
 EOF
 
