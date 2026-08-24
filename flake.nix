@@ -445,6 +445,7 @@
                 || baseName == "check-model-catalog"
                 || baseName == "check-model-catalog-hygiene"
                 || baseName == "check-response-ownership"
+                || baseName == "check-tool-result-cache"
                 || baseName == "check-persist-before-process-gateway"
                 || baseName == "check-model-runtime-profiles"
                 || baseName == "check-agent-role-profiles"
@@ -1190,6 +1191,14 @@
             pkgs.clippy
           ] ''
             sh scripts/cairn/check-response-ownership --root .
+          '';
+
+          tool-result-cache = cargoCheck "animus-tool-result-cache" [
+            pkgs.b3sum
+            pkgs.clippy
+            pkgs.nickel
+          ] ''
+            sh scripts/cairn/check-tool-result-cache --root .
           '';
 
           persist-before-process-gateway = cargoCheck "animus-persist-before-process-gateway" [

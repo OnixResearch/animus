@@ -61,6 +61,8 @@ mod handover_shell;
 #[path = "modelrequestsnapshot.rs"]
 /// Private model-request snapshot commit and provider-dispatch shell.
 pub mod model_request_snapshot_host;
+/// Bounded standard-library store for advisory tool-result reuse.
+pub mod retentionhost;
 #[cfg(feature = "tool-execution-stages")]
 #[path = "toolexecutionstages.rs"]
 /// Ordered host-injected stages around the existing authoritative tool executor kit.

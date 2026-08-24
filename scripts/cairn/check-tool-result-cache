@@ -1,0 +1,76 @@
+#!/usr/bin/env sh
+# r[verify animus.cache.projection.equal]
+# r[verify animus.cache.projection.distinct]
+# r[verify animus.cache.bound.configured]
+# r[verify animus.cache.bound.full]
+# r[verify animus.cache.decision.strict_lru]
+# r[verify animus.cache.decision.fifo]
+# r[verify animus.cache.deferral.evicted]
+# r[verify animus.cache.boundary.overclaim]
+# r[verify animus.cache.verification.matrix]
+set -eu
+
+readonly FAILURE=1
+readonly RAIL_NAME='tool-result-cache'
+readonly CORE_DIR='crates/animus-core/src/retention'
+readonly SHELL_DIR='crates/animus-std/src/retentionhost'
+readonly DOC='docs/tool-result-cache.md'
+
+root='.'
+if [ "${1:-}" = '--root' ]; then
+  if [ -z "${2:-}" ]; then
+    printf '%s\n' 'error: --root requires a path' >&2
+    exit "${FAILURE}"
+  fi
+  root=$2
+fi
+cd "${root}"
+
+for command in b3sum cargo grep; do
+  if ! command -v "${command}" >/dev/null 2>&1; then
+    printf 'error: %s is required\n' "${command}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+for marker in 'DOMAIN' 'Policy' 'InsertDisposition' 'decide_promotion' 'plan_insert' 'plan_trim'; do
+  grep -R -F "${marker}" "${CORE_DIR}" >/dev/null || {
+    printf 'error: missing core marker: %s\n' "${marker}" >&2
+    exit "${FAILURE}"
+  }
+done
+
+if grep -R -E 'std::|SystemTime|Instant|thread::|env::' "${CORE_DIR}" >/dev/null 2>&1; then
+  printf '%s\n' 'error: tool-result cache core gained ambient standard-library state' >&2
+  exit "${FAILURE}"
+fi
+
+grep -R -F 'drop(deferred_release);' "${SHELL_DIR}" >/dev/null
+grep -R -F 'Adapter execution occurs outside the cache guard.' "${SHELL_DIR}" >/dev/null
+grep -F 'A cache hit does not prove:' "${DOC}" >/dev/null
+grep -F 'no sibling-path dependency' "${DOC}" >/dev/null
+
+cargo test -p animus-core retention --locked
+cargo test -p animus-std retentionhost --locked
+cargo clippy -p animus-core -p animus-std --all-targets --locked -- -D warnings
+cargo check -p animus-core --target wasm32-unknown-unknown --locked
+sh scripts/cairn/check-component-catalog --root .
+sh scripts/cairn/check-runtime-facade-inventory --root .
+
+mkdir -p target/cairn/focused-rails
+core_hash=$(find "${CORE_DIR}" -type f -name '*.rs' -print0 | LC_ALL=C sort -z | xargs -0 b3sum | b3sum | cut -d ' ' -f 1)
+shell_hash=$(find "${SHELL_DIR}" -type f -name '*.rs' -print0 | LC_ALL=C sort -z | xargs -0 b3sum | b3sum | cut -d ' ' -f 1)
+receipt_path=target/cairn/focused-rails/${RAIL_NAME}.md
+cat > "${receipt_path}" <<EOF
+schema: animus.focused-rail-receipt.v1
+rail: ${RAIL_NAME}
+status: pass
+core_source_blake3: ${core_hash}
+shell_source_blake3: ${shell_hash}
+doc_blake3: $(b3sum "${DOC}" | cut -d ' ' -f 1)
+claims: canonical-blake3-key,explicit-capacity,deterministic-retention,watermark-trim,release-after-guard,unchanged-miss-path
+non_claims: tool-correctness,result-freshness,authorization,exactly-once-execution,durable-retention,production-readiness,release-eligibility
+EOF
+
+printf '%s\n' 'focused rail tool-result-cache: pass'
+printf 'receipt: %s\n' "${receipt_path}"

@@ -4,6 +4,8 @@
 //! inputs, environment handling, logging, async work, and I/O in `animus-std`.
 
 #![no_std]
+#![cfg_attr(animus_octet, feature(register_tool))]
+#![cfg_attr(animus_octet, register_tool(tigerstyle))]
 #![deny(missing_docs)]
 #![deny(clippy::all)]
 #![deny(clippy::pedantic)]
@@ -12,6 +14,9 @@
 #![forbid(unsafe_code)]
 
 extern crate alloc;
+
+/// Pure bounded tool-result identity and retention decisions.
+pub mod retention;
 
 const SUMMARY_PREFIX: &str = "intent: ";
 

@@ -287,6 +287,9 @@ dependencies = [
 [[package]]
 name = "animus-core"
 version = "0.1.0"
+dependencies = [
+ "blake3",
+]
 
 [[package]]
 name = "animus-eval-conformance"

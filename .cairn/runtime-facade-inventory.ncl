@@ -962,6 +962,8 @@ let entry_values = [
   entry "animus-core::Intent" "animus-core" core reusable none stable "validated intent DTO",
   entry "animus-core::AnimusState" "animus-core" core reusable none stable "deterministic state DTO",
   entry "animus-core::CoreError" "animus-core" core reusable none stable "core validation error",
+  entry "animus-core::retention" "animus-core" core reusable none stable "pure BLAKE3 identity and bounded retention decisions",
+  entry "animus-std::retentionhost" "animus-std" std_shell shell shell_owned stable "bounded synchronized store with release-after-guard execution",
 
   entry "animus-adapters::AdapterContractError" "animus-adapters" adapters reusable none stable "adapter boundary validation error",
   entry "animus-adapters::FieldName" "animus-adapters" adapters reusable none stable "adapter boundary field-name DTO",

@@ -7,6 +7,7 @@ The catalog names Lego-style Animus components, application-owned capability sea
 | Component | Class | Owner | Feature gate | Authority | Family | Focused checks | Smallest import |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `core.intent-state` | `reusable-contract` | `animus-core` | `always` | `none` | `core` | `cargo test -p animus-core --locked<br>scripts/cairn/check-wasm-surface --root .` | `animus_core::{Intent, AnimusState, CoreError}` |
+| `core.tool-result-cache-policy` | `reusable-contract` | `animus-core` | `always` | `none` | `tool` | `cargo test -p animus-core retention --locked<br>cargo check -p animus-core --target wasm32-unknown-unknown --locked<br>scripts/cairn/check-tool-result-cache --root .` | `animus_core::retention::{project_key, plan_insert, plan_trim, decide_promotion}` |
 | `adapters.dto-boundary` | `reusable-contract` | `animus-adapters` | `always` | `none` | `adapter-contracts` | `cargo test -p animus-adapters --locked<br>scripts/cairn/check-runtime-facade-inventory --root .` | `animus_adapters::{ModelRequest, ToolRequest, ToolResponse}` |
 | `adapters.agent-control-port` | `host-injection-surface` | `animus-adapters` | `always` | `injected-only` | `agent-control` | `cargo test -p animus-adapters control --locked<br>cargo check -p animus-adapters --target wasm32-unknown-unknown --locked` | `animus_adapters::{AgentControlCommand, AgentControlWait}` |
 | `host-control.protocol-core` | `reusable-contract` | `host-control-core` | `always` | `none` | `adapter-contracts` | `cargo test -p animus-adapters --test hostcontrol --locked<br>scripts/cairn/check-host-control-extraction --root .` | `animus_adapters::{HostSelector, HostTopologySnapshot, HostOutputView}` |
@@ -112,6 +113,7 @@ The catalog names Lego-style Animus components, application-owned capability sea
 | `preserves.review-fixtures` | `optional-bridge` | `animus-preserves` | `preserves` | `none` | `preserves` | `cargo test -p animus-preserves review --locked<br>scripts/cairn/check-preserves-boundary-schemas --root .` | `animus_preserves::review` |
 | `preserves.compat-facade` | `optional-bridge` | `animus-preserves` | `preserves` | `none` | `preserves` | `cargo test -p animus-preserves --locked<br>cargo check -p animus --features preserves --locked` | `animus_preserves` |
 | `std.host-authority-catalog` | `reusable-contract` | `animus-std` | `std` | `none` | `std-shell` | `cargo test -p animus-std hostadapters --locked<br>cargo check -p animus-std --no-default-features --locked` | `animus_std::{host_adapter_catalog, plan_host_adapter}` |
+| `std.tool-result-cache-store` | `shell-adapter` | `animus-std` | `std` | `shell-owned` | `tool` | `cargo test -p animus-std retentionhost --locked<br>cargo clippy -p animus-std --all-targets --locked -- -D warnings<br>scripts/cairn/check-tool-result-cache --root .` | `animus_std::retentionhost::{Store, Config, Access}` |
 | `std.live-openai-provider-host` | `shell-adapter` | `animus-std-openai` | `openai-provider-host` | `shell-owned` | `model` | `cargo test -p animus-std-openai --features tool-streaming --locked<br>cargo clippy -p animus-std-openai --all-targets --features tool-streaming --locked -- -D warnings<br>scripts/cairn/check-live-openai-provider-host --root .<br>scripts/cairn/check-packaged-live-openai-smoke --root .<br>scripts/cairn/check-packaged-live-openrouter-smoke --root .` | `animus_std_openai::{ReqwestOpenAiHost, OpenAiHostConfig, OpenAiApiKey, OpenAiResponsesSseParser, OpenAiToolDispatch, OpenAiToolCapabilityMatrix, run_packaged_live_openai_smoke, run_packaged_live_openrouter_smoke}` |
 | `std.iroh-agent-comms-shell` | `shell-adapter` | `animus-std` | `iroh-host` | `shell-owned` | `std-shell` | `cargo test -p animus-std --features iroh-host iroh --locked<br>cargo check -p animus --features iroh-host --locked` | `animus_std::{IrohAgentCommsAdapter, IrohAgentTransport}` |
 | `std.syndicate-turn-shell` | `shell-adapter` | `animus-std` | `syndicate-host` | `shell-owned` | `preserves` | `cargo test -p animus-std --features syndicate-host syndicate --locked<br>cargo check -p animus --features syndicate-host --locked` | `animus_std::{SyndicateProtocolAdapter, SyndicatePacketTransport}` |
@@ -185,6 +187,7 @@ The catalog names Lego-style Animus components, application-owned capability sea
 | Component | Dependencies | Composition links |
 | --- | --- | --- |
 | `core.intent-state` | - | - |
+| `core.tool-result-cache-policy` | - | - |
 | `adapters.dto-boundary` | - | - |
 | `adapters.agent-control-port` | `adapters.dto-boundary` | - |
 | `host-control.protocol-core` | - | - |
@@ -290,6 +293,7 @@ The catalog names Lego-style Animus components, application-owned capability sea
 | `preserves.review-fixtures` | `preserves.schema-primitives` | - |
 | `preserves.compat-facade` | `preserves.adapter-bridge`, `preserves.runtime-bridge`, `preserves.provenance-bridge`, `preserves.policy-bridge`, `preserves.dataspace-bridge`, `preserves.syndicate-turn-bridge`, `preserves.review-fixtures` | - |
 | `std.host-authority-catalog` | - | - |
+| `std.tool-result-cache-store` | `core.tool-result-cache-policy` | - |
 | `std.live-openai-provider-host` | `adapters.model-port`, `runtime.provider-retry`, `std.host-authority-catalog` | - |
 | `std.iroh-agent-comms-shell` | `std.host-authority-catalog` | - |
 | `std.syndicate-turn-shell` | `preserves.syndicate-turn-bridge`, `std.host-authority-catalog` | - |
