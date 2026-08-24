@@ -7,5 +7,5 @@
 ## Phase 2: Closed execution and evidence
 
 - [x] [serial] Document the two-cohort shell and its discovery, OAuth, and fallback non-claims. r[agent_harness_runtime.live_steel_agent_provider_cohort.closed]
-- [ ] [serial] Run focused live-agent and provider rails, strict Clippy, Octet, Cairn validation, and the relevant Nix checks. r[agent_harness_runtime.live_steel_agent_provider_cohort.closed.unknown]
-- [ ] [serial] Record safe evidence, sync the accepted specification, and archive the change. r[agent_harness_runtime.live_steel_agent_provider_cohort.closed.no_fallback]
+- [x] [serial] Run focused live-agent and provider rails, strict Clippy, Octet, Cairn validation, and the relevant Nix checks. r[agent_harness_runtime.live_steel_agent_provider_cohort.closed.unknown]
+- [x] [serial] Record safe evidence, sync the accepted specification, and archive the change. r[agent_harness_runtime.live_steel_agent_provider_cohort.closed.no_fallback]
