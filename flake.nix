@@ -26,7 +26,7 @@
       flake = false;
     };
     cairn = {
-      url = "git+ssh://git@github.com/OnixResearch/cairn.git?rev=695124d459574ba7aeba6097310d237f393c243c";
+      url = "git+ssh://git@github.com/OnixResearch/cairn.git?rev=5e1fe08d62149b286ff583eb056e655fe92e3cf1";
       flake = false;
     };
     trellis = {
@@ -262,7 +262,7 @@
             name = "cairn";
             runtimeInputs = [ pkgs.nix ];
             text = ''
-              policy_path=${pkgs.lib.escapeShellArg "${cairn}/cairn-policy/generated/cairn-policy.json"}
+              policy_path=${pkgs.lib.escapeShellArg "${self}/cairn-policy/generated/cairn-policy.json"}
               source_flake=${pkgs.lib.escapeShellArg "path:${cairn}"}
 
               has_policy_arg=false
@@ -275,7 +275,7 @@
 
               command="''${1:-}"
               case "$command" in
-                agent-receipt|doctor|validate|release-readiness|policy|probe|steel-orchestration|tracey|migrate|gate|sync|archive)
+                agent-receipt|change|doctor|validate|release-readiness|policy|probe|steel-orchestration|traceability|tracey|migrate|gate|sync|archive)
                   if [ "$has_policy_arg" = false ]; then
                     exec nix run "$source_flake#cairn" -- "$@" --policy "$policy_path"
                   fi
