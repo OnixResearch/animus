@@ -1,0 +1,85 @@
+{
+  "acceptance_ids": [],
+  "actions": [],
+  "blocked": true,
+  "change": "adopt-outcome-machine-lifecycle",
+  "cross_repo_dependencies": {
+    "blocked_count": 0,
+    "dependency_count": 0,
+    "input_hash": "da089c8ce440e796590048b06cadac574ae7b81910ba727f45b5ccb6433bcf5d",
+    "non_claims": [
+      "dependency satisfaction proves presented receipt linkage only",
+      "dependency satisfaction does not prove upstream correctness or remote trust",
+      "dependency satisfaction does not prove downstream integration correctness or release eligibility"
+    ],
+    "policy_hash": "302bc1f8bcb27920c37a6bdc21865e2ca1fbb5a38c268570b3fc326734e59942",
+    "receipt_hash": "ddd8b0ca042c1dcdeb7be5c99360796c8a1f1c101ace754a2eae78db9bb164c1",
+    "rows": [],
+    "satisfied_count": 0,
+    "schema": "cairn.cross-repo-dependency-receipt.v1",
+    "valid": true,
+    "verdict": "PASS"
+  },
+  "cross_repo_evidence_issues": [],
+  "delta_specs": [
+    "./.cairn/changes/adopt-outcome-machine-lifecycle/specs/outcome-machine-lifecycle/spec.md"
+  ],
+  "dry_run": true,
+  "input_hash": "c367620e9f45f0f565df359972aa90b02ea0d887f8dd165ee517d5d6a2c7f0ab",
+  "layout": "cairn",
+  "merge_preflight": {
+    "documents": [
+      {
+        "accepted_before_exists": false,
+        "accepted_before_hash": "43f9c1625392532952a91d6fbb376ed09bc5047cf0853a67fed264ca8232c464",
+        "blocked": false,
+        "changed": true,
+        "delta_hash": "94513fec3081ec89e040b3c59bc3d11a015b009a72942118c38cec0d18681ad5",
+        "destination": ".cairn/specs/outcome-machine-lifecycle/spec.md",
+        "diagnostics": [],
+        "expected_after_hash": "0d43968bb18a454dbc25222f1eb1020a83d43ca31235e50e1802029e0c0ce76a",
+        "operations": [
+          {
+            "block_hash": "370aabea1127ea1cb380aaf409761c5963bb89e6a3e3b2e5608ae0998c02208d",
+            "heading": "### Requirement: Animus owns outcome-machine lifecycle admission",
+            "kind": "added",
+            "requirement_id": "animus.lifecycle.outcome_machine_profile"
+          }
+        ],
+        "outcomes": [
+          {
+            "kind": "added",
+            "requirement_id": "animus.lifecycle.outcome_machine_profile",
+            "state": "applied"
+          }
+        ],
+        "source": ".cairn/changes/adopt-outcome-machine-lifecycle/specs/outcome-machine-lifecycle/spec.md"
+      }
+    ]
+  },
+  "mutated": false,
+  "mutation_manifest": null,
+  "non_claims": [
+    "workflow state proves only the selected policy graph and observed structural artifact facts",
+    "workflow instructions do not prove artifact truth, review quality, or implementation correctness",
+    "workflow state does not satisfy proposal, design, tasks, sync, archive, evidence, or release gates",
+    "workflow commands are read-only and do not create, edit, delete, or approve lifecycle artifacts",
+    "outcome-machine profile conformance does not prove product value, evidence truth, semantic correctness, reuse quality, maintenance quality, or release eligibility",
+    "recorded completion and fresh-state references prove only admitted structure and identity, not that the referenced claim is true"
+  ],
+  "plan_hash": "db8064d547e07bc8bc7525e19f623dc45aa63812b5c99c3ba6d0f39d9b996b76",
+  "policy": "cairn-default",
+  "policy_hash": "302bc1f8bcb27920c37a6bdc21865e2ca1fbb5a38c268570b3fc326734e59942",
+  "profile_identity_hash": "6a52c284bcf2dbbfeab472fe3e455d039fcf5f972ebc52b16be6a8facf143445",
+  "reasons": [
+    "cairn.workflow.outcome_machine.completion: observed completion evidence is missing",
+    "cairn.workflow.outcome_machine.fresh_state: fresh-state reproduction remains planned"
+  ],
+  "receipt_hash": "9a132c376c9d0b002d42db6a482a2e49886fd8df45ffdbf095d145161846ca9a",
+  "review_receipt_hashes": [],
+  "spec_effect": "delta",
+  "workflow_profile": "outcome-machine",
+  "workflow_profile_compatibility_fallback": false,
+  "workflow_profile_source": "change_create",
+  "workflow_profile_version": 1
+}
