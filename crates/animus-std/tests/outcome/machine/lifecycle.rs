@@ -1,4 +1,5 @@
 //! Verifies the repository-owned outcome-machine lifecycle runner.
+#![cfg(test)]
 
 const PINNED_CAIRN_REVISION: &str = "5e1fe08d62149b286ff583eb056e655fe92e3cf1";
 const CHANGE_POLICY_ROUTE: &str = "agent-receipt|change|doctor";
@@ -25,11 +26,16 @@ fn validate_runner(source: &str) -> Result<(), &'static str> {
     Ok(())
 }
 
+fn source() -> String {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../flake.nix");
+    std::fs::read_to_string(path).expect("repository-owned flake source")
+}
+
 #[test]
 fn pinned_runner_covers_profile_lifecycle_commands() {
     // r[verify animus.lifecycle.outcome_machine_profile]
-    let source = include_str!("../../../flake.nix");
-    assert_eq!(validate_runner(source), Ok(()));
+    let source = source();
+    assert_eq!(validate_runner(&source), Ok(()));
 }
 
 #[test]
@@ -39,10 +45,28 @@ fn moving_or_incomplete_runner_fails_admission() {
         validate_runner(moving_source),
         Err("Cairn revision is not pinned")
     );
-
-    let pin_without_routes = PINNED_CAIRN_REVISION;
     assert_eq!(
-        validate_runner(pin_without_routes),
+        validate_runner(PINNED_CAIRN_REVISION),
         Err("change commands do not receive the pinned policy")
     );
+    let source = source();
+    for (missing, expected) in [
+        (
+            TRACEABILITY_POLICY_ROUTE,
+            "traceability commands do not receive the pinned policy",
+        ),
+        (
+            POLICY_ARGUMENT,
+            "the runner does not inject a policy argument",
+        ),
+        (
+            LOCAL_POLICY_PATH,
+            "the runner does not use the repository policy",
+        ),
+    ] {
+        assert_eq!(
+            validate_runner(&source.replace(missing, "omitted")),
+            Err(expected)
+        );
+    }
 }
