@@ -121,10 +121,12 @@ source_hash=$(
     crates/animus-std-check-exec/Cargo.toml \
     crates/animus-std-check-exec/src/lib.rs \
     crates/animus-std-check-exec/src/executor.rs \
+    crates/animus-std-check-exec/src/capture.rs \
     crates/animus-std-check-exec/src/cairn.rs \
     crates/animus-std-check-exec/src/bin/animus-real-check-completion-smoke.rs \
     crates/animus-std-check-exec/src/bin/animus-check-exec-fixture.rs \
     crates/animus-std-check-exec/tests/bounded-completion.rs \
+    crates/animus-std-check-exec/tests/retained-output.rs \
     config/generated/agent-check-registry.json \
     scripts/cairn/check-real-check-completion-host-smoke | b3sum | cut -d ' ' -f 1
 )

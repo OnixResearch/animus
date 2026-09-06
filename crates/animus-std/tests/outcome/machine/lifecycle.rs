@@ -26,20 +26,21 @@ fn validate_runner(source: &str) -> Result<(), &'static str> {
     Ok(())
 }
 
-fn source() -> String {
+fn source() -> std::io::Result<String> {
     let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../flake.nix");
-    std::fs::read_to_string(path).expect("repository-owned flake source")
+    std::fs::read_to_string(path)
 }
 
 #[test]
-fn pinned_runner_covers_profile_lifecycle_commands() {
+fn pinned_runner_covers_profile_lifecycle_commands() -> std::io::Result<()> {
     // r[verify animus.lifecycle.outcome_machine_profile]
-    let source = source();
+    let source = source()?;
     assert_eq!(validate_runner(&source), Ok(()));
+    Ok(())
 }
 
 #[test]
-fn moving_or_incomplete_runner_fails_admission() {
+fn moving_or_incomplete_runner_fails_admission() -> std::io::Result<()> {
     let moving_source = "url = github:OnixResearch/cairn/main";
     assert_eq!(
         validate_runner(moving_source),
@@ -49,7 +50,7 @@ fn moving_or_incomplete_runner_fails_admission() {
         validate_runner(PINNED_CAIRN_REVISION),
         Err("change commands do not receive the pinned policy")
     );
-    let source = source();
+    let source = source()?;
     for (missing, expected) in [
         (
             TRACEABILITY_POLICY_ROUTE,
@@ -69,4 +70,5 @@ fn moving_or_incomplete_runner_fails_admission() {
             Err(expected)
         );
     }
+    Ok(())
 }

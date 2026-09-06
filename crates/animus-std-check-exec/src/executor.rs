@@ -128,6 +128,8 @@ pub enum ExecutorError {
     RunnerFailed,
     /// A byte counter cannot be represented by the completion DTO.
     ByteCountOverflow,
+    /// Explicit cancellation was already raised at the pre-spawn checkpoint.
+    CancelledBeforeSpawn,
 }
 
 impl ExecutorError {
@@ -142,6 +144,7 @@ impl ExecutorError {
             Self::ExecutableMissing => "executable-missing",
             Self::RunnerFailed => "runner-failed",
             Self::ByteCountOverflow => "byte-count-overflow",
+            Self::CancelledBeforeSpawn => "cancelled-before-spawn",
         }
     }
 }
@@ -207,18 +210,53 @@ impl BoundedCheckExecutor {
             (OsString::from("NIX_CONFIG"), OsString::from(NIX_CONFIG)),
         ])
     }
-}
 
-impl AgentCheckExecutionService for BoundedCheckExecutor {
-    type Error = ExecutorError;
-
-    fn execute(
+    /// Execute once and retain private bounded bytes beside the observation.
+    ///
+    /// Admission and child mechanics are identical to the metadata-only service.
+    /// The caller owns current authorization and output interpretation.
+    ///
+    /// # Errors
+    ///
+    /// Returns the existing admission or runner error without a partial capture.
+    pub fn execute_captured(
         &mut self,
         request: AgentCheckExecutionRequest<'_>,
-    ) -> Result<HostCheckExecutionObservation, Self::Error> {
+    ) -> Result<crate::CapturedCheck, ExecutorError> {
+        self.capture_inner(request, None)
+    }
+
+    /// Execute with an explicit caller-owned cancellation flag.
+    ///
+    /// Cancellation is cooperative, not atomic authorization or effect rollback.
+    /// No retry or fallback occurs. The flag is never modified by this host.
+    ///
+    /// # Errors
+    ///
+    /// Returns `CancelledBeforeSpawn` at an already-cancelled host checkpoint,
+    /// or the existing admission or runner error. Later cancellation is retained
+    /// as the runner's non-passing execution result after owned teardown.
+    pub fn execute_captured_with_cancellation(
+        &mut self,
+        request: AgentCheckExecutionRequest<'_>,
+        cancellation: &std::sync::atomic::AtomicBool,
+    ) -> Result<crate::CapturedCheck, ExecutorError> {
+        self.capture_inner(request, Some(cancellation))
+    }
+
+    fn capture_inner(
+        &self,
+        request: AgentCheckExecutionRequest<'_>,
+        cancellation: Option<&std::sync::atomic::AtomicBool>,
+    ) -> Result<crate::CapturedCheck, ExecutorError> {
         // r[impl agent_harness_runtime.real_check_completion_host_smoke.execution]
         // r[impl agent_harness_runtime.real_check_completion_host_smoke.failure]
+        // r[impl agent_harness_runtime.check_capture.retention]
+        // r[impl agent_harness_runtime.check_capture.cancellation]
         let allowed = self.allowed_check(request)?;
+        if cancellation.is_some_and(|flag| flag.load(std::sync::atomic::Ordering::Acquire)) {
+            return Err(ExecutorError::CancelledBeforeSpawn);
+        }
         let program = self.resolve_program(allowed.argv[0].as_str())?;
         let args = allowed.argv[1..]
             .iter()
@@ -226,7 +264,7 @@ impl AgentCheckExecutionService for BoundedCheckExecutor {
             .collect::<Vec<_>>();
         let outcome_policy = OutcomePolicy::new(vec![SUCCESS_EXIT_CODE], true, true)
             .map_err(|_failure| ExecutorError::InvalidConfig)?;
-        let output = bounded_exec::run(RunRequest {
+        let run_request = RunRequest {
             command: CommandSpec {
                 program,
                 args,
@@ -238,9 +276,27 @@ impl AgentCheckExecutionService for BoundedCheckExecutor {
             limits: allowed.budget.limits()?,
             termination_scope: TerminationScope::ProcessGroup,
             outcome_policy,
-        })
+        };
+        let output = match cancellation {
+            Some(flag) => bounded_exec::run_with_cancellation(run_request, flag),
+            None => bounded_exec::run(run_request),
+        }
         .map_err(|_failure| ExecutorError::RunnerFailed)?;
-        observation(request, &output)
+        let observed = observation(request, &output)?;
+        Ok(crate::CapturedCheck::new(observed, output))
+    }
+}
+
+impl AgentCheckExecutionService for BoundedCheckExecutor {
+    type Error = ExecutorError;
+
+    fn execute(
+        &mut self,
+        request: AgentCheckExecutionRequest<'_>,
+    ) -> Result<HostCheckExecutionObservation, Self::Error> {
+        // r[impl agent_harness_runtime.check_capture.compatibility]
+        self.execute_captured(request)
+            .map(crate::CapturedCheck::into_observation)
     }
 }
 

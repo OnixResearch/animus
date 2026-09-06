@@ -29,6 +29,11 @@ name = "bounded-completion"
 path = "tests/bounded-completion.rs"
 required-features = ["test-fixtures"]
 
+[[test]]
+name = "retained-output"
+path = "tests/retained-output.rs"
+required-features = ["test-fixtures"]
+
 [dependencies]
 animus-runtime = { path = "../animus-runtime", version = "0.1.0", default-features = false }
 animus-std = { path = "../animus-std", version = "0.1.0", default-features = false, features = ["authoritative-completion-smoke"] }

@@ -3,11 +3,14 @@
 //! Optional bounded selected-check host for Animus completion evidence.
 
 mod cairn;
+mod capture;
 mod executor;
 
 use std::path::PathBuf;
 
+pub use bounded_exec::{Completion, Disposition, OverflowedStreams};
 pub use cairn::{CairnServiceError, PinnedCairnFactory, PinnedCairnService};
+pub use capture::CapturedCheck;
 pub use executor::{
     AllowedCheck, BoundedCheckExecutor, BoundedCheckExecutorConfig, CheckExecutionBudget,
     ExecutorError,
