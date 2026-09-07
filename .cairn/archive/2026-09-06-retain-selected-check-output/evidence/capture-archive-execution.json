@@ -1,0 +1,141 @@
+{
+  "acceptance_ids": [],
+  "actions": [
+    {
+      "description": "move active change to archive: retain-selected-check-output",
+      "kind": "archive_change",
+      "path": "/home/brittonr/git/animus-worktrees/retain-check-output-20260906/.cairn/archive/2026-09-06-retain-selected-check-output"
+    }
+  ],
+  "blocked": false,
+  "change": "retain-selected-check-output",
+  "cross_repo_dependencies": {
+    "blocked_count": 0,
+    "dependency_count": 0,
+    "input_hash": "da089c8ce440e796590048b06cadac574ae7b81910ba727f45b5ccb6433bcf5d",
+    "non_claims": [
+      "dependency satisfaction proves presented receipt linkage only",
+      "dependency satisfaction does not prove upstream correctness or remote trust",
+      "dependency satisfaction does not prove downstream integration correctness or release eligibility"
+    ],
+    "policy_hash": "302bc1f8bcb27920c37a6bdc21865e2ca1fbb5a38c268570b3fc326734e59942",
+    "receipt_hash": "ddd8b0ca042c1dcdeb7be5c99360796c8a1f1c101ace754a2eae78db9bb164c1",
+    "rows": [],
+    "satisfied_count": 0,
+    "schema": "cairn.cross-repo-dependency-receipt.v1",
+    "valid": true,
+    "verdict": "PASS"
+  },
+  "cross_repo_evidence_issues": [],
+  "dry_run": false,
+  "input_hash": "482cfaa47102110b1bb419dd4eb8e979d97df97c9a6a6ca8f3b1ae5e093aad2f",
+  "layout": "cairn",
+  "mutated": true,
+  "mutation_manifest": {
+    "after": {
+      "entries": [
+        {
+          "content_hash": "d6eaf5f8b68d443762c9c144200fb565da15a9f9106d5851afd45a4d770f8b39",
+          "exists": true,
+          "path": "./.cairn/archive/2026-09-06-retain-selected-check-output/design.md"
+        },
+        {
+          "content_hash": "d75744840a225825f9f5dbf0cf7444c0b7ce2a2385674d907e6085e10454aa71",
+          "exists": true,
+          "path": "./.cairn/archive/2026-09-06-retain-selected-check-output/evidence/live-receipt.md"
+        },
+        {
+          "content_hash": "e9f5d963868be6a5f3e9f633aa2f739a66a94e575bc05a920cbd00e21da876b3",
+          "exists": true,
+          "path": "./.cairn/archive/2026-09-06-retain-selected-check-output/evidence/real-check-receipt.md"
+        },
+        {
+          "content_hash": "df8b71bae570eb5accd702e7370a816b8ea9f2e4521254c5d75ea82a9cfcf4db",
+          "exists": true,
+          "path": "./.cairn/archive/2026-09-06-retain-selected-check-output/metadata.json"
+        },
+        {
+          "content_hash": "edf7448da80c5ee78f3ec9e15f73e19594ee01654209b472fcb44a360ed60ada",
+          "exists": true,
+          "path": "./.cairn/archive/2026-09-06-retain-selected-check-output/proposal.md"
+        },
+        {
+          "content_hash": "dd57d180cb8aa1a5e1968575f4b1ef1d640f69da8fb25e54ca307e0741b80670",
+          "exists": true,
+          "path": "./.cairn/archive/2026-09-06-retain-selected-check-output/specs/agent-harness-runtime/spec.md"
+        },
+        {
+          "content_hash": "99e7ea9d9083785ae8891b1362db7f38e00de3246f6aa28fff0fd686aadcbf66",
+          "exists": true,
+          "path": "./.cairn/archive/2026-09-06-retain-selected-check-output/tasks.md"
+        },
+        {
+          "content_hash": null,
+          "exists": false,
+          "path": "./.cairn/changes/retain-selected-check-output"
+        }
+      ],
+      "manifest_hash": "e3af63e78a7e125afa992865dcc1867512fd54dcef5b2ebd7d32058d15dec9e5"
+    },
+    "before": {
+      "entries": [
+        {
+          "content_hash": "d6eaf5f8b68d443762c9c144200fb565da15a9f9106d5851afd45a4d770f8b39",
+          "exists": true,
+          "path": "./.cairn/changes/retain-selected-check-output/design.md"
+        },
+        {
+          "content_hash": "d75744840a225825f9f5dbf0cf7444c0b7ce2a2385674d907e6085e10454aa71",
+          "exists": true,
+          "path": "./.cairn/changes/retain-selected-check-output/evidence/live-receipt.md"
+        },
+        {
+          "content_hash": "e9f5d963868be6a5f3e9f633aa2f739a66a94e575bc05a920cbd00e21da876b3",
+          "exists": true,
+          "path": "./.cairn/changes/retain-selected-check-output/evidence/real-check-receipt.md"
+        },
+        {
+          "content_hash": "df8b71bae570eb5accd702e7370a816b8ea9f2e4521254c5d75ea82a9cfcf4db",
+          "exists": true,
+          "path": "./.cairn/changes/retain-selected-check-output/metadata.json"
+        },
+        {
+          "content_hash": "edf7448da80c5ee78f3ec9e15f73e19594ee01654209b472fcb44a360ed60ada",
+          "exists": true,
+          "path": "./.cairn/changes/retain-selected-check-output/proposal.md"
+        },
+        {
+          "content_hash": "dd57d180cb8aa1a5e1968575f4b1ef1d640f69da8fb25e54ca307e0741b80670",
+          "exists": true,
+          "path": "./.cairn/changes/retain-selected-check-output/specs/agent-harness-runtime/spec.md"
+        },
+        {
+          "content_hash": "99e7ea9d9083785ae8891b1362db7f38e00de3246f6aa28fff0fd686aadcbf66",
+          "exists": true,
+          "path": "./.cairn/changes/retain-selected-check-output/tasks.md"
+        }
+      ],
+      "manifest_hash": "afeb2711b5c1c4bd4eab111312ef00e4203cbe9f15761adbbbb52fa347175fc9"
+    },
+    "kind": "archive",
+    "manifest_hash": "764b8cc69b110ea7a8e85f17e51341d10b0cfd0491771c3493a882a6e8e08501"
+  },
+  "non_claims": [
+    "workflow state proves only the selected policy graph and observed structural artifact facts",
+    "workflow instructions do not prove artifact truth, review quality, or implementation correctness",
+    "workflow state does not satisfy proposal, design, tasks, sync, archive, evidence, or release gates",
+    "workflow commands are read-only and do not create, edit, delete, or approve lifecycle artifacts"
+  ],
+  "plan_hash": "71eda26638ed0383e2c2aeaca4ce79448bebd6cde3f1ca211bbd4b55068ed1af",
+  "policy": "cairn-default",
+  "policy_hash": "302bc1f8bcb27920c37a6bdc21865e2ca1fbb5a38c268570b3fc326734e59942",
+  "profile_identity_hash": "025df23b4ecbc3b066237c321835f6a54bbc983c7340d7027e8bde699a662631",
+  "reasons": [],
+  "receipt_hash": "f737fe04a667582478c241153a0fda2a5c433608472b2f7e53afaa5da3df9282",
+  "review_receipt_hashes": [],
+  "spec_effect": "delta",
+  "workflow_profile": "spec-driven",
+  "workflow_profile_compatibility_fallback": false,
+  "workflow_profile_source": "change_create",
+  "workflow_profile_version": 1
+}

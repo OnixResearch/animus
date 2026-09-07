@@ -8,11 +8,12 @@
 
 `docs/selected-check-capture-evidence.md` records 15 package tests, one compile-fail
 control, strict Clippy, the focused fixture rail, and full clean Octet evidence.
-The broader authoritative-completion gate rejects its existing positive fixture
-with `verification_contract.policy_drift`. The final task remains open until the
-current policy and completion cohorts align and that gate passes. No archive,
-main publication, or downstream runtime admission is authorized by this evidence.
+Policy repair `92914e2` resolves the historical `verification_contract.policy_drift`
+without a dependency change. Merged source `fdb5595` passed 20 package tests,
+one compile-fail control, strict Clippy, the live completion gate, the source-bound
+fixture rail, and full clean Octet. No downstream runtime admission follows from
+this owner-contract qualification.
 
 ## Phase 2: Verification
 
-- [ ] [serial] Record focused tests, Clippy, source-bound rail, lifecycle evidence, and non-claims before sync and archive. r[agent_harness_runtime.check_capture.retention] r[agent_harness_runtime.check_capture.compatibility] r[agent_harness_runtime.check_capture.cancellation]
+- [x] [serial] Record focused tests, Clippy, source-bound rail, lifecycle evidence, and non-claims before sync and archive. r[agent_harness_runtime.check_capture.retention] r[agent_harness_runtime.check_capture.compatibility] r[agent_harness_runtime.check_capture.cancellation]

@@ -4,8 +4,9 @@
 
 The implementation retains actual bounded output in `animus-std-check-exec`.
 It does not complete Neural Stream materialization or admit a trainer.
-The owner change remains active until the broader completion gate passes.
-No accepted spec, archive, production authority, or default runtime changes.
+The broader completion gate now passes after the reviewed policy repair.
+This qualifies the owner capture contract, not downstream runtime admission.
+No production authority or default runtime changes.
 
 Baseline owner source: `d6668e0e8b148f168b33de4d0f206fdd7c891fee`.
 The selected-check implementation matches the earlier `4f08f89` source at baseline.
@@ -49,10 +50,10 @@ Commit `1adf8dd` records the initial prerequisite repair; later checks refine er
 The final full Nix Octet gate passed with zero findings, warnings, and errors.
 `owner-octet-verified.log` records this result after the error-propagation repair.
 
-## Exact remaining blocker
+## Historical completion blocker
 
-`scripts/cairn/check-authoritative-agent-completion --root .` does not pass.
-The current pinned lifecycle CLI rejects the unchanged positive contract:
+Before the policy repair, `scripts/cairn/check-authoritative-agent-completion --root .` failed.
+The current pinned lifecycle CLI rejected the unchanged positive contract:
 
 - Contract/registry/runtime policy: `2c0b44345b9d2e2b3eff5fa7db7a14b9681c6bfcf7a4bb651f13bcadc1f91757`.
 - Current lifecycle policy: `302bc1f8bcb27920c37a6bdc21865e2ca1fbb5a38c268570b3fc326734e59942`.
@@ -64,10 +65,19 @@ The stale-subject response also reports `verification_contract.subject_stale`.
 Exit status and the `authoritative` classification label do not establish a passing completion.
 The capture fixture uses the separately pinned `cairn-core` at `695124d`, not the newer lifecycle CLI at `5e1fe08`.
 
-The next repair must align the intended current policy and completion cohorts.
-It must preserve stale-policy and stale-subject rejection across the registry,
-runtime contract, core adapter, CLI, generated fixtures, and maintained gate.
-Changing only an expected hash, substituting saved success, or ignoring the gate is not a repair.
+## Verified policy repair and final source
+
+Policy repair `92914e2` and archive `6ff13f7` align the reviewed current policy across all consumers.
+[Completion policy evidence](completion-policy-evidence.md) records the cause and five discriminating controls.
+The embedded Cairn core and CLI pins remain unchanged.
+Old-policy and stale-subject rejection remain mandatory.
+
+Merged source `fdb5595d0115c9963ed8a0a8aa9a7190faa08f37` passed all 20 package tests and one compile-fail control.
+Strict all-target/all-feature Clippy, the live completion rail, and the source-bound real-check fixture rail passed.
+The maintained full Nix Octet profile passed with zero findings, warnings, and errors.
+The policy repair also passed the sandboxed Nix completion rail in explicitly saved mode.
+The capture source did not change during that repair.
+These results clear the historical gate blocker. They do not authenticate a native trainer.
 
 ## Retained evidence and non-claims
 

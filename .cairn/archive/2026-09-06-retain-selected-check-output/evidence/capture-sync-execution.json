@@ -1,0 +1,131 @@
+{
+  "acceptance_ids": [],
+  "actions": [
+    {
+      "description": "merge delta spec into main specs: /home/brittonr/git/animus-worktrees/retain-check-output-20260906/.cairn/changes/retain-selected-check-output/specs/agent-harness-runtime/spec.md",
+      "kind": "sync_delta_spec",
+      "path": "/home/brittonr/git/animus-worktrees/retain-check-output-20260906/.cairn/changes/retain-selected-check-output/specs/agent-harness-runtime/spec.md"
+    }
+  ],
+  "blocked": false,
+  "change": "retain-selected-check-output",
+  "cross_repo_dependencies": {
+    "blocked_count": 0,
+    "dependency_count": 0,
+    "input_hash": "da089c8ce440e796590048b06cadac574ae7b81910ba727f45b5ccb6433bcf5d",
+    "non_claims": [
+      "dependency satisfaction proves presented receipt linkage only",
+      "dependency satisfaction does not prove upstream correctness or remote trust",
+      "dependency satisfaction does not prove downstream integration correctness or release eligibility"
+    ],
+    "policy_hash": "302bc1f8bcb27920c37a6bdc21865e2ca1fbb5a38c268570b3fc326734e59942",
+    "receipt_hash": "ddd8b0ca042c1dcdeb7be5c99360796c8a1f1c101ace754a2eae78db9bb164c1",
+    "rows": [],
+    "satisfied_count": 0,
+    "schema": "cairn.cross-repo-dependency-receipt.v1",
+    "valid": true,
+    "verdict": "PASS"
+  },
+  "cross_repo_evidence_issues": [],
+  "delta_specs": [
+    "/home/brittonr/git/animus-worktrees/retain-check-output-20260906/.cairn/changes/retain-selected-check-output/specs/agent-harness-runtime/spec.md"
+  ],
+  "dry_run": false,
+  "input_hash": "9fbe7b9a588a7da036283120160dd706754a8cb9da2464e1b261c07ac95b489f",
+  "layout": "cairn",
+  "merge_preflight": {
+    "documents": [
+      {
+        "accepted_before_exists": true,
+        "accepted_before_hash": "90cfbb135c92d77098e154e2a075d855e7551153669f9213dacaebd64cb5be2e",
+        "blocked": false,
+        "changed": true,
+        "delta_hash": "dd57d180cb8aa1a5e1968575f4b1ef1d640f69da8fb25e54ca307e0741b80670",
+        "destination": ".cairn/specs/agent-harness-runtime/spec.md",
+        "diagnostics": [],
+        "expected_after_hash": "e360cb1a1257c506afa1e8ccce1c87f49301fce9d1078d5b8d77bf8a7864064a",
+        "operations": [
+          {
+            "block_hash": "51bf076011abaa3f0f9423478074ebd9d6672ff8084a1703150387a0ff41bd73",
+            "heading": "### Requirement: Retain actual bounded output",
+            "kind": "added",
+            "requirement_id": "agent_harness_runtime.check_capture.retention"
+          },
+          {
+            "block_hash": "9fc50a184eae94ada1cf18990fe1189161ec7dba7bac64839101352f3b4b08d9",
+            "heading": "### Requirement: Preserve existing admission and safe receipts",
+            "kind": "added",
+            "requirement_id": "agent_harness_runtime.check_capture.compatibility"
+          },
+          {
+            "block_hash": "cb5b4e3aa08c2fa835adc20ff668c70b8485c11c6ef9fc19b0ba4f485a9f1a26",
+            "heading": "### Requirement: Cancellation is explicit and bounded",
+            "kind": "added",
+            "requirement_id": "agent_harness_runtime.check_capture.cancellation"
+          }
+        ],
+        "outcomes": [
+          {
+            "kind": "added",
+            "requirement_id": "agent_harness_runtime.check_capture.retention",
+            "state": "applied"
+          },
+          {
+            "kind": "added",
+            "requirement_id": "agent_harness_runtime.check_capture.compatibility",
+            "state": "applied"
+          },
+          {
+            "kind": "added",
+            "requirement_id": "agent_harness_runtime.check_capture.cancellation",
+            "state": "applied"
+          }
+        ],
+        "source": ".cairn/changes/retain-selected-check-output/specs/agent-harness-runtime/spec.md"
+      }
+    ]
+  },
+  "mutated": true,
+  "mutation_manifest": {
+    "after": {
+      "entries": [
+        {
+          "content_hash": "e360cb1a1257c506afa1e8ccce1c87f49301fce9d1078d5b8d77bf8a7864064a",
+          "exists": true,
+          "path": "./.cairn/specs/agent-harness-runtime/spec.md"
+        }
+      ],
+      "manifest_hash": "06acf1136e5d9bf126bc582c895a3816761d24c1b56de77299098407bd8d07cc"
+    },
+    "before": {
+      "entries": [
+        {
+          "content_hash": "90cfbb135c92d77098e154e2a075d855e7551153669f9213dacaebd64cb5be2e",
+          "exists": true,
+          "path": "./.cairn/specs/agent-harness-runtime/spec.md"
+        }
+      ],
+      "manifest_hash": "5c1456f5788fe7bf8c0a8ebcc55846dd084f7078c1ec20b519ba292443397ae7"
+    },
+    "kind": "sync",
+    "manifest_hash": "00b12c1e8458cd90a7c004c9f31635c944bb19c14a6a4bfc0e5ee60b0a44175a"
+  },
+  "non_claims": [
+    "workflow state proves only the selected policy graph and observed structural artifact facts",
+    "workflow instructions do not prove artifact truth, review quality, or implementation correctness",
+    "workflow state does not satisfy proposal, design, tasks, sync, archive, evidence, or release gates",
+    "workflow commands are read-only and do not create, edit, delete, or approve lifecycle artifacts"
+  ],
+  "plan_hash": "2a6ace52efc693830bfdc286a8fa6e730624b3d3da3fe01a592f5e9c72872f5c",
+  "policy": "cairn-default",
+  "policy_hash": "302bc1f8bcb27920c37a6bdc21865e2ca1fbb5a38c268570b3fc326734e59942",
+  "profile_identity_hash": "025df23b4ecbc3b066237c321835f6a54bbc983c7340d7027e8bde699a662631",
+  "reasons": [],
+  "receipt_hash": "b2ab9f6ec2159528d6eef8e67f1032e4976e16acf487536cabfaf8f6ab1429dd",
+  "review_receipt_hashes": [],
+  "spec_effect": "delta",
+  "workflow_profile": "spec-driven",
+  "workflow_profile_compatibility_fallback": false,
+  "workflow_profile_source": "change_create",
+  "workflow_profile_version": 1
+}

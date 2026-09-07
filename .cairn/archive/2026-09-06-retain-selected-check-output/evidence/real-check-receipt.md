@@ -1,0 +1,11 @@
+schema: animus.real-check-completion-host-smoke-receipt.v1
+rail: real-check-completion-host-smoke
+mode: fixture
+status: pass
+head: fdb5595d0115c9963ed8a0a8aa9a7190faa08f37
+head_dirty: false
+source_blake3: 3d59ede415fccb1e91b5d60edc41fad1c62a50fa665ac06b8e8bffdd44bec64a
+selected_check_ids: nickel-config,cairn-validate
+cairn_binding: pinned-cairn-core
+claims: bounded-fixture-child,pinned-cairn-core,command-drift-rejection,missing-executable-rejection,nonzero-rejection,timeout-rejection,signal-rejection,output-overflow-rejection,stale-cairn-rejection,metadata-only-output
+non_claims: check-oracle-soundness,executable-authenticity,sandboxing,hermeticity,child-correctness,side-effect-safety,live-provider,release-readiness,production-readiness
