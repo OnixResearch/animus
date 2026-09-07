@@ -279,8 +279,13 @@ fn registry_rejects_duplicate_unknown_cycle_unsafe_and_stale_rows() {
 
     let rows = [test_row(), clippy_row(), cairn_row()];
     let mut stale = registry_draft(&rows, FALLBACKS);
-    stale.cairn_policy_hash = HASH_A;
-    assert!(validate_agent_check_registry(&stale).is_err());
+    for rejected_policy in [
+        HASH_A,
+        "2c0b44345b9d2e2b3eff5fa7db7a14b9681c6bfcf7a4bb651f13bcadc1f91757",
+    ] {
+        stale.cairn_policy_hash = rejected_policy;
+        assert!(validate_agent_check_registry(&stale).is_err());
+    }
 }
 
 #[test]

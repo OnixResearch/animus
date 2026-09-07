@@ -6,7 +6,7 @@
     "classification": "authoritative",
     "diagnostics": [],
     "final_subject_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    "input_hash": "acdbb817430984ecce3095272d1a79d3e1c1587e6ebe35d096bdcf9663ac5723",
+    "input_hash": "fe227b7a1edcf06335cb2cff5ac10c3494c0a0f15989eae036c9ac0787500040",
     "non_claims": [
       "completion validation does not prove check-oracle soundness",
       "completion validation does not prove honest command execution beyond supplied evidence",
@@ -19,8 +19,8 @@
       "clippy",
       "tests"
     ],
-    "policy_hash": "2c0b44345b9d2e2b3eff5fa7db7a14b9681c6bfcf7a4bb651f13bcadc1f91757",
-    "receipt_hash": "9fa48494366ad68ea31b23ef704d204a26620a6f70f36848fac1829a2475ef6d",
+    "policy_hash": "302bc1f8bcb27920c37a6bdc21865e2ca1fbb5a38c268570b3fc326734e59942",
+    "receipt_hash": "78fc4f60a136e42f71deff7450ffecfd77d38476e42b12d7120561428ad3f199",
     "registry_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "registry_id": "animus-agent-checks",
     "repository_id": "onixresearch/animus",
@@ -33,13 +33,13 @@
     "valid": true,
     "verdict": "PASS"
   },
-  "completion_receipt_hash": "9fa48494366ad68ea31b23ef704d204a26620a6f70f36848fac1829a2475ef6d",
+  "completion_receipt_hash": "78fc4f60a136e42f71deff7450ffecfd77d38476e42b12d7120561428ad3f199",
   "contract_path": "fixtures/authoritative-completion/cairn-contract.json",
-  "current_policy_hash": "2c0b44345b9d2e2b3eff5fa7db7a14b9681c6bfcf7a4bb651f13bcadc1f91757",
+  "current_policy_hash": "302bc1f8bcb27920c37a6bdc21865e2ca1fbb5a38c268570b3fc326734e59942",
   "current_subject_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
   "input_kind": "path",
   "max_content_bytes": 65536,
-  "receipt_hash": "40d8a9ce5b5e016f5ed8e1ddda2cfeac8f9a9463f1d9045669edf67768ea9bc6",
+  "receipt_hash": "948fc01ab82db73e632acd9880dc6f14ca0ad29d060fbbffecc719322b1ebc1f",
   "results_path": "fixtures/authoritative-completion/cairn-results.json",
   "valid": true,
   "verdict": "PASS"
