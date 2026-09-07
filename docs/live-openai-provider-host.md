@@ -71,6 +71,7 @@ An explicit SSE event name must match that type. Empty or duplicate fields remai
 One unnamed `[DONE]` marker can follow an already validated completed response.
 The marker creates no canonical frame and cannot replace completion evidence.
 Premature markers, repeated markers, and later records fail. Markers consume the existing byte and event bounds.
+Comment-only SSE keep-alive records are ignored. Every record, including a keep-alive, consumes one event and its bytes from the configured bounds, so keep-alives cannot extend a stream.
 
 The parser binds every accepted event to one response and output-item lifecycle. It also checks sequence numbers, tool-call identities, completed arguments, terminal state, and configured bounds.
 

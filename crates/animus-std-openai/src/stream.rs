@@ -477,6 +477,15 @@ impl OpenAiResponsesSseParser {
 
     fn process_event(&mut self, bytes: &[u8]) -> Result<(), OpenAiStreamError> {
         let text = std::str::from_utf8(bytes).map_err(|_error| malformed(MALFORMED_SSE_REASON))?;
+        // r[impl agent_harness_runtime.responses_sse_framing.keepalive]
+        // A record whose every line starts with the comment prefix carries no fields.
+        // The record already consumed one event-count unit, so bounds stay charged.
+        if text
+            .lines()
+            .all(|line| line.trim_end_matches('\r').starts_with(':'))
+        {
+            return Ok(());
+        }
         let (event_name, data) = parse_sse_fields(text)?;
         // r[impl agent_harness_runtime.responses_sse_framing.termination]
         if data == STREAM_DONE {

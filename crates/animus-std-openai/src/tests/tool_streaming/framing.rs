@@ -104,6 +104,42 @@ fn terminal_marker_never_replaces_completion_or_allows_later_data() {
 }
 
 #[test]
+fn keepalive_comment_records_are_ignored_without_masking_violations() {
+    // r[verify agent_harness_runtime.responses_sse_framing.keepalive]
+    // r[verify agent_harness_runtime.responses_sse_framing.keepalive.guards]
+    let baseline = parse(super::FINAL_STREAM).expect("baseline succeeds");
+    let valid = unnamed(super::FINAL_STREAM);
+    let keepalive = ": \n\n";
+    let crlf = ": keep-alive\r\n\r\n";
+    let mut parts = valid.split_inclusive("\n\n");
+    let first = parts.next().expect("first record");
+    let rest = parts.collect::<String>();
+    let leading = format!("{keepalive}{keepalive}{valid}{DONE_RECORD}");
+    let between = format!("{first}: ping\n\n{rest}{DONE_RECORD}");
+    let inside = format!(
+        "{}{rest}{DONE_RECORD}",
+        first.replacen("data:", ": ping\ndata:", 1)
+    );
+    let crlf_variant = format!("{crlf}{valid}{DONE_RECORD}");
+    for candidate in [leading, between, inside, crlf_variant] {
+        let actual = parse(candidate.as_bytes()).expect("keep-alive framing succeeds");
+        assert_eq!(actual.terminal(), baseline.terminal());
+        assert_eq!(actual.frames(), baseline.frames());
+    }
+    let sequence = unnamed(super::FINAL_STREAM).replacen(SEQUENCE_ONE, SEQUENCE_ZERO, 1);
+    assert_ne!(sequence, valid);
+    let masked_sequence = format!("{keepalive}{sequence}{DONE_RECORD}");
+    let premature_marker = format!("{keepalive}{DONE_RECORD}{valid}");
+    let unknown_line = ": ping\njunk\n\n";
+    for invalid in [keepalive, &masked_sequence, &premature_marker, unknown_line] {
+        assert!(
+            parse(invalid.as_bytes()).is_err(),
+            "comments must not admit incomplete or invalid streams"
+        );
+    }
+}
+
+#[test]
 fn optional_headers_preserve_metadata_sequence_and_reasoning_rejections() {
     // r[verify agent_harness_runtime.responses_sse_framing.metadata]
     // r[verify agent_harness_runtime.responses_sse_framing.guards]
