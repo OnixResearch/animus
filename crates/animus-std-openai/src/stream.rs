@@ -10,6 +10,7 @@ const EVENT_SEPARATOR: &[u8] = b"\n\n";
 const CRLF_EVENT_SEPARATOR: &[u8] = b"\r\n\r\n";
 const EVENT_PREFIX: &str = "event:";
 const DATA_PREFIX: &str = "data:";
+const STREAM_DONE: &str = "[DONE]";
 const FIRST_ORDER: u64 = 1;
 const ORDER_INCREMENT: u64 = 1;
 const MAX_STREAM_CHUNKS: usize = 65_536;
@@ -323,6 +324,7 @@ pub struct OpenAiResponsesSseParser {
     response_id: Option<String>,
     lifecycle_started: bool,
     terminal: Option<OpenAiStreamTerminal>,
+    stream_end_seen: bool,
     frames: Vec<animus_adapters::ModelStreamFrame>,
     output_items: BTreeMap<String, OutputItemKind>,
     completed_output_items: BTreeSet<String>,
@@ -357,6 +359,7 @@ impl OpenAiResponsesSseParser {
             response_id: None,
             lifecycle_started: false,
             terminal: None,
+            stream_end_seen: false,
             frames: Vec::new(),
             output_items: BTreeMap::new(),
             completed_output_items: BTreeSet::new(),
@@ -473,14 +476,28 @@ impl OpenAiResponsesSseParser {
     }
 
     fn process_event(&mut self, bytes: &[u8]) -> Result<(), OpenAiStreamError> {
+        let text = std::str::from_utf8(bytes).map_err(|_error| malformed(MALFORMED_SSE_REASON))?;
+        let (event_name, data) = parse_sse_fields(text)?;
+        // r[impl agent_harness_runtime.responses_sse_framing.termination]
+        if data == STREAM_DONE {
+            if event_name.is_some()
+                || self.terminal != Some(OpenAiStreamTerminal::Completed)
+                || self.stream_end_seen
+            {
+                return Err(lifecycle(TERMINAL_REASON));
+            }
+            self.stream_end_seen = true;
+            debug_assert!(self.terminal.is_some());
+            return Ok(());
+        }
         if self.terminal.is_some() {
             return Err(lifecycle(TERMINAL_REASON));
         }
-        let text = std::str::from_utf8(bytes).map_err(|_error| malformed(MALFORMED_SSE_REASON))?;
-        let (event_name, data) = parse_sse_fields(text)?;
         let envelope: EventEnvelope =
             serde_json::from_str(data).map_err(|_error| malformed(MALFORMED_SSE_REASON))?;
-        if event_name != envelope.kind {
+        // r[impl agent_harness_runtime.responses_sse_framing.metadata]
+        // r[impl agent_harness_runtime.responses_sse_framing.guards]
+        if event_name.is_some_and(|name| name != envelope.kind) {
             return Err(malformed(EVENT_NAME_MISMATCH_REASON));
         }
         self.check_sequence(envelope.sequence_number)?;
@@ -952,7 +969,7 @@ pub fn parse_openai_responses_sse_chunks(
     parser.finish()
 }
 
-fn parse_sse_fields(record: &str) -> Result<(&str, &str), OpenAiStreamError> {
+fn parse_sse_fields(record: &str) -> Result<(Option<&str>, &str), OpenAiStreamError> {
     let mut event = None;
     let mut data = None;
     for line in record.lines() {
@@ -970,7 +987,9 @@ fn parse_sse_fields(record: &str) -> Result<(&str, &str), OpenAiStreamError> {
         }
     }
     match (event, data) {
-        (Some(event), Some(data)) if !event.is_empty() && !data.is_empty() => Ok((event, data)),
+        (event, Some(data)) if !event.is_some_and(str::is_empty) && !data.is_empty() => {
+            Ok((event, data))
+        }
         _missing => Err(malformed(MALFORMED_SSE_REASON)),
     }
 }
