@@ -24,7 +24,7 @@
       "dependencies": [
         {
           "path": "config/agent-check-registry.ncl",
-          "identity": "b3:a6669e6e04d804833eb574284979658094f5ba0fd233099f50f848b4d99ecdc7",
+          "identity": "b3:24548f64bc8d3e96074687ca8a89db3e21d22d1e88b16b4774604367573b62ac",
           "bytes": 12435
         }
       ],
@@ -55,5 +55,5 @@
       "non_claim": "Nickel export success proves only exact declared input and output identities under the recorded evaluator descriptor; it does not prove deployability, product-policy conformance, evaluator equivalence, build success, or release eligibility"
     }
   ],
-  "manifest_identity": "b3:a2c24150a21e1b7d038631e7837cfe5fc21c4b2d0cf3de31d7a81909df24fa17"
+  "manifest_identity": "b3:b4a50c9232cb4dd011aee108d253a2eecae63deb17678eae86cdf68a9916fcbb"
 }
