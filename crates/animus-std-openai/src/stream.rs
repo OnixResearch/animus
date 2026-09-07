@@ -487,12 +487,13 @@ impl OpenAiResponsesSseParser {
                 return Err(lifecycle(TERMINAL_REASON));
             }
             self.stream_end_seen = true;
-            debug_assert!(self.terminal.is_some());
+            debug_assert_eq!(self.terminal, Some(OpenAiStreamTerminal::Completed));
             return Ok(());
         }
         if self.terminal.is_some() {
             return Err(lifecycle(TERMINAL_REASON));
         }
+        debug_assert!(!self.stream_end_seen);
         let envelope: EventEnvelope =
             serde_json::from_str(data).map_err(|_error| malformed(MALFORMED_SSE_REASON))?;
         // r[impl agent_harness_runtime.responses_sse_framing.metadata]
@@ -988,6 +989,8 @@ fn parse_sse_fields(record: &str) -> Result<(Option<&str>, &str), OpenAiStreamEr
     }
     match (event, data) {
         (event, Some(data)) if !event.is_some_and(str::is_empty) && !data.is_empty() => {
+            debug_assert!(!data.is_empty());
+            debug_assert!(event.is_none_or(|name| !name.is_empty()));
             Ok((event, data))
         }
         _missing => Err(malformed(MALFORMED_SSE_REASON)),
