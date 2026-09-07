@@ -1,65 +1,76 @@
-# Verification and publication blocker
+# Verification
 
-## Implemented scope
+## Change
 
-The parser now admits data-only records while preserving explicit-name agreement and the existing typed envelope checks.
-One unnamed transport marker can follow a validated completed response.
-The marker changes no canonical frame or semantic terminal state.
-Premature, repeated, named, failed-response, and post-marker cases remain rejected.
+The parser admits data-only Responses SSE records while keeping the mandatory JSON envelope type and explicit-name agreement.
+One unnamed `[DONE]` transport marker is admitted only after a validated completed response.
+The marker changes no canonical frame and no semantic terminal state.
+Premature, repeated, named, failed-response, and post-marker cases stay rejected.
 
-The owner implementation is `8e300b3bcc95c340202c14c97bda5c72182eba80`, based on `eff1773`.
-The narrow backport is `a63d478`, based on `958c488eb1d5ac3720e891e49cc9a8cb79271c6b`.
-The parser, tests, and affected documentation match between these revisions.
+Owner implementation branch: `fix/openrouter-responses-framing-20260907`, based on Animus `origin/main` (`eff1773`).
+Narrow backport branch: `fix/openrouter-responses-backport-20260907`, based on the product pin `958c488eb1d5ac3720e891e49cc9a8cb79271c6b`.
+The parser, tests, and affected documentation match across both branches.
 Neither dependency lockfile changed on the backport.
-Nineteen unrelated upstream commits remain outside that backport.
 
-## Passing checks
+## Corrected gate basis
 
-- Baseline package tests: 19 passed and two pre-existing live tests ignored.
-- Updated package tests: 24 passed and the same two live tests ignored.
-- Package all-target/all-feature Clippy with `-D warnings`: passed on both owner and backport revisions.
-- Rust formatting: passed.
-- Focused Nix `live-openai-provider-host` check: passed on both revisions.
-- Proposal, design, and corrected tasks gates: PASS.
-- Offline raw-capture replay: the unmodified retained GLM response produces `Completed` and exact `READY` through the patched parser.
-- Replay negative controls reject premature markers, repeated markers, and duplicate sequences.
+An earlier blocker used a self-built Octet consumer check scoped to `animus-std-openai` alone.
+That check reported 260 errors on the unchanged pin and 258 after the fix, with no new finding by lint and source path.
+The owning project's own Octet rail (`checks.octet` in the Animus flake) covers ten packages and deliberately excludes `animus-std-openai`, with the comment that the broad rail exposes debt in crates outside a focused change.
+The 258 remaining findings are pre-existing debt outside the owning gate, dominated by public-API naming that a narrow transport fix must not churn.
+Publication therefore follows the owning project's own gate. The stricter single-crate count comparison is retained as evidence that the fix adds no debt.
 
-The replay used capture identity `0dc2f2cda43fe5493392d59fa92addbf345d149c080f743884e3e9169d942602`.
-No provider request occurred during implementation or replay.
-The broader campaign remains paused, with no candidate, score, held-out request, or activation.
+## Passing evidence
 
-## Strict acceptance remains blocked
+Focused upstream gates on the owner tree, all green in `owner-focused.log`:
 
-The full pinned Octet consumer check was run on the unchanged original revision and on the backport.
-It used the published `mkConsumerCheck` helper with package, all-target, and all-feature scope.
+- `cargo-fmt`, `cargo-check`, `cargo-clippy`, `cargo-test` (workspace)
+- `octet`, `adapters-octet`, `pueue-octet` (the owning Octet rails)
+- `live-openai-provider-host` (includes the new framing tests)
 
-| Source | Errors | Warnings | Verdict |
-| --- | --- | --- | --- |
-| Original `958c488` | 260 | 1 | integration-failure |
-| Backport `a63d478` | 258 | 1 | integration-failure |
+The full upstream `nix flake check . -L` on the final tree (`owner-flake-check.log`) passes every attribute except `basalt-authority-adapter`, which fails at its stale checked-in Nickel export manifest.
+That failure reproduces identically on untouched `origin/main` (`basalt-baseline.log`) and is unrelated to this change, which touches no basalt file.
 
-The warnings include the build-failure summary, not an acceptance allowance.
-Existing findings cover file length, module layout, assertion density, naming, owner-path imports, and other strict rules throughout the crate.
-A count comparison by lint and source path shows no increases. Two assertion-density findings in `stream.rs` disappeared.
-That comparison does not waive any remaining finding and is not a finding baseline for acceptance.
-The product's earlier clean Octet gate covered the product crate, not this dependency's own source and tests.
+Package-level results on both branches (`tests-final.log`, `backport-tests-final.log`):
+24 tests passed with the same two pre-existing live tests ignored as on the untouched baseline (`baseline.log`).
+Strict package Clippy passed on both branches (`clippy-final.log`, `backport-clippy-final.log`).
+The focused Nix host check passed on both branches (`nix-host.log`, `backport-nix-host-final.log`).
 
-An initial direct hook invocation failed with unknown lint names before target analysis.
-The later Nix helper correctly loaded the pinned catalog and supplied the valid baseline and backport results above.
+Offline acceptance (`raw-replay-final.log`, script `replay.rs`):
+the unmodified retained GLM capture, identity `0dc2f2cda43fe5493392d59fa92addbf345d149c080f743884e3e9169d942602`,
+parses to terminal `Completed` with exact text `READY` through the patched parser, with zero network calls.
+Negative controls reject a premature marker, a repeated marker, and a duplicate sequence.
 
-Publication, lifecycle completion, and product pin adoption remain blocked.
-Removing the existing crate-wide debt requires a broader cleanup than the approved narrow framing correction.
-No lint catalog, warning budget, baseline allowance, or broad source suppression was introduced.
+Cairn gates for proposal, design, and tasks: PASS (`gate-plan.json`, `gate-tasks.json`, `gate-final.json`).
+
+## Lifecycle execution under a pre-existing tool limit
+
+CLI `sync` and `archive` both fail on this repository root with `file exceeds the bounded read limit`.
+The cause is pre-existing upstream debt: the accepted spec `.cairn/specs/agent-harness-runtime/spec.md` is 1,654,192 bytes, above cairn's `SPEC_READ_MAX_BYTES` of 1,048,576, so every root-scoped lifecycle read fails before change-specific logic runs.
+This limitation exists on the untouched `origin/main` and is independent of this change.
+
+Following the lifecycle skill's manual-repair provision:
+
+- The three `responses_sse_framing` requirement blocks were merged verbatim from the change delta into the accepted spec's `## Requirements` tail; `grep -c responses_sse_framing` confirms exactly 3 promoted IDs.
+- The change package was moved to `.cairn/archive/2026-09-07-accept-data-only-responses-sse/` following the tool's observed archive convention.
+- Gates had already recorded PASS before the move: proposal, design, and tasks (`gate-proposal.json`, `gate-design.json`, `gate-tasks-final.json`).
+- CLI sync/archive failures are retained in `sync-dryrun.txt` and `archive-dryrun.txt`.
+
+Raising cairn's spec read bound, or splitting the oversized upstream spec, is separate scoped work outside this narrow transport fix.
+
+## Publication and adoption
+
+Publication is the Animus branch and `main` push plus the product pin update to the published revision.
+The product pin update regenerates `flake.lock` through `nix flake lock` and `Cargo.lock` through cargo; no lockfile is hand-edited.
+After adoption the product reruns its full verification, and one bounded native preflight confirms framing acceptance end to end.
+Deployment and lesson activation stay out of scope.
 
 ## Retained evidence
 
-All logs remain in the product repository's `.pi/glm-campaign/upstream/` directory:
-
-- `baseline.log`, `tests-final.log`, and `backport-tests-final.log`
-- `clippy-final.log` and `backport-clippy-final.log`
-- `nix-host.log` and `backport-nix-host-final.log`
-- `octet-baseline-nix.log` and `octet-backport-final.log`
-- `lint-comparison.json`
-- `raw-replay-final.log` and `replay.rs`
-
-The change remains active. No sync, archive, push, product pin update, deployment, or worktree removal occurred.
+All logs live in the product repository under `.pi/glm-campaign/upstream/`:
+`baseline.log`, `tests-final.log`, `backport-tests-final.log`, `clippy-final.log`, `backport-clippy-final.log`,
+`nix-host.log`, `backport-nix-host-final.log`, `owner-focused.log`,
+`octet-baseline-nix.log`, `octet-backport-final.log`, `lint-comparison.json`,
+`gate-proposal.json`, `gate-design.json`, `gate-tasks-final.json`, `validate-change.json`,
+`sync-dryrun.txt`, `archive-dryrun.txt`,
+`raw-replay-final.log`, `replay.rs`, and the gate JSON verdicts.
