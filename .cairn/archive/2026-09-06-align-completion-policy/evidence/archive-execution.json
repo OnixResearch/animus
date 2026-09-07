@@ -1,0 +1,141 @@
+{
+  "acceptance_ids": [],
+  "actions": [
+    {
+      "description": "move active change to archive: align-completion-policy",
+      "kind": "archive_change",
+      "path": "/home/brittonr/git/animus-worktrees/align-completion-policy-20260906/.cairn/archive/2026-09-06-align-completion-policy"
+    }
+  ],
+  "blocked": false,
+  "change": "align-completion-policy",
+  "cross_repo_dependencies": {
+    "blocked_count": 0,
+    "dependency_count": 0,
+    "input_hash": "da089c8ce440e796590048b06cadac574ae7b81910ba727f45b5ccb6433bcf5d",
+    "non_claims": [
+      "dependency satisfaction proves presented receipt linkage only",
+      "dependency satisfaction does not prove upstream correctness or remote trust",
+      "dependency satisfaction does not prove downstream integration correctness or release eligibility"
+    ],
+    "policy_hash": "302bc1f8bcb27920c37a6bdc21865e2ca1fbb5a38c268570b3fc326734e59942",
+    "receipt_hash": "ddd8b0ca042c1dcdeb7be5c99360796c8a1f1c101ace754a2eae78db9bb164c1",
+    "rows": [],
+    "satisfied_count": 0,
+    "schema": "cairn.cross-repo-dependency-receipt.v1",
+    "valid": true,
+    "verdict": "PASS"
+  },
+  "cross_repo_evidence_issues": [],
+  "dry_run": false,
+  "input_hash": "030985c1413e1d218c9b57bcaefa29448e30c61a8a18ab1ca6dd6c06d2d828cd",
+  "layout": "cairn",
+  "mutated": true,
+  "mutation_manifest": {
+    "after": {
+      "entries": [
+        {
+          "content_hash": "1b808e0be5f397aca336119f8c2317b24ab69b6f1cfa9922134b98189dc2f4c1",
+          "exists": true,
+          "path": "./.cairn/archive/2026-09-06-align-completion-policy/design.md"
+        },
+        {
+          "content_hash": "d75744840a225825f9f5dbf0cf7444c0b7ce2a2385674d907e6085e10454aa71",
+          "exists": true,
+          "path": "./.cairn/archive/2026-09-06-align-completion-policy/evidence/live-receipt.md"
+        },
+        {
+          "content_hash": "db2ad8deccfe755777e90be9a7e634b8d78e0f9e957fa85af8eb3a0d4e659f92",
+          "exists": true,
+          "path": "./.cairn/archive/2026-09-06-align-completion-policy/evidence/real-check-receipt.md"
+        },
+        {
+          "content_hash": "df8b71bae570eb5accd702e7370a816b8ea9f2e4521254c5d75ea82a9cfcf4db",
+          "exists": true,
+          "path": "./.cairn/archive/2026-09-06-align-completion-policy/metadata.json"
+        },
+        {
+          "content_hash": "ffbbf47bce613a6bb99a1e1ab84fab0d79078dcb77e700db58e4070b6e95cc8d",
+          "exists": true,
+          "path": "./.cairn/archive/2026-09-06-align-completion-policy/proposal.md"
+        },
+        {
+          "content_hash": "f45104baa2451179fe312c3c67adcf4dc593e5b3708e19c7cb21289fc1fed313",
+          "exists": true,
+          "path": "./.cairn/archive/2026-09-06-align-completion-policy/specs/agent-harness-runtime/spec.md"
+        },
+        {
+          "content_hash": "a18d6a9245c00ac0c97daa564fa42441fddd8dca008b5a0d6afb8ed2baad2607",
+          "exists": true,
+          "path": "./.cairn/archive/2026-09-06-align-completion-policy/tasks.md"
+        },
+        {
+          "content_hash": null,
+          "exists": false,
+          "path": "./.cairn/changes/align-completion-policy"
+        }
+      ],
+      "manifest_hash": "a1355cb22d43ec1f6f36365309cf8ccac7915246f1094ba9898ff89d44edbde4"
+    },
+    "before": {
+      "entries": [
+        {
+          "content_hash": "1b808e0be5f397aca336119f8c2317b24ab69b6f1cfa9922134b98189dc2f4c1",
+          "exists": true,
+          "path": "./.cairn/changes/align-completion-policy/design.md"
+        },
+        {
+          "content_hash": "d75744840a225825f9f5dbf0cf7444c0b7ce2a2385674d907e6085e10454aa71",
+          "exists": true,
+          "path": "./.cairn/changes/align-completion-policy/evidence/live-receipt.md"
+        },
+        {
+          "content_hash": "db2ad8deccfe755777e90be9a7e634b8d78e0f9e957fa85af8eb3a0d4e659f92",
+          "exists": true,
+          "path": "./.cairn/changes/align-completion-policy/evidence/real-check-receipt.md"
+        },
+        {
+          "content_hash": "df8b71bae570eb5accd702e7370a816b8ea9f2e4521254c5d75ea82a9cfcf4db",
+          "exists": true,
+          "path": "./.cairn/changes/align-completion-policy/metadata.json"
+        },
+        {
+          "content_hash": "ffbbf47bce613a6bb99a1e1ab84fab0d79078dcb77e700db58e4070b6e95cc8d",
+          "exists": true,
+          "path": "./.cairn/changes/align-completion-policy/proposal.md"
+        },
+        {
+          "content_hash": "f45104baa2451179fe312c3c67adcf4dc593e5b3708e19c7cb21289fc1fed313",
+          "exists": true,
+          "path": "./.cairn/changes/align-completion-policy/specs/agent-harness-runtime/spec.md"
+        },
+        {
+          "content_hash": "a18d6a9245c00ac0c97daa564fa42441fddd8dca008b5a0d6afb8ed2baad2607",
+          "exists": true,
+          "path": "./.cairn/changes/align-completion-policy/tasks.md"
+        }
+      ],
+      "manifest_hash": "103c09e534a24c6eef06dcc315d2ed6029c871a4b553c574f7d46aeb20433b70"
+    },
+    "kind": "archive",
+    "manifest_hash": "5393280661fb19b9a6751977c4f85bb739fec3aa918cfd12e1211c9a4a456c52"
+  },
+  "non_claims": [
+    "workflow state proves only the selected policy graph and observed structural artifact facts",
+    "workflow instructions do not prove artifact truth, review quality, or implementation correctness",
+    "workflow state does not satisfy proposal, design, tasks, sync, archive, evidence, or release gates",
+    "workflow commands are read-only and do not create, edit, delete, or approve lifecycle artifacts"
+  ],
+  "plan_hash": "5e49fb5553565cb90687a34ded52050bef0c322bd7ebf8c01bef2aeb823ac4f6",
+  "policy": "cairn-default",
+  "policy_hash": "302bc1f8bcb27920c37a6bdc21865e2ca1fbb5a38c268570b3fc326734e59942",
+  "profile_identity_hash": "3c7d6f7d11cca998bfb6d5bfdd3799f832c29094b029663c3f3a50410ad6d917",
+  "reasons": [],
+  "receipt_hash": "c907421db071d488daf719bd8e8082b8b8904dc1cb0f544470df7299b2ab0bd5",
+  "review_receipt_hashes": [],
+  "spec_effect": "delta",
+  "workflow_profile": "spec-driven",
+  "workflow_profile_compatibility_fallback": false,
+  "workflow_profile_source": "change_create",
+  "workflow_profile_version": 1
+}

@@ -67,6 +67,8 @@ nix develop --option builders '' --option secret-key-files '' -c \
   scripts/cairn/check-authoritative-agent-completion --root .
 ```
 
+[Completion policy evidence](completion-policy-evidence.md) records the current policy repair, negative controls, and exact source scope.
+
 ## Workspace consumer handoff
 
 r[impl agent_harness_runtime.authoritative_completion.workspace_supervisor]

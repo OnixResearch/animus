@@ -1,0 +1,120 @@
+{
+  "acceptance_ids": [],
+  "actions": [
+    {
+      "description": "merge delta spec into main specs: /home/brittonr/git/animus-worktrees/align-completion-policy-20260906/.cairn/changes/align-completion-policy/specs/agent-harness-runtime/spec.md",
+      "kind": "sync_delta_spec",
+      "path": "/home/brittonr/git/animus-worktrees/align-completion-policy-20260906/.cairn/changes/align-completion-policy/specs/agent-harness-runtime/spec.md"
+    }
+  ],
+  "blocked": false,
+  "change": "align-completion-policy",
+  "cross_repo_dependencies": {
+    "blocked_count": 0,
+    "dependency_count": 0,
+    "input_hash": "da089c8ce440e796590048b06cadac574ae7b81910ba727f45b5ccb6433bcf5d",
+    "non_claims": [
+      "dependency satisfaction proves presented receipt linkage only",
+      "dependency satisfaction does not prove upstream correctness or remote trust",
+      "dependency satisfaction does not prove downstream integration correctness or release eligibility"
+    ],
+    "policy_hash": "302bc1f8bcb27920c37a6bdc21865e2ca1fbb5a38c268570b3fc326734e59942",
+    "receipt_hash": "ddd8b0ca042c1dcdeb7be5c99360796c8a1f1c101ace754a2eae78db9bb164c1",
+    "rows": [],
+    "satisfied_count": 0,
+    "schema": "cairn.cross-repo-dependency-receipt.v1",
+    "valid": true,
+    "verdict": "PASS"
+  },
+  "cross_repo_evidence_issues": [],
+  "delta_specs": [
+    "/home/brittonr/git/animus-worktrees/align-completion-policy-20260906/.cairn/changes/align-completion-policy/specs/agent-harness-runtime/spec.md"
+  ],
+  "dry_run": false,
+  "input_hash": "a7b509535c6567569764277a05ce2bc59aeeff14b7d31882c083e94dfda2e2f2",
+  "layout": "cairn",
+  "merge_preflight": {
+    "documents": [
+      {
+        "accepted_before_exists": true,
+        "accepted_before_hash": "231e39837d06ad4de285eae1271af1a44d3e27706661e20c9d491e71bb140fa6",
+        "blocked": false,
+        "changed": true,
+        "delta_hash": "f45104baa2451179fe312c3c67adcf4dc593e5b3708e19c7cb21289fc1fed313",
+        "destination": ".cairn/specs/agent-harness-runtime/spec.md",
+        "diagnostics": [],
+        "expected_after_hash": "90cfbb135c92d77098e154e2a075d855e7551153669f9213dacaebd64cb5be2e",
+        "operations": [
+          {
+            "block_hash": "807189e6bd68d7f1a5a5491145b15021b20c8e5ee81b7d7ad4d7623b7110285a",
+            "heading": "### Requirement: Current completion policy coherence",
+            "kind": "added",
+            "requirement_id": "agent_harness_runtime.completion_policy.coherence"
+          },
+          {
+            "block_hash": "f96e26bfff677d86a167528e5571de4264cc71b887baafe63bdd27be1e9a3cf4",
+            "heading": "### Requirement: Core and CLI completion parity",
+            "kind": "added",
+            "requirement_id": "agent_harness_runtime.completion_policy.parity"
+          }
+        ],
+        "outcomes": [
+          {
+            "kind": "added",
+            "requirement_id": "agent_harness_runtime.completion_policy.coherence",
+            "state": "applied"
+          },
+          {
+            "kind": "added",
+            "requirement_id": "agent_harness_runtime.completion_policy.parity",
+            "state": "applied"
+          }
+        ],
+        "source": ".cairn/changes/align-completion-policy/specs/agent-harness-runtime/spec.md"
+      }
+    ]
+  },
+  "mutated": true,
+  "mutation_manifest": {
+    "after": {
+      "entries": [
+        {
+          "content_hash": "90cfbb135c92d77098e154e2a075d855e7551153669f9213dacaebd64cb5be2e",
+          "exists": true,
+          "path": "./.cairn/specs/agent-harness-runtime/spec.md"
+        }
+      ],
+      "manifest_hash": "5c1456f5788fe7bf8c0a8ebcc55846dd084f7078c1ec20b519ba292443397ae7"
+    },
+    "before": {
+      "entries": [
+        {
+          "content_hash": "231e39837d06ad4de285eae1271af1a44d3e27706661e20c9d491e71bb140fa6",
+          "exists": true,
+          "path": "./.cairn/specs/agent-harness-runtime/spec.md"
+        }
+      ],
+      "manifest_hash": "48839a7c1db5b31db8e251bde8b339581d1edd048ea00bcd0cad145bd7f17cdc"
+    },
+    "kind": "sync",
+    "manifest_hash": "e4bfac8085e84d7b0f368dd6e725d36db5a114b076a5f1aa105f43c11ac8e035"
+  },
+  "non_claims": [
+    "workflow state proves only the selected policy graph and observed structural artifact facts",
+    "workflow instructions do not prove artifact truth, review quality, or implementation correctness",
+    "workflow state does not satisfy proposal, design, tasks, sync, archive, evidence, or release gates",
+    "workflow commands are read-only and do not create, edit, delete, or approve lifecycle artifacts"
+  ],
+  "plan_hash": "b1b30db674436bcd65231e9313b4f7ad5aa9cd87aeac44e4747fb2b26209db70",
+  "policy": "cairn-default",
+  "policy_hash": "302bc1f8bcb27920c37a6bdc21865e2ca1fbb5a38c268570b3fc326734e59942",
+  "profile_identity_hash": "3c7d6f7d11cca998bfb6d5bfdd3799f832c29094b029663c3f3a50410ad6d917",
+  "reasons": [],
+  "receipt_hash": "ad20519d07110d9b9a0c8bb640758aef258bac31215467bb338aa9bdd0870316",
+  "review_receipt_hashes": [],
+  "spec_effect": "delta",
+  "workflow_profile": "spec-driven",
+  "workflow_profile_compatibility_fallback": false,
+  "workflow_profile_source": "change_create",
+  "workflow_profile_version": 1
+}
