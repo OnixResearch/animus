@@ -34,7 +34,7 @@
       }
     ],
     "final_subject_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
-    "input_hash": "19a5085eb76a1d5788fe41e3ba6362db66cb60a14cfe269647738ae85a7e17c6",
+    "input_hash": "60cd2d3cf5ef2549aef11a8d1c1ab1f11ab4405d06218d393bb727f921f087ff",
     "non_claims": [
       "completion validation does not prove check-oracle soundness",
       "completion validation does not prove honest command execution beyond supplied evidence",
@@ -47,8 +47,8 @@
       "clippy",
       "tests"
     ],
-    "policy_hash": "2c0b44345b9d2e2b3eff5fa7db7a14b9681c6bfcf7a4bb651f13bcadc1f91757",
-    "receipt_hash": "b3c03513c6f2032aa4a601aa0ca12f740b5cfb59467d38b0360677cddf81984e",
+    "policy_hash": "302bc1f8bcb27920c37a6bdc21865e2ca1fbb5a38c268570b3fc326734e59942",
+    "receipt_hash": "1536e2093ffc4d6feaa277f5b284bcbf2dcf3452c2eebc84da25af066727f4cd",
     "registry_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "registry_id": "animus-agent-checks",
     "repository_id": "onixresearch/animus",
@@ -61,13 +61,13 @@
     "valid": false,
     "verdict": "FAIL"
   },
-  "completion_receipt_hash": "b3c03513c6f2032aa4a601aa0ca12f740b5cfb59467d38b0360677cddf81984e",
+  "completion_receipt_hash": "1536e2093ffc4d6feaa277f5b284bcbf2dcf3452c2eebc84da25af066727f4cd",
   "contract_path": "fixtures/authoritative-completion/cairn-contract.json",
-  "current_policy_hash": "2c0b44345b9d2e2b3eff5fa7db7a14b9681c6bfcf7a4bb651f13bcadc1f91757",
+  "current_policy_hash": "302bc1f8bcb27920c37a6bdc21865e2ca1fbb5a38c268570b3fc326734e59942",
   "current_subject_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
   "input_kind": "path",
   "max_content_bytes": 65536,
-  "receipt_hash": "a5a9e13fa66e8c76d75fee0d4e818a6ae05dca3baf14454507e275c7fa36da7d",
+  "receipt_hash": "2c789f29064d31018708c40103ab509c3923869bd03d2c4a0534484b3da0350b",
   "results_path": "fixtures/authoritative-completion/cairn-results.json",
   "valid": false,
   "verdict": "FAIL"

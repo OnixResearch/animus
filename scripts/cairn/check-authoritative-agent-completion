@@ -11,6 +11,14 @@ readonly CONTRACT_FIXTURE=fixtures/authoritative-completion/cairn-contract.json
 readonly RESULTS_FIXTURE=fixtures/authoritative-completion/cairn-results.json
 readonly SAVED_POSITIVE_RECEIPT=fixtures/authoritative-completion/cairn-positive-receipt.json
 readonly SAVED_NEGATIVE_RECEIPT=fixtures/authoritative-completion/cairn-stale-subject-receipt.json
+readonly SAVED_POLICY_RECEIPT=fixtures/authoritative-completion/cairn-stale-policy-receipt.json
+readonly OLD_CONTRACT=fixtures/authoritative-completion/previous-policy/cairn-contract.json
+readonly OLD_RESULTS=fixtures/authoritative-completion/previous-policy/cairn-results.json
+readonly COMPLETION_MODE=${CAIRN_COMPLETION_MODE:-live}
+case "${COMPLETION_MODE}" in
+  live|saved) ;;
+  *) printf '%s\n' 'error: completion mode must be live or saved' >&2; exit "${FAILURE}" ;;
+esac
 readonly CURRENT_SUBJECT=cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 readonly STALE_SUBJECT=dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
 readonly RECEIPT_DIR=target/cairn/focused-rails
@@ -59,37 +67,42 @@ cargo test -p animus-runtime --locked empty_queue_waits_when_authoritative_compl
 run_cairn_completion() {
   subject=$1
   output=$2
-  if [ "${CAIRN_COMPLETION_MODE:-live}" = "saved" ]; then
-    if [ "${subject}" = "${CURRENT_SUBJECT}" ]; then
-      cp "${SAVED_POSITIVE_RECEIPT}" "${output}"
-    else
-      cp "${SAVED_NEGATIVE_RECEIPT}" "${output}"
-    fi
+  contract=${CONTRACT_FIXTURE}
+  results=${RESULTS_FIXTURE}
+  saved=${SAVED_POSITIVE_RECEIPT}
+  if [ "${subject}" = "${STALE_SUBJECT}" ]; then
+    saved=${SAVED_NEGATIVE_RECEIPT}
+  fi
+  if [ "${3:-current}" = "old-policy" ]; then
+    contract=${OLD_CONTRACT}
+    results=${OLD_RESULTS}
+    saved=${SAVED_POLICY_RECEIPT}
+  fi
+  if [ "${COMPLETION_MODE}" = "saved" ]; then
+    cp "${saved}" "${output}"
   elif [ -n "${CAIRN_COMPLETION_BIN:-}" ]; then
     "${CAIRN_COMPLETION_BIN}" agent-receipt complete \
-      --contract "${CONTRACT_FIXTURE}" \
-      --results "${RESULTS_FIXTURE}" \
+      --root "${repo_root}" --policy "${repo_root}/cairn-policy/generated/cairn-policy.json" \
+      --contract "${contract}" --results "${results}" \
       --subject-hash "${subject}" > "${output}"
   else
     nix run --option builders '' --option secret-key-files '' .#cairn -- \
       agent-receipt complete \
-      --contract "${CONTRACT_FIXTURE}" \
-      --results "${RESULTS_FIXTURE}" \
+      --root "${repo_root}" --policy "${repo_root}/cairn-policy/generated/cairn-policy.json" \
+      --contract "${contract}" --results "${results}" \
       --subject-hash "${subject}" > "${output}"
   fi
 }
 
-run_cairn_completion "${CURRENT_SUBJECT}" "${tmp_dir}/cairn-positive.json"
-grep -F '"valid": true' "${tmp_dir}/cairn-positive.json" >/dev/null
-grep -F '"verdict": "PASS"' "${tmp_dir}/cairn-positive.json" >/dev/null
-grep -F '"checks_executed": false' "${tmp_dir}/cairn-positive.json" >/dev/null
-run_cairn_completion "${STALE_SUBJECT}" "${tmp_dir}/cairn-negative.json"
-grep -F 'verification_contract.subject_stale' "${tmp_dir}/cairn-negative.json" >/dev/null
-grep -F '"valid": false' "${tmp_dir}/cairn-negative.json" >/dev/null
+run_cairn_completion "${CURRENT_SUBJECT}" "${tmp_dir}/cairn-positive-receipt.json"
+run_cairn_completion "${STALE_SUBJECT}" "${tmp_dir}/cairn-stale-subject-receipt.json"
+run_cairn_completion "${CURRENT_SUBJECT}" "${tmp_dir}/cairn-stale-policy-receipt.json" old-policy
+ANIMUS_COMPLETION_RECEIPT_DIR="${tmp_dir}" cargo test -p animus-std-check-exec \
+  --locked --test policy-cohort --no-fail-fast
 
 registry_blake3=$(b3sum "${REGISTRY_EXPORT}" | cut -d ' ' -f 1)
 steel_blake3=$(b3sum policy/steel-runtime/scripts/ralph-loop.scm | cut -d ' ' -f 1)
-cairn_receipt_hash=$(grep -F '"completion_receipt_hash"' "${tmp_dir}/cairn-positive.json" | head -n 1 | cut -d '"' -f 4)
+cairn_receipt_hash=$(grep -F '"completion_receipt_hash"' "${tmp_dir}/cairn-positive-receipt.json" | head -n 1 | cut -d '"' -f 4)
 mkdir -p "${RECEIPT_DIR}"
 cat > "${RECEIPT_PATH}" <<EOF
 schema: ${RECEIPT_SCHEMA}
@@ -107,6 +120,9 @@ incidental_complete_substrings: rejected
 continuation_empty_queue: awaits-authoritative-evidence
 cairn_schema: cairn.agent-completion.v2
 cairn_checks_executed: false
+cairn_response_mode: ${COMPLETION_MODE}
+cairn_complete_report_parity: pass
+cairn_stale_policy_fixture: rejected
 cairn_positive_receipt_hash: ${cairn_receipt_hash}
 cairn_stale_subject_fixture: rejected
 authoritative_completion: bounded-selected-scope-only

@@ -33,7 +33,7 @@ pub const AGENT_CHECK_REGISTRY_SCHEMA: &str = "animus.agent-check-registry.v1";
 pub const CAIRN_COMPLETION_SCHEMA: &str = "cairn.agent-completion.v2";
 /// Cairn generated-policy identity pinned by the current Animus registry.
 pub const PINNED_CAIRN_POLICY_HASH: &str =
-    "2c0b44345b9d2e2b3eff5fa7db7a14b9681c6bfcf7a4bb651f13bcadc1f91757";
+    "302bc1f8bcb27920c37a6bdc21865e2ca1fbb5a38c268570b3fc326734e59942";
 /// Product behaviors that this reusable core is forbidden to perform.
 pub const PROHIBITED_AUTHORITATIVE_COMPLETION_EFFECTS: &[&str] = &[
     "filesystem read",

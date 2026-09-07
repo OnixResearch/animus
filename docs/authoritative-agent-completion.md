@@ -4,7 +4,12 @@ Animus treats completion text, queue emptiness, process exit, task counts, and a
 
 ## Pinned authority
 
-The repository pins Cairn revision `695124d459574ba7aeba6097310d237f393c243c`, schema `cairn.agent-completion.v2`, and generated-policy identity `2c0b44345b9d2e2b3eff5fa7db7a14b9681c6bfcf7a4bb651f13bcadc1f91757`. Animus validates these values but does not redefine Cairn's pass-only contract.
+The embedded completion core pins Cairn `695124d459574ba7aeba6097310d237f393c243c`.
+The lifecycle CLI pins `5e1fe08d62149b286ff583eb056e655fe92e3cf1`.
+Both use schema `cairn.agent-completion.v2` and the reviewed repository policy identity
+`302bc1f8bcb27920c37a6bdc21865e2ca1fbb5a38c268570b3fc326734e59942`.
+The selected completion algorithm and canonical identity implementation are unchanged across these revisions.
+The complete-report parity rail checks their compatibility. Animus does not redefine Cairn's pass-only contract.
 
 `config/agent-check-registry.ncl` owns the bounded check registry. `config/generated/agent-check-registry.json` is the checked runtime input. The generated registry records exact argv vectors, working roots, prerequisites, trigger classes, costs, timeouts, evidence classes, and conservative fallback checks. Runtime code never interprets shell strings or discovers commands from the environment.
 
@@ -44,7 +49,16 @@ nix run --option builders '' --option secret-key-files '' .#cairn -- \
   --subject-hash cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 ```
 
-The checked positive receipt has completion identity `9fa48494366ad68ea31b23ef704d204a26620a6f70f36848fac1829a2475ef6d`. The stale-subject fixture fails with `verification_contract.subject_stale`. Both are bounded conformance fixtures; production hosts must construct evidence for the current real subject and may not replay these synthetic hashes.
+The checked positive receipt has completion identity `78fc4f60a136e42f71deff7450ffecfd77d38476e42b12d7120561428ad3f199`.
+The stale-subject fixture fails with `verification_contract.subject_stale`.
+The retained `previous-policy/` inputs fail with `verification_contract.policy_drift`.
+All inputs are synthetic conformance fixtures. Production hosts must construct evidence for the current real subject.
+
+`tests/policy-cohort.rs` in `animus-std-check-exec` compares complete core reports with CLI responses.
+It also checks the actual repository policy identity and rejects altered receipt fields.
+The integrated rail supplies fresh responses. Ordinary Cargo tests use checked fixture responses.
+`CAIRN_COMPLETION_MODE=saved` is explicit fixture replay, not fresh CLI validation.
+The rail receipt records that mode and never claims that Cairn ran the selected checks.
 
 Run the integrated rail with:
 
