@@ -164,7 +164,7 @@ fn marker_consumes_event_and_byte_bounds() {
 }
 
 #[test]
-fn unnamed_tool_calls_retain_their_bound_arguments() {
+fn unnamed_calls_retain_their_bound_arguments() {
     // r[verify agent_harness_runtime.responses_sse_framing.guards]
     let named = parse(super::TOOL_STREAM).expect("named tools parse");
     let data = format!("{}{DONE_RECORD}", unnamed(super::TOOL_STREAM));
