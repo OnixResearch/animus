@@ -1,5 +1,5 @@
 use animus_adapters::{
-    EffectiveAuthorityDecision, HOST_AUTHORITY_NON_CLAIMS, HostAuthorityDecision,
+    EffectiveAuthorityDecision, GuardedAction, HOST_AUTHORITY_NON_CLAIMS, HostAuthorityDecision,
     HostAuthorityDecisionDraft, HostAuthorityFreshnessClass, HostAuthorityIssue,
     HostAuthorityReceipt, HostAuthorityReceiptDraft, HostAuthorityReplayClass,
     HostAuthorityRequest, HostAuthorityService, HostAuthorityStatus, RequiredHostGates,
@@ -12,10 +12,12 @@ use basalt::ucan_enforcement::{
     UcanEnforcementBoundaries, UcanEnforcementFailure, UcanEnforcementReason,
     UcanEnforcementReceipt, UcanEnforcementRequest, verify_ucan_enforcement_request,
 };
+use basalt::ucan_profile::BasaltUcanProtocolProfile;
 
 use crate::core::{
-    BASALT_POLICY_IDENTITY, basalt_provider_identity, map_basalt_reason, normalize_basalt_identity,
-    plan_basalt_request, principal_hash, resource_hash,
+    BASALT_POLICY_IDENTITY, BASALT_PROCESS_EXECUTION_POLICY_IDENTITY, basalt_provider_identity,
+    map_basalt_reason, normalize_basalt_identity, plan_basalt_request, principal_hash,
+    resource_hash,
 };
 
 const ALLOWED_CHECKED_FACT_COUNT: u32 = 8;
@@ -78,6 +80,7 @@ impl<'a> BasaltAuthorityService<'a> {
         let raw = UcanEnforcementRequest::new(
             &plan.enforcement,
             self.invocation.compact_token,
+            BasaltUcanProtocolProfile::OnixCompactEd25519V1,
             plan.action,
             self.invocation.nonce,
             self.invocation.holder_signature,
@@ -253,8 +256,12 @@ fn preflight_invocation(
     invocation: &BasaltAuthorityInvocation<'_>,
 ) -> Result<(), BasaltAuthorityFailure> {
     let policy_identity = normalize_basalt_identity(invocation.policy_ref.artifact_ref.as_str());
+    let required_policy_identity = match request.action() {
+        GuardedAction::Exec => BASALT_PROCESS_EXECUTION_POLICY_IDENTITY,
+        _ => BASALT_POLICY_IDENTITY,
+    };
     if policy_identity.as_deref() != Some(request.policy_identity())
-        || request.policy_identity() != BASALT_POLICY_IDENTITY
+        || request.policy_identity() != required_policy_identity
         || invocation.policy_ref.contract_id != request.contract()
     {
         return Err(BasaltAuthorityFailure::without_receipt(

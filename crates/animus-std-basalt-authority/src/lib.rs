@@ -16,9 +16,10 @@ mod core;
 mod shell;
 
 pub use core::{
-    BASALT_LICENSE, BASALT_POLICY_IDENTITY, BASALT_SOURCE_REVISION, BASALT_UCAN_CATALOG_IDENTITY,
-    BASALT_UCAN_REVISION, BasaltRequestPlan, basalt_provider_identity, map_basalt_reason,
-    normalize_basalt_identity, operation_profile_identity, plan_basalt_request, principal_hash,
+    BASALT_LICENSE, BASALT_POLICY_IDENTITY, BASALT_PROCESS_EXECUTION_POLICY_IDENTITY,
+    BASALT_SOURCE_REVISION, BASALT_UCAN_CATALOG_IDENTITY, BASALT_UCAN_REVISION, BasaltRequestPlan,
+    basalt_provider_identity, map_basalt_reason, normalize_basalt_identity,
+    operation_profile_identity, plan_basalt_request, principal_hash, required_policy_identity,
     resource_hash,
 };
 pub use shell::{

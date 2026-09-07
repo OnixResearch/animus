@@ -4,8 +4,8 @@ let Blake3Identity = std.contract.from_predicate (fun value => std.is_string val
 let GitRevision = std.contract.from_predicate (fun value => std.is_string value && std.string.is_match "^[0-9a-f]{40}$" value) in
 let Positive = std.contract.from_predicate (fun value => std.is_number value && value > 0) in
 let Mapping = {
-  animus_action | [| 'filesystem |],
-  basalt_action | [| 'document_read, 'document_write |],
+  animus_action | [| 'filesystem, 'exec |],
+  basalt_action | [| 'document_read, 'document_write, 'process_execute |],
   contract | NonEmpty,
   ability | NonEmpty,
 } in
@@ -18,6 +18,7 @@ let Profile = {
     revision | GitRevision,
     license | NonEmpty,
     policy_identity | Blake3Identity,
+    process_execution_policy_identity | Blake3Identity,
     vendored_ucan_revision | GitRevision,
     ucan_catalog_identity | Blake3Identity,
   },
@@ -59,11 +60,12 @@ let Profile = {
     license_review_required = true,
     source = {
       repository = "OnixResearch/basalt",
-      revision = "e9891e32dcdf655c6e12d0bea2a420f7cdca31c7",
+      revision = "3f1fd1ed63f2b55f07a27f662e5a720518662b7e",
       license = "AGPL-3.0-or-later",
       policy_identity = "b3:5475d5473ec98cbf052a83512836b0739f5dad3e7b9b0ed201eb3094b1cf39bf",
-      vendored_ucan_revision = "34449ba1f1a9ef991225e4e6683b5d6aca8c07cf",
-      ucan_catalog_identity = "b3:3266e7b1f2ce66f2ab5c8cbd7028f8bcf3502c7e64fe8d058c7b7e1f762dedb6",
+      process_execution_policy_identity = "b3:c90838cfc1f3c8f5f926f9ee98a05d203d2c0dc2199657514537c37bff3d8c7d",
+      vendored_ucan_revision = "927dc32641af6cd1b17202aff44c35acef4540fa",
+      ucan_catalog_identity = "b3:fe77fd63076eaef555b74e702e4c14e483bdba70151ccc955c75b17d97412427",
     },
     generic_port = {
       concrete_basalt_types_exposed = false,
@@ -83,6 +85,12 @@ let Profile = {
         basalt_action = 'document_write,
         contract = "document-write",
         ability = "document/write",
+      },
+      {
+        animus_action = 'exec,
+        basalt_action = 'process_execute,
+        contract = "process-execute",
+        ability = "process/execute",
       },
     ],
     verification_services = [

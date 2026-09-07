@@ -6,7 +6,7 @@ Animus can use Basalt as an additional deny-capable authority gate for selected 
 
 `animus-adapters` owns the implementation-neutral `HostAuthorityService` request, decision, binding, gate-intersection, and receipt contracts. These contracts are `no_std` plus `alloc`. They expose no Basalt or UCAN type.
 
-`animus-std-basalt-authority` owns the optional standard-library bridge. It uses Basalt revision `e9891e32dcdf655c6e12d0bea2a420f7cdca31c7`, vendored UCAN revision `34449ba1f1a9ef991225e4e6683b5d6aca8c07cf`, policy identity `b3:5475d5473ec98cbf052a83512836b0739f5dad3e7b9b0ed201eb3094b1cf39bf`, and UCAN catalog identity `b3:3266e7b1f2ce66f2ab5c8cbd7028f8bcf3502c7e64fe8d058c7b7e1f762dedb6`.
+`animus-std-basalt-authority` owns the optional standard-library bridge. It uses Basalt revision `3f1fd1ed63f2b55f07a27f662e5a720518662b7e` with Basalt's default features disabled (the minimal enforcement profile), vendored UCAN revision `927dc32641af6cd1b17202aff44c35acef4540fa`, policy identity `b3:5475d5473ec98cbf052a83512836b0739f5dad3e7b9b0ed201eb3094b1cf39bf`, execution policy identity `b3:c90838cfc1f3c8f5f926f9ee98a05d203d2c0dc2199657514537c37bff3d8c7d`, and UCAN catalog identity `b3:fe77fd63076eaef555b74e702e4c14e483bdba70151ccc955c75b17d97412427`.
 
 The host supplies verification time, key resolution, proof storage, revocation checks, caveat policies, replay admission, verification limits, holder-invocation limits, and durable safe-decision commit. The adapter does not discover or create these services.
 
@@ -31,14 +31,17 @@ The mapping table is closed:
 | --- | --- | --- | --- |
 | `filesystem` | `document-read` | `document-read` | `document/read` |
 | `filesystem` | `document-write` | `document-write` | `document/write` |
+| `exec` | `process-execute` | `process-execute` | `process/execute` |
 
 All other action, contract, ability, resource, or operation-profile combinations return `UnsupportedAction`. A new action requires a reviewed code and policy change.
 
+`exec` admission additionally requires the request's policy identity to equal Basalt's reviewed process execution policy identity; the packaged default policy cannot authorize execution. The execution resource is `onix://process-execution/` followed by exactly 64 lowercase hexadecimal digits naming one complete consumer-admitted invocation context. The adapter binds the supplied reference through Basalt's exact binder; it does not authenticate the context preimage, executable, argv, environment, inputs, services, resource limits, or their custody. The adopting host owns complete context custody, currentness, sandboxing, and output meaning.
+
 ## Guarded-action inventory
 
-The optional adapter supports only the document read and document write filesystem paths above. An adopting host must route each such effect through `dispatch_with_basalt`.
+The optional adapter supports the document read and document write filesystem paths and the exact `exec` process execution path above. An adopting host must route each such effect through `dispatch_with_basalt`.
 
-Model dispatch, tool dispatch, process execution, network access, Steel activation, semantic-role assignment, semantic-role activation, handoff, output influence, selection, and veto remain unsupported by this adapter. They keep their existing owners and gates. They cannot use a shared role grant or a filesystem grant.
+Model dispatch, tool dispatch, network access, Steel activation, semantic-role assignment, semantic-role activation, handoff, output influence, selection, and veto remain unsupported by this adapter. They keep their existing owners and gates. They cannot use a shared role grant, a filesystem grant, or an execution grant.
 
 ## Dispatch order
 
@@ -60,7 +63,7 @@ Generic and Basalt receipts contain safe identities, action and ability labels, 
 
 Receipts exclude raw UCANs, signatures, proofs, nonces, keys, credentials, prompts, tool arguments, effect payloads or outputs, environment values, private paths, and unrestricted diagnostics.
 
-Receipts do not prove global trust, key truth, global revocation freshness, replay durability, sandbox confinement, effect correctness, agent safety, completion, or release readiness. This integration does not create a license compatibility exception.
+Receipts do not prove global trust, key truth, global revocation freshness, replay durability, sandbox confinement, effect correctness, agent safety, completion, or release readiness. Execution-purpose receipts bind only the supplied context reference and policy identity; they never authenticate the invocation context or prove that any process ran. This integration does not create a license compatibility exception.
 
 ## Verification
 

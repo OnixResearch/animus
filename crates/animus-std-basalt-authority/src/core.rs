@@ -3,15 +3,19 @@ use basalt::EnforcementRequest;
 use basalt::ucan_enforcement::{EnforcementAction, UcanEnforcementReason};
 
 /// Reviewed Basalt source revision used by this adapter.
-pub const BASALT_SOURCE_REVISION: &str = "e9891e32dcdf655c6e12d0bea2a420f7cdca31c7";
+pub const BASALT_SOURCE_REVISION: &str = "3f1fd1ed63f2b55f07a27f662e5a720518662b7e";
 /// Reviewed vendored UCAN source revision used by Basalt.
-pub const BASALT_UCAN_REVISION: &str = "34449ba1f1a9ef991225e4e6683b5d6aca8c07cf";
+pub const BASALT_UCAN_REVISION: &str = "927dc32641af6cd1b17202aff44c35acef4540fa";
 /// BLAKE3 identity of Basalt's checked generated policy artifact.
 pub const BASALT_POLICY_IDENTITY: &str =
     "b3:5475d5473ec98cbf052a83512836b0739f5dad3e7b9b0ed201eb3094b1cf39bf";
+/// BLAKE3 identity of Basalt's reviewed opt-in process execution policy.
+/// Execution-purpose admission requires this identity, not the default policy.
+pub const BASALT_PROCESS_EXECUTION_POLICY_IDENTITY: &str =
+    "b3:c90838cfc1f3c8f5f926f9ee98a05d203d2c0dc2199657514537c37bff3d8c7d";
 /// BLAKE3 identity of the reviewed vendored UCAN support catalog.
 pub const BASALT_UCAN_CATALOG_IDENTITY: &str =
-    "b3:3266e7b1f2ce66f2ab5c8cbd7028f8bcf3502c7e64fe8d058c7b7e1f762dedb6";
+    "b3:fe77fd63076eaef555b74e702e4c14e483bdba70151ccc955c75b17d97412427";
 /// License identifier that downstream adopters must review explicitly.
 pub const BASALT_LICENSE: &str = "AGPL-3.0-or-later";
 
@@ -19,6 +23,9 @@ const DOCUMENT_READ_CONTRACT: &str = "document-read";
 const DOCUMENT_READ_ABILITY: &str = "document/read";
 const DOCUMENT_WRITE_CONTRACT: &str = "document-write";
 const DOCUMENT_WRITE_ABILITY: &str = "document/write";
+const PROCESS_EXECUTE_CONTRACT: &str = "process-execute";
+const PROCESS_EXECUTE_ABILITY: &str = "process/execute";
+const PROCESS_EXECUTE_RESOURCE_PREFIX: &str = "onix://process-execution/";
 
 /// Pure exact translation from Animus vocabulary to Basalt vocabulary.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -47,8 +54,22 @@ pub fn plan_basalt_request(
         (GuardedAction::Filesystem, DOCUMENT_WRITE_CONTRACT, DOCUMENT_WRITE_ABILITY) => {
             EnforcementAction::DocumentWrite
         }
+        (GuardedAction::Exec, PROCESS_EXECUTE_CONTRACT, PROCESS_EXECUTE_ABILITY) => {
+            EnforcementAction::ProcessExecute
+        }
         _ => return Err(HostAuthorityIssue::UnsupportedAction),
     };
+    if action == EnforcementAction::ProcessExecute
+        && !request
+            .resource()
+            .starts_with(PROCESS_EXECUTE_RESOURCE_PREFIX)
+    {
+        return Err(HostAuthorityIssue::UnsupportedAction);
+    }
+    let expected_policy_identity = required_policy_identity(action);
+    if request.policy_identity() != expected_policy_identity {
+        return Err(HostAuthorityIssue::UnsupportedAction);
+    }
     let operation_profile_identity = operation_profile_identity(action);
     if request.operation_profile_identity() != operation_profile_identity {
         return Err(HostAuthorityIssue::UnsupportedAction);
@@ -62,6 +83,15 @@ pub fn plan_basalt_request(
         ),
         operation_profile_identity,
     })
+}
+
+/// Return the reviewed policy identity one action must select.
+#[must_use]
+pub const fn required_policy_identity(action: EnforcementAction) -> &'static str {
+    match action {
+        EnforcementAction::ProcessExecute => BASALT_PROCESS_EXECUTION_POLICY_IDENTITY,
+        _ => BASALT_POLICY_IDENTITY,
+    }
 }
 
 /// Return the exact generic BLAKE3 identity for one Basalt operation profile.
@@ -107,7 +137,9 @@ pub const fn map_basalt_reason(reason: UcanEnforcementReason) -> HostAuthorityIs
     match reason {
         UcanEnforcementReason::TimeDenied => HostAuthorityIssue::StaleVerification,
         UcanEnforcementReason::ReplayDenied => HostAuthorityIssue::ReplayDenied,
-        UcanEnforcementReason::OperationMismatch => HostAuthorityIssue::UnsupportedAction,
+        UcanEnforcementReason::OperationMismatch | UcanEnforcementReason::ProtocolProfileDenied => {
+            HostAuthorityIssue::UnsupportedAction
+        }
         UcanEnforcementReason::PolicyDenied => HostAuthorityIssue::PolicyDenied,
         UcanEnforcementReason::BackendUnavailable
         | UcanEnforcementReason::InternalAuthorityDenied => HostAuthorityIssue::ProviderUnavailable,

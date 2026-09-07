@@ -12,5 +12,5 @@ workspace = true
 
 [dependencies]
 animus-adapters = { path = "../animus-adapters", version = "0.1.0" }
-basalt = { git = "ssh://git@github.com/OnixResearch/basalt.git", rev = "e9891e32dcdf655c6e12d0bea2a420f7cdca31c7" }
+basalt = { git = "ssh://git@github.com/OnixResearch/basalt.git", rev = "3f1fd1ed63f2b55f07a27f662e5a720518662b7e", default-features = false }
 blake3 = "1.8"
