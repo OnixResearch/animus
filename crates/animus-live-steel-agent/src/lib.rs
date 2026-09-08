@@ -37,7 +37,9 @@ pub use runtime::host::{
     ExplicitContextMap, LiveAuthorityObserver, LiveHostError, build_bindings, build_executor,
     build_expected_authority, context_route,
 };
-pub use runtime::provider::{FixtureStreamProvider, LiveOpenAiProvider, ProviderStreamService};
+pub use runtime::provider::{
+    FixtureStreamProvider, LiveOpenAiProvider, ProviderStreamError, ProviderStreamService,
+};
 pub use session::{
     LiveApprovalDecision, LiveChildStatus, LiveSessionExecutorControl, LiveSteelEventRead,
     LiveSteelPrompt, LiveSteelQueueEdit, LiveSteelQueueRemoval, LiveSteelQueuedInput,

@@ -19,6 +19,11 @@ The `animus-live-steel-agent` package is a non-default headless application. It 
 
 The package is a workspace member, but it is not a default member. Its `live-provider` feature is also off by default.
 
+The package exports both `ProviderStreamService` and its required `ProviderStreamError` type.
+External consumers can implement a provider wrapper, forward an admitted stream, or reject it before the inner service runs.
+This export grants no provider or credential authority. The consumer still owns limits, cancellation, and execution policy.
+External fixture tests cover successful forwarding, initial denial, and rejection of a second stream.
+
 ## Prerequisite record
 
 The shell composes prerequisite code from the same checked workspace revision. The closeout commit binds those exact source identities.

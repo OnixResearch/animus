@@ -1,5 +1,8 @@
 //! Deterministic production-entrypoint and resumable-host tests.
 
+#[path = "fixture/providerport.rs"]
+mod providerport;
+
 use animus_live_steel_agent::{
     FixtureStreamProvider, LiveSteelAgentComposition, LiveSteelAgentCompositionInput,
     parse_live_steel_agent_config,

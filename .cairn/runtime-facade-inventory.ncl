@@ -3896,6 +3896,7 @@ let entry_values = [
   live_steel_agent_record "animus-live-steel-agent::LiveStoreError" "safe durable composition failure class",
   live_steel_agent_record "animus-live-steel-agent::MetadataChildEvents" "metadata-only child event sink",
   live_steel_agent_record "animus-live-steel-agent::MetadataChildStore" "metadata-only child lifecycle store",
+  live_steel_agent_record "animus-live-steel-agent::ProviderStreamError" "safe rejection type for external provider stream implementations",
   live_steel_agent_record "animus-live-steel-agent::ProviderStreamService" "injected provider stream acquisition port",
   live_steel_agent_record "animus-live-steel-agent::SessionPersistence" "coding-session persistence and lease-release port",
   live_steel_agent_record "animus-live-steel-agent::SnapshotPersistence" "private model-request snapshot persistence and lease-release port",
