@@ -140,6 +140,61 @@ fn keepalive_comment_records_are_ignored_without_masking_violations() {
 }
 
 #[test]
+fn reasoning_text_items_parse_as_redacted_thoughts() {
+    // r[verify agent_harness_runtime.responses_sse_framing.reasoning_text]
+    // r[verify agent_harness_runtime.responses_sse_framing.reasoning_text.parts]
+    let reasoning_stream = concat!(
+        ": keep-alive\n\n",
+        "data: {\"type\":\"response.created\",\"sequence_number\":0,\"response\":{\"id\":\"resp_reasoning\",\"status\":\"in_progress\"}}\n\n",
+        "data: {\"type\":\"response.in_progress\",\"sequence_number\":1,\"response\":{\"id\":\"resp_reasoning\",\"status\":\"in_progress\"}}\n\n",
+        "data: {\"type\":\"response.output_item.added\",\"sequence_number\":2,\"output_index\":0,\"item\":{\"id\":\"rs_item\",\"type\":\"reasoning\",\"status\":\"in_progress\",\"summary\":[]}}\n\n",
+        "data: {\"type\":\"response.content_part.added\",\"sequence_number\":3,\"item_id\":\"rs_item\",\"output_index\":0,\"content_index\":0,\"part\":{\"type\":\"reasoning_text\",\"text\":\"\"}}\n\n",
+        "data: {\"type\":\"response.reasoning_text.delta\",\"sequence_number\":4,\"item_id\":\"rs_item\",\"output_index\":0,\"content_index\":0,\"delta\":\"thin\"}\n\n",
+        "data: {\"type\":\"response.reasoning_text.delta\",\"sequence_number\":5,\"item_id\":\"rs_item\",\"output_index\":0,\"content_index\":0,\"delta\":\"king\"}\n\n",
+        "data: {\"type\":\"response.reasoning_text.done\",\"sequence_number\":6,\"item_id\":\"rs_item\",\"output_index\":0,\"content_index\":0,\"text\":\"thinking\"}\n\n",
+        "data: {\"type\":\"response.content_part.done\",\"sequence_number\":7,\"item_id\":\"rs_item\",\"output_index\":0,\"content_index\":0,\"part\":{\"type\":\"reasoning_text\",\"text\":\"thinking\"}}\n\n",
+        "data: {\"type\":\"response.output_item.done\",\"sequence_number\":8,\"output_index\":0,\"item\":{\"id\":\"rs_item\",\"type\":\"reasoning\",\"status\":\"complete\",\"summary\":[]}}\n\n",
+        "data: {\"type\":\"response.output_item.added\",\"sequence_number\":9,\"output_index\":1,\"item\":{\"id\":\"msg_item\",\"type\":\"message\",\"role\":\"assistant\",\"content\":[]}}\n\n",
+        "data: {\"type\":\"response.content_part.added\",\"sequence_number\":10,\"item_id\":\"msg_item\",\"output_index\":1,\"content_index\":0,\"part\":{\"type\":\"output_text\",\"text\":\"\",\"annotations\":[]}}\n\n",
+        "data: {\"type\":\"response.output_text.delta\",\"sequence_number\":11,\"item_id\":\"msg_item\",\"output_index\":1,\"content_index\":0,\"delta\":\"keep\"}\n\n",
+        "data: {\"type\":\"response.output_text.done\",\"sequence_number\":12,\"item_id\":\"msg_item\",\"output_index\":1,\"content_index\":0,\"text\":\"keep\"}\n\n",
+        "data: {\"type\":\"response.content_part.done\",\"sequence_number\":13,\"item_id\":\"msg_item\",\"output_index\":1,\"content_index\":0,\"part\":{\"type\":\"output_text\",\"text\":\"keep\",\"annotations\":[]}}\n\n",
+        "data: {\"type\":\"response.output_item.done\",\"sequence_number\":14,\"output_index\":1,\"item\":{\"id\":\"msg_item\",\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"type\":\"output_text\",\"text\":\"keep\",\"annotations\":[]}]}}\n\n",
+        "data: {\"type\":\"response.completed\",\"sequence_number\":15,\"response\":{\"id\":\"resp_reasoning\",\"status\":\"completed\",\"usage\":{\"input_tokens\":16,\"output_tokens\":2}}}\n\n",
+        "data: [DONE]\n\n",
+    );
+    let outcome = parse(reasoning_stream.as_bytes()).expect("reasoning text stream parses");
+    assert_eq!(outcome.terminal(), crate::OpenAiStreamTerminal::Completed);
+    let visible: String = outcome
+        .frames()
+        .iter()
+        .filter(|frame| frame.is_default_final_visible())
+        .filter_map(animus_adapters::ModelStreamFrame::body)
+        .collect();
+    assert_eq!(visible, "keep");
+    let uncorrelated = reasoning_stream.replacen(
+        "\"content_index\":0,\"delta\":\"thin\"",
+        "\"delta\":\"thin\"",
+        1,
+    );
+    assert_ne!(uncorrelated, reasoning_stream);
+    assert!(
+        parse(uncorrelated.as_bytes()).is_err(),
+        "uncorrelated reasoning delta must fail"
+    );
+    let unknown_item = reasoning_stream.replacen(
+        "\"item_id\":\"rs_item\",\"output_index\":0,\"content_index\":0,\"part\":{\"type\":\"reasoning_text\"",
+        "\"item_id\":\"rs_unknown\",\"output_index\":0,\"content_index\":0,\"part\":{\"type\":\"reasoning_text\"",
+        1,
+    );
+    assert_ne!(unknown_item, reasoning_stream);
+    assert!(
+        parse(unknown_item.as_bytes()).is_err(),
+        "unknown reasoning item part must fail"
+    );
+}
+
+#[test]
 fn optional_headers_preserve_metadata_sequence_and_reasoning_rejections() {
     // r[verify agent_harness_runtime.responses_sse_framing.metadata]
     // r[verify agent_harness_runtime.responses_sse_framing.guards]

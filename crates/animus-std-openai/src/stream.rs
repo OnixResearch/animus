@@ -29,6 +29,9 @@ const REASONING_SUMMARY_PART_ADDED: &str = "response.reasoning_summary_part.adde
 const REASONING_SUMMARY_PART_DONE: &str = "response.reasoning_summary_part.done";
 const REASONING_SUMMARY_DELTA: &str = "response.reasoning_summary_text.delta";
 const REASONING_SUMMARY_DONE: &str = "response.reasoning_summary_text.done";
+const REASONING_TEXT_DELTA: &str = "response.reasoning_text.delta";
+const REASONING_TEXT_DONE: &str = "response.reasoning_text.done";
+const REASONING_TEXT_PART_TYPE: &str = "reasoning_text";
 const OUTPUT_ITEM_ADDED: &str = "response.output_item.added";
 const OUTPUT_ITEM_DONE: &str = "response.output_item.done";
 const FUNCTION_ARGUMENTS_DELTA: &str = "response.function_call_arguments.delta";
@@ -522,7 +525,12 @@ impl OpenAiResponsesSseParser {
                 self.text_delta(value, animus_adapters::ModelStreamFrameKind::ContentDelta)
             }
             OUTPUT_TEXT_DONE | CONTENT_PART_ADDED | CONTENT_PART_DONE => {
-                self.output_lifecycle(value, OutputItemKind::Message)
+                let expected = if value["part"]["type"].as_str() == Some(REASONING_TEXT_PART_TYPE) {
+                    OutputItemKind::Reasoning
+                } else {
+                    OutputItemKind::Message
+                };
+                self.output_lifecycle(value, expected)
             }
             REASONING_SUMMARY_DELTA => {
                 self.text_delta(value, animus_adapters::ModelStreamFrameKind::ThoughtDelta)
@@ -530,6 +538,10 @@ impl OpenAiResponsesSseParser {
             REASONING_SUMMARY_DONE | REASONING_SUMMARY_PART_ADDED | REASONING_SUMMARY_PART_DONE => {
                 self.output_lifecycle(value, OutputItemKind::Reasoning)
             }
+            REASONING_TEXT_DELTA => {
+                self.text_delta(value, animus_adapters::ModelStreamFrameKind::ThoughtDelta)
+            }
+            REASONING_TEXT_DONE => self.output_lifecycle(value, OutputItemKind::Reasoning),
             OUTPUT_ITEM_ADDED => self.output_item_added(value),
             FUNCTION_ARGUMENTS_DELTA => self.function_arguments_delta(value),
             FUNCTION_ARGUMENTS_DONE => self.function_arguments_done(value),
@@ -600,6 +612,7 @@ impl OpenAiResponsesSseParser {
         self.require_output_item(required_string(value, "item_id")?, expected_item_kind)?;
         if kind == animus_adapters::ModelStreamFrameKind::ThoughtDelta
             && value.get("summary_index").and_then(Value::as_u64).is_none()
+            && value.get("content_index").and_then(Value::as_u64).is_none()
         {
             return Err(OpenAiStreamError::new(
                 OpenAiStreamFailureClass::UnsafeReasoning,
