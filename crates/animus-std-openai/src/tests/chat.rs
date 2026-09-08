@@ -13,6 +13,8 @@ const RESPONSE_ID: &str = "chatcmpl-fixture-1";
 const TOOL_CALL_ID: &str = "call_fixture_1";
 const ANSWER: &str = "3";
 
+mod lifecycle;
+
 fn fresh_parser() -> OpenAiChatCompletionsSseParser {
     OpenAiChatCompletionsSseParser::new(dispatch(), OpenAiStreamBounds::reviewed(4_096))
         .expect("reviewed bounds must validate")
@@ -206,14 +208,13 @@ fn premature_done_trailing_bytes_and_double_done_fail() {
         .push_chunk(b"data: [DONE]\n\n")
         .expect("first done must parse");
     assert!(parser2.push_chunk(b"data: [DONE]\n\n").is_err());
-    assert!(parser2.finish().is_ok());
+    assert!(parser2.finish().is_err());
 
     let mut parser3 = fresh_parser();
     parser3
         .push_chunk(chunk(&serde_json::json!({}), Some("stop")).as_bytes())
         .expect("finish must parse");
-    let outcome = parser3.finish().expect("finish without done must finish");
-    assert_eq!(outcome.terminal(), OpenAiStreamTerminal::Completed);
+    assert!(parser3.finish().is_err());
 
     let mut parser4 = fresh_parser();
     parser4

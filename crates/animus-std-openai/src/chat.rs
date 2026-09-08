@@ -19,6 +19,8 @@ const TOOL_CORRELATION_REASON: &str = "chat-completions SSE function-call correl
 const UNSUPPORTED_CHOICE_REASON: &str = "chat-completions SSE choice shape is unsupported";
 const CANCELLED_REASON: &str = "cancelled";
 
+mod event;
+
 struct ChatToolState {
     tool_call_id: String,
     tool_name: Option<String>,
@@ -47,6 +49,7 @@ pub struct OpenAiChatCompletionsSseParser {
     tool_states: BTreeMap<u64, ChatToolState>,
     tool_calls: Vec<crate::tool::OpenAiCompletedToolCall>,
     usage_emitted: bool,
+    error: Option<OpenAiStreamError>,
     terminal: Option<OpenAiStreamTerminal>,
     stream_end_seen: bool,
     pending_finish: Option<String>,
@@ -79,6 +82,7 @@ impl OpenAiChatCompletionsSseParser {
             tool_states: BTreeMap::new(),
             tool_calls: Vec::new(),
             usage_emitted: false,
+            error: None,
             terminal: None,
             stream_end_seen: false,
             pending_finish: None,
@@ -94,6 +98,20 @@ impl OpenAiChatCompletionsSseParser {
     /// Returns [`OpenAiStreamError`] for malformed framing, bounds, correlation,
     /// or unsupported event shapes.
     pub fn push_chunk(&mut self, chunk: &[u8]) -> Result<(), OpenAiStreamError> {
+        if let Some(error) = &self.error {
+            return Err(error.clone());
+        }
+        let result = self.consume_chunk(chunk);
+        if let Err(error) = &result {
+            self.error = Some(error.clone());
+        }
+        result
+    }
+
+    fn consume_chunk(&mut self, chunk: &[u8]) -> Result<(), OpenAiStreamError> {
+        if self.stream_end_seen || self.terminal == Some(OpenAiStreamTerminal::Cancelled) {
+            return Err(lifecycle(TERMINAL_REASON));
+        }
         if chunk.is_empty() {
             return Err(malformed(MALFORMED_SSE_REASON));
         }
@@ -129,6 +147,9 @@ impl OpenAiChatCompletionsSseParser {
     ///
     /// Returns [`OpenAiStreamError`] if the stream already ended.
     pub fn cancel(&mut self) -> Result<(), OpenAiStreamError> {
+        if let Some(error) = &self.error {
+            return Err(error.clone());
+        }
         if self.terminal.is_some() {
             return Err(lifecycle(TERMINAL_REASON));
         }
@@ -140,6 +161,9 @@ impl OpenAiChatCompletionsSseParser {
             visibility: animus_adapters::ModelStreamVisibility::Redacted,
         })?;
         self.frames.push(frame);
+        self.buffer.clear();
+        self.tool_states.clear();
+        self.tool_calls.clear();
         self.terminal = Some(OpenAiStreamTerminal::Cancelled);
         Ok(())
     }
@@ -151,18 +175,16 @@ impl OpenAiChatCompletionsSseParser {
     /// Returns [`OpenAiStreamError`] for trailing bytes, missing terminal state,
     /// or invalid frames.
     pub fn finish(mut self) -> Result<OpenAiStreamOutcome, OpenAiStreamError> {
+        if let Some(error) = self.error.take() {
+            return Err(error);
+        }
         if !self.buffer.is_empty() {
-            if self.buffer.len() > self.bounds.event_bytes {
-                return Err(bound_error());
-            }
-            let event_bytes = std::mem::take(&mut self.buffer);
-            self.event_count = self.event_count.checked_add(1).ok_or_else(bound_error)?;
-            if self.event_count > self.bounds.events {
-                return Err(bound_error());
-            }
-            self.process_event(event_bytes.as_slice())?;
+            return Err(malformed(MALFORMED_SSE_REASON));
         }
         let terminal = self.terminal.ok_or_else(|| lifecycle(TERMINAL_REASON))?;
+        if terminal != OpenAiStreamTerminal::Cancelled && !self.stream_end_seen {
+            return Err(lifecycle(TERMINAL_REASON));
+        }
         if terminal == OpenAiStreamTerminal::Completed && self.pending_finish.take().is_some() {
             let frame = self.frame(&ChatFrameParts {
                 kind: animus_adapters::ModelStreamFrameKind::Finish,
@@ -178,9 +200,11 @@ impl OpenAiChatCompletionsSseParser {
                 OpenAiStreamError::new(OpenAiStreamFailureClass::Canonical, MALFORMED_SSE_REASON)
             },
         )?;
-        let provider_response_id = self
-            .response_id
-            .ok_or_else(|| correlation(RESPONSE_ID_REASON))?;
+        let provider_response_id = match self.response_id {
+            Some(id) => id,
+            None if terminal == OpenAiStreamTerminal::Cancelled => String::new(),
+            None => return Err(correlation(RESPONSE_ID_REASON)),
+        };
         Ok(OpenAiStreamOutcome::assemble(OutcomeParts {
             provider_response_id,
             frames: self.frames,
@@ -191,6 +215,9 @@ impl OpenAiChatCompletionsSseParser {
     }
 
     fn process_event(&mut self, bytes: &[u8]) -> Result<(), OpenAiStreamError> {
+        if self.stream_end_seen || self.terminal == Some(OpenAiStreamTerminal::Cancelled) {
+            return Err(lifecycle(TERMINAL_REASON));
+        }
         let text = std::str::from_utf8(bytes).map_err(|_error| malformed(MALFORMED_SSE_REASON))?;
         if text
             .lines()
@@ -214,57 +241,7 @@ impl OpenAiChatCompletionsSseParser {
         let object = value
             .as_object()
             .ok_or_else(|| malformed(MALFORMED_SSE_REASON))?;
-        self.bind_response_id(required_string(object, "id")?)?;
-        if self.terminal.is_some() {
-            // Only the usage-only record that follows a finished stream is admitted.
-            if object
-                .get("choices")
-                .and_then(Value::as_array)
-                .is_some_and(Vec::is_empty)
-            {
-                return self.accept_usage(object);
-            }
-            return Err(lifecycle(TERMINAL_REASON));
-        }
-        if let Some(reason) = finish_reason(object)? {
-            self.finish_stream(reason)?;
-            if let Some(usage) = object.get("usage").filter(|usage| !usage.is_null()) {
-                self.accept_usage_value(usage)?;
-            }
-            return Ok(());
-        }
-        let choices = object.get("choices").and_then(Value::as_array);
-        let Some(choices) = choices else {
-            return self.accept_usage(object);
-        };
-        if choices.is_empty() {
-            return self.accept_usage(object);
-        }
-        let [choice] = choices.as_slice() else {
-            return Err(malformed(UNSUPPORTED_CHOICE_REASON));
-        };
-        if let Some(usage) = choice.get("usage").filter(|usage| !usage.is_null()) {
-            self.accept_usage_value(usage)?;
-        }
-        let delta = choice.get("delta").and_then(Value::as_object);
-        let Some(delta) = delta else {
-            return Ok(());
-        };
-        if let Some(content) = delta.get("content").and_then(Value::as_str) {
-            self.text_frame(animus_adapters::ModelStreamFrameKind::ContentDelta, content)?;
-        }
-        if let Some(reasoning) = delta.get("reasoning_content").and_then(Value::as_str) {
-            self.text_frame(
-                animus_adapters::ModelStreamFrameKind::ThoughtDelta,
-                reasoning,
-            )?;
-        }
-        if let Some(calls) = delta.get("tool_calls").and_then(Value::as_array) {
-            for call in calls {
-                self.tool_call_delta(call)?;
-            }
-        }
-        Ok(())
+        self.accept_chunk_object(object)
     }
 
     fn bind_response_id(&mut self, id: &str) -> Result<(), OpenAiStreamError> {
@@ -320,7 +297,16 @@ impl OpenAiChatCompletionsSseParser {
                 TOOL_CORRELATION_REASON,
             )
         })?;
-        let function = object.get("function").and_then(Value::as_object);
+        let function = event::tool_function(object)?;
+        if let Some(id) = object.get("id").and_then(Value::as_str) {
+            if self
+                .tool_states
+                .iter()
+                .any(|(bound_index, state)| *bound_index != index && state.tool_call_id == id)
+            {
+                return Err(correlation(TOOL_CORRELATION_REASON));
+            }
+        }
         let name = function
             .and_then(|function| function.get("name"))
             .and_then(Value::as_str);
@@ -403,7 +389,7 @@ impl OpenAiChatCompletionsSseParser {
         }
         match reason {
             "stop" if self.tool_states.is_empty() => {}
-            "tool_calls" => {
+            "tool_calls" if !self.tool_states.is_empty() => {
                 let indexes: Vec<u64> = self.tool_states.keys().copied().collect();
                 for index in indexes {
                     self.complete_tool_call(index)?;
@@ -450,6 +436,11 @@ impl OpenAiChatCompletionsSseParser {
             return Err(correlation(TOOL_CORRELATION_REASON));
         }
         debug_assert!(state.arguments.len() <= bounds.tool_argument_bytes);
+        let arguments: Value = serde_json::from_str(&state.arguments)
+            .map_err(|_error| malformed(MALFORMED_SSE_REASON))?;
+        if !arguments.is_object() {
+            return Err(malformed(MALFORMED_SSE_REASON));
+        }
         self.tool_calls.push(OpenAiCompletedToolCall {
             model_call_id: self.model_call_id.clone(),
             provider_response_id: response_id,
@@ -522,23 +513,6 @@ impl OpenAiChatCompletionsSseParser {
 
 const STREAM_BOUND_REASON: &str = "chat-completions SSE exceeds a stream bound";
 const MALFORMED_SSE_REASON: &str = "chat-completions SSE is malformed";
-
-fn finish_reason(
-    object: &serde_json::Map<String, Value>,
-) -> Result<Option<&str>, OpenAiStreamError> {
-    let choice = object.get("choices").and_then(Value::as_array);
-    let Some(choices) = choice else {
-        return Ok(None);
-    };
-    let [choice] = choices.as_slice() else {
-        return Err(malformed(UNSUPPORTED_CHOICE_REASON));
-    };
-    match choice.get("finish_reason") {
-        None | Some(Value::Null) => Ok(None),
-        Some(Value::String(reason)) => Ok(Some(reason.as_str())),
-        Some(_) => Err(malformed(MALFORMED_SSE_REASON)),
-    }
-}
 
 fn required_string<'a>(
     object: &'a serde_json::Map<String, Value>,

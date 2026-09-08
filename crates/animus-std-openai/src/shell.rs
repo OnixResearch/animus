@@ -289,6 +289,7 @@ impl ReqwestOpenAiHost {
     ///
     /// Returns [`HostError`] under the same transport, bound, and parser rules
     /// as [`Self::execute_tool_stream`].
+    #[cfg(feature = "tool-streaming")]
     pub fn execute_chat_stream(
         &self,
         request: OpenAiToolStreamRequest<'_>,

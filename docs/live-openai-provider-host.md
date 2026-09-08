@@ -104,6 +104,22 @@ The streaming transport is behind an injected reader seam. Deterministic tests u
 
 The response reader checks cancellation between reads. A cancellation before provider response creation produces a canonical cancelled outcome without a provider response identity.
 
+## Z.ai chat-completions status
+
+The separate chat parser admits the exact Coding Plan endpoint at `https://api.z.ai/api/coding/paas/v4/chat/completions`.
+It does not use OpenRouter or the Z.ai pay-as-you-go endpoint.
+
+The chat parser requires a finish reason and a complete `[DONE]` record before it accepts a provider outcome.
+It processes deltas in the final choice before completion. A parse error permanently blocks further input, cancellation, and successful completion.
+The parser rejects records after `[DONE]`, malformed tool-argument JSON, non-object arguments, duplicate tool identities, and unsupported choice indices.
+An explicit model field must match the admitted model. Optional absent model fields do not prove provider model identity.
+Cancellation before a response identity produces a cancelled outcome with an empty provider identity.
+These controls use synthetic streams and do not prove live Coding Plan behavior.
+
+**Chat continuation remains incomplete.** The request builder retains tool arguments but does not retain the original conversation or replay reasoning state.
+The product must not treat this path as verified Steel tool continuation.
+The all-feature build does not prove feature isolation. The `reqwest-client` feature also requires a separate build without `tool-streaming`.
+
 ## Packaged live smokes
 
 The existing packaged smokes remain text-only. Run one only from the clean revision that will own the evidence.
