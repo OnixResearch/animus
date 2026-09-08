@@ -39,7 +39,7 @@ All other action, contract, ability, resource, or operation-profile combinations
 
 ## Guarded-action inventory
 
-The optional adapter supports the document read and document write filesystem paths and the exact `exec` process execution path above. An adopting host must route each such effect through `dispatch_with_basalt`.
+The optional adapter supports the document read and document write filesystem paths and the exact `exec` process execution path above. An adopting host must route each such effect through `dispatch_with_basalt` or `dispatch_with_basalt_scoped`.
 
 Model dispatch, tool dispatch, network access, Steel activation, semantic-role assignment, semantic-role activation, handoff, output influence, selection, and veto remain unsupported by this adapter. They keep their existing owners and gates. They cannot use a shared role grant, a filesystem grant, or an execution grant.
 
@@ -57,6 +57,29 @@ Model dispatch, tool dispatch, network access, Steel activation, semantic-role a
 
 Basalt cannot widen agent-definition, semantic-role, parent, task, model, tool, workspace, approval, sandbox, cancellation, timeout, budget, or runtime-authority-seal limits. Any denial stops the effect.
 
+## Scoped live callback
+
+`dispatch_with_basalt_scoped` adds a borrowed `ScopedAuthority` callback view.
+The view exposes the actual verified holder authorization, generic decision,
+committed receipt, and validated commit identity. Holder access includes the exact
+operation and effective token time bounds. These values do not come from a receipt
+parser or a second verification call.
+
+The original API delegates to the same implementation and ignores the view.
+Both APIs retain one replay admission before gate intersection and commit.
+Neither denied path calls the effect. Effect errors retain the committed receipt.
+
+The view has private construction and no Clone, Debug, or serde surface.
+The higher-ranked callback prevents its view and borrowed authority from escaping
+through the result. Consumers can copy ordinary metadata, but those copies do not
+grant authority. Raw holder details require deliberate access and must not enter
+safe receipts by default.
+
+This authority reflects verification time. The callback does not guarantee later
+non-revocation, continuous resource custody, or safe execution. Hosts retain later
+recheck obligations. Repeating raw holder verification with the same nonce is not
+a continuing-authority recheck.
+
 ## Evidence
 
 Generic and Basalt receipts contain safe identities, action and ability labels, status, issue class, bounded counts, freshness class, replay class, and redacted principal and resource hashes.
@@ -68,7 +91,7 @@ Receipts do not prove global trust, key truth, global revocation freshness, repl
 ## Verification
 
 ```sh
-cargo test -p animus-adapters host_authority --locked
+cargo test -p animus-adapters effect::gate::tests --locked
 cargo test -p animus-std-basalt-authority --locked
 cargo clippy -p animus-std-basalt-authority --all-targets -- -D warnings
 cargo check --no-default-features --locked

@@ -1,3 +1,6 @@
+#[path = "tests/scoped.rs"]
+mod scoped;
+
 use std::cell::{Cell, RefCell};
 use std::collections::BTreeSet;
 

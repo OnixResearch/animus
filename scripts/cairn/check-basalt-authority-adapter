@@ -34,7 +34,7 @@ fi
 nickel export --format json fixtures/basalt-authority/positive.ncl >/dev/null
 nickel export --format json fixtures/basalt-authority/negative.ncl >/dev/null
 
-cargo test -p animus-adapters host_authority --locked
+cargo test -p animus-adapters effect::gate::tests --locked
 cargo test -p animus-std-basalt-authority --locked
 cargo clippy -p animus-std-basalt-authority --all-targets -- -D warnings
 cargo check -p animus-adapters --no-default-features --locked
@@ -81,6 +81,9 @@ coverage:
 - final replay admission after all other verification inputs
 - intersection with every existing Animus gate
 - durable safe-decision commit before guarded effect
+- borrowed live holder view with actual effective time bounds and commit identity
+- callback non-escape and no second replay admission
+- original argument-free callback compatibility
 - metadata-only allow and denial receipts
 - default, no-default, Wasm, catalog, facade, and evidence isolation
 non_claims:

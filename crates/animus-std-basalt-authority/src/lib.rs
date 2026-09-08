@@ -13,7 +13,10 @@
 #![deny(clippy::all, clippy::pedantic)]
 
 mod core;
+mod scoped;
 mod shell;
+
+pub use scoped::ScopedAuthority;
 
 pub use core::{
     BASALT_LICENSE, BASALT_POLICY_IDENTITY, BASALT_PROCESS_EXECUTION_POLICY_IDENTITY,
@@ -25,7 +28,7 @@ pub use core::{
 pub use shell::{
     BasaltAuthorityFailure, BasaltAuthorityInvocation, BasaltAuthorityService,
     BasaltAuthorizedDispatch, BasaltDispatchContext, HostAuthorityDecisionCommit,
-    dispatch_with_basalt,
+    dispatch_with_basalt, dispatch_with_basalt_scoped,
 };
 
 #[cfg(test)]

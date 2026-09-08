@@ -64,7 +64,7 @@ impl<'a> BasaltAuthorityService<'a> {
         &self,
         request: &HostAuthorityRequest,
     ) -> Result<HostAuthorityDecision, BasaltAuthorityFailure> {
-        self.with_live_authority(request, |decision| Ok(decision.clone()))
+        self.with_live_authority(request, |decision, _holder| Ok(decision.clone()))
     }
 
     fn with_live_authority<T, F>(
@@ -73,7 +73,10 @@ impl<'a> BasaltAuthorityService<'a> {
         admitted: F,
     ) -> Result<T, BasaltAuthorityFailure>
     where
-        F: FnOnce(&HostAuthorityDecision) -> Result<T, BasaltAuthorityFailure>,
+        F: FnOnce(
+            &HostAuthorityDecision,
+            &basalt::ucan::HolderInvocationAuthorized,
+        ) -> Result<T, BasaltAuthorityFailure>,
     {
         preflight_invocation(request, &self.invocation)?;
         let plan = plan_basalt_request(request).map_err(BasaltAuthorityFailure::without_receipt)?;
@@ -104,7 +107,7 @@ impl<'a> BasaltAuthorityService<'a> {
                 }
                 let decision = build_allowed_decision(request, live.receipt())
                     .map_err(BasaltAuthorityFailure::without_receipt)?;
-                admitted(&decision)
+                admitted(&decision, authorized)
             }
             Err(failure) => Err(build_denied_failure(request, &failure)),
         }
@@ -212,13 +215,35 @@ where
     C: HostAuthorityDecisionCommit,
     E: FnOnce() -> Result<T, HostAuthorityIssue>,
 {
+    dispatch_with_basalt_scoped(context, |_view| effect())
+}
+
+/// Dispatch with borrowed live holder authority after every gate and durable commit.
+///
+/// The higher-ranked callback cannot return the view or its borrowed authority.
+/// Verification happens once. This does not recheck ongoing revocation, reserve
+/// another nonce, grant resource custody, or authenticate effect output.
+///
+/// # Errors
+///
+/// Preserves the same provider, local-gate, commit, and effect failures as
+/// [`dispatch_with_basalt`]. No denied path calls the effect.
+// r[impl agent_harness_runtime.scoped_authority.order]
+pub fn dispatch_with_basalt_scoped<T, C, E>(
+    context: BasaltDispatchContext<'_, '_, C>,
+    effect: E,
+) -> Result<BasaltAuthorizedDispatch<T>, BasaltAuthorityFailure>
+where
+    C: HostAuthorityDecisionCommit,
+    E: for<'live> FnOnce(crate::ScopedAuthority<'live>) -> Result<T, HostAuthorityIssue>,
+{
     let BasaltDispatchContext {
         service,
         request,
         gates,
         commit,
     } = context;
-    service.with_live_authority(request, |decision| {
+    service.with_live_authority(request, |decision, holder| {
         let effective = intersect_host_authority(decision, gates);
         if effective.status != HostAuthorityStatus::Allowed {
             return Err(build_local_failure(request, decision, effective));
@@ -237,7 +262,13 @@ where
                 HostAuthorityIssue::CommitFailed,
             ));
         }
-        let output = effect().map_err(|issue| BasaltAuthorityFailure {
+        let output = effect(crate::ScopedAuthority {
+            holder,
+            decision,
+            receipt: &authority_receipt,
+            commit_identity: &commit_identity,
+        })
+        .map_err(|issue| BasaltAuthorityFailure {
             issue,
             authority_receipt: Some(Box::new(authority_receipt.clone())),
             basalt_receipt: None,
