@@ -39,16 +39,16 @@
       "locked": {
         "lastModified": 1784441700,
         "narHash": "sha256-BVmqyUYyoNpY6LfOABxwPO3DY88ZtXeKNg3TPoGCcL0=",
-        "owner": "OnixResearch",
-        "repo": "bounded-exec",
+        "ref": "refs/heads/main",
         "rev": "29dac88ecded94457572db3fdfaaaab95fa91525",
-        "type": "github"
+        "revCount": 3,
+        "type": "git",
+        "url": "ssh://git@github.com/OnixResearch/bounded-exec.git"
       },
       "original": {
-        "owner": "OnixResearch",
-        "repo": "bounded-exec",
         "rev": "29dac88ecded94457572db3fdfaaaab95fa91525",
-        "type": "github"
+        "type": "git",
+        "url": "ssh://git@github.com/OnixResearch/bounded-exec.git"
       }
     },
     "cairn": {

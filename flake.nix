@@ -42,7 +42,7 @@
       flake = false;
     };
     bounded-exec = {
-      url = "github:OnixResearch/bounded-exec/29dac88ecded94457572db3fdfaaaab95fa91525";
+      url = "git+ssh://git@github.com/OnixResearch/bounded-exec.git?rev=29dac88ecded94457572db3fdfaaaab95fa91525";
       flake = false;
     };
     trajectory = {

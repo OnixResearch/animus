@@ -1,5 +1,7 @@
 # Blocked cohort qualification
 
+Superseded by `QUALIFIED.md`. This file retains the earlier blocked-attempt record.
+
 Animus baseline `eff17736a6330cfe8f5d8fec2d986b65ff885f8d`: eight adapter tests passed.
 Cairn proposal, design and task receipts have empty issues. No execution mapping
 or policy admission change has been implemented.
