@@ -532,16 +532,13 @@ impl OpenAiResponsesSseParser {
                 };
                 self.output_lifecycle(value, expected)
             }
-            REASONING_SUMMARY_DELTA => {
+            REASONING_SUMMARY_DELTA | REASONING_TEXT_DELTA => {
                 self.text_delta(value, animus_adapters::ModelStreamFrameKind::ThoughtDelta)
             }
-            REASONING_SUMMARY_DONE | REASONING_SUMMARY_PART_ADDED | REASONING_SUMMARY_PART_DONE => {
-                self.output_lifecycle(value, OutputItemKind::Reasoning)
-            }
-            REASONING_TEXT_DELTA => {
-                self.text_delta(value, animus_adapters::ModelStreamFrameKind::ThoughtDelta)
-            }
-            REASONING_TEXT_DONE => self.output_lifecycle(value, OutputItemKind::Reasoning),
+            REASONING_SUMMARY_DONE
+            | REASONING_SUMMARY_PART_ADDED
+            | REASONING_SUMMARY_PART_DONE
+            | REASONING_TEXT_DONE => self.output_lifecycle(value, OutputItemKind::Reasoning),
             OUTPUT_ITEM_ADDED => self.output_item_added(value),
             FUNCTION_ARGUMENTS_DELTA => self.function_arguments_delta(value),
             FUNCTION_ARGUMENTS_DONE => self.function_arguments_done(value),
