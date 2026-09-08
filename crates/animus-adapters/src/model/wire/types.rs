@@ -7,7 +7,7 @@ pub struct Draft<'a> {
     pub order: u64,
     /// Stream frame kind.
     pub kind: super::parts::Kind,
-    /// Optional text body for text, tool, cancellation, and failure frames.
+    /// Optional text body. Content, thought, and tool deltas preserve whitespace.
     pub body: Option<&'a str>,
     /// Optional tool-call identifier for tool-call deltas.
     pub tool_call_id: Option<&'a str>,

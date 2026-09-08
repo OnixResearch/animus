@@ -25,6 +25,21 @@ fn body(
     match (kind.requires_body(), value) {
         (true, Some(raw)) => {
             let field = super::types::body_field_for(kind);
+            if matches!(
+                kind,
+                super::parts::Kind::ContentDelta
+                    | super::parts::Kind::ThoughtDelta
+                    | super::parts::Kind::ToolCallDelta
+            ) {
+                if raw.is_empty() {
+                    return Err(crate::validation::AdapterContractError::EmptyField {
+                        field: field.as_str(),
+                    }
+                    .into());
+                }
+                crate::validation::validate_optional_adapter_field(field, raw)?;
+                return Ok(Some(alloc::string::String::from(raw)));
+            }
             Ok(Some(crate::validation::normalized_adapter_field(
                 field, raw,
             )?))
