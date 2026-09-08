@@ -71,7 +71,7 @@ An explicit SSE event name must match that type. Empty or duplicate fields remai
 One unnamed `[DONE]` marker can follow an already validated completed response.
 The marker creates no canonical frame and cannot replace completion evidence.
 Premature markers, repeated markers, and later records fail. Markers consume the existing byte and event bounds.
-Comment-only SSE keep-alive records are ignored. Every record, including a keep-alive, consumes one event and its bytes from the configured bounds, so keep-alives cannot extend a stream.
+Comment-only SSE keep-alive records are ignored. Each record consumes the configured event and byte bounds. These parser bounds do not establish a wall-clock deadline.
 
 The parser binds every accepted event to one response and output-item lifecycle. It also checks sequence numbers, tool-call identities, completed arguments, terminal state, and configured bounds.
 
@@ -86,6 +86,12 @@ The parser projects its accepted frames into the existing runtime retry stream s
 `build_openai_request_body`, `build_tool_capable_openai_request_body`, `normalize_openai_response`, and the SSE parser are deterministic over explicit inputs. They do not read the environment or contact a network.
 
 `ReqwestOpenAiHost` owns transport. It uses explicit configuration, credentials, dispatch plans, cancellation, and byte bounds. The client disables redirects, ambient proxies, discovery, fallback, and hidden retry. It permits cleartext transport only after exact local-dspark pair validation.
+
+Both transport paths set an explicit request timeout. It applies from connection start through response-body completion, including a body with regular keep-alive bytes.
+The blocking client timeout remains an additional operation limit. That client-level setting alone restarts its wait on each read and does not bound total request time.
+The request timeout excludes credential resolution, request projection, worker lifetime, and cleanup. It does not establish a complete process deadline.
+
+Private transport tests cover completed bodies and deadline rejection under regular body activity for both text and streaming paths. They use synthetic credentials and a loopback server. This test-only wire seam does not widen public endpoint admission.
 
 The streaming transport is behind an injected reader seam. Deterministic tests use the same request admission and parser loop as the live client.
 

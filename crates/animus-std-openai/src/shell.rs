@@ -8,6 +8,9 @@ use crate::{
     build_tool_capable_openai_request_body,
 };
 
+#[cfg(all(test, feature = "tool-streaming"))]
+mod deadline;
+
 const HTTP_SUCCESS_START: u16 = 200;
 const HTTP_SUCCESS_END_EXCLUSIVE: u16 = 300;
 
@@ -249,6 +252,9 @@ impl Transport for ReqwestOpenAiHost {
             .client
             .post(request.endpoint_url)
             .bearer_auth(api_key.expose_value())
+            // The blocking client timeout renews on each read. The request
+            // timeout also follows the async response body until completion.
+            .timeout(self.config.timeout())
             .header(reqwest::header::ACCEPT, "application/json")
             .header(reqwest::header::CONTENT_TYPE, "application/json")
             .body(request.body.clone())
@@ -279,6 +285,7 @@ impl StreamingTransport for ReqwestOpenAiHost {
             .client
             .post(request.endpoint_url)
             .bearer_auth(api_key.expose_value())
+            .timeout(self.config.timeout())
             .header(reqwest::header::ACCEPT, "text/event-stream")
             .header(reqwest::header::CONTENT_TYPE, "application/json")
             .body(request.body.clone())
