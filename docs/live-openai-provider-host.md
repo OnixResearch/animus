@@ -75,7 +75,7 @@ Comment-only SSE keep-alive records are ignored. Every record, including a keep-
 
 The parser binds every accepted event to one response and output-item lifecycle. It also checks sequence numbers, tool-call identities, completed arguments, terminal state, and configured bounds.
 
-Only `response.reasoning_summary_text.delta` can produce a reasoning frame. That frame is redacted by default. Hidden reasoning events fail closed.
+`response.reasoning_text.delta` and `.done` events for registered reasoning items are accepted like reasoning summary events: they produce redacted reasoning frames only, and each reasoning delta must carry a `summary_index` or `content_index` correlation field. Content parts select their item kind from the part type, so `reasoning_text` parts validate against reasoning items. Hidden reasoning events still fail closed.
 
 Visible output becomes canonical content frames. Function arguments become redacted tool-call frames. Usage and terminal events become redacted canonical frames. Provider response identities remain host-local.
 
