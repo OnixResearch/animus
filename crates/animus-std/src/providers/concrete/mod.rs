@@ -1114,7 +1114,10 @@ pub fn validate_provider_dispatch_receipt(
 fn validate_dispatch_prerequisites(
     input: &ProviderDispatchInput<'_>,
 ) -> Result<(), ProviderDispatchError> {
-    if input.selected_model.api_kind() != super::ApiKind::OpenAiResponses {
+    if !matches!(
+        input.selected_model.api_kind(),
+        super::ApiKind::OpenAiResponses | super::ApiKind::OpenAiChat
+    ) {
         return Err(ProviderDispatchError::UnsupportedProviderFamily {
             api_kind: input.selected_model.api_kind(),
         });

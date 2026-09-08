@@ -134,14 +134,23 @@ impl ProviderStreamService for LiveOpenAiProvider {
         plan: &animus_std::ProviderDispatchPlan,
         dispatch: animus_std_openai::OpenAiToolDispatch,
     ) -> Result<animus_std_openai::OpenAiStreamOutcome, ProviderStreamError> {
-        self.host
-            .execute_tool_stream(animus_std_openai::OpenAiToolStreamRequest {
-                plan,
-                dispatch,
-                api_key: &self.api_key,
-                cancellation: &self.cancellation,
-            })
-            .map_err(|_error| ProviderStreamError::Provider)
+        let request = animus_std_openai::OpenAiToolStreamRequest {
+            plan,
+            dispatch,
+            api_key: &self.api_key,
+            cancellation: &self.cancellation,
+        };
+        if self.host.config().endpoint_identity()
+            == animus_std_openai::ZAI_CODING_PLAN_COMPLETIONS_ENDPOINT_IDENTITY
+        {
+            self.host
+                .execute_chat_stream(request)
+                .map_err(|_error| ProviderStreamError::Provider)
+        } else {
+            self.host
+                .execute_tool_stream(request)
+                .map_err(|_error| ProviderStreamError::Provider)
+        }
     }
 }
 
@@ -307,8 +316,15 @@ pub(crate) fn plan_request(
         },
     )
     .map_err(|_error| ProviderStreamError::Canonical)?;
+    let family = if config.endpoint_identity()
+        == animus_std_openai::ZAI_CODING_PLAN_COMPLETIONS_ENDPOINT_IDENTITY
+    {
+        animus_adapters::ProviderProjectionFamily::OpenAiChat
+    } else {
+        animus_adapters::ProviderProjectionFamily::OpenAiResponses
+    };
     let support = animus_adapters::ProviderProjectionSupport {
-        family: animus_adapters::ProviderProjectionFamily::OpenAiResponses,
+        family,
         developer_role: animus_adapters::ProviderProjectionFeatureSupport::Unsupported,
         images: animus_adapters::ProviderProjectionFeatureSupport::Unsupported,
         tools: animus_adapters::ProviderProjectionFeatureSupport::Preserved,

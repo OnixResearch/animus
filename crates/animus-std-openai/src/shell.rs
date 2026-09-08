@@ -158,6 +158,50 @@ pub(crate) fn execute_tool_stream_with_transport<T: StreamingTransport>(
         .map_err(|source| HostError::Stream { source })
 }
 
+#[cfg(feature = "tool-streaming")]
+pub(crate) fn execute_chat_stream_with_transport<T: StreamingTransport>(
+    transport: &T,
+    input: StreamingExecutionRequest<'_>,
+) -> Result<OpenAiStreamOutcome, HostError> {
+    if input.cancellation.is_cancelled() {
+        return Err(HostError::Cancelled);
+    }
+    if input.api_key.source_label() != input.plan.credential_source_label() {
+        return Err(HostError::CredentialBindingMismatch);
+    }
+    let body = crate::chat::build_zai_chat_completions_request_body(
+        input.config,
+        input.plan,
+        &input.dispatch,
+    )?;
+    let request = WireRequest {
+        endpoint_url: input.config.endpoint_url(),
+        body,
+        max_response_bytes: input.config.max_response_bytes(),
+    };
+    let mut response = transport
+        .open_stream(&request, input.api_key)
+        .map_err(|class| HostError::Transport { class })?;
+    if !(HTTP_SUCCESS_START..HTTP_SUCCESS_END_EXCLUSIVE).contains(&response.status) {
+        return Err(HostError::HttpStatus {
+            status: response.status,
+        });
+    }
+    let mut parser = crate::OpenAiChatCompletionsSseParser::new(
+        input.dispatch,
+        OpenAiStreamBounds::reviewed(usize::try_from(input.config.max_response_bytes()).map_err(
+            |_error| HostError::ResponseTooLarge {
+                limit: input.config.max_response_bytes(),
+            },
+        )?),
+    )
+    .map_err(|source| HostError::Stream { source })?;
+    stream_reader_into_parser(response.body.as_mut(), &mut parser, input.cancellation)?;
+    parser
+        .finish()
+        .map_err(|source| HostError::Stream { source })
+}
+
 /// One explicit blocking client for an admitted Responses endpoint.
 #[cfg(feature = "reqwest-client")]
 pub struct ReqwestOpenAiHost {
@@ -239,6 +283,30 @@ impl ReqwestOpenAiHost {
         Ok(outcome)
     }
 
+    /// Executes one bounded chat-completions stream for the Z.ai cohort.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`HostError`] under the same transport, bound, and parser rules
+    /// as [`Self::execute_tool_stream`].
+    pub fn execute_chat_stream(
+        &self,
+        request: OpenAiToolStreamRequest<'_>,
+    ) -> Result<OpenAiStreamOutcome, HostError> {
+        let outcome = execute_chat_stream_with_transport(
+            self,
+            StreamingExecutionRequest {
+                config: &self.config,
+                plan: request.plan,
+                dispatch: request.dispatch,
+                api_key: request.api_key,
+                cancellation: request.cancellation,
+            },
+        )?;
+        let _progress: OpenAiRetryStreamProgress = outcome.retry_progress();
+        Ok(outcome)
+    }
+
     /// Returns the admitted host configuration.
     #[must_use]
     pub const fn config(&self) -> &OpenAiHostConfig {
@@ -306,9 +374,35 @@ impl StreamingTransport for ReqwestOpenAiHost {
 }
 
 #[cfg(feature = "tool-streaming")]
-fn stream_reader_into_parser(
+pub(crate) trait StreamParserSink {
+    fn push_chunk(&mut self, chunk: &[u8]) -> Result<(), crate::stream::OpenAiStreamError>;
+    fn cancel(&mut self) -> Result<(), crate::stream::OpenAiStreamError>;
+}
+
+#[cfg(feature = "tool-streaming")]
+impl StreamParserSink for crate::OpenAiResponsesSseParser {
+    fn push_chunk(&mut self, chunk: &[u8]) -> Result<(), crate::stream::OpenAiStreamError> {
+        Self::push_chunk(self, chunk)
+    }
+    fn cancel(&mut self) -> Result<(), crate::stream::OpenAiStreamError> {
+        Self::cancel(self)
+    }
+}
+
+#[cfg(feature = "tool-streaming")]
+impl StreamParserSink for crate::OpenAiChatCompletionsSseParser {
+    fn push_chunk(&mut self, chunk: &[u8]) -> Result<(), crate::stream::OpenAiStreamError> {
+        Self::push_chunk(self, chunk)
+    }
+    fn cancel(&mut self) -> Result<(), crate::stream::OpenAiStreamError> {
+        Self::cancel(self)
+    }
+}
+
+#[cfg(feature = "tool-streaming")]
+fn stream_reader_into_parser<P: StreamParserSink>(
     reader: &mut dyn std::io::Read,
-    parser: &mut crate::OpenAiResponsesSseParser,
+    parser: &mut P,
     cancellation: &dyn StreamingCancellation,
 ) -> Result<(), HostError> {
     const STREAM_READ_BUFFER_BYTES: usize = 8_192;

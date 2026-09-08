@@ -3,6 +3,8 @@
 pub enum ApiKind {
     /// OpenAI-compatible responses API.
     OpenAiResponses,
+    /// OpenAI-compatible chat-completions API.
+    OpenAiChat,
     /// Anthropic-compatible messages API.
     AnthropicMessages,
     /// Local HTTP endpoint controlled by the host.
@@ -17,6 +19,7 @@ impl ApiKind {
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::OpenAiResponses => "openai_responses",
+            Self::OpenAiChat => "openai_chat",
             Self::AnthropicMessages => "anthropic_messages",
             Self::LocalHttp => "local_http",
             Self::Mock => "mock",

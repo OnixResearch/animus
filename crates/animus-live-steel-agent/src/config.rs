@@ -18,12 +18,15 @@ const COMPONENT_RECEIPTS: &str = "animus-live-steel-agent:RunReceipt";
 const LOCAL_DSPARK_PROVIDER_ID: &str = "local-dspark";
 const OPENAI_PROVIDER_ID: &str = "openai";
 const OPENROUTER_PROVIDER_ID: &str = "openrouter";
+const ZAI_PROVIDER_ID: &str = "zai";
 const LOCAL_DSPARK_CREDENTIAL_REFERENCE: &str = "brokered:injected-local-dspark-api-key";
 const OPENAI_CREDENTIAL_REFERENCE: &str = "brokered:injected-openai-api-key";
 const OPENROUTER_CREDENTIAL_REFERENCE: &str = "brokered:injected-openrouter-api-key";
 const LOCAL_DSPARK_CREDENTIAL_SOURCE: &str = "injected-local-dspark-api-key";
 const OPENAI_CREDENTIAL_SOURCE: &str = "injected-openai-api-key";
 const OPENROUTER_CREDENTIAL_SOURCE: &str = "injected-openrouter-api-key";
+const ZAI_CREDENTIAL_REFERENCE: &str = "brokered:injected-zai-api-key";
+const ZAI_CREDENTIAL_SOURCE: &str = "injected-zai-api-key";
 const DISABLED_REASONING_EFFORT: &str = "none";
 const LOW_REASONING_EFFORT: &str = "low";
 const DURABILITY: &str = "sync_all_each_commit";
@@ -590,6 +593,7 @@ fn validate_fixed_components(raw: &LiveSteelAgentConfig) -> Result<(), LiveSteel
 #[derive(Clone, Copy)]
 struct AdmittedProviderCohort {
     provider_id: &'static str,
+    api_kind: animus_std::ApiKind,
     endpoint_identity: &'static str,
     endpoint_url: &'static str,
     credential_reference: &'static str,
@@ -599,6 +603,7 @@ struct AdmittedProviderCohort {
 
 const LOCAL_DSPARK_PROVIDER_COHORT: AdmittedProviderCohort = AdmittedProviderCohort {
     provider_id: LOCAL_DSPARK_PROVIDER_ID,
+    api_kind: animus_std::ApiKind::OpenAiResponses,
     endpoint_identity: animus_std_openai::LOCAL_DSPARK_RESPONSES_ENDPOINT_IDENTITY,
     endpoint_url: animus_std_openai::LOCAL_DSPARK_RESPONSES_URL,
     credential_reference: LOCAL_DSPARK_CREDENTIAL_REFERENCE,
@@ -607,6 +612,7 @@ const LOCAL_DSPARK_PROVIDER_COHORT: AdmittedProviderCohort = AdmittedProviderCoh
 };
 const OPENAI_PROVIDER_COHORT: AdmittedProviderCohort = AdmittedProviderCohort {
     provider_id: OPENAI_PROVIDER_ID,
+    api_kind: animus_std::ApiKind::OpenAiResponses,
     endpoint_identity: animus_std_openai::OFFICIAL_OPENAI_RESPONSES_ENDPOINT_IDENTITY,
     endpoint_url: animus_std_openai::OFFICIAL_OPENAI_RESPONSES_URL,
     credential_reference: OPENAI_CREDENTIAL_REFERENCE,
@@ -615,10 +621,21 @@ const OPENAI_PROVIDER_COHORT: AdmittedProviderCohort = AdmittedProviderCohort {
 };
 const OPENROUTER_PROVIDER_COHORT: AdmittedProviderCohort = AdmittedProviderCohort {
     provider_id: OPENROUTER_PROVIDER_ID,
+    api_kind: animus_std::ApiKind::OpenAiResponses,
     endpoint_identity: animus_std_openai::OPENROUTER_RESPONSES_ENDPOINT_IDENTITY,
     endpoint_url: animus_std_openai::OPENROUTER_RESPONSES_URL,
     credential_reference: OPENROUTER_CREDENTIAL_REFERENCE,
     credential_source: OPENROUTER_CREDENTIAL_SOURCE,
+    reasoning_effort: LOW_REASONING_EFFORT,
+};
+
+const ZAI_PROVIDER_COHORT: AdmittedProviderCohort = AdmittedProviderCohort {
+    provider_id: ZAI_PROVIDER_ID,
+    api_kind: animus_std::ApiKind::OpenAiChat,
+    endpoint_identity: animus_std_openai::ZAI_CODING_PLAN_COMPLETIONS_ENDPOINT_IDENTITY,
+    endpoint_url: animus_std_openai::ZAI_CODING_PLAN_COMPLETIONS_URL,
+    credential_reference: ZAI_CREDENTIAL_REFERENCE,
+    credential_source: ZAI_CREDENTIAL_SOURCE,
     reasoning_effort: LOW_REASONING_EFFORT,
 };
 
@@ -652,6 +669,7 @@ fn admit_provider_cohort(
         LOCAL_DSPARK_PROVIDER_ID => &LOCAL_DSPARK_PROVIDER_COHORT,
         OPENAI_PROVIDER_ID => &OPENAI_PROVIDER_COHORT,
         OPENROUTER_PROVIDER_ID => &OPENROUTER_PROVIDER_COHORT,
+        ZAI_PROVIDER_ID => &ZAI_PROVIDER_COHORT,
         _unknown => return Err(LiveSteelAgentConfigError::ProviderMismatch),
     };
     let is_tuple_exact = provider.provider_id == cohort.provider_id
@@ -851,12 +869,7 @@ fn build_selected_model(
             cost: None,
         })
         .map_err(|_error| LiveSteelAgentConfigError::ProviderMismatch)?;
-    let model = animus_std::ModelEntry::new(
-        model_id,
-        animus_std::ApiKind::OpenAiResponses,
-        endpoint,
-        capabilities,
-    );
+    let model = animus_std::ModelEntry::new(model_id, cohort.api_kind, endpoint, capabilities);
     let source = animus_std::CredentialSource::brokered(cohort.credential_source)
         .map_err(|_error| LiveSteelAgentConfigError::ProviderMismatch)?;
     let provider = animus_std::ProviderEntry::new(

@@ -12,6 +12,11 @@ pub const OFFICIAL_OPENAI_RESPONSES_URL: &str = "https://api.openai.com/v1/respo
 pub const OPENROUTER_RESPONSES_ENDPOINT_IDENTITY: &str = "openrouter-responses";
 /// Exact HTTPS URL admitted by the `OpenRouter` Responses cohort.
 pub const OPENROUTER_RESPONSES_URL: &str = "https://openrouter.ai/api/v1/responses";
+/// Exact endpoint identity admitted by the Z.ai coding-plan chat-completions cohort.
+pub const ZAI_CODING_PLAN_COMPLETIONS_ENDPOINT_IDENTITY: &str = "zai-coding-plan-completions";
+/// Exact HTTPS URL admitted by the Z.ai coding-plan chat-completions cohort.
+pub const ZAI_CODING_PLAN_COMPLETIONS_URL: &str =
+    "https://api.z.ai/api/coding/paas/v4/chat/completions";
 /// Exact endpoint identity admitted by the private `local-dspark` cohort.
 pub const LOCAL_DSPARK_RESPONSES_ENDPOINT_IDENTITY: &str = "local-dspark-responses";
 /// Exact private HTTP URL admitted by the `local-dspark` cohort.
@@ -316,6 +321,7 @@ fn validate_config(
     let expected_url = match endpoint_identity {
         OFFICIAL_OPENAI_RESPONSES_ENDPOINT_IDENTITY => OFFICIAL_OPENAI_RESPONSES_URL,
         OPENROUTER_RESPONSES_ENDPOINT_IDENTITY => OPENROUTER_RESPONSES_URL,
+        ZAI_CODING_PLAN_COMPLETIONS_ENDPOINT_IDENTITY => ZAI_CODING_PLAN_COMPLETIONS_URL,
         LOCAL_DSPARK_RESPONSES_ENDPOINT_IDENTITY => LOCAL_DSPARK_RESPONSES_URL,
         _unsupported => {
             return Err(HostError::InvalidConfiguration {

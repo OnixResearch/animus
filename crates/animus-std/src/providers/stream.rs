@@ -282,7 +282,7 @@ pub fn parse_provider_stream_chunks(
         super::ApiKind::AnthropicMessages => {
             parse_events(input.call_id, input.chunks, anthropic_event_kind)
         }
-        super::ApiKind::LocalHttp | super::ApiKind::Mock => {
+        super::ApiKind::OpenAiChat | super::ApiKind::LocalHttp | super::ApiKind::Mock => {
             Err(ProviderStreamingError::UnsupportedProviderFamily {
                 api_kind: input.api_kind,
             })

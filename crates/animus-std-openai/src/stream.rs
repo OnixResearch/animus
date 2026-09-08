@@ -10,9 +10,9 @@ const EVENT_SEPARATOR: &[u8] = b"\n\n";
 const CRLF_EVENT_SEPARATOR: &[u8] = b"\r\n\r\n";
 const EVENT_PREFIX: &str = "event:";
 const DATA_PREFIX: &str = "data:";
-const STREAM_DONE: &str = "[DONE]";
-const FIRST_ORDER: u64 = 1;
-const ORDER_INCREMENT: u64 = 1;
+pub(crate) const STREAM_DONE: &str = "[DONE]";
+pub(crate) const FIRST_ORDER: u64 = 1;
+pub(crate) const ORDER_INCREMENT: u64 = 1;
 const MAX_STREAM_CHUNKS: usize = 65_536;
 const MAX_STREAM_EVENTS: usize = 65_536;
 const MAX_EVENT_BYTES: usize = 1_048_576;
@@ -50,7 +50,7 @@ const UNKNOWN_EVENT_REASON: &str = "OpenAI Responses SSE event is outside the re
 const RESPONSE_ID_REASON: &str = "OpenAI Responses SSE response identity is missing or mismatched";
 const RESPONSE_LIFECYCLE_REASON: &str = "OpenAI Responses SSE lifecycle is invalid";
 const SEQUENCE_REASON: &str = "OpenAI Responses SSE sequence is invalid";
-const TERMINAL_REASON: &str = "OpenAI Responses SSE terminal state is invalid";
+pub(crate) const TERMINAL_REASON: &str = "OpenAI Responses SSE terminal state is invalid";
 const TERMINAL_BODY_REASON: &str = "OpenAI Responses SSE terminal response is malformed";
 const TOOL_CORRELATION_REASON: &str = "OpenAI Responses SSE function-call correlation is invalid";
 const TOOL_ARGUMENT_REASON: &str = "OpenAI Responses SSE function-call arguments are invalid";
@@ -64,7 +64,7 @@ const REASONING_EVENT_REASON: &str =
 const PROVIDER_FAILURE_REASON: &str = "openai_provider_failure";
 const PROVIDER_INCOMPLETE_REASON: &str = "openai_provider_incomplete";
 const PROVIDER_ERROR_REASON: &str = "openai_provider_error";
-const CANCELLED_REASON: &str = "cancelled";
+pub(crate) const CANCELLED_REASON: &str = "cancelled";
 
 /// Explicit byte and event bounds for one production SSE parse.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -98,7 +98,7 @@ impl OpenAiStreamBounds {
         }
     }
 
-    fn validate(self) -> Result<(), HostError> {
+    pub(crate) fn validate(self) -> Result<(), HostError> {
         let valid = self.stream_bytes > 0
             && self.event_bytes > 0
             && self.event_bytes <= self.stream_bytes
@@ -148,7 +148,7 @@ pub struct OpenAiStreamError {
 }
 
 impl OpenAiStreamError {
-    fn new(class: OpenAiStreamFailureClass, reason: &'static str) -> Self {
+    pub(crate) fn new(class: OpenAiStreamFailureClass, reason: &'static str) -> Self {
         Self { class, reason }
     }
 
@@ -209,6 +209,20 @@ pub enum OpenAiRetryStreamProgress {
     Other,
 }
 
+/// Parser-owned canonical parts for one assembled stream outcome.
+pub(crate) struct OutcomeParts {
+    /// Host-local provider response identity.
+    pub(crate) provider_response_id: String,
+    /// Ordered canonical model stream frames.
+    pub(crate) frames: Vec<animus_adapters::ModelStreamFrame>,
+    /// Completed correlated provider function calls.
+    pub(crate) tool_calls: Vec<OpenAiCompletedToolCall>,
+    /// Terminal stream classification.
+    pub(crate) terminal: OpenAiStreamTerminal,
+    /// Safe retry progress classification.
+    pub(crate) retry_progress: OpenAiRetryStreamProgress,
+}
+
 /// Bounded result from the production `OpenAI` Responses SSE parser.
 #[derive(Clone)]
 pub struct OpenAiStreamOutcome {
@@ -248,6 +262,17 @@ impl OpenAiStreamOutcome {
     #[must_use]
     pub const fn retry_progress(&self) -> OpenAiRetryStreamProgress {
         self.retry_progress
+    }
+
+    /// Assembles one outcome from parser-owned canonical parts.
+    pub(crate) fn assemble(parts: OutcomeParts) -> Self {
+        Self {
+            provider_response_id: parts.provider_response_id,
+            frames: parts.frames,
+            tool_calls: parts.tool_calls,
+            terminal: parts.terminal,
+            retry_progress: parts.retry_progress,
+        }
     }
 
     /// Reduces all accepted frames into the existing runtime replay-safety state.
@@ -450,13 +475,13 @@ impl OpenAiResponsesSseParser {
                 .response_id
                 .ok_or_else(|| correlation(RESPONSE_ID_REASON))?,
         };
-        Ok(OpenAiStreamOutcome {
+        Ok(OpenAiStreamOutcome::assemble(OutcomeParts {
             provider_response_id,
             frames: self.frames,
             tool_calls: self.tool_calls,
             terminal,
             retry_progress: self.retry_progress,
-        })
+        }))
     }
 
     fn process_complete_events(&mut self) -> Result<(), OpenAiStreamError> {
@@ -989,7 +1014,7 @@ pub fn parse_openai_responses_sse_chunks(
     parser.finish()
 }
 
-fn parse_sse_fields(record: &str) -> Result<(Option<&str>, &str), OpenAiStreamError> {
+pub(crate) fn parse_sse_fields(record: &str) -> Result<(Option<&str>, &str), OpenAiStreamError> {
     let mut event = None;
     let mut data = None;
     for line in record.lines() {
@@ -1016,7 +1041,7 @@ fn parse_sse_fields(record: &str) -> Result<(Option<&str>, &str), OpenAiStreamEr
     }
 }
 
-fn find_separator(bytes: &[u8]) -> Option<(usize, usize)> {
+pub(crate) fn find_separator(bytes: &[u8]) -> Option<(usize, usize)> {
     let lf = bytes
         .windows(EVENT_SEPARATOR.len())
         .position(|window| window == EVENT_SEPARATOR)
@@ -1081,19 +1106,19 @@ fn required_u32(value: &Value, key: &str) -> Result<u32, OpenAiStreamError> {
     u32::try_from(raw).map_err(|_error| bound_error())
 }
 
-fn malformed(reason: &'static str) -> OpenAiStreamError {
+pub(crate) fn malformed(reason: &'static str) -> OpenAiStreamError {
     OpenAiStreamError::new(OpenAiStreamFailureClass::Malformed, reason)
 }
 
-fn lifecycle(reason: &'static str) -> OpenAiStreamError {
+pub(crate) fn lifecycle(reason: &'static str) -> OpenAiStreamError {
     OpenAiStreamError::new(OpenAiStreamFailureClass::Lifecycle, reason)
 }
 
-fn correlation(reason: &'static str) -> OpenAiStreamError {
+pub(crate) fn correlation(reason: &'static str) -> OpenAiStreamError {
     OpenAiStreamError::new(OpenAiStreamFailureClass::Correlation, reason)
 }
 
-fn bound_error() -> OpenAiStreamError {
+pub(crate) fn bound_error() -> OpenAiStreamError {
     OpenAiStreamError::new(OpenAiStreamFailureClass::BoundExceeded, STREAM_BOUND_REASON)
 }
 

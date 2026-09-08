@@ -14,7 +14,7 @@ pub const STEEL_REPL_TOOL_NAME: &str = animus_adapters::rlm_kernel::STEEL_REPL_T
 const FUNCTION_TYPE: &str = "function";
 const FUNCTION_CALL_OUTPUT_TYPE: &str = "function_call_output";
 const INPUT_TEXT_TYPE: &str = "input_text";
-const RESPONSE_FORMAT_TEXT: &str = "text";
+pub(crate) const RESPONSE_FORMAT_TEXT: &str = "text";
 const REASONING_NONE: &str = "none";
 const ROLE_TOOL: &str = "tool";
 const TOOL_CHOICE_AUTO: &str = "auto";
@@ -24,19 +24,19 @@ const MAX_TOOL_CAPABILITIES: usize = 64;
 const MAX_SCHEMA_BYTES: usize = 65_536;
 const MAX_TOOL_RESULT_BYTES: usize = 262_144;
 
-const FEATURE_ENDPOINT: &str = "endpoint";
-const FEATURE_PROVIDER_FAMILY: &str = "provider_family";
-const FEATURE_STREAMING: &str = "streaming";
-const FEATURE_STRUCTURED_OUTPUT: &str = "structured_output";
-const FEATURE_STOP_SEQUENCES: &str = "stop_sequences";
-const FEATURE_MESSAGE_ROLE: &str = "message_role";
-const FEATURE_TOOL_CAPABILITY: &str = "tool_capability";
-const FEATURE_TOOL_SCHEMA: &str = "tool_schema";
-const FEATURE_STREAM_CHANNEL: &str = "stream_channel";
-const FEATURE_TOOL_RESULT_SHAPE: &str = "tool_result_shape";
-const FEATURE_PARALLEL_TOOL_CALLS: &str = "parallel_tool_calls";
-const FEATURE_TOOL_CHOICE: &str = "tool_choice";
-const FEATURE_TOOL_COHORT: &str = "steel_repl_tool_cohort";
+pub(crate) const FEATURE_ENDPOINT: &str = "endpoint";
+pub(crate) const FEATURE_PROVIDER_FAMILY: &str = "provider_family";
+pub(crate) const FEATURE_STREAMING: &str = "streaming";
+pub(crate) const FEATURE_STRUCTURED_OUTPUT: &str = "structured_output";
+pub(crate) const FEATURE_STOP_SEQUENCES: &str = "stop_sequences";
+pub(crate) const FEATURE_MESSAGE_ROLE: &str = "message_role";
+pub(crate) const FEATURE_TOOL_CAPABILITY: &str = "tool_capability";
+pub(crate) const FEATURE_TOOL_SCHEMA: &str = "tool_schema";
+pub(crate) const FEATURE_STREAM_CHANNEL: &str = "stream_channel";
+pub(crate) const FEATURE_TOOL_RESULT_SHAPE: &str = "tool_result_shape";
+pub(crate) const FEATURE_PARALLEL_TOOL_CALLS: &str = "parallel_tool_calls";
+pub(crate) const FEATURE_TOOL_CHOICE: &str = "tool_choice";
+pub(crate) const FEATURE_TOOL_COHORT: &str = "steel_repl_tool_cohort";
 
 const INVALID_LABEL_REASON: &str = "OpenAI tool metadata contains an invalid label";
 const DUPLICATE_CAPABILITY_REASON: &str = "OpenAI tool capability metadata contains a duplicate";
@@ -299,6 +299,7 @@ pub struct OpenAiContinuationBinding {
     tool_call_id: String,
     tool_name: String,
     arguments_identity: String,
+    arguments_json: String,
 }
 
 impl OpenAiContinuationBinding {
@@ -310,6 +311,7 @@ impl OpenAiContinuationBinding {
             tool_call_id: call.tool_call_id.clone(),
             tool_name: call.tool_name.clone(),
             arguments_identity: blake3_identity(call.arguments_json.as_bytes()),
+            arguments_json: call.arguments_json.clone(),
         }
     }
 
@@ -348,6 +350,12 @@ impl OpenAiContinuationBinding {
     pub fn arguments_identity(&self) -> &str {
         self.arguments_identity.as_str()
     }
+
+    /// Returns the private completed arguments for chat-protocol continuations.
+    #[must_use]
+    pub(crate) fn arguments_json(&self) -> &str {
+        self.arguments_json.as_str()
+    }
 }
 
 impl fmt::Debug for OpenAiContinuationBinding {
@@ -360,6 +368,7 @@ impl fmt::Debug for OpenAiContinuationBinding {
             .field("tool_call_id", &"[REDACTED]")
             .field("tool_name", &self.tool_name)
             .field("arguments_identity", &self.arguments_identity)
+            .field("arguments_json", &"[REDACTED]")
             .finish()
     }
 }
@@ -679,7 +688,7 @@ fn validate_tool_plan(
     validate_continuation(dispatch, request)
 }
 
-fn validate_roles(
+pub(crate) fn validate_roles(
     request: &animus_std::OpenAiResponsesDispatchRequest,
     capabilities: &OpenAiToolCapabilityMatrix,
 ) -> Result<(), HostError> {
@@ -697,7 +706,7 @@ fn validate_roles(
     Ok(())
 }
 
-fn validate_tools(
+pub(crate) fn validate_tools(
     request: &animus_std::OpenAiResponsesDispatchRequest,
     capabilities: &OpenAiToolCapabilityMatrix,
     schemas: &[OpenAiToolSchemaBinding],
@@ -718,7 +727,7 @@ fn validate_tools(
     Ok(())
 }
 
-fn validate_stream_channels(
+pub(crate) fn validate_stream_channels(
     request: &animus_std::OpenAiResponsesDispatchRequest,
     capabilities: &OpenAiToolCapabilityMatrix,
 ) -> Result<(), HostError> {
@@ -740,7 +749,7 @@ fn validate_stream_channels(
     Ok(())
 }
 
-fn validate_continuation(
+pub(crate) fn validate_continuation(
     dispatch: &OpenAiToolDispatch,
     request: &animus_std::OpenAiResponsesDispatchRequest,
 ) -> Result<(), HostError> {
@@ -869,6 +878,25 @@ fn project_tool_choice(
     }
 }
 
+pub(crate) fn project_chat_tool_choice(
+    choice: &OpenAiToolChoice,
+    request: &animus_std::OpenAiResponsesDispatchRequest,
+) -> Result<Value, HostError> {
+    match &choice.kind {
+        OpenAiToolChoiceKind::Auto => Ok(Value::String(String::from(TOOL_CHOICE_AUTO))),
+        OpenAiToolChoiceKind::Required => Ok(Value::String(String::from(TOOL_CHOICE_REQUIRED))),
+        OpenAiToolChoiceKind::Named(name) => {
+            if !request.tools().iter().any(|tool| tool.name() == name) {
+                return unsupported(FEATURE_TOOL_CHOICE);
+            }
+            Ok(serde_json::json!({
+                "type": FUNCTION_TYPE,
+                "function": {"name": name}
+            }))
+        }
+    }
+}
+
 fn project_reasoning(config: &crate::OpenAiHostConfig, effort: &str) -> Option<WireReasoning> {
     debug_assert!(effort == REASONING_NONE || !effort.is_empty());
     config
@@ -912,7 +940,9 @@ fn tool_result_text(message: &animus_std::OpenAiResponsesMessage) -> Result<&str
     }
 }
 
-fn schema_map(schemas: &[OpenAiToolSchemaBinding]) -> Result<BTreeMap<&str, &Value>, HostError> {
+pub(crate) fn schema_map(
+    schemas: &[OpenAiToolSchemaBinding],
+) -> Result<BTreeMap<&str, &Value>, HostError> {
     let mut output = BTreeMap::new();
     for binding in schemas {
         if output.insert(binding.label(), binding.schema()).is_some() {

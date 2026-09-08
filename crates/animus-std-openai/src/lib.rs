@@ -13,6 +13,8 @@
 #![allow(clippy::module_name_repetitions)]
 #![forbid(unsafe_code)]
 
+#[cfg(feature = "tool-streaming")]
+mod chat;
 mod core;
 mod model;
 #[cfg(any(feature = "reqwest-client", test))]
@@ -23,6 +25,8 @@ mod stream;
 #[cfg(feature = "tool-streaming")]
 mod tool;
 
+#[cfg(feature = "tool-streaming")]
+pub use chat::OpenAiChatCompletionsSseParser;
 pub use core::{build_openai_request_body, normalize_openai_response};
 #[cfg(any(feature = "reqwest-client", test))]
 pub use model::OpenAiApiKey;
@@ -31,6 +35,7 @@ pub use model::{
     LOCAL_DSPARK_RESPONSES_URL, OFFICIAL_OPENAI_RESPONSES_ENDPOINT_IDENTITY,
     OFFICIAL_OPENAI_RESPONSES_URL, OPENROUTER_RESPONSES_ENDPOINT_IDENTITY,
     OPENROUTER_RESPONSES_URL, OpenAiHostConfig, TransportErrorClass,
+    ZAI_CODING_PLAN_COMPLETIONS_ENDPOINT_IDENTITY, ZAI_CODING_PLAN_COMPLETIONS_URL,
 };
 #[cfg(feature = "reqwest-client")]
 pub use shell::ReqwestOpenAiHost;
