@@ -10,6 +10,8 @@ use crate::{
 
 #[cfg(all(test, feature = "tool-streaming"))]
 mod deadline;
+#[cfg(all(test, feature = "tool-streaming"))]
+mod tls;
 
 const HTTP_SUCCESS_START: u16 = 200;
 const HTTP_SUCCESS_END_EXCLUSIVE: u16 = 300;
@@ -165,21 +167,26 @@ pub struct ReqwestOpenAiHost {
 
 #[cfg(feature = "reqwest-client")]
 impl ReqwestOpenAiHost {
+    fn client_builder(config: &OpenAiHostConfig) -> reqwest::blocking::ClientBuilder {
+        reqwest::blocking::Client::builder()
+            .timeout(config.timeout())
+            .redirect(reqwest::redirect::Policy::none())
+            .no_proxy()
+            .https_only(config.https_only())
+    }
+
     /// Builds the exact bounded client without redirects or retries.
     ///
     /// # Errors
     ///
     /// Returns [`HostError`] when the client cannot be constructed.
     pub fn new(config: OpenAiHostConfig) -> Result<Self, HostError> {
-        let client = reqwest::blocking::Client::builder()
-            .timeout(config.timeout())
-            .redirect(reqwest::redirect::Policy::none())
-            .no_proxy()
-            .https_only(config.https_only())
-            .build()
-            .map_err(|_error| HostError::Transport {
-                class: TransportErrorClass::ClientConfiguration,
-            })?;
+        let client =
+            Self::client_builder(&config)
+                .build()
+                .map_err(|_error| HostError::Transport {
+                    class: TransportErrorClass::ClientConfiguration,
+                })?;
         Ok(Self { config, client })
     }
 

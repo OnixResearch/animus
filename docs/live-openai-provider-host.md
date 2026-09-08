@@ -93,6 +93,13 @@ The request timeout excludes credential resolution, request projection, worker l
 
 Private transport tests cover completed bodies and deadline rejection under regular body activity for both text and streaming paths. They use synthetic credentials and a loopback server. This test-only wire seam does not widen public endpoint admission.
 
+Private TLS tests use the same internal client builder and both production request paths.
+The fixture alone replaces the trust roots with an ephemeral synthetic certificate and resolves the requested hostname directly to loopback.
+Positive controls accept the synthetic trust anchor. Negative controls reject an untrusted certificate and a trusted certificate with the wrong hostname before an HTTP request arrives.
+Stalled handshakes and active TLS response bodies must respect the configured request timeout on both transport paths.
+The public constructor retains bundled trust roots, certificate and hostname verification, and the exact endpoint allowlist. It exposes no new root or resolver override.
+These controls do not contact OpenAI or OpenRouter. They do not prove public certificate validity, external DNS, provider availability, or a complete process deadline.
+
 The streaming transport is behind an injected reader seam. Deterministic tests use the same request admission and parser loop as the live client.
 
 The response reader checks cancellation between reads. A cancellation before provider response creation produces a canonical cancelled outcome without a provider response identity.
