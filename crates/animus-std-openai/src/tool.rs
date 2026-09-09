@@ -300,6 +300,8 @@ pub struct OpenAiContinuationBinding {
     tool_name: String,
     arguments_identity: String,
     arguments_json: String,
+    pub(crate) chat_replay: Option<std::sync::Arc<crate::chat::history::Replay>>,
+    pub(crate) api_kind: animus_std::ApiKind,
 }
 
 impl OpenAiContinuationBinding {
@@ -312,6 +314,8 @@ impl OpenAiContinuationBinding {
             tool_name: call.tool_name.clone(),
             arguments_identity: blake3_identity(call.arguments_json.as_bytes()),
             arguments_json: call.arguments_json.clone(),
+            chat_replay: call.chat_replay.clone(),
+            api_kind: call.api_kind,
         }
     }
 
@@ -369,6 +373,8 @@ impl fmt::Debug for OpenAiContinuationBinding {
             .field("tool_name", &self.tool_name)
             .field("arguments_identity", &self.arguments_identity)
             .field("arguments_json", &"[REDACTED]")
+            .field("chat_replay", &self.chat_replay.is_some())
+            .field("api_kind", &self.api_kind)
             .finish()
     }
 }
@@ -382,6 +388,8 @@ pub struct OpenAiCompletedToolCall {
     pub(crate) tool_call_id: String,
     pub(crate) tool_name: String,
     pub(crate) arguments_json: String,
+    pub(crate) chat_replay: Option<std::sync::Arc<crate::chat::history::Replay>>,
+    pub(crate) api_kind: animus_std::ApiKind,
 }
 
 impl OpenAiCompletedToolCall {
@@ -414,6 +422,8 @@ impl fmt::Debug for OpenAiCompletedToolCall {
             .field("tool_call_id", &"[REDACTED]")
             .field("tool_name", &self.tool_name)
             .field("arguments_json", &"[REDACTED]")
+            .field("chat_replay", &self.chat_replay.is_some())
+            .field("api_kind", &self.api_kind)
             .finish()
     }
 }
@@ -660,7 +670,9 @@ fn validate_tool_plan(
     if plan.endpoint() != config.endpoint_identity() {
         return unsupported(FEATURE_ENDPOINT);
     }
-    if plan.api_kind() != animus_std::ApiKind::OpenAiResponses {
+    if plan.api_kind() != animus_std::ApiKind::OpenAiResponses
+        || dispatch.continuation_parts().is_some_and(|(binding, _result)|
+            binding.api_kind != animus_std::ApiKind::OpenAiResponses) {
         return unsupported(FEATURE_PROVIDER_FAMILY);
     }
     let request = plan.request();

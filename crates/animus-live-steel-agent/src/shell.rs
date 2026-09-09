@@ -331,22 +331,20 @@ where
         animus_runtime::coding_session_host::CodingSessionServiceIssue,
     > {
         self.dispatch_count = self.dispatch_count.saturating_add(1);
-        let (model_call_id, continuation, correlation_id) = {
+        let (model_call_id, continuation) = {
             let mut shared = self.shared.borrow_mut();
             let model_call_id = shared.next_model_call_id();
-            let correlation_id = shared
-                .pending()
-                .map(|pending| String::from(pending.correlation_id()));
-            (model_call_id, shared.pending().is_some(), correlation_id)
+            let continuation = shared.pending().map(crate::runtime::provider::PendingContinuation::request_input)
+                .transpose().map_err(service_issue)?;
+            (model_call_id, continuation)
         };
         let planned = crate::runtime::provider::plan_request(
             self.config.as_ref(),
             request,
-            continuation,
-            correlation_id.as_deref(),
+            continuation.as_ref(),
         )
         .map_err(service_issue)?;
-        let dispatch = if continuation {
+        let dispatch = if continuation.is_some() {
             self.shared
                 .borrow_mut()
                 .take()

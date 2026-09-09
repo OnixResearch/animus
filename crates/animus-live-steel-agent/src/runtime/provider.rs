@@ -212,7 +212,20 @@ impl SharedProviderState {
     }
 }
 
+pub(crate) struct ContinuationInput {
+    correlation_id: String,
+    output: String,
+}
+
 impl PendingContinuation {
+    pub(crate) fn request_input(&self) -> Result<ContinuationInput, ProviderStreamError> {
+        let result = self.result.as_ref().ok_or(ProviderStreamError::ToolCohort)?;
+        Ok(ContinuationInput {
+            correlation_id: String::from(self.binding.tool_call_id()),
+            output: String::from(result.output()),
+        })
+    }
+
     pub(crate) fn correlation_id(&self) -> &str {
         self.binding.tool_call_id()
     }
@@ -280,16 +293,15 @@ pub(crate) struct PlannedProviderRequest {
 pub(crate) fn plan_request(
     config: &crate::ValidatedLiveSteelAgentConfig,
     request: &animus_runtime::coding_session_host::CodingSessionProviderRequest,
-    continuation: bool,
-    correlation_id: Option<&str>,
+    continuation: Option<&ContinuationInput>,
 ) -> Result<PlannedProviderRequest, ProviderStreamError> {
     let text = [animus_adapters::CanonicalMessageContentPartDraft::Text {
-        text: request.request().prompt(),
+        text: continuation.map_or_else(|| request.request().prompt(), |input| input.output.as_str()),
     }];
     let message = animus_adapters::CanonicalModelMessageDraft {
-        role: if continuation { "tool" } else { "user" },
+        role: if continuation.is_some() { "tool" } else { "user" },
         content: &text,
-        tool_call_id: correlation_id,
+        tool_call_id: continuation.map(|input| input.correlation_id.as_str()),
     };
     let tools = [animus_adapters::CanonicalModelToolDeclarationDraft {
         name: animus_std_openai::STEEL_REPL_TOOL_NAME,

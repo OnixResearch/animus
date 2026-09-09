@@ -813,6 +813,8 @@ impl OpenAiResponsesSseParser {
             tool_call_id: String::from(tool_call_id),
             tool_name: String::from(tool_name),
             arguments_json: String::from(arguments),
+            chat_replay: None,
+            api_kind: animus_std::ApiKind::OpenAiResponses,
         });
         Ok(())
     }

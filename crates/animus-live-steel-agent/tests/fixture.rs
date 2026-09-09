@@ -2,6 +2,8 @@
 
 #[path = "fixture/providerport.rs"]
 mod providerport;
+#[path = "fixture/zaichat.rs"]
+mod zaichat;
 
 use animus_live_steel_agent::{
     FixtureStreamProvider, LiveSteelAgentComposition, LiveSteelAgentCompositionInput,

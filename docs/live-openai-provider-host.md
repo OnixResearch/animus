@@ -116,8 +116,22 @@ An explicit model field must match the admitted model. Optional absent model fie
 Cancellation before a response identity produces a cancelled outcome with an empty provider identity.
 These controls use synthetic streams and do not prove live Coding Plan behavior.
 
-**Chat continuation remains incomplete.** The request builder retains tool arguments but does not retain the original conversation or replay reasoning state.
-The product must not treat this path as verified Steel tool continuation.
+Chat continuation retains the admitted original messages, completed assistant messages, exact reasoning text, tool arguments, and correlated tool results.
+The host binds this private history to the model, provider, endpoint, credential declaration, reasoning effort, and tool-schema identity.
+It sends `thinking.clear_thinking = false` and an explicit thinking mode. Unset temperature is omitted.
+Canonical content, thought, and tool deltas preserve whitespace. They are not identifier labels.
+
+History is limited to 64 messages and 1,048,576 serialized bytes. A request is limited to 2,097,152 encoded bytes.
+These are local memory and encoding limits, not approved campaign budgets.
+Excess history is rejected, never trimmed. Parallel calls and reused tool-call identities are rejected.
+Debug output omits private history. This state is not a durable session-recovery format.
+
+`OpenAiChatCompletionsSseParser::for_request` binds an admitted request for offline or injected stream acquisition.
+The production transport prepares the same request and replay state before contact.
+The standalone `new` constructor has no original request. Its completed calls cannot authorize chat continuation.
+Responses and chat continuation bindings cannot cross protocol families.
+
+Offline tests do not prove subscription access, live model behavior, or release readiness.
 The all-feature build does not prove feature isolation. The `reqwest-client` feature also requires a separate build without `tool-streaming`.
 
 ## Packaged live smokes

@@ -26,7 +26,7 @@ mod stream;
 mod tool;
 
 #[cfg(feature = "tool-streaming")]
-pub use chat::OpenAiChatCompletionsSseParser;
+pub use chat::{OpenAiChatCompletionsSseParser, build_zai_chat_completions_request_body};
 pub use core::{build_openai_request_body, normalize_openai_response};
 #[cfg(any(feature = "reqwest-client", test))]
 pub use model::OpenAiApiKey;

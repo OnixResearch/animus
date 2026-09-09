@@ -1023,7 +1023,7 @@ pub fn plan_provider_dispatch(
     )?;
     let projection = animus_adapters::assert_model_provider_request_fixture(
         input.canonical_request,
-        openai_responses_projection_support(),
+        openai_projection_support(input.selected_model.api_kind())?,
         input.reviewed_projection_fixture,
     )
     .map_err(|source| ProviderDispatchError::RequestProjection { source })?;
@@ -1366,10 +1366,15 @@ fn request_has_images(request: &animus_adapters::CanonicalModelRequest) -> bool 
     })
 }
 
-fn openai_responses_projection_support() -> animus_adapters::ProviderProjectionSupport {
+fn openai_projection_support(api_kind: super::ApiKind) -> Result<animus_adapters::ProviderProjectionSupport, ProviderDispatchError> {
+    let family = match api_kind {
+        super::ApiKind::OpenAiResponses => animus_adapters::ProviderProjectionFamily::OpenAiResponses,
+        super::ApiKind::OpenAiChat => animus_adapters::ProviderProjectionFamily::OpenAiChat,
+        _ => return Err(ProviderDispatchError::UnsupportedProviderFamily { api_kind }),
+    };
     let preserved = animus_adapters::ProviderProjectionFeatureSupport::Preserved;
-    animus_adapters::ProviderProjectionSupport {
-        family: animus_adapters::ProviderProjectionFamily::OpenAiResponses,
+    Ok(animus_adapters::ProviderProjectionSupport {
+        family,
         developer_role: preserved,
         images: preserved,
         tools: preserved,
@@ -1378,7 +1383,7 @@ fn openai_responses_projection_support() -> animus_adapters::ProviderProjectionS
         reasoning: preserved,
         streaming: preserved,
         metadata: preserved,
-    }
+    })
 }
 
 fn messages_match(

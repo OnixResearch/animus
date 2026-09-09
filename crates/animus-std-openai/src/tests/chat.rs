@@ -14,6 +14,8 @@ const TOOL_CALL_ID: &str = "call_fixture_1";
 const ANSWER: &str = "3";
 
 mod lifecycle;
+mod continuation;
+mod fixture;
 
 fn fresh_parser() -> OpenAiChatCompletionsSseParser {
     OpenAiChatCompletionsSseParser::new(dispatch(), OpenAiStreamBounds::reviewed(4_096))
@@ -36,6 +38,9 @@ fn dispatch() -> OpenAiToolDispatch {
             vec![
                 OpenAiToolStreamChannel::Content,
                 OpenAiToolStreamChannel::ReasoningSummary,
+                OpenAiToolStreamChannel::ToolCall,
+                OpenAiToolStreamChannel::Usage,
+                OpenAiToolStreamChannel::Finish,
             ],
         )
         .expect("reviewed capability matrix must validate"),

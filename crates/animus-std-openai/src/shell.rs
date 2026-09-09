@@ -169,33 +169,23 @@ pub(crate) fn execute_chat_stream_with_transport<T: StreamingTransport>(
     if input.api_key.source_label() != input.plan.credential_source_label() {
         return Err(HostError::CredentialBindingMismatch);
     }
-    let body = crate::chat::build_zai_chat_completions_request_body(
-        input.config,
-        input.plan,
-        &input.dispatch,
-    )?;
-    let request = WireRequest {
-        endpoint_url: input.config.endpoint_url(),
-        body,
-        max_response_bytes: input.config.max_response_bytes(),
-    };
-    let mut response = transport
-        .open_stream(&request, input.api_key)
-        .map_err(|class| HostError::Transport { class })?;
-    if !(HTTP_SUCCESS_START..HTTP_SUCCESS_END_EXCLUSIVE).contains(&response.status) {
-        return Err(HostError::HttpStatus {
-            status: response.status,
-        });
-    }
+    let prepared = crate::chat::request::prepare(input.config, input.plan, &input.dispatch)?;
     let mut parser = crate::OpenAiChatCompletionsSseParser::new(
         input.dispatch,
         OpenAiStreamBounds::reviewed(usize::try_from(input.config.max_response_bytes()).map_err(
-            |_error| HostError::ResponseTooLarge {
-                limit: input.config.max_response_bytes(),
-            },
+            |_error| HostError::ResponseTooLarge { limit: input.config.max_response_bytes() },
         )?),
-    )
-    .map_err(|source| HostError::Stream { source })?;
+    ).map_err(|source| HostError::Stream { source })?.with_history(prepared.replay);
+    let request = WireRequest {
+        endpoint_url: input.config.endpoint_url(), body: prepared.body,
+        max_response_bytes: input.config.max_response_bytes(),
+    };
+    if input.cancellation.is_cancelled() { return Err(HostError::Cancelled); }
+    let mut response = transport.open_stream(&request, input.api_key)
+        .map_err(|class| HostError::Transport { class })?;
+    if !(HTTP_SUCCESS_START..HTTP_SUCCESS_END_EXCLUSIVE).contains(&response.status) {
+        return Err(HostError::HttpStatus { status: response.status });
+    }
     stream_reader_into_parser(response.body.as_mut(), &mut parser, input.cancellation)?;
     parser
         .finish()
