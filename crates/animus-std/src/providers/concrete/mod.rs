@@ -1376,8 +1376,13 @@ fn openai_projection_support(
         super::ApiKind::OpenAiChat => animus_adapters::ProviderProjectionFamily::OpenAiChat,
         _ => return Err(ProviderDispatchError::UnsupportedProviderFamily { api_kind }),
     };
+    assert_eq!(
+        family.as_str(),
+        api_kind.as_str(),
+        "projection must retain the admitted API family"
+    );
     let preserved = animus_adapters::ProviderProjectionFeatureSupport::Preserved;
-    Ok(animus_adapters::ProviderProjectionSupport {
+    let projection = animus_adapters::ProviderProjectionSupport {
         family,
         developer_role: preserved,
         images: preserved,
@@ -1387,7 +1392,12 @@ fn openai_projection_support(
         reasoning: preserved,
         streaming: preserved,
         metadata: preserved,
-    })
+    };
+    assert_eq!(
+        projection.tools, preserved,
+        "dispatch projection must retain tool declarations"
+    );
+    Ok(projection)
 }
 
 fn messages_match(
