@@ -1,5 +1,8 @@
 use super::*;
 
+#[path = "observation.rs"]
+mod observation;
+
 const NARROW_NOT_BEFORE_SECONDS: u64 = 1_200;
 const NARROW_EXPIRES_SECONDS: u64 = 1_800;
 
@@ -90,6 +93,7 @@ fn direct_and_delegated_views_follow_commit_and_preserve_exact_authority() {
                     view.decision().decision_identity(),
                     view.receipt().decision_identity
                 );
+                observation::check_observations(&view, &fixture, &replay, &commits);
                 Ok(view.receipt().receipt_identity.clone())
             },
         )

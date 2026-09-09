@@ -6,7 +6,7 @@ Animus can use Basalt as an additional deny-capable authority gate for selected 
 
 `animus-adapters` owns the implementation-neutral `HostAuthorityService` request, decision, binding, gate-intersection, and receipt contracts. These contracts are `no_std` plus `alloc`. They expose no Basalt or UCAN type.
 
-`animus-std-basalt-authority` owns the optional standard-library bridge. It uses Basalt revision `3f1fd1ed63f2b55f07a27f662e5a720518662b7e` with Basalt's default features disabled (the minimal enforcement profile), vendored UCAN revision `927dc32641af6cd1b17202aff44c35acef4540fa`, policy identity `b3:5475d5473ec98cbf052a83512836b0739f5dad3e7b9b0ed201eb3094b1cf39bf`, execution policy identity `b3:c90838cfc1f3c8f5f926f9ee98a05d203d2c0dc2199657514537c37bff3d8c7d`, and UCAN catalog identity `b3:fe77fd63076eaef555b74e702e4c14e483bdba70151ccc955c75b17d97412427`.
+`animus-std-basalt-authority` owns the optional standard-library bridge. It uses Basalt revision `b10a0465bc3ee966a4864d6e779184f4eae0cd61` with Basalt's default features disabled (the minimal enforcement profile), vendored UCAN revision `3a2aa043068a82663cf72ec05ed5d56a7d65ecd5`, policy identity `b3:5475d5473ec98cbf052a83512836b0739f5dad3e7b9b0ed201eb3094b1cf39bf`, execution policy identity `b3:c90838cfc1f3c8f5f926f9ee98a05d203d2c0dc2199657514537c37bff3d8c7d`, and UCAN catalog identity `b3:fe77fd63076eaef555b74e702e4c14e483bdba70151ccc955c75b17d97412427`.
 
 The host supplies verification time, key resolution, proof storage, revocation checks, caveat policies, replay admission, verification limits, holder-invocation limits, and durable safe-decision commit. The adapter does not discover or create these services.
 
@@ -79,6 +79,21 @@ This authority reflects verification time. The callback does not guarantee later
 non-revocation, continuous resource custody, or safe execution. Hosts retain later
 recheck obligations. Repeating raw holder verification with the same nonce is not
 a continuing-authority recheck.
+
+With the reviewed cohort, consumers can call
+`basalt::ucan::recheck_holder_authorization(view.holder(), token, context, policies)`
+inside the callback. The existing holder accessor supplies the original live
+admission; no additional Animus wrapper or verifier is required. The caller supplies
+explicit current verification inputs. The recheck accepts no replay port and
+returns a borrowed observation, not a new dispatch capability. It does not modify
+the original committed receipt. The callback result cannot carry this observation
+outside its admitted lifetime.
+
+Rechecks do not refresh Animus or Basalt policy. Consumers still own stricter
+deadlines, monotonic successive observation times, service authenticity and
+freshness, and atomic effect-time admission. A failed recheck must stop any later
+consumer effect; the recheck itself does not revoke an already-returned value or
+provide persistent resource custody.
 
 ## Evidence
 

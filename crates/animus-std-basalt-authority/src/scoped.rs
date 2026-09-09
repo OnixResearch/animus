@@ -46,7 +46,25 @@
 ///     let _private = format!("{view:?}");
 /// }
 /// ```
+/// A recheck observation cannot escape through the callback result either.
+///
+/// ```compile_fail
+/// use animus_std_basalt_authority::*;
+/// use basalt::ucan::*;
+/// fn escape_observation<'a, C: HostAuthorityDecisionCommit>(
+///     context: BasaltDispatchContext<'_, '_, C>,
+///     token: &str,
+///     verification: &HolderTokenVerificationContext<'_>,
+///     policies: &HolderRecheckPolicies<'_>,
+/// ) -> Result<BasaltAuthorizedDispatch<HolderAuthorizationObservation<'a>>, BasaltAuthorityFailure> {
+///     dispatch_with_basalt_scoped(context, |view| {
+///         recheck_holder_authorization(view.holder(), token, verification, policies)
+///             .map_err(|_| animus_adapters::HostAuthorityIssue::ProviderUnavailable)
+///     })
+/// }
+/// ```
 // r[impl agent_harness_runtime.scoped_authority.view]
+// r[verify agent_harness_runtime.holder_observation.boundary]
 pub struct ScopedAuthority<'live> {
     pub(crate) holder: &'live basalt::ucan::HolderInvocationAuthorized,
     pub(crate) decision: &'live animus_adapters::HostAuthorityDecision,

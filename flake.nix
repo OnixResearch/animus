@@ -18,7 +18,7 @@
       flake = false;
     };
     basalt = {
-      url = "git+ssh://git@github.com/OnixResearch/basalt.git?rev=3f1fd1ed63f2b55f07a27f662e5a720518662b7e";
+      url = "git+ssh://git@github.com/OnixResearch/basalt.git?rev=b10a0465bc3ee966a4864d6e779184f4eae0cd61";
       flake = false;
     };
     artifact = {

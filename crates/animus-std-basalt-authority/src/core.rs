@@ -3,9 +3,9 @@ use basalt::EnforcementRequest;
 use basalt::ucan_enforcement::{EnforcementAction, UcanEnforcementReason};
 
 /// Reviewed Basalt source revision used by this adapter.
-pub const BASALT_SOURCE_REVISION: &str = "3f1fd1ed63f2b55f07a27f662e5a720518662b7e";
+pub const BASALT_SOURCE_REVISION: &str = "b10a0465bc3ee966a4864d6e779184f4eae0cd61";
 /// Reviewed vendored UCAN source revision used by Basalt.
-pub const BASALT_UCAN_REVISION: &str = "927dc32641af6cd1b17202aff44c35acef4540fa";
+pub const BASALT_UCAN_REVISION: &str = "3a2aa043068a82663cf72ec05ed5d56a7d65ecd5";
 /// BLAKE3 identity of Basalt's checked generated policy artifact.
 pub const BASALT_POLICY_IDENTITY: &str =
     "b3:5475d5473ec98cbf052a83512836b0739f5dad3e7b9b0ed201eb3094b1cf39bf";

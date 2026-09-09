@@ -5,8 +5,8 @@ readonly FAILURE=1
 readonly ROOT_FLAG=--root
 readonly DEFAULT_ROOT=.
 readonly RECEIPT=target/cairn/focused-rails/basalt-authority-adapter.md
-readonly BASALT_REVISION=3f1fd1ed63f2b55f07a27f662e5a720518662b7e
-readonly UCAN_REVISION=927dc32641af6cd1b17202aff44c35acef4540fa
+readonly BASALT_REVISION=b10a0465bc3ee966a4864d6e779184f4eae0cd61
+readonly UCAN_REVISION=3a2aa043068a82663cf72ec05ed5d56a7d65ecd5
 readonly POLICY_IDENTITY=b3:5475d5473ec98cbf052a83512836b0739f5dad3e7b9b0ed201eb3094b1cf39bf
 readonly EXECUTION_POLICY_IDENTITY=b3:c90838cfc1f3c8f5f926f9ee98a05d203d2c0dc2199657514537c37bff3d8c7d
 readonly UCAN_CATALOG_IDENTITY=b3:fe77fd63076eaef555b74e702e4c14e483bdba70151ccc955c75b17d97412427
@@ -83,6 +83,9 @@ coverage:
 - durable safe-decision commit before guarded effect
 - borrowed live holder view with actual effective time bounds and commit identity
 - callback non-escape and no second replay admission
+- direct and delegated holder observations through the published UCAN API
+- repeated observations preserve replay and decision commits; expiry, revocation, and substitution deny
+- borrowed observation cannot escape through the callback result
 - original argument-free callback compatibility
 - metadata-only allow and denial receipts
 - default, no-default, Wasm, catalog, facade, and evidence isolation

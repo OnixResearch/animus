@@ -20,16 +20,16 @@
     "basalt": {
       "flake": false,
       "locked": {
-        "lastModified": 1788812231,
-        "narHash": "sha256-+fGEGhsqcZ9h0U645UYGemObE25iCyx42qXCpNh6fgU=",
+        "lastModified": 1788912370,
+        "narHash": "sha256-wb+8lqq6GedHWqS3/5EPkQV5u/vjrut334m0pX284D0=",
         "ref": "refs/heads/main",
-        "rev": "3f1fd1ed63f2b55f07a27f662e5a720518662b7e",
-        "revCount": 90,
+        "rev": "b10a0465bc3ee966a4864d6e779184f4eae0cd61",
+        "revCount": 92,
         "type": "git",
         "url": "ssh://git@github.com/OnixResearch/basalt.git"
       },
       "original": {
-        "rev": "3f1fd1ed63f2b55f07a27f662e5a720518662b7e",
+        "rev": "b10a0465bc3ee966a4864d6e779184f4eae0cd61",
         "type": "git",
         "url": "ssh://git@github.com/OnixResearch/basalt.git"
       }

@@ -60,11 +60,11 @@ let Profile = {
     license_review_required = true,
     source = {
       repository = "OnixResearch/basalt",
-      revision = "3f1fd1ed63f2b55f07a27f662e5a720518662b7e",
+      revision = "b10a0465bc3ee966a4864d6e779184f4eae0cd61",
       license = "AGPL-3.0-or-later",
       policy_identity = "b3:5475d5473ec98cbf052a83512836b0739f5dad3e7b9b0ed201eb3094b1cf39bf",
       process_execution_policy_identity = "b3:c90838cfc1f3c8f5f926f9ee98a05d203d2c0dc2199657514537c37bff3d8c7d",
-      vendored_ucan_revision = "927dc32641af6cd1b17202aff44c35acef4540fa",
+      vendored_ucan_revision = "3a2aa043068a82663cf72ec05ed5d56a7d65ecd5",
       ucan_catalog_identity = "b3:fe77fd63076eaef555b74e702e4c14e483bdba70151ccc955c75b17d97412427",
     },
     generic_port = {
