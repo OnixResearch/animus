@@ -219,7 +219,10 @@ pub(crate) struct ContinuationInput {
 
 impl PendingContinuation {
     pub(crate) fn request_input(&self) -> Result<ContinuationInput, ProviderStreamError> {
-        let result = self.result.as_ref().ok_or(ProviderStreamError::ToolCohort)?;
+        let result = self
+            .result
+            .as_ref()
+            .ok_or(ProviderStreamError::ToolCohort)?;
         Ok(ContinuationInput {
             correlation_id: String::from(self.binding.tool_call_id()),
             output: String::from(result.output()),
@@ -296,10 +299,15 @@ pub(crate) fn plan_request(
     continuation: Option<&ContinuationInput>,
 ) -> Result<PlannedProviderRequest, ProviderStreamError> {
     let text = [animus_adapters::CanonicalMessageContentPartDraft::Text {
-        text: continuation.map_or_else(|| request.request().prompt(), |input| input.output.as_str()),
+        text: continuation
+            .map_or_else(|| request.request().prompt(), |input| input.output.as_str()),
     }];
     let message = animus_adapters::CanonicalModelMessageDraft {
-        role: if continuation.is_some() { "tool" } else { "user" },
+        role: if continuation.is_some() {
+            "tool"
+        } else {
+            "user"
+        },
         content: &text,
         tool_call_id: continuation.map(|input| input.correlation_id.as_str()),
     };

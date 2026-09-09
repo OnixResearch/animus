@@ -13,9 +13,9 @@ const RESPONSE_ID: &str = "chatcmpl-fixture-1";
 const TOOL_CALL_ID: &str = "call_fixture_1";
 const ANSWER: &str = "3";
 
-mod lifecycle;
 mod continuation;
 mod fixture;
+mod lifecycle;
 
 fn fresh_parser() -> OpenAiChatCompletionsSseParser {
     OpenAiChatCompletionsSseParser::new(dispatch(), OpenAiStreamBounds::reviewed(4_096))

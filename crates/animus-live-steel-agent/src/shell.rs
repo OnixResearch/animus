@@ -334,8 +334,11 @@ where
         let (model_call_id, continuation) = {
             let mut shared = self.shared.borrow_mut();
             let model_call_id = shared.next_model_call_id();
-            let continuation = shared.pending().map(crate::runtime::provider::PendingContinuation::request_input)
-                .transpose().map_err(service_issue)?;
+            let continuation = shared
+                .pending()
+                .map(crate::runtime::provider::PendingContinuation::request_input)
+                .transpose()
+                .map_err(service_issue)?;
             (model_call_id, continuation)
         };
         let planned = crate::runtime::provider::plan_request(

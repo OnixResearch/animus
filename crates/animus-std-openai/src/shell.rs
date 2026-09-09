@@ -173,18 +173,28 @@ pub(crate) fn execute_chat_stream_with_transport<T: StreamingTransport>(
     let mut parser = crate::OpenAiChatCompletionsSseParser::new(
         input.dispatch,
         OpenAiStreamBounds::reviewed(usize::try_from(input.config.max_response_bytes()).map_err(
-            |_error| HostError::ResponseTooLarge { limit: input.config.max_response_bytes() },
+            |_error| HostError::ResponseTooLarge {
+                limit: input.config.max_response_bytes(),
+            },
         )?),
-    ).map_err(|source| HostError::Stream { source })?.with_history(prepared.replay);
+    )
+    .map_err(|source| HostError::Stream { source })?
+    .with_history(prepared.replay);
     let request = WireRequest {
-        endpoint_url: input.config.endpoint_url(), body: prepared.body,
+        endpoint_url: input.config.endpoint_url(),
+        body: prepared.body,
         max_response_bytes: input.config.max_response_bytes(),
     };
-    if input.cancellation.is_cancelled() { return Err(HostError::Cancelled); }
-    let mut response = transport.open_stream(&request, input.api_key)
+    if input.cancellation.is_cancelled() {
+        return Err(HostError::Cancelled);
+    }
+    let mut response = transport
+        .open_stream(&request, input.api_key)
         .map_err(|class| HostError::Transport { class })?;
     if !(HTTP_SUCCESS_START..HTTP_SUCCESS_END_EXCLUSIVE).contains(&response.status) {
-        return Err(HostError::HttpStatus { status: response.status });
+        return Err(HostError::HttpStatus {
+            status: response.status,
+        });
     }
     stream_reader_into_parser(response.body.as_mut(), &mut parser, input.cancellation)?;
     parser

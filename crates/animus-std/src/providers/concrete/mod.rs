@@ -1366,9 +1366,13 @@ fn request_has_images(request: &animus_adapters::CanonicalModelRequest) -> bool 
     })
 }
 
-fn openai_projection_support(api_kind: super::ApiKind) -> Result<animus_adapters::ProviderProjectionSupport, ProviderDispatchError> {
+fn openai_projection_support(
+    api_kind: super::ApiKind,
+) -> Result<animus_adapters::ProviderProjectionSupport, ProviderDispatchError> {
     let family = match api_kind {
-        super::ApiKind::OpenAiResponses => animus_adapters::ProviderProjectionFamily::OpenAiResponses,
+        super::ApiKind::OpenAiResponses => {
+            animus_adapters::ProviderProjectionFamily::OpenAiResponses
+        }
         super::ApiKind::OpenAiChat => animus_adapters::ProviderProjectionFamily::OpenAiChat,
         _ => return Err(ProviderDispatchError::UnsupportedProviderFamily { api_kind }),
     };

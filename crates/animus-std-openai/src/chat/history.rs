@@ -44,7 +44,10 @@ impl Replay {
         &self,
         plan: &animus_std::ProviderDispatchPlan,
         schema_identity: &str,
-        continuation: (&crate::tool::OpenAiContinuationBinding, &crate::tool::OpenAiToolResult),
+        continuation: (
+            &crate::tool::OpenAiContinuationBinding,
+            &crate::tool::OpenAiToolResult,
+        ),
     ) -> Result<Self, crate::HostError> {
         let (binding, result) = continuation;
         if self.model != plan.request().model()

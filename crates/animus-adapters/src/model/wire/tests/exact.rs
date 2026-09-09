@@ -17,8 +17,11 @@ fn content_thought_and_tool_deltas_preserve_whitespace_and_unicode() {
 
 #[test]
 fn empty_nul_and_oversized_deltas_remain_invalid() {
-    let oversized = "x".repeat(crate::validation::MAX_ADAPTER_FIELD_CHARS + 1);
-    for text in ["", "\0", &oversized] {
+    let invalid_text_chars = crate::validation::MAX_ADAPTER_FIELD_CHARS
+        .checked_add(1)
+        .expect("the test bound must have a larger representable value");
+    let invalid_text = "x".repeat(invalid_text_chars);
+    for text in ["", "\0", &invalid_text] {
         assert!(frame(super::super::parts::Kind::ContentDelta, text).is_err());
         assert!(frame(super::super::parts::Kind::ThoughtDelta, text).is_err());
         assert!(frame(super::super::parts::Kind::ToolCallDelta, text).is_err());

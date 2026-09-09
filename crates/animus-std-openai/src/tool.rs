@@ -671,8 +671,12 @@ fn validate_tool_plan(
         return unsupported(FEATURE_ENDPOINT);
     }
     if plan.api_kind() != animus_std::ApiKind::OpenAiResponses
-        || dispatch.continuation_parts().is_some_and(|(binding, _result)|
-            binding.api_kind != animus_std::ApiKind::OpenAiResponses) {
+        || dispatch
+            .continuation_parts()
+            .is_some_and(|(binding, _result)| {
+                binding.api_kind != animus_std::ApiKind::OpenAiResponses
+            })
+    {
         return unsupported(FEATURE_PROVIDER_FAMILY);
     }
     let request = plan.request();
