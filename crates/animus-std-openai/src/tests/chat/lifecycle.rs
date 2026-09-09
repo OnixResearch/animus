@@ -52,6 +52,37 @@ fn final_tool_delta_is_not_lost() {
 }
 
 #[test]
+fn local_dspark_reasoning_delta_is_accepted_as_thought_and_combined_deltas_keep_content() {
+    // The private local-dspark vLLM emits reasoning under `reasoning`, not `reasoning_content`.
+    let mut parser = fresh_parser();
+    parser
+        .push_chunk(chunk(&json!({"reasoning": "think then"}), None).as_bytes())
+        .expect("reasoning delta");
+    parser
+        .push_chunk(chunk(&json!({"content": ANSWER, "reasoning": "."}), None).as_bytes())
+        .expect("combined delta");
+    parser
+        .push_chunk(chunk(&json!({}), Some("stop")).as_bytes())
+        .expect("finish");
+    parser.push_chunk(DONE).expect("done");
+    let outcome = parser.finish().expect("complete stream");
+    let thoughts: Vec<&str> = outcome
+        .frames()
+        .iter()
+        .filter(|frame| frame.kind() == ModelStreamFrameKind::ThoughtDelta)
+        .filter_map(ModelStreamFrame::body)
+        .collect();
+    assert_eq!(thoughts, vec!["think then", "."]);
+    let content: Vec<&str> = outcome
+        .frames()
+        .iter()
+        .filter(|frame| frame.kind() == ModelStreamFrameKind::ContentDelta)
+        .filter_map(ModelStreamFrame::body)
+        .collect();
+    assert_eq!(content, vec![ANSWER]);
+}
+
+#[test]
 fn rejected_record_permanently_blocks_success() {
     let mut parser = fresh_parser();
     parser

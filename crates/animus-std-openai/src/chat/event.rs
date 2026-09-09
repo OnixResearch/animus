@@ -94,7 +94,7 @@ impl OpenAiChatCompletionsSseParser {
         if delta.keys().any(|key| {
             !matches!(
                 key.as_str(),
-                "role" | "content" | "reasoning_content" | "tool_calls"
+                "role" | "content" | "reasoning_content" | "reasoning" | "tool_calls"
             )
         }) {
             return Err(malformed(UNSUPPORTED_CHOICE_REASON));
@@ -105,6 +105,8 @@ impl OpenAiChatCompletionsSseParser {
         {
             return Err(malformed(UNSUPPORTED_CHOICE_REASON));
         }
+        // The private local-dspark vLLM emits reasoning under `reasoning`, not `reasoning_content`.
+        // Both spellings are admitted; each preserves exact text as a ThoughtDelta.
         for (field, kind) in [
             (
                 "content",
@@ -112,6 +114,10 @@ impl OpenAiChatCompletionsSseParser {
             ),
             (
                 "reasoning_content",
+                animus_adapters::ModelStreamFrameKind::ThoughtDelta,
+            ),
+            (
+                "reasoning",
                 animus_adapters::ModelStreamFrameKind::ThoughtDelta,
             ),
         ] {
