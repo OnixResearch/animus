@@ -22,4 +22,4 @@ fi
 cd "${repo_root}"
 
 cargo test -p animus-adapters --locked artifact::
-cargo test -p animus-adapters --locked safe_receipt::
+cargo test -p animus-adapter-safe --locked
