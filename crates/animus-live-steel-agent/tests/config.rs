@@ -63,7 +63,7 @@ fn exact_openrouter_configuration_selects_the_matching_host_and_credential() {
 }
 
 #[test]
-fn exact_local_dspark_configuration_requires_disabled_reasoning() {
+fn exact_local_dspark_configuration_admits_the_cohort_effort_set() {
     // r[verify agent_harness_runtime.local_dspark_responses.endpoint.pass]
     // r[verify agent_harness_runtime.local_dspark_responses.reasoning.pass]
     let value = local_dspark_value();
@@ -86,12 +86,27 @@ fn exact_local_dspark_configuration_requires_disabled_reasoning() {
         animus_std_openai::LOCAL_DSPARK_CHAT_COMPLETIONS_URL
     );
 
-    let mut reasoning_drift = value;
-    reasoning_drift["provider"]["reasoning_effort"] = Value::from("low");
-    assert_eq!(
-        parse_value(&reasoning_drift),
-        Err(LiveSteelAgentConfigError::ProviderMismatch)
-    );
+    // Every admitted cohort effort parses; the wire effort follows the config.
+    for admitted in ["none", "low", "high"] {
+        let mut variant = local_dspark_value();
+        variant["provider"]["reasoning_effort"] = Value::from(admitted);
+        let parsed = parse_value(&local_dspark_with_effort(admitted));
+        assert!(parsed.is_ok(), "effort {admitted} must be admitted");
+    }
+
+    // A label outside the exact cohort set fails closed.
+    for rejected in ["medium", "max"] {
+        assert_eq!(
+            parse_value(&local_dspark_with_effort(rejected)),
+            Err(LiveSteelAgentConfigError::ProviderMismatch)
+        );
+    }
+}
+
+fn local_dspark_with_effort(effort: &str) -> Value {
+    let mut value = local_dspark_value();
+    value["provider"]["reasoning_effort"] = Value::from(effort);
+    value
 }
 
 #[test]

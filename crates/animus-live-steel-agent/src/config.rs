@@ -29,6 +29,7 @@ const ZAI_CREDENTIAL_REFERENCE: &str = "brokered:injected-zai-api-key";
 const ZAI_CREDENTIAL_SOURCE: &str = "injected-zai-api-key";
 const DISABLED_REASONING_EFFORT: &str = "none";
 const LOW_REASONING_EFFORT: &str = "low";
+const HIGH_REASONING_EFFORT: &str = "high";
 const DURABILITY: &str = "sync_all_each_commit";
 const LOCKING: &str = "exclusive_create_new";
 const PRIVACY: &str = "replay_private";
@@ -598,7 +599,9 @@ struct AdmittedProviderCohort {
     endpoint_url: &'static str,
     credential_reference: &'static str,
     credential_source: &'static str,
-    reasoning_effort: &'static str,
+    /// Exact reasoning-effort labels the backend admits for this cohort.
+    /// The deployed configuration must pick exactly one of them.
+    reasoning_efforts: &'static [&'static str],
 }
 
 const LOCAL_DSPARK_PROVIDER_COHORT: AdmittedProviderCohort = AdmittedProviderCohort {
@@ -608,7 +611,11 @@ const LOCAL_DSPARK_PROVIDER_COHORT: AdmittedProviderCohort = AdmittedProviderCoh
     endpoint_url: animus_std_openai::LOCAL_DSPARK_CHAT_COMPLETIONS_URL,
     credential_reference: LOCAL_DSPARK_CREDENTIAL_REFERENCE,
     credential_source: LOCAL_DSPARK_CREDENTIAL_SOURCE,
-    reasoning_effort: DISABLED_REASONING_EFFORT,
+    reasoning_efforts: &[
+        DISABLED_REASONING_EFFORT,
+        LOW_REASONING_EFFORT,
+        HIGH_REASONING_EFFORT,
+    ],
 };
 const OPENAI_PROVIDER_COHORT: AdmittedProviderCohort = AdmittedProviderCohort {
     provider_id: OPENAI_PROVIDER_ID,
@@ -617,7 +624,7 @@ const OPENAI_PROVIDER_COHORT: AdmittedProviderCohort = AdmittedProviderCohort {
     endpoint_url: animus_std_openai::OFFICIAL_OPENAI_RESPONSES_URL,
     credential_reference: OPENAI_CREDENTIAL_REFERENCE,
     credential_source: OPENAI_CREDENTIAL_SOURCE,
-    reasoning_effort: LOW_REASONING_EFFORT,
+    reasoning_efforts: &[LOW_REASONING_EFFORT],
 };
 const OPENROUTER_PROVIDER_COHORT: AdmittedProviderCohort = AdmittedProviderCohort {
     provider_id: OPENROUTER_PROVIDER_ID,
@@ -626,7 +633,7 @@ const OPENROUTER_PROVIDER_COHORT: AdmittedProviderCohort = AdmittedProviderCohor
     endpoint_url: animus_std_openai::OPENROUTER_RESPONSES_URL,
     credential_reference: OPENROUTER_CREDENTIAL_REFERENCE,
     credential_source: OPENROUTER_CREDENTIAL_SOURCE,
-    reasoning_effort: LOW_REASONING_EFFORT,
+    reasoning_efforts: &[LOW_REASONING_EFFORT],
 };
 
 const ZAI_PROVIDER_COHORT: AdmittedProviderCohort = AdmittedProviderCohort {
@@ -636,7 +643,7 @@ const ZAI_PROVIDER_COHORT: AdmittedProviderCohort = AdmittedProviderCohort {
     endpoint_url: animus_std_openai::ZAI_CODING_PLAN_COMPLETIONS_URL,
     credential_reference: ZAI_CREDENTIAL_REFERENCE,
     credential_source: ZAI_CREDENTIAL_SOURCE,
-    reasoning_effort: LOW_REASONING_EFFORT,
+    reasoning_efforts: &[LOW_REASONING_EFFORT, HIGH_REASONING_EFFORT],
 };
 
 fn validate_provider(provider: &ProviderConfig) -> Result<(), LiveSteelAgentConfigError> {
@@ -652,7 +659,9 @@ fn validate_provider(provider: &ProviderConfig) -> Result<(), LiveSteelAgentConf
         validate_label(label)?;
     }
     let cohort = admit_provider_cohort(provider)?;
-    let is_provider_admitted = provider.reasoning_effort == cohort.reasoning_effort
+    let is_provider_admitted = cohort
+        .reasoning_efforts
+        .contains(&provider.reasoning_effort.as_str())
         && provider.tool_name == animus_std_openai::STEEL_REPL_TOOL_NAME
         && provider.tool_schema == animus_std_openai::STEEL_REPL_TOOL_SCHEMA;
     if !is_provider_admitted {
@@ -843,6 +852,7 @@ fn build_selected_model(
 ) -> Result<animus_std::SelectedModel, LiveSteelAgentConfigError> {
     const CONTEXT_BUDGET: u32 = 128_000;
     let cohort = admit_provider_cohort(&raw.provider)?;
+    let selected_thinking = thinking_level_for_effort(raw.provider.reasoning_effort.as_str())?;
     let provider_id = animus_std::ProviderId::new(raw.provider.provider_id.as_str())
         .map_err(|_error| LiveSteelAgentConfigError::ProviderMismatch)?;
     let model_id = animus_std::ModelId::new(raw.provider.model_id.as_str())
@@ -856,10 +866,16 @@ fn build_selected_model(
             output_budget: u32::try_from(raw.bounds.max_output_tokens)
                 .map_err(|_error| LiveSteelAgentConfigError::InvalidBound)?,
             reasoning: animus_std::ReasoningSupport::Optional,
-            thinking_levels: vec![
-                animus_std::ThinkingLevel::None,
-                animus_std::ThinkingLevel::Low,
-            ],
+            thinking_levels: {
+                let mut levels = vec![
+                    animus_std::ThinkingLevel::None,
+                    animus_std::ThinkingLevel::Low,
+                ];
+                if matches!(selected_thinking, animus_std::ThinkingLevel::High) {
+                    levels.push(animus_std::ThinkingLevel::High);
+                }
+                levels
+            },
             streaming: animus_std::ModelStreamingCapabilities::new(
                 animus_std::StreamSupport::Supported,
                 animus_std::StreamSupport::Supported,
@@ -885,10 +901,25 @@ fn build_selected_model(
                 .map_err(|_error| LiveSteelAgentConfigError::ProviderMismatch)?,
             animus_std::ModelId::new(raw.provider.model_id.as_str())
                 .map_err(|_error| LiveSteelAgentConfigError::ProviderMismatch)?,
-            animus_std::ThinkingLevel::Low,
+            selected_thinking,
             animus_std::ThinkingPolicy::Reject,
         ))
         .map_err(|_error| LiveSteelAgentConfigError::ProviderMismatch)
+}
+
+/// Maps an admitted reasoning-effort label to its thinking level.
+///
+/// Admission already restricts labels to the exact cohort set, so any label
+/// outside the admitted vocabulary fails closed here as defense in depth.
+fn thinking_level_for_effort(
+    effort: &str,
+) -> Result<animus_std::ThinkingLevel, LiveSteelAgentConfigError> {
+    match effort {
+        DISABLED_REASONING_EFFORT => Ok(animus_std::ThinkingLevel::None),
+        LOW_REASONING_EFFORT => Ok(animus_std::ThinkingLevel::Low),
+        HIGH_REASONING_EFFORT => Ok(animus_std::ThinkingLevel::High),
+        _unknown => Err(LiveSteelAgentConfigError::ProviderMismatch),
+    }
 }
 
 fn build_skill_modules(
