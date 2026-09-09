@@ -79,11 +79,11 @@ fn exact_local_dspark_configuration_requires_disabled_reasoning() {
     let host = config.provider_host_config().expect("local host config");
     assert_eq!(
         host.endpoint_identity(),
-        animus_std_openai::LOCAL_DSPARK_RESPONSES_ENDPOINT_IDENTITY
+        animus_std_openai::LOCAL_DSPARK_CHAT_COMPLETIONS_ENDPOINT_IDENTITY
     );
     assert_eq!(
         host.endpoint_url(),
-        animus_std_openai::LOCAL_DSPARK_RESPONSES_URL
+        animus_std_openai::LOCAL_DSPARK_CHAT_COMPLETIONS_URL
     );
 
     let mut reasoning_drift = value;
@@ -227,8 +227,9 @@ fn local_dspark_value() -> Value {
     value["provider"]["provider_id"] = Value::from(LOCAL_DSPARK_PROVIDER);
     value["provider"]["model_id"] = Value::from(LOCAL_DSPARK_MODEL);
     value["provider"]["endpoint_identity"] =
-        Value::from(animus_std_openai::LOCAL_DSPARK_RESPONSES_ENDPOINT_IDENTITY);
-    value["provider"]["endpoint_url"] = Value::from(animus_std_openai::LOCAL_DSPARK_RESPONSES_URL);
+        Value::from(animus_std_openai::LOCAL_DSPARK_CHAT_COMPLETIONS_ENDPOINT_IDENTITY);
+    value["provider"]["endpoint_url"] =
+        Value::from(animus_std_openai::LOCAL_DSPARK_CHAT_COMPLETIONS_URL);
     value["provider"]["credential_reference"] = Value::from(LOCAL_DSPARK_CREDENTIAL_REFERENCE);
     value["provider"]["reasoning_effort"] = Value::from("none");
     value

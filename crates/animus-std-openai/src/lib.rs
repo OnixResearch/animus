@@ -31,7 +31,8 @@ pub use core::{build_openai_request_body, normalize_openai_response};
 #[cfg(any(feature = "reqwest-client", test))]
 pub use model::OpenAiApiKey;
 pub use model::{
-    CancellationState, HostError, LOCAL_DSPARK_RESPONSES_ENDPOINT_IDENTITY,
+    CancellationState, HostError, LOCAL_DSPARK_CHAT_COMPLETIONS_ENDPOINT_IDENTITY,
+    LOCAL_DSPARK_CHAT_COMPLETIONS_URL, LOCAL_DSPARK_RESPONSES_ENDPOINT_IDENTITY,
     LOCAL_DSPARK_RESPONSES_URL, OFFICIAL_OPENAI_RESPONSES_ENDPOINT_IDENTITY,
     OFFICIAL_OPENAI_RESPONSES_URL, OPENROUTER_RESPONSES_ENDPOINT_IDENTITY,
     OPENROUTER_RESPONSES_URL, OpenAiHostConfig, TransportErrorClass,

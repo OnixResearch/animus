@@ -140,9 +140,11 @@ impl ProviderStreamService for LiveOpenAiProvider {
             api_key: &self.api_key,
             cancellation: &self.cancellation,
         };
-        if self.host.config().endpoint_identity()
-            == animus_std_openai::ZAI_CODING_PLAN_COMPLETIONS_ENDPOINT_IDENTITY
-        {
+        if matches!(
+            self.host.config().endpoint_identity(),
+            animus_std_openai::ZAI_CODING_PLAN_COMPLETIONS_ENDPOINT_IDENTITY
+                | animus_std_openai::LOCAL_DSPARK_CHAT_COMPLETIONS_ENDPOINT_IDENTITY
+        ) {
             self.host
                 .execute_chat_stream(request)
                 .map_err(|_error| ProviderStreamError::Provider)
@@ -336,9 +338,11 @@ pub(crate) fn plan_request(
         },
     )
     .map_err(|_error| ProviderStreamError::Canonical)?;
-    let family = if config.endpoint_identity()
-        == animus_std_openai::ZAI_CODING_PLAN_COMPLETIONS_ENDPOINT_IDENTITY
-    {
+    let family = if matches!(
+        config.endpoint_identity(),
+        animus_std_openai::ZAI_CODING_PLAN_COMPLETIONS_ENDPOINT_IDENTITY
+            | animus_std_openai::LOCAL_DSPARK_CHAT_COMPLETIONS_ENDPOINT_IDENTITY
+    ) {
         animus_adapters::ProviderProjectionFamily::OpenAiChat
     } else {
         animus_adapters::ProviderProjectionFamily::OpenAiResponses

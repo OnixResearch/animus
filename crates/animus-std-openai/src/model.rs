@@ -19,8 +19,12 @@ pub const ZAI_CODING_PLAN_COMPLETIONS_URL: &str =
     "https://api.z.ai/api/coding/paas/v4/chat/completions";
 /// Exact endpoint identity admitted by the private `local-dspark` cohort.
 pub const LOCAL_DSPARK_RESPONSES_ENDPOINT_IDENTITY: &str = "local-dspark-responses";
-/// Exact private HTTP URL admitted by the `local-dspark` cohort.
+/// Exact private HTTP URL admitted by the `local-dspark` Responses cohort.
 pub const LOCAL_DSPARK_RESPONSES_URL: &str = "http://192.168.1.244:8888/v1/responses";
+/// Exact endpoint identity admitted by the private `local-dspark` chat-completions cohort.
+pub const LOCAL_DSPARK_CHAT_COMPLETIONS_ENDPOINT_IDENTITY: &str = "local-dspark-chat-completions";
+/// Exact private HTTP URL admitted by the `local-dspark` chat-completions cohort.
+pub const LOCAL_DSPARK_CHAT_COMPLETIONS_URL: &str = "http://192.168.1.244:8888/v1/chat/completions";
 
 #[cfg(any(feature = "reqwest-client", test))]
 const MAX_API_KEY_CHARS: usize = 4_096;
@@ -215,7 +219,11 @@ impl OpenAiHostConfig {
     }
 
     pub(crate) fn https_only(&self) -> bool {
-        self.endpoint_identity != LOCAL_DSPARK_RESPONSES_ENDPOINT_IDENTITY
+        !matches!(
+            self.endpoint_identity.as_str(),
+            LOCAL_DSPARK_RESPONSES_ENDPOINT_IDENTITY
+                | LOCAL_DSPARK_CHAT_COMPLETIONS_ENDPOINT_IDENTITY
+        )
     }
 
     pub(crate) fn projected_reasoning_effort<'a>(&self, effort: &'a str) -> Option<&'a str> {
@@ -323,6 +331,7 @@ fn validate_config(
         OPENROUTER_RESPONSES_ENDPOINT_IDENTITY => OPENROUTER_RESPONSES_URL,
         ZAI_CODING_PLAN_COMPLETIONS_ENDPOINT_IDENTITY => ZAI_CODING_PLAN_COMPLETIONS_URL,
         LOCAL_DSPARK_RESPONSES_ENDPOINT_IDENTITY => LOCAL_DSPARK_RESPONSES_URL,
+        LOCAL_DSPARK_CHAT_COMPLETIONS_ENDPOINT_IDENTITY => LOCAL_DSPARK_CHAT_COMPLETIONS_URL,
         _unsupported => {
             return Err(HostError::InvalidConfiguration {
                 reason: ENDPOINT_IDENTITY_REASON,

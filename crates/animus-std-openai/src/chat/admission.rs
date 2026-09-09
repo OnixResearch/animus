@@ -5,8 +5,11 @@ pub(super) fn validate(
     plan: &animus_std::ProviderDispatchPlan,
     dispatch: &crate::tool::OpenAiToolDispatch,
 ) -> Result<(), crate::HostError> {
-    if config.endpoint_identity() != crate::ZAI_CODING_PLAN_COMPLETIONS_ENDPOINT_IDENTITY
-        || plan.endpoint() != config.endpoint_identity()
+    if !matches!(
+        config.endpoint_identity(),
+        crate::ZAI_CODING_PLAN_COMPLETIONS_ENDPOINT_IDENTITY
+            | crate::LOCAL_DSPARK_CHAT_COMPLETIONS_ENDPOINT_IDENTITY
+    ) || plan.endpoint() != config.endpoint_identity()
     {
         return Err(crate::HostError::UnsupportedPlan {
             feature: crate::tool::FEATURE_ENDPOINT,

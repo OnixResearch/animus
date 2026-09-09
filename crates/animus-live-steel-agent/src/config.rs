@@ -603,9 +603,9 @@ struct AdmittedProviderCohort {
 
 const LOCAL_DSPARK_PROVIDER_COHORT: AdmittedProviderCohort = AdmittedProviderCohort {
     provider_id: LOCAL_DSPARK_PROVIDER_ID,
-    api_kind: animus_std::ApiKind::OpenAiResponses,
-    endpoint_identity: animus_std_openai::LOCAL_DSPARK_RESPONSES_ENDPOINT_IDENTITY,
-    endpoint_url: animus_std_openai::LOCAL_DSPARK_RESPONSES_URL,
+    api_kind: animus_std::ApiKind::OpenAiChat,
+    endpoint_identity: animus_std_openai::LOCAL_DSPARK_CHAT_COMPLETIONS_ENDPOINT_IDENTITY,
+    endpoint_url: animus_std_openai::LOCAL_DSPARK_CHAT_COMPLETIONS_URL,
     credential_reference: LOCAL_DSPARK_CREDENTIAL_REFERENCE,
     credential_source: LOCAL_DSPARK_CREDENTIAL_SOURCE,
     reasoning_effort: DISABLED_REASONING_EFFORT,
