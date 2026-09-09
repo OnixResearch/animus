@@ -109,9 +109,10 @@ fn streaming_snapshot_after_stream_shows_accumulated_content() {
 
     let after_snapshot = render_streaming_snapshot(&model);
     assert!(
-        after_snapshot.contains("assistant: Helloworld,this isstreaming!"),
+        after_snapshot.contains("assistant: Hello world, this is streaming!"),
         "accumulated content after flush: {after_snapshot}"
     );
+    assert!(!after_snapshot.contains("assistant: Helloworld"));
 }
 
 // -----------------------------------------------------------------------
