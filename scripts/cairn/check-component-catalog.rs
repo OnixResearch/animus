@@ -73,7 +73,7 @@ const ISSUE_UNSUPPORTED_EVENT_CYCLE: &str = "COMPONENT_CATALOG_UNSUPPORTED_EVENT
 const ISSUE_PROFILE_DRIFT: &str = "COMPONENT_CATALOG_PROFILE_DRIFT";
 
 const LIVE_STEEL_CONSUMER: &str = "std.live-steel-agent-shell";
-const LIVE_STEEL_PROFILE_PATH: &str = "crates/animus-live-steel-agent/src/activation.rs";
+const LIVE_STEEL_PROFILE_PATH: &str = "crates/animus-live-steel-agent/src/readiness/mod.rs";
 const LIVE_TERMINAL_CONSUMER: &str = "std.live-terminal-agent-host";
 const LIVE_TERMINAL_PROFILE_PATH: &str = "crates/animus-live-terminal/src/activation.rs";
 
