@@ -26,7 +26,7 @@ fn the_program_name_is_not_a_model_flag() {
 }
 
 #[test]
-fn rejected_arguments_preserve_the_safe_issue_and_precedence() {
+fn refused_inputs_preserve_the_safe_issue_and_precedence() {
     let cases: &[(&[&str], &str)] = &[
         (&[], "missing_credential_stdin"),
         (&["--credential-stdin"], "missing_model"),

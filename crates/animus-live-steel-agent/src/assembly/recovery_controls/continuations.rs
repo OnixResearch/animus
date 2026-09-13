@@ -56,9 +56,10 @@ fn a_complete_continuation_preserves_the_final_reply() {
 }
 
 fn assert_retry_refused(refusal: Refusal) {
-    let bytes = match refusal {
-        Refusal::Provider => MALFORMED_STREAM,
-        Refusal::Snapshot | Refusal::Terminal => FINAL_STREAM,
+    let bytes = if matches!(refusal, Refusal::Provider) {
+        MALFORMED_STREAM
+    } else {
+        FINAL_STREAM
     };
     let (mut adapter, request) = ready_adapter(bytes);
     adapter.snapshot_store.refuse_snapshot = matches!(refusal, Refusal::Snapshot);
@@ -110,6 +111,7 @@ fn ready_adapter(
     session
         .drive_one()
         .expect("commit and observe the tool result");
+    assert!(session.host.tool_service_mut().pending_stage.is_none());
     let request = session
         .host
         .state_snapshot()
@@ -122,6 +124,7 @@ fn ready_adapter(
         })
         .expect("continuation provider request");
     let mut adapter = session.host.into_services().provider;
+    assert!(adapter.shared.borrow().pending().is_some());
     adapter.provider = crate::FixtureStreamProvider::new(
         [bytes.to_vec(), FINAL_STREAM.to_vec()],
         adapter.config.max_provider_response_bytes(),

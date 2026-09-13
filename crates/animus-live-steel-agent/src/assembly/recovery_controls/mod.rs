@@ -180,6 +180,11 @@ fn pending_tool_result_session() -> crate::PersistentLiveHost<
         session.drive_one().expect("drive to tool result commit");
     }
     assert!(session.host.tool_service_mut().pending_stage.is_some());
+    assert!(matches!(
+        session.host.state_snapshot().pending_effect(),
+        Some(animus_runtime::coding_session_host::CodingSessionEffectRequest::Commit(request))
+            if request.tool_response_after_commit().is_some()
+    ));
     session
 }
 
@@ -188,16 +193,17 @@ fn exact_observation<Executor, Persistence>(
     synchronized: bool,
 ) -> animus_std::coding_session_host::CodingSessionToolCommitObservation {
     let pending = tool.pending_stage.as_ref().expect("pending stage");
+    let result_identity = pending
+        .outcome()
+        .response()
+        .content_hash()
+        .expect("tool response hash");
+    assert!(!pending.plan().plan_identity().is_empty());
+    assert!(!result_identity.is_empty());
     animus_std::coding_session_host::CodingSessionToolCommitObservation {
         effect_id: String::from("effect.tool.commit"),
         run_id: String::from("run.tool.commit"),
-        result_identity: String::from(
-            pending
-                .outcome()
-                .response()
-                .content_hash()
-                .expect("tool response hash"),
-        ),
+        result_identity: String::from(result_identity),
         commit_owner_identity:
             animus_runtime::tool_execution_stages::coding_session_tool_commit_owner_identity(),
         durable_head_identity: String::from(GOOD_HEAD),

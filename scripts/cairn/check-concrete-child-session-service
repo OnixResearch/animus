@@ -5,7 +5,7 @@ set -eu
 readonly FAILURE=1
 readonly RAIL_NAME='concrete-child-session-service'
 readonly RECEIPT_SCHEMA='animus.focused-rail-receipt.v1'
-readonly RUNTIME_SOURCE='crates/animus-runtime/src/childsession.rs'
+readonly RUNTIME_SOURCE='crates/animus-runtime/src/childsession/mod.rs'
 readonly SUBAGENT_SOURCE='crates/animus-runtime/src/subagents.rs'
 readonly STD_SOURCE='crates/animus-std/src/childsession.rs'
 readonly STD_TESTS='crates/animus-std/src/childsession/tests.rs'
@@ -28,7 +28,7 @@ for tool in cargo grep b3sum; do
   fi
 done
 
-cargo test -p "${RUNTIME_PACKAGE}" child_session_service --locked
+cargo test -p "${RUNTIME_PACKAGE}" childsession --locked
 cargo test -p "${RUNTIME_PACKAGE}" subagents --locked
 cargo test -p "${STD_PACKAGE}" --features child-session-host child_session --locked
 cargo test -p animus --features child-session-host --locked

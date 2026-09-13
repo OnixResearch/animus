@@ -1,10 +1,10 @@
 /// Shared continuation state between coding-session provider and tool adapters.
 pub(crate) struct SharedProviderState {
-    continuation: ContinuationState,
+    continuation: Phase,
     next_call: u64,
 }
 
-enum ContinuationState {
+enum Phase {
     Empty,
     Ready(Box<PendingCall>),
     Blocked,
@@ -13,7 +13,7 @@ enum ContinuationState {
 impl Default for SharedProviderState {
     fn default() -> Self {
         Self {
-            continuation: ContinuationState::Empty,
+            continuation: Phase::Empty,
             next_call: super::FIRST_CALL,
         }
     }
@@ -38,32 +38,31 @@ impl SharedProviderState {
     }
 
     pub(crate) const fn is_blocked(&self) -> bool {
-        matches!(self.continuation, ContinuationState::Blocked)
+        matches!(self.continuation, Phase::Blocked)
     }
 
     pub(crate) fn pending(&self) -> Option<&PendingCall> {
         match &self.continuation {
-            ContinuationState::Ready(pending) => Some(Box::as_ref(pending)),
-            ContinuationState::Empty | ContinuationState::Blocked => None,
+            Phase::Ready(pending) => Some(Box::as_ref(pending)),
+            Phase::Empty | Phase::Blocked => None,
         }
     }
 
     pub(crate) fn pending_mut(&mut self) -> Option<&mut PendingCall> {
         match &mut self.continuation {
-            ContinuationState::Ready(pending) => Some(Box::as_mut(pending)),
-            ContinuationState::Empty | ContinuationState::Blocked => None,
+            Phase::Ready(pending) => Some(Box::as_mut(pending)),
+            Phase::Empty | Phase::Blocked => None,
         }
     }
 
     pub(crate) fn install(&mut self, pending: PendingCall) {
-        self.continuation = ContinuationState::Ready(Box::new(pending));
+        self.continuation = Phase::Ready(Box::new(pending));
     }
 
     pub(crate) fn block_pending_for_effect(
         &mut self,
     ) -> Result<animus_std_openai::OpenAiToolDispatch, super::ProviderStreamError> {
-        let ContinuationState::Ready(pending) =
-            core::mem::replace(&mut self.continuation, ContinuationState::Blocked)
+        let Phase::Ready(pending) = core::mem::replace(&mut self.continuation, Phase::Blocked)
         else {
             return Err(super::ProviderStreamError::ToolCohort);
         };
@@ -71,8 +70,8 @@ impl SharedProviderState {
     }
 
     pub(crate) fn clear_blocked(&mut self) {
-        if matches!(self.continuation, ContinuationState::Blocked) {
-            self.continuation = ContinuationState::Empty;
+        if matches!(self.continuation, Phase::Blocked) {
+            self.continuation = Phase::Empty;
         }
     }
 }
@@ -147,7 +146,7 @@ mod tests {
     #[test]
     fn exhausted_model_call_sequence_fails_without_state_change() {
         let mut state = super::SharedProviderState {
-            continuation: super::ContinuationState::Empty,
+            continuation: super::Phase::Empty,
             next_call: u64::MAX,
         };
         assert!(matches!(

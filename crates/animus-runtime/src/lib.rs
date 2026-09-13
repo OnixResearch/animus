@@ -85,7 +85,6 @@ mod capmap;
 #[path = "caps/core.rs"]
 mod caps;
 mod checkpoint;
-#[path = "childsession.rs"]
 mod childsession;
 /// Pure concrete child-session admission, lifecycle, result, and persistence contracts.
 pub mod child_session_service {
