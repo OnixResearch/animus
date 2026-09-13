@@ -50,9 +50,9 @@ require_text 'crates/animus-runtime/src/toolexecutionstages/receipt.rs' 'pub fn 
 require_text 'crates/animus-std/src/toolexecutionstages.rs' 'pub fn execute_staged_tool'
 require_text 'crates/animus-std/src/toolexecutionstages.rs' 'pub fn complete_staged_tool_commit'
 require_text 'crates/animus-std-rlm-host/src/routes.rs' 'pub trait ToolRouteCommitService'
-require_text 'crates/animus-live-steel-agent/src/tool.rs' 'persist_staged_safe_point'
-require_text 'crates/animus-live-steel-agent/src/shell.rs' 'execute_staged_tool'
-require_text 'crates/animus-live-steel-agent/src/shell.rs' 'observe_committed'
+require_text 'crates/animus-live-steel-agent/src/evaluation/mod.rs' 'persist_staged_safe_point'
+require_text 'crates/animus-live-steel-agent/src/assembly/stages.rs' 'execute_staged_tool'
+require_text 'crates/animus-live-steel-agent/src/assembly/stages.rs' 'observe_committed'
 
 if grep -R -E 'std::fs|std::process|Command::new|std::env|TcpStream|UdpSocket|SystemTime::now|Instant::now|reqwest|hyper::|tokio::|serde_json' \
   crates/animus-runtime/src/toolexecutionstages --include='*.rs' >/dev/null 2>&1
@@ -76,7 +76,7 @@ for command_name in cargo b3sum; do
   fi
 done
 
-cargo test -p animus-runtime tool_execution_stages --locked
+cargo test -p animus-runtime toolexecutionstages --locked
 cargo check -p animus-runtime --no-default-features --target wasm32-unknown-unknown --locked
 cargo test -p animus-std --features tool-execution-stages --lib --locked
 cargo test -p animus-std --features coding-session-host --lib --locked

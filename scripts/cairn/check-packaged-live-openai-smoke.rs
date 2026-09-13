@@ -9,7 +9,8 @@ const EXIT_FAILURE: u8 = 1;
 const ARG_ROOT: &str = "--root";
 const HOST_MANIFEST: &str = "crates/animus-std-openai/Cargo.toml";
 const HOST_LIB: &str = "crates/animus-std-openai/src/lib.rs";
-const SMOKE_CORE: &str = "crates/animus-std-openai/src/smoke.rs";
+const SMOKE_CORE: &str = "crates/animus-std-openai/src/probe/mod.rs";
+const SMOKE_REPORT: &str = "crates/animus-std-openai/src/probe/report.rs";
 const OPENAI_SMOKE_BINARY: &str =
     "crates/animus-std-openai/src/bin/animus-live-openai-smoke.rs";
 const OPENROUTER_SMOKE_BINARY: &str =
@@ -77,6 +78,7 @@ fn validate_contract(root: &Path) -> Result<(), String> {
     let manifest = read(root, HOST_MANIFEST)?;
     let library = read(root, HOST_LIB)?;
     let core = read(root, SMOKE_CORE)?;
+    let report = read(root, SMOKE_REPORT)?;
     let openai_binary = read(root, OPENAI_SMOKE_BINARY)?;
     let openrouter_binary = read(root, OPENROUTER_SMOKE_BINARY)?;
     let live_test = read(root, LIVE_TEST)?;
@@ -129,9 +131,9 @@ fn validate_contract(root: &Path) -> Result<(), String> {
         }
     }
     require(
-        core.contains("raw_response=omitted")
-            && core.contains("model_output=omitted")
-            && core.contains("credential=omitted"),
+        report.contains("raw_response=omitted")
+            && report.contains("model_output=omitted")
+            && report.contains("credential=omitted"),
         "metadata-only live smoke evidence markers are incomplete",
     )?;
     require(
