@@ -27,11 +27,11 @@ cargo tree -p animus-live-steel-agent --no-default-features --locked > /dev/null
 readonly MANIFEST='crates/animus-live-steel-agent/Cargo.toml'
 readonly CONFIG='config/live-steel-agent-shell.ncl'
 readonly GENERATED='config/generated/live-steel-agent-shell.json'
-readonly APPLICATION='crates/animus-live-steel-agent/src/application.rs'
-readonly SHELL='crates/animus-live-steel-agent/src/shell.rs'
-readonly STORE='crates/animus-live-steel-agent/src/store.rs'
-readonly TOOL='crates/animus-live-steel-agent/src/tool.rs'
-readonly RECEIPT='crates/animus-live-steel-agent/src/receipt.rs'
+readonly APPLICATION='crates/animus-live-steel-agent/src/entrypoint/mod.rs'
+readonly SHELL='crates/animus-live-steel-agent/src/assembly/opening.rs'
+readonly STORE='crates/animus-live-steel-agent/src/durable/recovery.rs'
+readonly TOOL='crates/animus-live-steel-agent/src/evaluation/mod.rs'
+readonly RECEIPT='crates/animus-live-steel-agent/src/evidence/mod.rs'
 readonly DOC='docs/live-steel-agent-shell.md'
 
 for file in "${MANIFEST}" "${CONFIG}" "${GENERATED}" "${APPLICATION}" "${SHELL}" "${STORE}" "${TOOL}" "${RECEIPT}" "${DOC}"; do

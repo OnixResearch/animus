@@ -57,7 +57,11 @@ Embedders should depend on the smallest crate set they need: `animus-core` for p
 
 ## Development safety rails
 
-The workspace denies missing docs, `clippy::all`, `clippy::pedantic`, and undocumented unsafe blocks at crate roots. Unsafe code is currently forbidden by workspace lint policy. `config/repo.ncl` is the Nickel source of truth for repo-owned tool config, and the generated `dylint.toml` sets the repo-adopted Octet lint baseline to `deny` for the pinned Octet input.
+The workspace denies missing docs, `clippy::all`, `clippy::pedantic`, and undocumented unsafe blocks at crate roots. The workspace lint policy forbids unsafe code. `config/repo.ncl` owns the tool configuration. Its generated `dylint.toml` denies the adopted Octet rules, not every rule in the pinned catalog.
+
+The live host checks use the full pinned `octet-deny-all` catalog with all targets and all compatible features. Independent checks select `animus-std-openai` and `animus-live-steel-agent`. The combined `live-child-control-octet` check remains required. These checks do not establish equivalent coverage for other workspace checks.
+
+The host repair changes public counts from `usize` to `u64` and makes fixture counts fallible. These changes require caller migration. See [the provider contract](docs/live-openai-provider-host.md#portable-bound-migration) and [the live-agent contract](docs/live-steel-agent-shell.md#portable-count-migration).
 
 Every test suite should include positive and negative tests. Run baseline tests before core changes and repeat them after the change. Avoid process-global state in tests unless explicit isolation is in place.
 

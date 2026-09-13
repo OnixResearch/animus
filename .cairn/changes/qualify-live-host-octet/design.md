@@ -10,9 +10,9 @@ The repository already owns the provider core, SSE parser, tool declarations, ex
 
 ### Decision: Preserve the strict subject
 
-**Choice:** Add independent provider and live-agent checks beside the combined host check. Use the existing pinned driver and deny catalog with all targets and all features.
+**Choice:** Add independent provider and live-agent checks beside the combined host check. Use the official `octet-deny-all` hook with all targets and all features. The immutable source is `OnixResearch/octet` at `f39ab155170f32ffc6408782d20c0d488137c995`.
 
-**Rationale:** A passing upstream dependency build is not a downstream lint result. Separate observations expose the failure in each owner without reducing final acceptance.
+**Rationale:** A passing dependency build is not a downstream lint result. The repo config does not deny every pinned lint. The official hook enables the full catalog and denies unknown lint names. Host checks use `DYLINT_RUSTFLAGS` for the selected packages. Other package checks retain their current invocation and config.
 
 ### Decision: Split by capability and effect ownership
 
@@ -32,12 +32,24 @@ The repository already owns the provider core, SSE parser, tool declarations, ex
 
 **Rationale:** `usize` cannot remain a public portable contract. A changed integer type can break source compatibility. Evidence must name that change instead of hiding it with an alias or an exemption.
 
+### Decision: Retain explicit host clock ownership
+
+**Choice:** Acquire `cap_std::time::MonotonicClock` at the existing per-cell shell boundary. Pass the capability and start instant to the private checkpoint control. Keep the public four-input constructor unchanged.
+
+**Rationale:** The direct dependency already pins `cap-std` 3.4.5 and `cap-primitives` 3.4.5 through Cargo checksums. Its clock separates authority-bearing time access from authority-free instant values. It preserves the underlying standard monotonic clock operations. This change adds no dependency, reusable clock authority, sampling policy, or preemptive deadline.
+
+### Decision: Keep gate ownership limits explicit
+
+**Choice:** Keep dependency findings visible. Do not relocate unrelated runtime sources or change a dependency API without a declared scope decision.
+
+**Rationale:** The pinned module-file rule reads workspace paths from the compiler source map, including imported runtime files. The host also lacks an explicit empty constructor for `MemoryCodingSessionPersistence`. Hiding either finding cannot qualify the host.
+
 ## Parallel ownership
 
 - Parser worker: provider `stream.rs` and `tool.rs`, with new `codec/` and `declarations/` subtrees. It does not edit the facade or other tests.
 - Provider worker: remaining provider sources, binaries, tests, and the facade. It coordinates only through the declared module names and output manifests.
 - Session worker: live-agent sources and tests. It leaves other crates and lifecycle files to the parent.
-- Parent: cross-scope composition, direct callers, flake checks, documentation, lifecycle, and final verification.
+- Parent: cross-scope composition, direct callers, flake checks, documentation, lifecycle, and final verification. The parent also migrates direct path and marker references in the existing host rails.
 
 Each worker has 160 tool calls and 40 minutes. Workers cannot delegate, run memo, publish, edit another scope, or run a workspace-wide formatter. The parent runs the shared baseline and final checks. A worker formats only its owned files after its writes finish.
 

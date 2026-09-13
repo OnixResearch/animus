@@ -10,7 +10,7 @@ const ROOT_MANIFEST: &str = "Cargo.toml";
 const HOST_MANIFEST: &str = "crates/animus-std-openai/Cargo.toml";
 const HOST_SOURCE: &str = "crates/animus-std-openai/src";
 const LIVE_TEST: &str = "crates/animus-std-openai/tests/live-openai.rs";
-const TOOL_TEST: &str = "crates/animus-std-openai/src/tests/tool_streaming.rs";
+const TOOL_TEST: &str = "crates/animus-std-openai/src/tests/sse";
 const TOOL_FIXTURE: &str = "crates/animus-std-openai/tests/fixtures/openai-responses-tool-call.sse";
 const FINAL_FIXTURE: &str = "crates/animus-std-openai/tests/fixtures/openai-responses-final.sse";
 const HOST_DOC: &str = "docs/live-openai-provider-host.md";
@@ -36,7 +36,7 @@ const REQUIRED_SOURCE_MARKERS: &[&str] = &[
     "STEEL_REPL_TOOL_NAME",
     "STEEL_REPL_TOOL_SCHEMA",
     "previous_response_id",
-    "FUNCTION_CALL_OUTPUT_TYPE",
+    "\"type\": \"function_call_output\"",
     "parallel_tool_calls",
     "OpenAiToolStreamRequest",
     "observe_provider_retry_stream",
@@ -97,7 +97,7 @@ fn validate_contract(root: &Path) -> Result<(), String> {
     let host_manifest = read(root, HOST_MANIFEST)?;
     let source = read_tree(root.join(HOST_SOURCE).as_path())?;
     let live_test = read(root, LIVE_TEST)?;
-    let tool_test = read(root, TOOL_TEST)?;
+    let tool_test = read_tree(root.join(TOOL_TEST).as_path())?;
     let tool_fixture = read(root, TOOL_FIXTURE)?;
     let final_fixture = read(root, FINAL_FIXTURE)?;
     let docs = read(root, HOST_DOC)?;

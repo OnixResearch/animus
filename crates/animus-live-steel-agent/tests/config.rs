@@ -1,8 +1,5 @@
 //! Configuration parity and rejection tests.
 
-use animus_live_steel_agent::{LiveSteelAgentConfigError, parse_live_steel_agent_config};
-use serde_json::Value;
-
 const CONFIG: &[u8] = include_bytes!("../../../config/generated/live-steel-agent-shell.json");
 const LOCAL_DSPARK_PROVIDER: &str = "local-dspark";
 const OPENAI_PROVIDER: &str = "openai";
@@ -16,7 +13,8 @@ const OPENROUTER_MODEL: &str = "deepseek/deepseek-v4-flash-0731";
 #[test]
 fn generated_nickel_configuration_revalidates_in_rust() {
     // r[verify agent_harness_runtime.live_steel_agent_shell.configuration]
-    let config = parse_live_steel_agent_config(CONFIG).expect("generated configuration");
+    let config = animus_live_steel_agent::parse_live_steel_agent_config(CONFIG)
+        .expect("generated configuration");
     assert_eq!(config.application_id(), "animus-live-steel-agent");
     assert_eq!(config.provider_id(), OPENAI_PROVIDER);
     assert_eq!(config.credential_reference(), OPENAI_CREDENTIAL_REFERENCE);
@@ -37,7 +35,8 @@ fn exact_openrouter_configuration_selects_the_matching_host_and_credential() {
     // r[verify agent_harness_runtime.live_steel_agent_provider_cohort.valid]
     let value = openrouter_value();
     let bytes = serde_json::to_vec(&value).expect("encode OpenRouter fixture");
-    let config = parse_live_steel_agent_config(bytes.as_slice()).expect("OpenRouter config");
+    let config = animus_live_steel_agent::parse_live_steel_agent_config(bytes.as_slice())
+        .expect("OpenRouter config");
 
     assert_eq!(config.provider_id(), OPENROUTER_PROVIDER);
     assert_eq!(config.model_id(), OPENROUTER_MODEL);
@@ -68,7 +67,8 @@ fn exact_local_dspark_configuration_requires_disabled_reasoning() {
     // r[verify agent_harness_runtime.local_dspark_responses.reasoning.pass]
     let value = local_dspark_value();
     let bytes = serde_json::to_vec(&value).expect("encode local-dspark fixture");
-    let config = parse_live_steel_agent_config(bytes.as_slice()).expect("local-dspark config");
+    let config = animus_live_steel_agent::parse_live_steel_agent_config(bytes.as_slice())
+        .expect("local-dspark config");
 
     assert_eq!(config.provider_id(), LOCAL_DSPARK_PROVIDER);
     assert_eq!(config.model_id(), LOCAL_DSPARK_MODEL);
@@ -87,23 +87,24 @@ fn exact_local_dspark_configuration_requires_disabled_reasoning() {
     );
 
     let mut reasoning_drift = value;
-    reasoning_drift["provider"]["reasoning_effort"] = Value::from("low");
+    reasoning_drift["provider"]["reasoning_effort"] = serde_json::Value::from("low");
     assert_eq!(
         parse_value(&reasoning_drift),
-        Err(LiveSteelAgentConfigError::ProviderMismatch)
+        Err(animus_live_steel_agent::LiveSteelAgentConfigError::ProviderMismatch)
     );
 }
 
 #[test]
 fn exact_host_tool_operation_is_optional_and_unknown_operations_fail_closed() {
     // r[verify agent_harness_runtime.pueue_host.live_shell_tool_route]
-    let mut tool: Value = serde_json::from_slice(CONFIG).expect("JSON");
+    let mut tool: serde_json::Value = serde_json::from_slice(CONFIG).expect("JSON");
     tool["admitted_operations"]
         .as_array_mut()
         .expect("operation array")
-        .push(Value::from("tool"));
+        .push(serde_json::Value::from("tool"));
     let bytes = serde_json::to_vec(&tool).expect("tool operation fixture");
-    let config = parse_live_steel_agent_config(bytes.as_slice()).expect("tool operation config");
+    let config = animus_live_steel_agent::parse_live_steel_agent_config(bytes.as_slice())
+        .expect("tool operation config");
     assert!(
         config
             .admitted_operations()
@@ -111,45 +112,45 @@ fn exact_host_tool_operation_is_optional_and_unknown_operations_fail_closed() {
             .any(|value| value == "tool")
     );
 
-    let mut unknown: Value = serde_json::from_slice(CONFIG).expect("JSON");
+    let mut unknown: serde_json::Value = serde_json::from_slice(CONFIG).expect("JSON");
     unknown["admitted_operations"]
         .as_array_mut()
         .expect("operation array")
-        .push(Value::from("shell"));
+        .push(serde_json::Value::from("shell"));
     assert_eq!(
         parse_value(&unknown),
-        Err(LiveSteelAgentConfigError::InvalidCollection)
+        Err(animus_live_steel_agent::LiveSteelAgentConfigError::InvalidCollection)
     );
 }
 
 #[test]
 fn missing_component_unknown_field_and_zero_bound_fail_before_effects() {
     // r[verify agent_harness_runtime.live_steel_agent_shell.configuration.missing]
-    let mut missing: Value = serde_json::from_slice(CONFIG).expect("JSON");
+    let mut missing: serde_json::Value = serde_json::from_slice(CONFIG).expect("JSON");
     missing
         .as_object_mut()
         .expect("object")
         .remove("components");
     assert_eq!(
         parse_value(&missing),
-        Err(LiveSteelAgentConfigError::Malformed)
+        Err(animus_live_steel_agent::LiveSteelAgentConfigError::Malformed)
     );
 
-    let mut unknown: Value = serde_json::from_slice(CONFIG).expect("JSON");
-    unknown
-        .as_object_mut()
-        .expect("object")
-        .insert(String::from("ambient_provider"), Value::Bool(true));
+    let mut unknown: serde_json::Value = serde_json::from_slice(CONFIG).expect("JSON");
+    unknown.as_object_mut().expect("object").insert(
+        String::from("ambient_provider"),
+        serde_json::Value::Bool(true),
+    );
     assert_eq!(
         parse_value(&unknown),
-        Err(LiveSteelAgentConfigError::Malformed)
+        Err(animus_live_steel_agent::LiveSteelAgentConfigError::Malformed)
     );
 
-    let mut zero: Value = serde_json::from_slice(CONFIG).expect("JSON");
-    zero["bounds"]["provider_timeout_ms"] = Value::from(0);
+    let mut zero: serde_json::Value = serde_json::from_slice(CONFIG).expect("JSON");
+    zero["bounds"]["provider_timeout_ms"] = serde_json::Value::from(0);
     assert_eq!(
         parse_value(&zero),
-        Err(LiveSteelAgentConfigError::InvalidBound)
+        Err(animus_live_steel_agent::LiveSteelAgentConfigError::InvalidBound)
     );
 }
 
@@ -159,93 +160,100 @@ fn crossed_unknown_and_arbitrary_provider_tuples_fail_closed() {
     // r[verify agent_harness_runtime.live_steel_agent_provider_cohort.closed.unknown]
     let mut crossed_endpoint = openrouter_value();
     crossed_endpoint["provider"]["endpoint_identity"] =
-        Value::from(animus_std_openai::OFFICIAL_OPENAI_RESPONSES_ENDPOINT_IDENTITY);
+        serde_json::Value::from(animus_std_openai::OFFICIAL_OPENAI_RESPONSES_ENDPOINT_IDENTITY);
     crossed_endpoint["provider"]["endpoint_url"] =
-        Value::from(animus_std_openai::OFFICIAL_OPENAI_RESPONSES_URL);
+        serde_json::Value::from(animus_std_openai::OFFICIAL_OPENAI_RESPONSES_URL);
     assert_eq!(
         parse_value(&crossed_endpoint),
-        Err(LiveSteelAgentConfigError::ProviderMismatch)
+        Err(animus_live_steel_agent::LiveSteelAgentConfigError::ProviderMismatch)
     );
 
     let mut crossed_credential = openrouter_value();
     crossed_credential["provider"]["credential_reference"] =
-        Value::from(OPENAI_CREDENTIAL_REFERENCE);
+        serde_json::Value::from(OPENAI_CREDENTIAL_REFERENCE);
     assert_eq!(
         parse_value(&crossed_credential),
-        Err(LiveSteelAgentConfigError::ProviderMismatch)
+        Err(animus_live_steel_agent::LiveSteelAgentConfigError::ProviderMismatch)
     );
 
     let mut unknown = openrouter_value();
-    unknown["provider"]["provider_id"] = Value::from("unknown-provider");
+    unknown["provider"]["provider_id"] = serde_json::Value::from("unknown-provider");
     assert_eq!(
         parse_value(&unknown),
-        Err(LiveSteelAgentConfigError::ProviderMismatch)
+        Err(animus_live_steel_agent::LiveSteelAgentConfigError::ProviderMismatch)
     );
 
     let mut arbitrary = openrouter_value();
-    arbitrary["provider"]["endpoint_url"] = Value::from("https://example.invalid/v1/responses");
+    arbitrary["provider"]["endpoint_url"] =
+        serde_json::Value::from("https://example.invalid/v1/responses");
     assert_eq!(
         parse_value(&arbitrary),
-        Err(LiveSteelAgentConfigError::ProviderMismatch)
+        Err(animus_live_steel_agent::LiveSteelAgentConfigError::ProviderMismatch)
     );
 
     // r[verify agent_harness_runtime.live_steel_agent_provider_cohort.closed.no_fallback]
     let mut fallback = openrouter_value();
-    fallback["provider"]["fallback_provider"] = Value::from(OPENAI_PROVIDER);
+    fallback["provider"]["fallback_provider"] = serde_json::Value::from(OPENAI_PROVIDER);
     assert_eq!(
         parse_value(&fallback),
-        Err(LiveSteelAgentConfigError::Malformed)
+        Err(animus_live_steel_agent::LiveSteelAgentConfigError::Malformed)
     );
 }
 
 #[test]
 fn endpoint_credential_and_evidence_drift_fail_closed() {
-    let mut endpoint: Value = serde_json::from_slice(CONFIG).expect("JSON");
-    endpoint["provider"]["endpoint_url"] = Value::from("https://example.invalid");
+    let mut endpoint: serde_json::Value = serde_json::from_slice(CONFIG).expect("JSON");
+    endpoint["provider"]["endpoint_url"] = serde_json::Value::from("https://example.invalid");
     assert_eq!(
         parse_value(&endpoint),
-        Err(LiveSteelAgentConfigError::ProviderMismatch)
+        Err(animus_live_steel_agent::LiveSteelAgentConfigError::ProviderMismatch)
     );
 
-    let mut credential: Value = serde_json::from_slice(CONFIG).expect("JSON");
-    credential["provider"]["credential_reference"] = Value::from("env:OPENAI_API_KEY");
+    let mut credential: serde_json::Value = serde_json::from_slice(CONFIG).expect("JSON");
+    credential["provider"]["credential_reference"] = serde_json::Value::from("env:OPENAI_API_KEY");
     assert_eq!(
         parse_value(&credential),
-        Err(LiveSteelAgentConfigError::ProviderMismatch)
+        Err(animus_live_steel_agent::LiveSteelAgentConfigError::ProviderMismatch)
     );
 
-    let mut evidence: Value = serde_json::from_slice(CONFIG).expect("JSON");
-    evidence["evidence"]["non_claims"] = Value::Array(Vec::new());
+    let mut evidence: serde_json::Value = serde_json::from_slice(CONFIG).expect("JSON");
+    evidence["evidence"]["non_claims"] = serde_json::Value::Array(Vec::new());
     assert_eq!(
         parse_value(&evidence),
-        Err(LiveSteelAgentConfigError::EvidenceMismatch)
+        Err(animus_live_steel_agent::LiveSteelAgentConfigError::EvidenceMismatch)
     );
 }
 
-fn local_dspark_value() -> Value {
-    let mut value: Value = serde_json::from_slice(CONFIG).expect("JSON");
-    value["provider"]["provider_id"] = Value::from(LOCAL_DSPARK_PROVIDER);
-    value["provider"]["model_id"] = Value::from(LOCAL_DSPARK_MODEL);
+fn local_dspark_value() -> serde_json::Value {
+    let mut value: serde_json::Value = serde_json::from_slice(CONFIG).expect("JSON");
+    value["provider"]["provider_id"] = serde_json::Value::from(LOCAL_DSPARK_PROVIDER);
+    value["provider"]["model_id"] = serde_json::Value::from(LOCAL_DSPARK_MODEL);
     value["provider"]["endpoint_identity"] =
-        Value::from(animus_std_openai::LOCAL_DSPARK_RESPONSES_ENDPOINT_IDENTITY);
-    value["provider"]["endpoint_url"] = Value::from(animus_std_openai::LOCAL_DSPARK_RESPONSES_URL);
-    value["provider"]["credential_reference"] = Value::from(LOCAL_DSPARK_CREDENTIAL_REFERENCE);
-    value["provider"]["reasoning_effort"] = Value::from("none");
+        serde_json::Value::from(animus_std_openai::LOCAL_DSPARK_RESPONSES_ENDPOINT_IDENTITY);
+    value["provider"]["endpoint_url"] =
+        serde_json::Value::from(animus_std_openai::LOCAL_DSPARK_RESPONSES_URL);
+    value["provider"]["credential_reference"] =
+        serde_json::Value::from(LOCAL_DSPARK_CREDENTIAL_REFERENCE);
+    value["provider"]["reasoning_effort"] = serde_json::Value::from("none");
     value
 }
 
-fn openrouter_value() -> Value {
-    let mut value: Value = serde_json::from_slice(CONFIG).expect("JSON");
-    value["provider"]["provider_id"] = Value::from(OPENROUTER_PROVIDER);
-    value["provider"]["model_id"] = Value::from(OPENROUTER_MODEL);
+fn openrouter_value() -> serde_json::Value {
+    let mut value: serde_json::Value = serde_json::from_slice(CONFIG).expect("JSON");
+    value["provider"]["provider_id"] = serde_json::Value::from(OPENROUTER_PROVIDER);
+    value["provider"]["model_id"] = serde_json::Value::from(OPENROUTER_MODEL);
     value["provider"]["endpoint_identity"] =
-        Value::from(animus_std_openai::OPENROUTER_RESPONSES_ENDPOINT_IDENTITY);
-    value["provider"]["endpoint_url"] = Value::from(animus_std_openai::OPENROUTER_RESPONSES_URL);
-    value["provider"]["credential_reference"] = Value::from(OPENROUTER_CREDENTIAL_REFERENCE);
+        serde_json::Value::from(animus_std_openai::OPENROUTER_RESPONSES_ENDPOINT_IDENTITY);
+    value["provider"]["endpoint_url"] =
+        serde_json::Value::from(animus_std_openai::OPENROUTER_RESPONSES_URL);
+    value["provider"]["credential_reference"] =
+        serde_json::Value::from(OPENROUTER_CREDENTIAL_REFERENCE);
     value
 }
 
-fn parse_value(value: &Value) -> Result<(), LiveSteelAgentConfigError> {
+fn parse_value(
+    value: &serde_json::Value,
+) -> Result<(), animus_live_steel_agent::LiveSteelAgentConfigError> {
     let bytes = serde_json::to_vec(value).expect("encode fixture");
-    parse_live_steel_agent_config(bytes.as_slice()).map(|_config| ())
+    animus_live_steel_agent::parse_live_steel_agent_config(bytes.as_slice()).map(|_config| ())
 }

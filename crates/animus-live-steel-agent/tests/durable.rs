@@ -1,12 +1,5 @@
 //! Durable live-shell restart and restore checks.
 
-use animus_live_steel_agent::{
-    FixtureStreamProvider, LiveSteelAgentComposition, LiveSteelAgentCompositionInput,
-    open_kernel_persistence, open_session_persistence, open_snapshot_persistence,
-    parse_live_steel_agent_config, restore_interrupted_kernel, restore_or_create_kernel,
-    session_resume_required, store_definitions,
-};
-
 const CONFIG: &[u8] = include_bytes!("../../../config/generated/live-steel-agent-shell.json");
 const TOOL_STREAM: &[u8] =
     include_bytes!("../../animus-std-openai/tests/fixtures/openai-responses-tool-call.sse");
@@ -40,16 +33,22 @@ fn durable_restart_restores_session_and_kernel_safe_points() {
     let temp = tempfile::tempdir().expect("temporary store root");
     let root = cap_std::fs::Dir::open_ambient_dir(temp.path(), cap_std::ambient_authority())
         .expect("capability root");
-    let base = parse_live_steel_agent_config(CONFIG).expect("config");
-    let definitions = store_definitions(&base).expect("store definitions");
-    assert!(!session_resume_required(&root, &base, &definitions).expect("empty session"));
+    let base = animus_live_steel_agent::parse_live_steel_agent_config(CONFIG).expect("config");
+    let definitions = animus_live_steel_agent::store_definitions(&base).expect("store definitions");
+    assert!(
+        !animus_live_steel_agent::session_resume_required(&root, &base, &definitions)
+            .expect("empty session")
+    );
 
     let first_output = run_once(&root, &base, &definitions, FIRST_PROMPT, false);
     assert_eq!(
         first_output.receipt().committed_message_count(),
         FIRST_RUN_TOTAL_MESSAGES
     );
-    assert!(session_resume_required(&root, &base, &definitions).expect("committed session"));
+    assert!(
+        animus_live_steel_agent::session_resume_required(&root, &base, &definitions)
+            .expect("committed session")
+    );
 
     let second_output = run_once(&root, &base, &definitions, SECOND_PROMPT, true);
     assert_eq!(
@@ -69,9 +68,12 @@ fn interrupted_restore_returns_the_prior_committed_kernel_without_effect_replay(
     let temp = tempfile::tempdir().expect("temporary store root");
     let root = cap_std::fs::Dir::open_ambient_dir(temp.path(), cap_std::ambient_authority())
         .expect("capability root");
-    let config = parse_live_steel_agent_config(CONFIG).expect("config");
-    let definitions = store_definitions(&config).expect("store definitions");
-    let persistence = open_kernel_persistence(&root, &config, &definitions).expect("kernel store");
+    let config = animus_live_steel_agent::parse_live_steel_agent_config(CONFIG).expect("config");
+    let definitions =
+        animus_live_steel_agent::store_definitions(&config).expect("store definitions");
+    let persistence =
+        animus_live_steel_agent::open_kernel_persistence(&root, &config, &definitions)
+            .expect("kernel store");
     let mut kernel =
         animus_steel::SteelRlmKernel::new(config.rlm_policy().clone()).expect("kernel");
     let completed = kernel.evaluate("(+ 1 2)").expect("committed cell");
@@ -89,8 +91,9 @@ fn interrupted_restore_returns_the_prior_committed_kernel_without_effect_replay(
         .expect("snapshot commit");
     persistence.close().expect("close first kernel store");
 
-    let reopened = open_kernel_persistence(&root, &config, &definitions).expect("reopen kernel");
-    let restored = restore_interrupted_kernel(
+    let reopened = animus_live_steel_agent::open_kernel_persistence(&root, &config, &definitions)
+        .expect("reopen kernel");
+    let restored = animus_live_steel_agent::restore_interrupted_kernel(
         &config,
         &reopened,
         animus_runtime::active_turn_recovery::ActiveTurnRecoveryAction::PlanInterruptedToolRepair,
@@ -111,9 +114,12 @@ fn present_kernel_drift_fails_without_fresh_state_fallback() {
     let temp = tempfile::tempdir().expect("temporary store root");
     let root = cap_std::fs::Dir::open_ambient_dir(temp.path(), cap_std::ambient_authority())
         .expect("capability root");
-    let config = parse_live_steel_agent_config(CONFIG).expect("config");
-    let definitions = store_definitions(&config).expect("store definitions");
-    let persistence = open_kernel_persistence(&root, &config, &definitions).expect("kernel store");
+    let config = animus_live_steel_agent::parse_live_steel_agent_config(CONFIG).expect("config");
+    let definitions =
+        animus_live_steel_agent::store_definitions(&config).expect("store definitions");
+    let persistence =
+        animus_live_steel_agent::open_kernel_persistence(&root, &config, &definitions)
+            .expect("kernel store");
     let mut kernel =
         animus_steel::SteelRlmKernel::new(config.rlm_policy().clone()).expect("kernel");
     let completed = kernel.evaluate("(+ 1 2)").expect("committed cell");
@@ -133,9 +139,11 @@ fn present_kernel_drift_fails_without_fresh_state_fallback() {
     let drifted_json = String::from_utf8(CONFIG.to_vec())
         .expect("UTF-8")
         .replace("\"max_source_chars\": 4096", "\"max_source_chars\": 4097");
-    let drifted = parse_live_steel_agent_config(drifted_json.as_bytes()).expect("drifted config");
-    let reopened = open_kernel_persistence(&root, &drifted, &definitions).expect("reopen kernel");
-    assert!(restore_or_create_kernel(&drifted, &reopened).is_err());
+    let drifted = animus_live_steel_agent::parse_live_steel_agent_config(drifted_json.as_bytes())
+        .expect("drifted config");
+    let reopened = animus_live_steel_agent::open_kernel_persistence(&root, &drifted, &definitions)
+        .expect("reopen kernel");
+    assert!(animus_live_steel_agent::restore_or_create_kernel(&drifted, &reopened).is_err());
     reopened.close().expect("close drift store");
 }
 
@@ -152,25 +160,31 @@ fn run_once(
 ) -> animus_live_steel_agent::LiveSteelAgentRunOutput {
     let config = base.with_session_resume_required(resume_required);
     let session_persistence =
-        open_session_persistence(root, &config, definitions).expect("session persistence");
+        animus_live_steel_agent::open_session_persistence(root, &config, definitions)
+            .expect("session persistence");
     let snapshot_persistence =
-        open_snapshot_persistence(root, definitions).expect("snapshot persistence");
+        animus_live_steel_agent::open_snapshot_persistence(root, definitions)
+            .expect("snapshot persistence");
     let kernel_persistence =
-        open_kernel_persistence(root, &config, definitions).expect("kernel persistence");
-    let kernel = restore_or_create_kernel(&config, &kernel_persistence).expect("kernel restore");
-    let provider = FixtureStreamProvider::new(
+        animus_live_steel_agent::open_kernel_persistence(root, &config, definitions)
+            .expect("kernel persistence");
+    let kernel = animus_live_steel_agent::restore_or_create_kernel(&config, &kernel_persistence)
+        .expect("kernel restore");
+    let provider = animus_live_steel_agent::FixtureStreamProvider::new(
         [TOOL_STREAM.to_vec(), FINAL_STREAM.to_vec()],
-        usize::try_from(config.max_provider_response_bytes()).expect("provider bound"),
+        config.max_provider_response_bytes(),
     );
-    LiveSteelAgentComposition::new(LiveSteelAgentCompositionInput {
-        config: config.clone(),
-        provider,
-        session_persistence,
-        snapshot_persistence,
-        kernel,
-        host_executor: DenyHost,
-        kernel_persistence,
-    })
+    animus_live_steel_agent::LiveSteelAgentComposition::new(
+        animus_live_steel_agent::LiveSteelAgentCompositionInput {
+            config: config.clone(),
+            provider,
+            session_persistence,
+            snapshot_persistence,
+            kernel,
+            host_executor: DenyHost,
+            kernel_persistence,
+        },
+    )
     .expect("composition")
     .run_prompt(prompt)
     .expect("durable run")

@@ -1,10 +1,6 @@
 //! Concrete child-route execution and denial checks.
 
-use animus_live_steel_agent::{
-    ExplicitChildAuthority, ExplicitChildFactory, FixedChildTimer, MetadataChildEvents,
-    MetadataChildStore, admit_child_request, build_child_service, parse_live_steel_agent_config,
-};
-use animus_std_rlm_host::{ChildRoute, ConcreteChildRoute};
+use animus_std_rlm_host::ChildRoute;
 
 const CONFIG: &[u8] = include_bytes!("../../../config/generated/live-steel-agent-shell.json");
 const CHILD_PROFILE: &str = "focused-child";
@@ -14,14 +10,15 @@ const CHILD_RESULT: &str = "Bounded child result.";
 
 #[test]
 fn concrete_child_route_uses_normal_coding_session_controller() {
-    let config = parse_live_steel_agent_config(CONFIG).expect("config");
+    let config = animus_live_steel_agent::parse_live_steel_agent_config(CONFIG).expect("config");
     let request = child_request(&config, CHILD_PROFILE, false, false);
-    let mut service = build_child_service(&config, CHILD_RESULT).expect("child service");
+    let mut service =
+        animus_live_steel_agent::build_child_service(&config, CHILD_RESULT).expect("child service");
     let child_config = config.clone();
     let mut admission = move |candidate: &animus_adapter_rlm_kernel::ChildSpawnRequest| {
-        admit_child_request(&child_config, candidate)
+        animus_live_steel_agent::admit_child_request(&child_config, candidate)
     };
-    let mut route = ConcreteChildRoute {
+    let mut route = animus_std_rlm_host::ConcreteChildRoute {
         service: &mut service,
         admission: &mut admission,
     };
@@ -36,9 +33,9 @@ fn concrete_child_route_uses_normal_coding_session_controller() {
 
 #[test]
 fn child_profile_and_ambient_discovery_are_denied_before_enqueue() {
-    let config = parse_live_steel_agent_config(CONFIG).expect("config");
+    let config = animus_live_steel_agent::parse_live_steel_agent_config(CONFIG).expect("config");
     let denied_profile = child_request(&config, DENIED_CHILD_PROFILE, false, false);
-    assert!(admit_child_request(&config, &denied_profile).is_err());
+    assert!(animus_live_steel_agent::admit_child_request(&config, &denied_profile).is_err());
 
     let ambient = child_request(&config, CHILD_PROFILE, true, false);
     assert!(animus_adapter_rlm_kernel::admit_child_spawn(config.rlm_policy(), &ambient).is_err());
@@ -46,25 +43,30 @@ fn child_profile_and_ambient_discovery_are_denied_before_enqueue() {
 
 #[test]
 fn denied_factory_fails_without_registering_a_child() {
-    let config = parse_live_steel_agent_config(CONFIG).expect("config");
+    let config = animus_live_steel_agent::parse_live_steel_agent_config(CONFIG).expect("config");
     let request = child_request(&config, CHILD_PROFILE, false, false);
-    let admission = admit_child_request(&config, &request).expect("admission");
+    let admission =
+        animus_live_steel_agent::admit_child_request(&config, &request).expect("admission");
     let mut service = animus_std::child_session_host::ConcreteChildSessionService::new(
         config.child_service_label(),
         animus_std::child_session_host::ConcreteChildSessionServices {
-            factory: ExplicitChildFactory::denied(config.authority_component_identity()),
-            store: MetadataChildStore::default(),
-            authority: ExplicitChildAuthority::admitted(config.authority_authorization_identity()),
-            timer: FixedChildTimer::default(),
-            events: MetadataChildEvents::default(),
+            factory: animus_live_steel_agent::ExplicitChildFactory::denied(
+                config.authority_component_identity(),
+            ),
+            store: animus_live_steel_agent::MetadataChildStore::default(),
+            authority: animus_live_steel_agent::ExplicitChildAuthority::admitted(
+                config.authority_authorization_identity(),
+            ),
+            timer: animus_live_steel_agent::FixedChildTimer::default(),
+            events: animus_live_steel_agent::MetadataChildEvents::default(),
         },
     )
     .expect("denied service");
     let child_config = config.clone();
     let mut admission_builder = move |candidate: &animus_adapter_rlm_kernel::ChildSpawnRequest| {
-        admit_child_request(&child_config, candidate)
+        animus_live_steel_agent::admit_child_request(&child_config, candidate)
     };
-    let mut route = ConcreteChildRoute {
+    let mut route = animus_std_rlm_host::ConcreteChildRoute {
         service: &mut service,
         admission: &mut admission_builder,
     };

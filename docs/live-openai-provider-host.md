@@ -81,6 +81,14 @@ Visible output becomes canonical content frames. Function arguments become redac
 
 The parser projects its accepted frames into the existing runtime retry stream state. Any accepted semantic frame blocks unsafe replay under the current retry policy.
 
+## Portable bound migration
+
+`OpenAiStreamBounds::reviewed` now accepts `u64` and remains a const constructor. All five public fields use `u64`: `stream_bytes`, `event_bytes`, `events`, `tool_argument_bytes`, and `tool_calls`.
+
+This change is not source-compatible with callers that supply `usize` variables. Callers must use portable bounds or checked conversions. Collection indexing remains private and uses checked conversions where necessary.
+
+The provider keeps its public facade. Private `declarations/` modules own tool admission and bounded schema traversal. Private `codec/` modules own SSE admission and state transitions. Private `shell/` modules own transport and credentials. Literal SSE fixtures remain under `tests/fixtures/`.
+
 ## Authority and execution
 
 `build_openai_request_body`, `build_tool_capable_openai_request_body`, `normalize_openai_response`, and the SSE parser are deterministic over explicit inputs. They do not read the environment or contact a network.

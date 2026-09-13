@@ -1,9 +1,5 @@
 //! Steel tool cancellation, host failure, and request-denial checks.
 
-use animus_live_steel_agent::{
-    SteelToolBinding, SteelToolError, SteelToolService, parse_live_steel_agent_config,
-};
-
 const CONFIG: &[u8] = include_bytes!("../../../config/generated/live-steel-agent-shell.json");
 const HOST_SOURCE: &str = "(animus-context-read \"fixture-key\")";
 const VALUE_SOURCE: &str = "(+ 1 2)";
@@ -24,56 +20,61 @@ impl animus_runtime::rlm_kernel::RlmKernelHostExecutor for DenyHost {
 
 #[test]
 fn explicit_cancellation_stops_before_kernel_safe_point() {
-    let config = parse_live_steel_agent_config(CONFIG).expect("config");
+    let config = animus_live_steel_agent::parse_live_steel_agent_config(CONFIG).expect("config");
     let kernel = animus_steel::SteelRlmKernel::new(config.rlm_policy().clone()).expect("kernel");
-    let mut tool = SteelToolService::new(kernel, DenyHost, (), binding(&config));
+    let mut tool =
+        animus_live_steel_agent::SteelToolService::new(kernel, DenyHost, (), binding(&config));
     tool.set_cancelled(true);
     let prior_head = kernel_head(&tool, &config);
 
     assert_eq!(
         tool.execute(&tool_request(HOST_SOURCE)),
-        Err(SteelToolError::Cancelled)
+        Err(animus_live_steel_agent::SteelToolError::Cancelled)
     );
     assert_eq!(kernel_head(&tool, &config), prior_head);
 }
 
 #[test]
 fn host_failure_does_not_commit_the_active_cell() {
-    let config = parse_live_steel_agent_config(CONFIG).expect("config");
+    let config = animus_live_steel_agent::parse_live_steel_agent_config(CONFIG).expect("config");
     let kernel = animus_steel::SteelRlmKernel::new(config.rlm_policy().clone()).expect("kernel");
-    let mut tool = SteelToolService::new(kernel, DenyHost, (), binding(&config));
+    let mut tool =
+        animus_live_steel_agent::SteelToolService::new(kernel, DenyHost, (), binding(&config));
     let prior_head = kernel_head(&tool, &config);
 
     assert_eq!(
         tool.execute(&tool_request(HOST_SOURCE)),
-        Err(SteelToolError::Host)
+        Err(animus_live_steel_agent::SteelToolError::Host)
     );
     assert_eq!(kernel_head(&tool, &config), prior_head);
 }
 
 #[test]
 fn denied_tool_request_fails_before_steel_execution() {
-    let config = parse_live_steel_agent_config(CONFIG).expect("config");
+    let config = animus_live_steel_agent::parse_live_steel_agent_config(CONFIG).expect("config");
     let kernel = animus_steel::SteelRlmKernel::new(config.rlm_policy().clone()).expect("kernel");
-    let mut tool = SteelToolService::new(kernel, DenyHost, (), binding(&config));
+    let mut tool =
+        animus_live_steel_agent::SteelToolService::new(kernel, DenyHost, (), binding(&config));
     let prior_head = kernel_head(&tool, &config);
 
     assert_eq!(
         tool.execute(&denied_tool_request()),
-        Err(SteelToolError::Request)
+        Err(animus_live_steel_agent::SteelToolError::Request)
     );
     assert_eq!(kernel_head(&tool, &config), prior_head);
 }
 
-fn binding(config: &animus_live_steel_agent::ValidatedLiveSteelAgentConfig) -> SteelToolBinding {
-    SteelToolBinding {
+fn binding(
+    config: &animus_live_steel_agent::ValidatedLiveSteelAgentConfig,
+) -> animus_live_steel_agent::SteelToolBinding {
+    animus_live_steel_agent::SteelToolBinding {
         session_identity: String::from(config.session_identity()),
         generation: config.authority_generation(),
     }
 }
 
 fn kernel_head(
-    tool: &SteelToolService<DenyHost, ()>,
+    tool: &animus_live_steel_agent::SteelToolService<DenyHost, ()>,
     config: &animus_live_steel_agent::ValidatedLiveSteelAgentConfig,
 ) -> String {
     tool.kernel()

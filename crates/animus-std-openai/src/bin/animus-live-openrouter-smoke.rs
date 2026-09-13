@@ -1,14 +1,11 @@
 //! Explicit-input packaged live `OpenRouter` smoke.
 
 use std::io::Read as _;
-use std::process::ExitCode;
 
 const ARG_MODEL: &str = "--model";
 const ARG_CREDENTIAL_STDIN: &str = "--credential-stdin";
 const STATUS_FAILED: &str = "LIVE_OPENROUTER_SMOKE status=failed";
-const KIBIBYTE_BYTES: u64 = 1_024;
-const MAX_CREDENTIAL_STDIN_KIBIBYTES: u64 = 4;
-const MAX_CREDENTIAL_STDIN_BYTES: u64 = MAX_CREDENTIAL_STDIN_KIBIBYTES * KIBIBYTE_BYTES;
+const MAX_CREDENTIAL_STDIN_BYTES: u64 = 4_096;
 const INPUT_SENTINEL_BYTES: u64 = 1;
 const SUCCESS: u8 = 0;
 const FAILURE: u8 = 1;
@@ -16,10 +13,10 @@ const FAILURE: u8 = 1;
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct SmokeArgs {
     model: String,
-    credential_stdin: bool,
+    has_credential_stdin: bool,
 }
 
-fn main() -> ExitCode {
+fn main() -> std::process::ExitCode {
     let arguments = std::env::args().skip(1).collect::<Vec<_>>();
     match parse_args(arguments.as_slice())
         .and_then(|parsed| read_credential(&parsed).map(|credential| (parsed, credential)))
@@ -27,11 +24,11 @@ fn main() -> ExitCode {
     {
         Ok(evidence) => {
             print!("{evidence}");
-            ExitCode::from(SUCCESS)
+            std::process::ExitCode::from(SUCCESS)
         }
         Err(issue) => {
             eprintln!("{STATUS_FAILED} issue={issue}");
-            ExitCode::from(FAILURE)
+            std::process::ExitCode::from(FAILURE)
         }
     }
 }
@@ -44,33 +41,37 @@ fn run(arguments: &SmokeArgs, credential: String) -> Result<String, String> {
 fn parse_args(args: &[String]) -> Result<SmokeArgs, String> {
     // r[impl agent_harness_runtime.packaged_live_openrouter_smoke.binary.failure]
     let mut model = None;
-    let mut credential_stdin = false;
+    let mut has_credential_stdin = false;
     let mut index = 0_usize;
     while index < args.len() {
         let argument = args
             .get(index)
             .ok_or_else(|| String::from("missing_argument"))?;
-        index = index.saturating_add(1);
+        index = index
+            .checked_add(1)
+            .ok_or_else(|| String::from("missing_argument"))?;
         match argument.as_str() {
             ARG_MODEL => {
                 let value = args
                     .get(index)
                     .ok_or_else(|| String::from("missing_model_value"))?;
-                index = index.saturating_add(1);
+                index = index
+                    .checked_add(1)
+                    .ok_or_else(|| String::from("missing_argument"))?;
                 if model.replace(value.clone()).is_some() {
                     return Err(String::from("duplicate_model"));
                 }
             }
             ARG_CREDENTIAL_STDIN => {
-                if credential_stdin {
+                if has_credential_stdin {
                     return Err(String::from("duplicate_credential_stdin"));
                 }
-                credential_stdin = true;
+                has_credential_stdin = true;
             }
             _unsupported => return Err(String::from("unsupported_argument")),
         }
     }
-    if !credential_stdin {
+    if !has_credential_stdin {
         return Err(String::from("missing_credential_stdin"));
     }
     let model = model.ok_or_else(|| String::from("missing_model"))?;
@@ -78,22 +79,24 @@ fn parse_args(args: &[String]) -> Result<SmokeArgs, String> {
     if model != animus_std_openai::OPENROUTER_SMOKE_MODEL_ID {
         return Err(String::from("unsupported_model"));
     }
+    assert!(has_credential_stdin);
+    assert_eq!(index, args.len());
     Ok(SmokeArgs {
         model,
-        credential_stdin,
+        has_credential_stdin,
     })
 }
 
 fn read_credential(arguments: &SmokeArgs) -> Result<String, String> {
-    if !arguments.credential_stdin {
+    if !arguments.has_credential_stdin {
         return Err(String::from("missing_credential_stdin"));
     }
-    let read_limit = MAX_CREDENTIAL_STDIN_BYTES
+    let read_limit_bytes = MAX_CREDENTIAL_STDIN_BYTES
         .checked_add(INPUT_SENTINEL_BYTES)
         .ok_or_else(|| String::from("credential_limit_overflow"))?;
     let mut input = String::new();
     std::io::stdin()
-        .take(read_limit)
+        .take(read_limit_bytes)
         .read_to_string(&mut input)
         .map_err(|_error| String::from("credential_stdin_read_failed"))?;
     decode_credential(input)
@@ -106,10 +109,16 @@ fn decode_credential(mut input: String) -> Result<String, String> {
         return Err(String::from("credential_stdin_oversized"));
     }
     if input.ends_with("\r\n") {
-        let new_len = input.len().saturating_sub("\r\n".len());
+        let new_len = input
+            .len()
+            .checked_sub("\r\n".len())
+            .ok_or_else(|| String::from("credential_length_overflow"))?;
         input.truncate(new_len);
     } else if input.ends_with('\n') {
-        let new_len = input.len().saturating_sub('\n'.len_utf8());
+        let new_len = input
+            .len()
+            .checked_sub('\n'.len_utf8())
+            .ok_or_else(|| String::from("credential_length_overflow"))?;
         input.truncate(new_len);
     }
     if input.is_empty() {
@@ -118,12 +127,13 @@ fn decode_credential(mut input: String) -> Result<String, String> {
     if input.contains(['\r', '\n']) {
         return Err(String::from("credential_stdin_multiline"));
     }
+    assert!(!input.is_empty());
+    assert!(!input.contains(['\r', '\n']));
     Ok(input)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     const MODEL_ID: &str = animus_std_openai::OPENROUTER_SMOKE_MODEL_ID;
     const SUBSTITUTED_MODEL_ID: &str = "openai/gpt-5.5";
@@ -131,12 +141,14 @@ mod tests {
     #[test]
     fn positive_explicit_arguments_and_credential_are_admitted() {
         // r[verify agent_harness_runtime.packaged_live_openrouter_smoke.binary.pass]
-        let parsed = parse_args(&[ARG_MODEL, MODEL_ID, ARG_CREDENTIAL_STDIN].map(String::from))
-            .expect("valid arguments");
+        let parsed = super::parse_args(
+            &[super::ARG_MODEL, MODEL_ID, super::ARG_CREDENTIAL_STDIN].map(String::from),
+        )
+        .expect("valid arguments");
         assert_eq!(parsed.model, MODEL_ID);
-        assert!(parsed.credential_stdin);
+        assert!(parsed.has_credential_stdin);
         assert_eq!(
-            decode_credential(String::from("secret-value\n")),
+            super::decode_credential(String::from("secret-value\n")),
             Ok(String::from("secret-value"))
         );
     }
@@ -144,30 +156,38 @@ mod tests {
     #[test]
     fn negative_missing_duplicate_unknown_and_unsafe_input_fail() {
         // r[verify agent_harness_runtime.packaged_live_openrouter_smoke.binary.failure]
-        assert!(parse_args(&[]).is_err());
+        assert!(super::parse_args(&[]).is_err());
         assert!(
-            parse_args(
+            super::parse_args(
                 &[
-                    ARG_MODEL,
+                    super::ARG_MODEL,
                     MODEL_ID,
-                    ARG_MODEL,
+                    super::ARG_MODEL,
                     MODEL_ID,
-                    ARG_CREDENTIAL_STDIN,
+                    super::ARG_CREDENTIAL_STDIN,
                 ]
                 .map(String::from),
             )
             .is_err()
         );
-        assert!(parse_args(&["--unknown"].map(String::from)).is_err());
+        assert!(super::parse_args(&["--unknown"].map(String::from)).is_err());
         assert_eq!(
-            parse_args(&[ARG_MODEL, SUBSTITUTED_MODEL_ID, ARG_CREDENTIAL_STDIN].map(String::from)),
+            super::parse_args(
+                &[
+                    super::ARG_MODEL,
+                    SUBSTITUTED_MODEL_ID,
+                    super::ARG_CREDENTIAL_STDIN
+                ]
+                .map(String::from)
+            ),
             Err(String::from("unsupported_model"))
         );
-        assert!(decode_credential(String::new()).is_err());
-        assert!(decode_credential(String::from("first\nsecond")).is_err());
-        let oversized_len = usize::try_from(MAX_CREDENTIAL_STDIN_BYTES)
+        assert!(super::decode_credential(String::new()).is_err());
+        assert!(super::decode_credential(String::from("first\nsecond")).is_err());
+        let refused_length_bytes = usize::try_from(super::MAX_CREDENTIAL_STDIN_BYTES)
             .expect("test limit must fit usize")
-            .saturating_add(1);
-        assert!(decode_credential("x".repeat(oversized_len)).is_err());
+            .checked_add(1)
+            .expect("test sentinel fits usize");
+        assert!(super::decode_credential("x".repeat(refused_length_bytes)).is_err());
     }
 }

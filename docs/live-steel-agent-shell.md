@@ -19,6 +19,14 @@ The `animus-live-steel-agent` package is a non-default headless application. It 
 
 The package is a workspace member, but it is not a default member. Its `live-provider` feature is also off by default.
 
+## Portable count migration
+
+`FixtureStreamProvider::new` now accepts a `u64` response bound. Its `remaining()` method now returns `Result<u64, ProviderStreamError>`. `MetadataChildEvents::len()` returns `u64`. The crate root re-exports `ProviderStreamError`.
+
+These public changes are not source-compatible with machine-width counts or infallible fixture-count callers. Callers must handle conversion errors and compare counts as `u64`.
+
+Private modules now separate configuration admission, provider adapters, composition, session ownership, evaluation, persistence, and evidence. The public facade retains the existing concept names.
+
 ## Prerequisite record
 
 The shell composes prerequisite code from the same checked workspace revision. The closeout commit binds those exact source identities.
@@ -51,11 +59,15 @@ The binary accepts `<store-root> <prompt>`. It reads one explicit credential val
 
 `CodingSessionHost` commits the assistant tool call before `steel_repl` dispatch. The tool adapter then runs the fixed staged execution plan through final validation.
 
-The shell keeps the pending staged result and private safe-point journal bound together. It completes post-commit observation only after the exact correlated result commit.
+The tool adapter persists the private kernel safe point before it returns the staged result. `CodingSessionHost` then commits the tool result. The adapter completes post-commit observation only after the exact correlated result commit.
 
 Provider continuation cannot observe the result before that transition completes. See [tool execution stages](tool-execution-stages.md).
 
-The session and kernel stores use separate journals and exclusive leases. The shell releases both leases after the final safe point.
+The session and kernel stores use separate journals and exclusive leases. Their commits do not form one transaction. An interruption between these commits can leave the kernel head ahead of the session tool result. This repair preserves the existing order. The current controls do not establish recovery from this interruption.
+
+A rejected tool-commit observation consumes the pending stage. A failed continuation attempt can also consume its pending binding. The source audit found these existing paths. Retry safety and retained state across these failures remain unproved. The repair evidence records these limits without changing the accepted specification.
+
+The shell releases both leases after the final safe point.
 
 `LiveSteelAgentComposition::open_session` keeps the provider, model-request snapshot store, coding-session store, Steel tool, and kernel persistence inside one owning session. It begins commands without driving unrelated effects. `drive_one` executes at most one existing `CodingSessionHost` effect.
 
@@ -66,6 +78,10 @@ A present kernel snapshot must restore exactly. Policy or journal drift fails cl
 ## Child and host authority
 
 The RLM executor contains only the configured `context_read` and `subagent` routes. Each host effect receives a fresh authority observation.
+
+The product shell explicitly acquires its existing monotonic clock capability for each admitted cell. It uses the already-locked `cap-std` 3.4.5 adapter. The private checkpoint control receives that capability and the cell start instant. Reusable runtime code still receives elapsed-time facts through `RlmBridgeControl` and gains no clock authority.
+
+The four-input `SteelToolService::new` constructor remains unchanged. Time starts after request admission and identity construction, immediately before bridge execution. Checkpoints remain cooperative. This repair adds no preemptive deadline and no companion cancellation API.
 
 Child requests must match the configured profile and bounds. The child service creates a normal `CodingSessionHost` controller. It does not create a second agent loop.
 

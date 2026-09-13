@@ -1,7 +1,6 @@
 //! Packaged opt-in live Steel agent entrypoint.
 
 use std::io::Read as _;
-use std::path::PathBuf;
 
 const CONFIG_JSON: &[u8] = include_bytes!("../../../config/generated/live-steel-agent-shell.json");
 const EXPECTED_ARGUMENTS: usize = 2;
@@ -21,7 +20,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     if arguments.len() != EXPECTED_ARGUMENTS {
         return Err("usage: animus-live-steel-agent <store-root> <prompt> < credential".into());
     }
-    let store_root = PathBuf::from(&arguments[0]);
+    let store_root = std::path::PathBuf::from(&arguments[0]);
     let prompt = arguments[1].as_str();
     let mut credential = String::new();
     std::io::stdin()
@@ -34,7 +33,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             store_root: store_root.as_path(),
             prompt,
             credential,
-            context: animus_live_steel_agent::ExplicitContextMap::default(),
+            context: animus_live_steel_agent::ExplicitContextMap::new([])?,
         },
     )?;
     println!("{}", output.final_text());

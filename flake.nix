@@ -514,6 +514,26 @@
               "$out/lib/${octetDllPrefix}octet@${octetRustupToolchain}${octetSharedLibSuffix}"
           '';
           octetDylintLibPath = "${octetDylintLibDir}/lib/${octetDllPrefix}octet@${octetRustupToolchain}${octetSharedLibSuffix}";
+          scopeOctetDriver = driver: pkgs.writeShellScript "animus-octet-primary-driver" ''
+            if [ "''${DYLINT_NO_DEPS-0}" != 0 ]; then
+              if [ "''${CARGO_PRIMARY_PACKAGE+x}" != x ]; then
+                unset DYLINT_RUSTFLAGS
+              fi
+            fi
+            exec ${driver} "$@"
+          '';
+          octetPrimaryDriver = scopeOctetDriver "${octetDriver}/bin/dylint-driver";
+          liveHostCargoOctet = cargoOctet.overrideAttrs (old:
+            let
+              driverSetting = "--set TIGERSTYLE_DRIVER_PATH ";
+              scopedSetting = "--set-default TIGERSTYLE_DRIVER_PATH ";
+              scopedCommand = builtins.replaceStrings [ driverSetting ] [ scopedSetting ] old.buildCommand;
+            in
+            assert scopedCommand != old.buildCommand;
+            {
+              name = "cargo-octet-live-host";
+              buildCommand = scopedCommand;
+            });
 
           cargoLock = builtins.fromTOML (builtins.readFile ./Cargo.lock);
           renderCargoLockPackage = package:
@@ -697,13 +717,14 @@
               '';
             };
 
-          octetCheck =
-            name: packages:
+          octetCheckWith =
+            { name, packages, strict ? false }:
             pkgs.runCommand name
               {
+                src = source;
                 nativeBuildInputs = cargoNativeBuildInputs ++ [
                   pkgs.clippy
-                  cargoOctet
+                  (if strict then liveHostCargoOctet else cargoOctet)
                 ];
               }
               ''
@@ -712,16 +733,29 @@
                 mkdir -p "$HOME" "$CARGO_HOME"
                 sed 's|directory = "cargo-vendor-dir/|directory = "${cargoDeps}/|g' \
                   "${cargoDeps}/.cargo/config.toml" > "$CARGO_HOME/config.toml"
-                cp -r ${source} source
+                cp -r "$src" source
                 chmod -R u+w source
                 cd source
                 export TIGERSTYLE_DRIVER_PATH="${octetDriver}/bin/dylint-driver"
                 export TIGERSTYLE_LINT_LIB="${octetDylintLibPath}"
                 export TIGERSTYLE_TOOLCHAIN="${octetRustupToolchain}"
-                export RUSTFLAGS="''${RUSTFLAGS:-} --cfg animus_octet"
-                cargo-octet check ${packages}
+                ${if strict then ''
+                  export DYLINT_RUSTFLAGS="''${DYLINT_RUSTFLAGS:-} --cfg animus_octet"
+                  export OCTET_PRECOMMIT_USE_INSTALLED=true
+                  export TIGERSTYLE_DRIVER_PATH="${octetPrimaryDriver}"
+                  ${octet}/hooks/octet-deny-all.sh ${packages}
+                '' else ''
+                  export RUSTFLAGS="''${RUSTFLAGS:-} --cfg animus_octet"
+                  cargo-octet check ${packages}
+                ''}
                 mkdir -p "$out"
               '';
+
+          octetCheck = name: packages: octetCheckWith { inherit name packages; };
+          liveHostOctetCheck = name: packages: octetCheckWith {
+            inherit name packages;
+            strict = true;
+          };
         in
         {
           cargo-fmt = cargoCheck "animus-cargo-fmt" [ pkgs.rustfmt ] ''
@@ -1717,15 +1751,47 @@
             -p animus-std-pueue -- --all-targets --all-features
           '';
 
-          live-child-control-octet = octetCheck "animus-live-child-control-octet" ''
+          live-host-octet-driver =
+            let
+              flags = "--cfg animus_octet -D no_unwrap";
+              argument = "argument with spaces";
+              probe = pkgs.writeShellScript "animus-octet-driver-probe" ''
+                printf '%s\n' "''${DYLINT_RUSTFLAGS:-absent}" "$@"
+              '';
+              driver = scopeOctetDriver probe;
+              selected = pkgs.writeText "animus-octet-selected" "${flags}\n${argument}\n";
+              dependency = pkgs.writeText "animus-octet-dependency" "absent\n${argument}\n";
+            in
+            pkgs.runCommand "animus-live-host-octet-driver" { } ''
+              export DYLINT_RUSTFLAGS="${flags}"
+              export DYLINT_NO_DEPS=1
+              export CARGO_PRIMARY_PACKAGE=1
+              ${driver} "${argument}" > selected
+              cmp selected ${selected}
+              CARGO_PRIMARY_PACKAGE= ${driver} "${argument}" > empty-marker
+              cmp empty-marker ${selected}
+              unset CARGO_PRIMARY_PACKAGE
+              ${driver} "${argument}" > dependency
+              cmp dependency ${dependency}
+              DYLINT_NO_DEPS= ${driver} "${argument}" > empty-no-deps
+              cmp empty-no-deps ${dependency}
+              DYLINT_NO_DEPS=0 ${driver} "${argument}" > all-packages
+              cmp all-packages ${selected}
+              unset DYLINT_NO_DEPS
+              ${driver} "${argument}" > unscoped
+              cmp unscoped ${selected}
+              mkdir -p "$out"
+            '';
+
+          live-child-control-octet = liveHostOctetCheck "animus-live-child-control-octet" ''
             -p animus-live-steel-agent -p animus-std-openai -- --all-targets --all-features
           '';
 
-          live-openai-octet = octetCheck "animus-live-openai-octet" ''
+          live-openai-octet = liveHostOctetCheck "animus-live-openai-octet" ''
             -p animus-std-openai -- --all-targets --all-features
           '';
 
-          live-steel-octet = octetCheck "animus-live-steel-octet" ''
+          live-steel-octet = liveHostOctetCheck "animus-live-steel-octet" ''
             -p animus-live-steel-agent -- --all-targets --all-features
           '';
 

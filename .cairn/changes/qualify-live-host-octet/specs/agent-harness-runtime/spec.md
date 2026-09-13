@@ -4,7 +4,7 @@
 
 r[agent_harness_runtime.live_host_quality.strict]
 
-Both live host crates MUST pass the full pinned Octet catalog with all targets and all compatible features. Each crate MUST have an independent result. Final acceptance MUST include the combined selection. No lint exemption, warning budget, finding baseline, or omitted feature MAY substitute for acceptance.
+Both live host crates MUST pass the full pinned Octet catalog with all targets and all compatible features. Each crate MUST have an independent result. Final acceptance MUST include the combined selection. The gate MUST reject any lint exemption, warning budget, finding baseline, or omitted feature as a substitute for acceptance.
 
 #### Scenario: Independent host results
 

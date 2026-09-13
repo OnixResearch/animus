@@ -22,4 +22,8 @@ before provider construction. The live binary accepts the selected credential
 through standard input. It does not read environment variables, credential
 files, or provider accounts.
 
+Public stream bounds and child-event counts use `u64`. `FixtureStreamProvider::remaining()` returns `Result<u64, ProviderStreamError>`. These signatures require explicit caller migration.
+
+The shell owns an explicit per-cell monotonic clock capability from its existing `cap-std` dependency. The public tool constructor and reusable runtime clock boundary remain unchanged.
+
 See `docs/live-steel-agent-shell.md` for the claim boundary and validation rail.

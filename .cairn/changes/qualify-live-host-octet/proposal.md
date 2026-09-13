@@ -15,7 +15,7 @@ The operator approved this repair on 2026-09-12. The work starts from fetched `o
 
 ## Impact
 
-- **Files**: both host crates, directly affected callers, `flake.nix`, related documentation, and this Cairn package.
+- **Files**: both host crates, directly affected callers, `flake.nix`, related documentation, and this Cairn package. Existing host rails can receive direct path and source-marker migrations.
 - **Authority**: no new ambient authority, live-provider campaign, worker scheduler, or consumer activation.
 - **Compatibility**: current endpoint admission, parser results, error classes, persistence order, and constructor intent remain intact. Public integer-width changes require explicit caller migration and cannot count as source compatibility.
 - **Gates**: unchanged baseline, focused positive and negative tests, feature checks, strict Clippy, independent and combined Octet checks, applicable host rails, and Cairn validation.
