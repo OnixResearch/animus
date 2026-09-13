@@ -83,8 +83,8 @@ mod controls {
 
     #[test]
     fn label_admission_keeps_its_byte_bound() {
-        let limit: u32 = animus_runtime::change_scope_handoff::scope_label_char_bound();
-        let exact = "x".repeat(slots(limit));
+        let label_bound_bytes: u32 = animus_runtime::change_scope_handoff::scope_label_char_bound();
+        let exact = "x".repeat(slots(label_bound_bytes));
         let valid = animus_runtime::change_scope_handoff::validate_change_scope(
             animus_runtime::change_scope_handoff::ChangeScopeDraft {
                 driving_task: &exact,
@@ -94,7 +94,7 @@ mod controls {
         .expect("exact byte bound");
         assert_eq!(valid.driving_task(), exact);
         let excess = format!("{exact}x");
-        let multibyte = "λ".repeat(slots(limit));
+        let multibyte = "λ".repeat(slots(label_bound_bytes));
         for label in [&excess, &multibyte] {
             let issue = animus_runtime::change_scope_handoff::validate_change_scope(
                 animus_runtime::change_scope_handoff::ChangeScopeDraft {

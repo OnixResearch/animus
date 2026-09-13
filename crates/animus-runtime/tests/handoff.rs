@@ -150,6 +150,8 @@ mod controls {
     fn task_and_each_collection_bind_the_decision() {
         // r[verify animus.change_scope_handoff.scope]
         let original = scope(draft());
+        assert_eq!(original.driving_task(), TASK);
+        assert_eq!(original, scope(draft()));
         let changes = [
             animus_runtime::change_scope_handoff::ChangeScopeDraft {
                 driving_task: OTHER_TASK,
@@ -198,6 +200,8 @@ mod controls {
     fn every_hunk_field_binds_the_decision() {
         // r[verify animus.change_scope_handoff.scope]
         let original = scope(draft());
+        assert_eq!(original.hunks()[0].hunk_identity(), HUNK.hunk_identity);
+        assert_eq!(original, scope(draft()));
         let changes = [
             animus_runtime::change_scope_handoff::ChangeScopeHunkDraft {
                 file_path: SHIFTED_LABEL,
