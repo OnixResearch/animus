@@ -1717,6 +1717,18 @@
             -p animus-std-pueue -- --all-targets --all-features
           '';
 
+          live-child-control-octet = octetCheck "animus-live-child-control-octet" ''
+            -p animus-live-steel-agent -p animus-std-openai -- --all-targets --all-features
+          '';
+
+          live-openai-octet = octetCheck "animus-live-openai-octet" ''
+            -p animus-std-openai -- --all-targets --all-features
+          '';
+
+          live-steel-octet = octetCheck "animus-live-steel-octet" ''
+            -p animus-live-steel-agent -- --all-targets --all-features
+          '';
+
           # This broad rail can expose debt in crates outside a focused change.
           octet = octetCheck "animus-octet" ''
             -p animus \
