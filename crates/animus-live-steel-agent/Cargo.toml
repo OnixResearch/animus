@@ -39,3 +39,7 @@ required-features = ["live-provider"]
 [[test]]
 name = "application"
 required-features = ["live-provider"]
+
+[[test]]
+name = "tool_negative"
+path = "tests/tool.rs"

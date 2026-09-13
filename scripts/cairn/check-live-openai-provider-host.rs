@@ -117,7 +117,8 @@ fn validate_contract(root: &Path) -> Result<(), String> {
     )?;
     require(
         host_manifest.contains("default = []")
-            && host_manifest.contains("reqwest-client = [\"dep:reqwest\"]")
+            && host_manifest.contains("reqwest-client = [\"dep:reqwest\", \"dep:clap_lex\"]")
+            && host_manifest.contains("clap_lex = { version = \"=1.1.0\", optional = true }")
             && host_manifest.contains("tool-streaming = [")
             && host_manifest.contains("animus-std/provider-retry")
             && host_manifest.contains("default-features = false"),

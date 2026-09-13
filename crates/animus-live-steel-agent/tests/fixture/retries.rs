@@ -143,7 +143,7 @@ impl animus_live_steel_agent::ProviderStreamService for ControlledProvider {
 }
 
 struct ControlledSnapshotPersistence {
-    inner: super::persistence::MemorySnapshotPersistence,
+    inner: super::persistence::Snapshots,
     snapshot_commits: u32,
     terminal_commits: u32,
     fail_snapshot_on: Option<u32>,
@@ -153,7 +153,7 @@ struct ControlledSnapshotPersistence {
 impl ControlledSnapshotPersistence {
     fn normal() -> Self {
         Self {
-            inner: super::persistence::MemorySnapshotPersistence::default(),
+            inner: super::persistence::Snapshots::default(),
             snapshot_commits: 0,
             terminal_commits: 0,
             fail_snapshot_on: None,
@@ -260,7 +260,7 @@ fn session_with(
 ) -> animus_live_steel_agent::LiveSteelAgentComposition<
     ControlledProvider,
     super::ContextExecutor,
-    super::persistence::MemoryPersistence,
+    super::persistence::Journal,
     ControlledSnapshotPersistence,
     (),
 > {
@@ -271,7 +271,7 @@ fn session_with(
         animus_live_steel_agent::LiveSteelAgentCompositionInput {
             config,
             provider,
-            session_persistence: super::persistence::MemoryPersistence::default(),
+            session_persistence: super::persistence::Journal::default(),
             snapshot_persistence,
             kernel,
             host_executor: super::ContextExecutor::default(),

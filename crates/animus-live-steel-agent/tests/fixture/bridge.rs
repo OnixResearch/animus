@@ -88,6 +88,8 @@ impl animus_runtime::rlm_kernel::RlmBridgeControl for FixedControl {
     }
 }
 
+const MAX_VISIBLE_CHARS: u32 = 4_096;
+
 pub(super) fn tool_request(code: &str) -> animus_adapters::ToolRequest {
     let arguments = animus_adapters::tool::PreparedArguments::prepare(
         &animus_adapters::tool::ArgumentPreparationRequest {
@@ -101,12 +103,17 @@ pub(super) fn tool_request(code: &str) -> animus_adapters::ToolRequest {
         },
     )
     .expect("arguments");
+    assert!(!code.is_empty());
+    assert_eq!(
+        arguments.schema_identity(),
+        animus_std_openai::STEEL_REPL_TOOL_SCHEMA
+    );
     animus_adapters::ToolRequest::from_draft(&animus_adapters::tool::RequestDraft {
         name: Some(animus_std_openai::STEEL_REPL_TOOL_NAME),
         arguments: Some(&arguments),
         correlation_id: Some("call.host-fixture"),
         output_policy: animus_adapters::tool::OutputPolicy {
-            visible_char_budget: 4_096,
+            visible_char_budget: MAX_VISIBLE_CHARS,
         },
         mutation_targets: &[],
         required_capability_labels: &[animus_adapter_rlm_kernel::STEEL_REPL_CAPABILITY],

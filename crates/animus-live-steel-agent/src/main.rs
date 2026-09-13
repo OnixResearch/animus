@@ -20,9 +20,11 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let raw = clap_lex::RawArgs::from_args();
     let arguments = launch::parse(&raw)?;
     let mut credential = String::new();
-    std::io::stdin()
+    let read_length_bytes = std::io::stdin()
         .take(MAX_CREDENTIAL_BYTES)
         .read_to_string(&mut credential)?;
+    assert_eq!(read_length_bytes, credential.len());
+    assert!(u64::try_from(read_length_bytes)? <= MAX_CREDENTIAL_BYTES);
     let credential = credential.trim_end_matches(['\r', '\n']).to_owned();
     let output = animus_live_steel_agent::run_live_application(
         animus_live_steel_agent::LiveApplicationInput {

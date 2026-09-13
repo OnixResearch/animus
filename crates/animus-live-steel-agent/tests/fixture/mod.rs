@@ -2,7 +2,7 @@ mod bridge;
 mod commands;
 mod completion;
 mod persistence;
-mod provider_recovery;
+mod retries;
 // Deterministic production-entrypoint and resumable-host tests.
 
 pub(super) const CONFIG: &[u8] =

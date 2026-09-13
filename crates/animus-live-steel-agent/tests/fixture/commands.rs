@@ -122,8 +122,8 @@ pub(super) fn persistent_session_rejects_malformed_identity_and_event_bounds() {
 fn fixture_session() -> animus_live_steel_agent::PersistentLiveHost<
     animus_live_steel_agent::FixtureStreamProvider,
     super::ContextExecutor,
-    super::persistence::MemoryPersistence,
-    super::persistence::MemorySnapshotPersistence,
+    super::persistence::Journal,
+    super::persistence::Snapshots,
     (),
 > {
     let config = animus_live_steel_agent::parse_live_steel_agent_config(super::CONFIG)
@@ -132,19 +132,25 @@ fn fixture_session() -> animus_live_steel_agent::PersistentLiveHost<
         [super::FINAL_STREAM.to_vec()],
         config.max_provider_response_bytes(),
     );
+    assert!(matches!(provider.remaining(), Ok(1)));
     let kernel =
         animus_steel::SteelRlmKernel::new(config.rlm_policy().clone()).expect("fixture kernel");
     let composition = animus_live_steel_agent::LiveSteelAgentComposition::new(
         animus_live_steel_agent::LiveSteelAgentCompositionInput {
             config,
             provider,
-            session_persistence: super::persistence::MemoryPersistence::default(),
-            snapshot_persistence: super::persistence::MemorySnapshotPersistence::default(),
+            session_persistence: super::persistence::Journal::default(),
+            snapshot_persistence: super::persistence::Snapshots::default(),
             kernel,
             host_executor: super::ContextExecutor::default(),
             kernel_persistence: (),
         },
     )
     .expect("composition");
-    composition.open_session().expect("persistent session")
+    let session = composition.open_session().expect("persistent session");
+    assert_eq!(
+        session.status(),
+        animus_live_steel_agent::PersistentStatus::Idle
+    );
+    session
 }

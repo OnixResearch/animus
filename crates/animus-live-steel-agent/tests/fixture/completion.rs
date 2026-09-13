@@ -14,8 +14,8 @@ pub(super) fn production_entrypoint_runs_prompt_tool_result_continuation_and_fin
         animus_live_steel_agent::LiveSteelAgentCompositionInput {
             config,
             provider,
-            session_persistence: super::persistence::MemoryPersistence::default(),
-            snapshot_persistence: super::persistence::MemorySnapshotPersistence::default(),
+            session_persistence: super::persistence::Journal::default(),
+            snapshot_persistence: super::persistence::Snapshots::default(),
             kernel,
             host_executor: super::ContextExecutor::default(),
             kernel_persistence: (),
@@ -26,6 +26,14 @@ pub(super) fn production_entrypoint_runs_prompt_tool_result_continuation_and_fin
         .run_prompt("Use Steel to calculate.")
         .expect("complete tool loop");
 
+    assert_eq!(
+        output.receipt().provider_dispatch_count(),
+        super::EXPECTED_PROVIDER_DISPATCHES
+    );
+    assert_eq!(
+        output.receipt().tool_dispatch_count(),
+        super::EXPECTED_TOOL_DISPATCHES
+    );
     assert_output(&output);
 }
 
@@ -44,8 +52,8 @@ pub(super) fn persistent_session_drives_incrementally_and_finishes_with_private_
         animus_live_steel_agent::LiveSteelAgentCompositionInput {
             config,
             provider,
-            session_persistence: super::persistence::MemoryPersistence::default(),
-            snapshot_persistence: super::persistence::MemorySnapshotPersistence::default(),
+            session_persistence: super::persistence::Journal::default(),
+            snapshot_persistence: super::persistence::Snapshots::default(),
             kernel,
             host_executor: super::ContextExecutor::default(),
             kernel_persistence: (),

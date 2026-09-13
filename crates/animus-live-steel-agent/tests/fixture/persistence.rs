@@ -1,16 +1,16 @@
 #[derive(Default)]
-pub(super) struct MemoryPersistence {
+pub(super) struct Journal {
     messages: Vec<animus_runtime::coding_session_host::CodingSessionMessage>,
     head_hash: String,
 }
 
-impl animus_live_steel_agent::SessionPersistence for MemoryPersistence {
+impl animus_live_steel_agent::SessionPersistence for Journal {
     fn close(self) -> Result<(), animus_live_steel_agent::LiveSteelAgentError> {
         Ok(())
     }
 }
 
-impl animus_std::coding_session_host::CodingSessionPersistenceService for MemoryPersistence {
+impl animus_std::coding_session_host::CodingSessionPersistenceService for Journal {
     fn commit(
         &mut self,
         request: &animus_runtime::coding_session_host::CodingSessionCommitRequest,
@@ -68,20 +68,18 @@ impl animus_std::coding_session_host::CodingSessionPersistenceService for Memory
 }
 
 #[derive(Default)]
-pub(super) struct MemorySnapshotPersistence {
+pub(super) struct Snapshots {
     committed: Vec<animus_runtime::model_request_snapshot::CommittedModelRequestSnapshot>,
     terminal: Vec<animus_runtime::model_request_snapshot::ModelRequestProviderTerminalObservation>,
 }
 
-impl animus_live_steel_agent::SnapshotPersistence for MemorySnapshotPersistence {
+impl animus_live_steel_agent::SnapshotPersistence for Snapshots {
     fn close(self) -> Result<(), animus_live_steel_agent::LiveSteelAgentError> {
         Ok(())
     }
 }
 
-impl animus_std::model_request_snapshot_host::ModelRequestSnapshotStorePort
-    for MemorySnapshotPersistence
-{
+impl animus_std::model_request_snapshot_host::ModelRequestSnapshotStorePort for Snapshots {
     fn commit_snapshot(
         &mut self,
         plan: &animus_runtime::model_request_snapshot::ModelRequestSnapshotCommitPlan,

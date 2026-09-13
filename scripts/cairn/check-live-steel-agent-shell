@@ -43,7 +43,8 @@ done
 
 grep -F 'license = "AGPL-3.0-or-later"' "${MANIFEST}" >/dev/null
 grep -F 'default = []' "${MANIFEST}" >/dev/null
-grep -F 'live-provider = ["animus-std-openai/reqwest-client"]' "${MANIFEST}" >/dev/null
+grep -F 'live-provider = ["animus-std-openai/reqwest-client", "dep:clap_lex"]' "${MANIFEST}" >/dev/null
+grep -F 'clap_lex = { version = "=1.1.0", optional = true }' "${MANIFEST}" >/dev/null
 grep -F 'animus-live-steel-agent' Cargo.toml >/dev/null
 if awk '/default-members = \[/,/^\]/' Cargo.toml | grep -F 'animus-live-steel-agent' >/dev/null; then
   printf '%s\n' 'error: live Steel agent entered workspace default members' >&2
