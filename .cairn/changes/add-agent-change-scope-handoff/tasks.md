@@ -22,3 +22,13 @@
 - [x] [parallel] Add positive scope-shape, recorded-handoff, bounded-continuation, and artifact-identity fixtures. r[animus.change_scope_handoff.fixtures]
 - [x] [parallel] Add negative malformed-scope, missing-decision, unbounded-continuation, artifact-leak, and overclaim fixtures. r[animus.change_scope_handoff.fixtures] r[animus.change_scope_handoff.artifacts] r[animus.change_scope_handoff.nonclaims]
 - [ ] [serial] Run focused tests before and after changes, no-std builds, Clippy with warnings denied, octet, Cairn validation and gates, and relevant Nix checks. r[animus.change_scope_handoff.fixtures]
+
+## Qualification status (2026-09-13)
+
+The encoding repair at `71d7eb63547d1042fd2f71f31f446906dbcddb98` passes its six maintained controls and package/caller checks.
+The full flake gate remains blocked by 214 runtime Octet findings, including preserved public `usize` signatures.
+All three strict host selections pass with zero findings, warnings, and errors.
+The primary comparison passes. No push, archive, or primary integration occurred.
+The stale safe-receipt wrapper selects zero tests, while the direct current-owner command passes five cases.
+The final task stays open. A default-off build is not proof that the runtime crate is `no_std`.
+See `evidence/qualification-2026-09-13.md` for exact subjects, results, and the required scope decision.
