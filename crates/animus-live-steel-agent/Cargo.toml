@@ -12,7 +12,7 @@ workspace = true
 
 [features]
 default = []
-live-provider = ["animus-std-openai/reqwest-client"]
+live-provider = ["animus-std-openai/reqwest-client", "dep:clap_lex"]
 
 [dependencies]
 animus-adapter-rlm-kernel = { path = "../animus-adapter-rlm-kernel", version = "0.1.0" }
@@ -24,6 +24,7 @@ animus-std-rlm-host = { path = "../animus-std-rlm-host", version = "0.1.0" }
 animus-steel = { path = "../animus-steel", version = "0.1.0", features = ["rlm-kernel"] }
 blake3 = "1.8.5"
 cap-std = "3.4.5"
+clap_lex = { version = "=1.1.0", optional = true }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 

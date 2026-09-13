@@ -3855,7 +3855,7 @@ let entry_values = [
   entry "animus::prepare_rejected_attempt_context" "animus" root shell shell_owned optional_stability "compatibility reexport of rejected-attempt host preparation",
   entry "animus-runtime::NamedProcessJobProfile" "animus-runtime" runtime injection injected stable "named exact process profile entry for injected host execution",
   entry "animus-runtime::coding_session_host" "animus-runtime" runtime reusable none stable "provider- and frontend-neutral coding-session reducer facade with authority-profile binding and resume admission",
-  entry "animus-std::coding_session_host" "animus-std" std_shell shell shell_owned stable "non-default explicit-service coding-session host facade with current authority-enforcement re-probes",
+  entry "animus-std::coding_session_host" "animus-std" std_shell shell shell_owned stable "non-default explicit-service coding-session host with current authority re-probes, additive resume gates, and explicit authority-free empty memory construction",
   rlm_host_executor_record "animus::rlm_host_executor" "animus" root "root module facade for the non-default AGPL host executor",
   durable_steel_kernel_restore_record "animus-std::DurableSteelKernelHostError" "animus-std" std_shell reusable none "bounded durable Steel kernel host error" none,
   durable_steel_kernel_restore_record "animus-std::DurableSteelKernelHostIssue" "animus-std" std_shell reusable none "typed durable Steel kernel host issue class" none,

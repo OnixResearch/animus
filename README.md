@@ -61,6 +61,8 @@ The workspace denies missing docs, `clippy::all`, `clippy::pedantic`, and undocu
 
 The live host checks use the full pinned `octet-deny-all` catalog with all targets and all compatible features. Independent checks select `animus-std-openai` and `animus-live-steel-agent`. The combined `live-child-control-octet` check remains required. These checks do not establish equivalent coverage for other workspace checks.
 
+The live binaries use the locked argument lexer without changing their CLI grammar. The live session refuses recovery repair writes and unproved continuation retries. The stores remain separate transactions. See [the recovery boundary](docs/live-steel-agent-shell.md#argument-and-recovery-boundaries).
+
 The host repair changes public counts from `usize` to `u64` and makes fixture counts fallible. These changes require caller migration. See [the provider contract](docs/live-openai-provider-host.md#portable-bound-migration) and [the live-agent contract](docs/live-steel-agent-shell.md#portable-count-migration).
 
 Every test suite should include positive and negative tests. Run baseline tests before core changes and repeat them after the change. Avoid process-global state in tests unless explicit isolation is in place.

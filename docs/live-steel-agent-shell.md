@@ -19,6 +19,14 @@ The `animus-live-steel-agent` package is a non-default headless application. It 
 
 The package is a workspace member, but it is not a default member. Its `live-provider` feature is also off by default.
 
+## Argument and recovery boundaries
+
+The binary acquires process arguments through the locked `clap_lex` 1.1.0 lexer after activation preflight. Its adapter admits exactly two positional values. Spaces, empty strings, and flag spellings remain literal values. Missing values, extra values, and invalid UTF-8 return the existing usage text. Credential input and product admission keep their existing order.
+
+`MemoryCodingSessionPersistence::empty()` constructs the canonical empty in-memory store without I/O. `Default` delegates to this constructor.
+
+`CodingSessionHost::resume_with_gate` adds a caller-owned effect gate to recovery. It retains the current-authority probe after successful recovery. The existing `resume` method keeps its prior behavior. This product selects read-only recovery and refuses automatic repair writes.
+
 ## Portable count migration
 
 `FixtureStreamProvider::new` now accepts a `u64` response bound. Its `remaining()` method now returns `Result<u64, ProviderStreamError>`. `MetadataChildEvents::len()` returns `u64`. The crate root re-exports `ProviderStreamError`.
@@ -63,9 +71,13 @@ The tool adapter persists the private kernel safe point before it returns the st
 
 Provider continuation cannot observe the result before that transition completes. See [tool execution stages](tool-execution-stages.md).
 
-The session and kernel stores use separate journals and exclusive leases. Their commits do not form one transaction. An interruption between these commits can leave the kernel head ahead of the session tool result. This repair preserves the existing order. The current controls do not establish recovery from this interruption.
+The session and kernel stores use separate journals and exclusive leases. Their commits do not form one transaction. An interruption between these commits can leave the kernel head ahead of the session tool result. The product refuses a recovery repair before that repair writes to the session journal. A completed turn reopens at `Idle` without provider contact.
 
-A rejected tool-commit observation consumes the pending stage. A failed continuation attempt can also consume its pending binding. The source audit found these existing paths. Retry safety and retained state across these failures remain unproved. The repair evidence records these limits without changing the accepted specification.
+The adapter validates stage commit facts before it consumes the pending stage. Rejected result identities, unsynchronized observations, and duplicate result bindings retain that stage. The exact accepted observation completes it once. A later duplicate returns `Stale`.
+
+A continuation becomes blocked before snapshot persistence. Snapshot refusal, provider failure, or terminal-persistence refusal cannot turn that attempt into a fresh request. Direct adapter controls attempt a second dispatch and verify unchanged provider input and persisted-record counts.
+
+The interrupted-write control stops after a kernel commit and before the session result commit. It closes the leases and attempts recovery. It does not simulate a process kill, prove general journal-pair equivalence, or establish rollback or cross-journal atomicity.
 
 The shell releases both leases after the final safe point.
 

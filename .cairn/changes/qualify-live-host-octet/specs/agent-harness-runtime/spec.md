@@ -48,6 +48,30 @@ The repair MUST preserve accepted and rejected runtime outcomes for the existing
 - WHEN the repaired implementation processes it.
 - THEN it returns the appropriate error and leaves protected state unchanged.
 
+### Requirement: Evidence-bound recovery and continuation
+
+r[agent_harness_runtime.live_host_quality.recovery]
+
+The host MUST retain protected pending state when a commit observation fails correlation checks. Successful execution MUST preserve the existing persistence order. Recovery MUST refuse a kernel/session pair whose evidence does not prove safe continuation. A failed continuation that can follow an external effect MUST NOT silently become a fresh or retryable request. These controls MUST NOT claim atomicity across separate journals or reversal of completed effects.
+
+#### Scenario: Rejected observation followed by the exact commit
+
+- GIVEN a pending staged tool result and its exact admitted binding.
+- WHEN a crossed observation is rejected before the exact observation arrives.
+- THEN the pending result remains available and only the exact observation can complete it.
+
+#### Scenario: Interrupted journal pair
+
+- GIVEN a kernel safe point committed before its matching session tool result.
+- WHEN the host reopens the interrupted session.
+- THEN recovery refuses unproved continuation without rerunning the tool or contacting the provider.
+
+#### Scenario: Failed provider continuation
+
+- GIVEN an admitted continuation whose snapshot, provider, or terminal persistence attempt fails.
+- WHEN a caller attempts another dispatch through the same binding.
+- THEN the host refuses that dispatch without an unproved provider retry or fresh-request fallback.
+
 ### Requirement: Exact host repair evidence
 
 r[agent_harness_runtime.live_host_quality.evidence]

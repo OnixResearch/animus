@@ -1,3 +1,5 @@
+mod recovery;
+
 impl<Provider, Executor, Persistence, SnapshotStore, KernelPersistence>
     super::LiveSteelAgentComposition<
         Provider,
@@ -128,13 +130,22 @@ where
             events: super::policy::MetadataEventSink,
         };
         let state = super::policy::new_state(config.as_ref())?;
-        let mut host = animus_std::coding_session_host::CodingSessionHost::new(state, services)
+        let host = animus_std::coding_session_host::CodingSessionHost::new(state, services)
             .map_err(|_error| super::LiveSteelAgentError::Session)?;
-        if config.session_resume_required() {
-            host.resume()
-                .map_err(|_error| super::LiveSteelAgentError::Session)?;
+        let needs_resume = config.session_resume_required();
+        let mut session = crate::PersistentLiveHost::new(config, host);
+        if !needs_resume {
+            return Ok(session);
         }
-        Ok(crate::PersistentLiveHost::new(config, host))
+        if session
+            .host
+            .resume_with_gate(&mut recovery::ReadOnly)
+            .is_err()
+        {
+            session.close()?;
+            return Err(super::LiveSteelAgentError::Session);
+        }
+        Ok(session)
     }
 
     /// Runs one prompt through `CodingSessionHost` until a terminal result.

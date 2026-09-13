@@ -1,13 +1,19 @@
 /// Shared continuation state between coding-session provider and tool adapters.
 pub(crate) struct SharedProviderState {
-    pending: Option<PendingCall>,
+    continuation: ContinuationState,
     next_call: u64,
+}
+
+enum ContinuationState {
+    Empty,
+    Ready(Box<PendingCall>),
+    Blocked,
 }
 
 impl Default for SharedProviderState {
     fn default() -> Self {
         Self {
-            pending: None,
+            continuation: ContinuationState::Empty,
             next_call: super::FIRST_CALL,
         }
     }
@@ -31,20 +37,43 @@ impl SharedProviderState {
         Ok(identity)
     }
 
+    pub(crate) const fn is_blocked(&self) -> bool {
+        matches!(self.continuation, ContinuationState::Blocked)
+    }
+
     pub(crate) fn pending(&self) -> Option<&PendingCall> {
-        self.pending.as_ref()
+        match &self.continuation {
+            ContinuationState::Ready(pending) => Some(Box::as_ref(pending)),
+            ContinuationState::Empty | ContinuationState::Blocked => None,
+        }
     }
 
     pub(crate) fn pending_mut(&mut self) -> Option<&mut PendingCall> {
-        self.pending.as_mut()
+        match &mut self.continuation {
+            ContinuationState::Ready(pending) => Some(Box::as_mut(pending)),
+            ContinuationState::Empty | ContinuationState::Blocked => None,
+        }
     }
 
     pub(crate) fn install(&mut self, pending: PendingCall) {
-        self.pending = Some(pending);
+        self.continuation = ContinuationState::Ready(Box::new(pending));
     }
 
-    pub(crate) fn take(&mut self) -> Option<PendingCall> {
-        self.pending.take()
+    pub(crate) fn block_pending_for_effect(
+        &mut self,
+    ) -> Result<animus_std_openai::OpenAiToolDispatch, super::ProviderStreamError> {
+        let ContinuationState::Ready(pending) =
+            core::mem::replace(&mut self.continuation, ContinuationState::Blocked)
+        else {
+            return Err(super::ProviderStreamError::ToolCohort);
+        };
+        (*pending).into_dispatch()
+    }
+
+    pub(crate) fn clear_blocked(&mut self) {
+        if matches!(self.continuation, ContinuationState::Blocked) {
+            self.continuation = ContinuationState::Empty;
+        }
     }
 }
 
@@ -118,7 +147,7 @@ mod tests {
     #[test]
     fn exhausted_model_call_sequence_fails_without_state_change() {
         let mut state = super::SharedProviderState {
-            pending: None,
+            continuation: super::ContinuationState::Empty,
             next_call: u64::MAX,
         };
         assert!(matches!(

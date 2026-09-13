@@ -24,6 +24,9 @@ where
         self.advance_count()?;
         let (model_call_id, continuation, correlation_id) = {
             let mut shared = self.shared.borrow_mut();
+            if shared.is_blocked() {
+                return Err(animus_runtime::coding_session_host::CodingSessionServiceIssue::Stale);
+            }
             let model_call_id = shared
                 .next_model_call_id()
                 .map_err(super::policy::service_issue)?;
@@ -40,20 +43,17 @@ where
         )
         .map_err(super::policy::service_issue)?;
         let dispatch = if continuation {
-            self.shared
-                .borrow_mut()
-                .take()
-                .ok_or(animus_runtime::coding_session_host::CodingSessionServiceIssue::Stale)?
-                .into_dispatch()
-                .map_err(super::policy::service_issue)?
+            None
         } else {
-            crate::adapters::responses::continuation::initial_dispatch(
-                crate::adapters::responses::continuation::InitialCall {
-                    model_id: self.config.model_id(),
-                    model_call_id: model_call_id.as_str(),
-                },
+            Some(
+                crate::adapters::responses::continuation::initial_dispatch(
+                    crate::adapters::responses::continuation::InitialCall {
+                        model_id: self.config.model_id(),
+                        model_call_id: model_call_id.as_str(),
+                    },
+                )
+                .map_err(super::policy::service_issue)?,
             )
-            .map_err(super::policy::service_issue)?
         };
         let prepared = super::prerequisite::prepare_live_model_request_snapshot(
             self.config.as_ref(),
@@ -61,18 +61,27 @@ where
             &planned.canonical,
             &planned.plan,
         )?;
-        let mut pending_dispatch = Some(dispatch);
+        let mut pending_dispatch = if continuation {
+            Some(
+                self.shared
+                    .borrow_mut()
+                    .block_pending_for_effect()
+                    .map_err(super::policy::service_issue)?,
+            )
+        } else {
+            dispatch
+        };
         let mut provider_effect =
             |_snapshot_plan: &animus_runtime::model_request_snapshot::ModelRequestDispatchPlan,
              _canonical: &animus_adapters::CanonicalModelRequest| {
                 let dispatch = pending_dispatch.take().ok_or(
-                animus_runtime::model_request_snapshot::ModelRequestProviderTerminalStatus::Failed,
-            )?;
+                    animus_runtime::model_request_snapshot::ModelRequestProviderTerminalStatus::Failed,
+                )?;
                 self.provider
-                .stream(&planned.plan, dispatch)
-                .map_err(|_error| {
-                    animus_runtime::model_request_snapshot::ModelRequestProviderTerminalStatus::Failed
-                })
+                    .stream(&planned.plan, dispatch)
+                    .map_err(|_error| {
+                        animus_runtime::model_request_snapshot::ModelRequestProviderTerminalStatus::Failed
+                    })
             };
         let outcome = animus_std::model_request_snapshot_host::dispatch_initial_model_request(
             &mut self.snapshot_store,
@@ -144,6 +153,7 @@ impl<Provider, SnapshotStore> ProviderAdapter<Provider, SnapshotStore> {
         let response = animus_adapters::ModelResponse::new(text.as_str()).map_err(|_error| {
             animus_runtime::coding_session_host::CodingSessionServiceIssue::Malformed
         })?;
+        self.shared.borrow_mut().clear_blocked();
         Ok(animus_runtime::coding_session_host::CodingSessionProviderReply::Final(response))
     }
 }

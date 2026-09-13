@@ -4,6 +4,12 @@
 
 The root text-only feature is `openai-provider-host`. The tool-capable feature is `openai-tool-provider-host`. Direct users can enable `reqwest-client` or `tool-streaming` on `animus-std-openai`.
 
+## Smoke argument boundary
+
+The three smoke binaries acquire arguments through the locked `clap_lex` 1.1.0 lexer. A shared binary adapter admits the existing `--model <value>` and `--credential-stdin` grammar. Attached values, duplicate flags, short flags, and unknown arguments remain rejected. Error precedence and safe issue strings remain unchanged for valid UTF-8 input. Invalid UTF-8 now returns a safe error instead of a panic.
+
+Model selection, bounded credential stdin, endpoint admission, and provider contact keep their existing order. The optional direct dependency uses the existing `reqwest-client` feature. Its revision and the default-off feature state remain unchanged. The library exposes no argument reader.
+
 ## Endpoint cohorts
 
 The host admits three exact endpoint pairs:

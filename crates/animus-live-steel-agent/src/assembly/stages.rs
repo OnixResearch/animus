@@ -94,7 +94,7 @@ where
     ) -> Result<(), animus_runtime::coding_session_host::CodingSessionServiceIssue> {
         let pending = self
             .pending_stage
-            .take()
+            .as_ref()
             .ok_or(animus_runtime::coding_session_host::CodingSessionServiceIssue::Stale)?;
         let stage_observation =
             animus_runtime::tool_execution_stages::ToolExecutionStageCommitObservation {
@@ -105,10 +105,9 @@ where
                 complete: true,
                 synchronized: observation.synchronized,
             };
-        let mut post_commit = animus_std::tool_execution_stage_host::NoToolExecutionStageHandlers;
-        let completed = animus_std::tool_execution_stage_host::complete_staged_tool_commit(
-            &mut post_commit,
-            pending,
+        animus_runtime::tool_execution_stages::observe_tool_stage_durable_commit(
+            pending.plan(),
+            pending.state(),
             &stage_observation,
         )
         .map_err(|_error| animus_runtime::coding_session_host::CodingSessionServiceIssue::Failed)?;
@@ -116,8 +115,20 @@ where
             .borrow_mut()
             .pending_mut()
             .ok_or(animus_runtime::coding_session_host::CodingSessionServiceIssue::Stale)?
-            .bind_result(completed.outcome.response().output())
-            .map_err(super::policy::service_issue)
+            .bind_result(pending.outcome().response().output())
+            .map_err(super::policy::service_issue)?;
+        let pending = self
+            .pending_stage
+            .take()
+            .ok_or(animus_runtime::coding_session_host::CodingSessionServiceIssue::Stale)?;
+        let mut post_commit = animus_std::tool_execution_stage_host::NoToolExecutionStageHandlers;
+        let _completed = animus_std::tool_execution_stage_host::complete_staged_tool_commit(
+            &mut post_commit,
+            pending,
+            &stage_observation,
+        )
+        .map_err(|_error| animus_runtime::coding_session_host::CodingSessionServiceIssue::Failed)?;
+        Ok(())
     }
 }
 

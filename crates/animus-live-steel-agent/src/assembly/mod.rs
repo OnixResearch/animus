@@ -3,6 +3,8 @@ mod inventory;
 mod opening;
 pub(crate) mod policy;
 mod prerequisite;
+#[cfg(test)]
+mod recovery_controls;
 pub(crate) mod stages;
 
 const QUEUE_POLICY_LABEL: &str = "live-steel-agent-queue";

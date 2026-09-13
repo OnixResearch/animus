@@ -1,3 +1,6 @@
+#[path = "memory.rs"]
+mod memory;
+
 use super::*;
 use crate::{
     DurableSessionLocalStore, DurableSessionStoreLocation, DurableSessionStoreOpenRequest,

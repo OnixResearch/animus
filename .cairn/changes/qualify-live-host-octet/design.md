@@ -40,9 +40,25 @@ The repository already owns the provider core, SSE parser, tool declarations, ex
 
 ### Decision: Keep gate ownership limits explicit
 
-**Choice:** Keep dependency findings visible. Do not relocate unrelated runtime sources or change a dependency API without a declared scope decision.
+**Choice:** The operator approved the owner expansion after `44a221ff`. Permit coherent `animus-runtime` source relocation, an explicit empty `MemoryCodingSessionPersistence` constructor, direct caller migration, and owner controls. Preserve public module paths and `Default` behavior. Keep unrelated runtime logic unchanged.
 
-**Rationale:** The pinned module-file rule reads workspace paths from the compiler source map, including imported runtime files. The host also lacks an explicit empty constructor for `MemoryCodingSessionPersistence`. Hiding either finding cannot qualify the host.
+**Rationale:** The pinned module-file rule reads workspace paths from the compiler source map, including imported runtime files. The host lacks an explicit empty constructor for its memory persistence owner. Owner repairs must not hide either finding or grant new external authority.
+
+### Decision: Admit CLI arguments at the binary root
+
+**Choice:** Preserve each existing positional grammar, safe usage error, activation order, and bounded credential stdin. Select a reviewed argument-acquisition component with actual parsing or authority semantics. Keep its process effects at the binary root and pass admitted values inward.
+
+**Rationale:** Import aliases, unlinted shims, and renamed ambient calls do not create a capability boundary. Existing dependency revisions stay pinned. A new dependency revision or incompatible grammar requires a separate decision.
+
+### Decision: Refuse unproved recovery and retry
+
+**Choice:** Validate correlated commit observations before consuming protected pending state. Preserve the successful kernel-before-session journal order. Refuse a reopened kernel/session pair when its binding cannot prove safe continuation. Retain a terminal blocked state after a continuation attempt can have external effects; do not restore that attempt as retryable.
+
+**Rationale:** Separate journals are not one transaction. Restoring a pending value cannot undo a provider call or persistence effect. Positive and negative controls must show exact state retention or safe refusal, not assume rollback.
+
+**CLI component:** Reuse the locked `clap_lex` 1.1.0 package from crates.io. Its Cargo checksum is `c8d4a3bb8b1e0c1050499d1815f5ab16d04f0959b233085fb31653fbfc9d98f9`. Argument acquisition stays at each binary root. The lexer owns the argument buffer, cursor traversal, flag classification, and UTF-8 decoding. The binary adapter admits the existing grammar and safe errors. It rejects attached values and unknown flags. It preserves flag-like positional values and the activation-before-acquisition order. No library gains an argument reader. The optional direct edges use the existing opt-in features and do not change a dependency revision. This is a lexer contract, not a new authority token or an alias for an environment call.
+
+**Owner API:** Add `CodingSessionHost::resume_with_gate` over the existing additive `CodingSessionEffectGate`. Keep `resume` behavior and its current-authority probe unchanged. The live root selects read-only recovery and refuses an automatic repair commit. Checking `RepairRequired` after `resume` is too late: `resume` can already commit the repair. This additive method prevents that write without skipping authority admission.
 
 ## Parallel ownership
 
@@ -51,7 +67,9 @@ The repository already owns the provider core, SSE parser, tool declarations, ex
 - Session worker: live-agent sources and tests. It leaves other crates and lifecycle files to the parent.
 - Parent: cross-scope composition, direct callers, flake checks, documentation, lifecycle, and final verification. The parent also migrates direct path and marker references in the existing host rails.
 
-Each worker has 160 tool calls and 40 minutes. Workers cannot delegate, run memo, publish, edit another scope, or run a workspace-wide formatter. The parent runs the shared baseline and final checks. A worker formats only its owned files after its writes finish.
+The initial workers each had 160 tool calls and 40 minutes. Those rounds have ended. The approved owner round gives CLI research 35 calls and eight minutes, and recovery repair 100 calls and 25 minutes. Recovery starts after the unchanged baseline and updated artifact gates pass. Consolidation starts before its final 20 calls. A separate final immutable-subject audit has 40 calls and ten minutes.
+
+Workers cannot delegate, run memo, publish, edit another scope, or run shared checks or formatting. The parent owns runtime layout, persistence construction, CLI implementation, baseline checks, and final verification. Each worker writes its own report. Reports do not establish acceptance.
 
 ## Risks / Trade-offs
 

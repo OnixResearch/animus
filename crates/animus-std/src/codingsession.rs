@@ -503,7 +503,23 @@ where
     /// # Errors
     /// Returns a host error when recovery or fresh authority admission fails.
     pub fn resume(&mut self) -> Result<(), CodingSessionHostError> {
-        self.submit(&CodingSessionCommand::Resume)?;
+        self.resume_with_gate(&mut AdmitCodingSessionEffects)
+    }
+
+    /// Resumes through an additive effect gate, then checks current authority.
+    ///
+    /// A gate can refuse automatic recovery writes without replacing the
+    /// persistence service or bypassing the current-authority probe.
+    ///
+    /// # Errors
+    ///
+    /// Returns a host error when recovery, the gate, or authority admission fails.
+    pub fn resume_with_gate<Gate>(&mut self, gate: &mut Gate) -> Result<(), CodingSessionHostError>
+    where
+        Gate: CodingSessionEffectGate + ?Sized,
+    {
+        self.begin_without_driving(&CodingSessionCommand::Resume)?;
+        self.drive_pending_with_gate(gate)?;
         self.admit_current_authority().map_err(|_issue| {
             CodingSessionHostError::blocked(Some(
                 CodingSessionIssue::AuthorityEnforcementUnavailable,
@@ -1149,14 +1165,24 @@ pub struct MemoryCodingSessionPersistence {
     head_hash: String,
 }
 
-impl Default for MemoryCodingSessionPersistence {
-    fn default() -> Self {
+impl MemoryCodingSessionPersistence {
+    /// Creates an empty in-memory store at the canonical empty session head.
+    ///
+    /// This constructor acquires no filesystem or persistence authority.
+    #[must_use]
+    pub fn empty() -> Self {
         Self {
             messages: Vec::new(),
             head_hash: String::from(
                 animus_runtime::coding_session_host::CODING_SESSION_EMPTY_HEAD_HASH,
             ),
         }
+    }
+}
+
+impl Default for MemoryCodingSessionPersistence {
+    fn default() -> Self {
+        Self::empty()
     }
 }
 

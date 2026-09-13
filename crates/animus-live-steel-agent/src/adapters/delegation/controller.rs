@@ -15,7 +15,7 @@ pub(super) fn build(
                 dispatch_count: 0,
             },
             tool: animus_std::coding_session_host::DenyUnusedCodingSessionTool,
-            persistence: animus_std::coding_session_host::MemoryCodingSessionPersistence::default(),
+            persistence: animus_std::coding_session_host::MemoryCodingSessionPersistence::empty(),
             policy: animus_std::coding_session_host::AllowCodingSessionPolicy,
             authority: animus_std::coding_session_host::AdmittedCodingSessionAuthority {
                 observation_count: 0,

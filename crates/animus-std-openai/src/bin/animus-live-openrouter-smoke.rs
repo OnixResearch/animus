@@ -2,7 +2,9 @@
 
 use std::io::Read as _;
 
+#[cfg(test)]
 const ARG_MODEL: &str = "--model";
+#[cfg(test)]
 const ARG_CREDENTIAL_STDIN: &str = "--credential-stdin";
 const STATUS_FAILED: &str = "LIVE_OPENROUTER_SMOKE status=failed";
 const MAX_CREDENTIAL_STDIN_BYTES: u64 = 4_096;
@@ -10,15 +12,14 @@ const INPUT_SENTINEL_BYTES: u64 = 1;
 const SUCCESS: u8 = 0;
 const FAILURE: u8 = 1;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-struct SmokeArgs {
-    model: String,
-    has_credential_stdin: bool,
-}
+mod arguments;
 
 fn main() -> std::process::ExitCode {
-    let arguments = std::env::args().skip(1).collect::<Vec<_>>();
-    match parse_args(arguments.as_slice())
+    let raw = clap_lex::RawArgs::from_args();
+    let mut cursor = raw.cursor();
+    let _program = raw.next_os(&mut cursor);
+    match arguments::parse(&raw, &mut cursor)
+        .and_then(admit_model)
         .and_then(|parsed| read_credential(&parsed).map(|credential| (parsed, credential)))
         .and_then(|(parsed, credential)| run(&parsed, credential))
     {
@@ -33,61 +34,27 @@ fn main() -> std::process::ExitCode {
     }
 }
 
-fn run(arguments: &SmokeArgs, credential: String) -> Result<String, String> {
+fn run(arguments: &arguments::Admitted, credential: String) -> Result<String, String> {
     animus_std_openai::run_packaged_live_openrouter_smoke(arguments.model.as_str(), credential)
         .map_err(|error| error.to_string())
 }
 
-fn parse_args(args: &[String]) -> Result<SmokeArgs, String> {
-    // r[impl agent_harness_runtime.packaged_live_openrouter_smoke.binary.failure]
-    let mut model = None;
-    let mut has_credential_stdin = false;
-    let mut index = 0_usize;
-    while index < args.len() {
-        let argument = args
-            .get(index)
-            .ok_or_else(|| String::from("missing_argument"))?;
-        index = index
-            .checked_add(1)
-            .ok_or_else(|| String::from("missing_argument"))?;
-        match argument.as_str() {
-            ARG_MODEL => {
-                let value = args
-                    .get(index)
-                    .ok_or_else(|| String::from("missing_model_value"))?;
-                index = index
-                    .checked_add(1)
-                    .ok_or_else(|| String::from("missing_argument"))?;
-                if model.replace(value.clone()).is_some() {
-                    return Err(String::from("duplicate_model"));
-                }
-            }
-            ARG_CREDENTIAL_STDIN => {
-                if has_credential_stdin {
-                    return Err(String::from("duplicate_credential_stdin"));
-                }
-                has_credential_stdin = true;
-            }
-            _unsupported => return Err(String::from("unsupported_argument")),
-        }
-    }
-    if !has_credential_stdin {
-        return Err(String::from("missing_credential_stdin"));
-    }
-    let model = model.ok_or_else(|| String::from("missing_model"))?;
+fn admit_model(arguments: arguments::Admitted) -> Result<arguments::Admitted, String> {
     // r[impl agent_harness_runtime.packaged_live_openrouter_smoke.reviewed_model.failure]
-    if model != animus_std_openai::OPENROUTER_SMOKE_MODEL_ID {
+    if arguments.model != animus_std_openai::OPENROUTER_SMOKE_MODEL_ID {
         return Err(String::from("unsupported_model"));
     }
-    assert!(has_credential_stdin);
-    assert_eq!(index, args.len());
-    Ok(SmokeArgs {
-        model,
-        has_credential_stdin,
-    })
+    Ok(arguments)
 }
 
-fn read_credential(arguments: &SmokeArgs) -> Result<String, String> {
+#[cfg(test)]
+fn parse_args(args: &[String]) -> Result<arguments::Admitted, String> {
+    let raw = clap_lex::RawArgs::new(args);
+    arguments::parse(&raw, &mut raw.cursor()).and_then(admit_model)
+}
+
+// r[impl agent_harness_runtime.packaged_live_openrouter_smoke.binary.failure]
+fn read_credential(arguments: &arguments::Admitted) -> Result<String, String> {
     if !arguments.has_credential_stdin {
         return Err(String::from("missing_credential_stdin"));
     }

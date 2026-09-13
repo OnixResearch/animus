@@ -49,6 +49,10 @@ Each inventory record carries composition metadata: `feature_gate`, `required_au
 - `animus-live-terminal` exports the non-default local terminal shell. It owns typed configuration, bounded input and rendering, explicit connection adapters, lifecycle restoration, and metadata-only receipts. It composes existing `animus-tui` projections and owns no worker or session execution.
 - The root `animus` crate mirrors these classes through feature-gated reexports. `session_authority_profile` remains a pure runtime facade. `coding_session_host`, `child_session_host`, durable Steel kernel restore, `codebase_graph`, `acp_stdio_host`, `agent_guardrail`, and `lean_loop` are non-default facades. They are not default product behavior.
 
+## Coding-session owner additions
+
+The `animus-std::coding_session_host` module keeps its shell classification. `MemoryCodingSessionPersistence::empty()` constructs an empty value without I/O and preserves `Default`. `CodingSessionHost::resume_with_gate` uses the existing injected gate and retains current-authority admission. Neither method acquires ambient authority. The private binary parsers expose no new facade exports.
+
 ## Forbidden reusable-contract authority
 
 A `reusable-contract` inventory entry must not require ambient filesystem, environment, credentials, clocks, randomness, network, provider discovery, TUI state, daemon frames, plugin launch, process execution, or concrete persistence. If behavior needs that authority, it belongs behind a `host-injection-surface` or `shell-adapter`.
