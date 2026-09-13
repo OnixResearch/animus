@@ -89,6 +89,20 @@ r[animus.change_scope_handoff.continuation] After a recorded decision, agent con
 - THEN the rejected items MUST form a fresh scope
 - AND the agent MUST NOT silently reapply them inside the approved scope.
 
+#### Scenario: Portable approved indexes preserve their exact values
+
+- GIVEN public count bounds and approved hunk indexes use unsigned 32-bit integers
+- WHEN a decision approves the highest admitted hunk index
+- THEN the recorded decision, completion, and continuation MUST preserve that exact index
+- AND admitted facts MUST retain their v2 scope, decision, and receipt identities.
+
+#### Scenario: A portable index exceeds the admitted scope
+
+- GIVEN a decision supplies a duplicate, descending, or out-of-scope index, including `u32::MAX`
+- WHEN the core validates the approved subset
+- THEN it MUST return `InvalidApprovedSubset` without truncation or a panic
+- AND it MUST leave the pending state unchanged.
+
 ### Requirement: Non-claims are preserved
 
 r[animus.change_scope_handoff.nonclaims] Passing handoff evidence MUST NOT claim change correctness, VCS completion, policy enforcement, tool correctness, production readiness, or release eligibility.

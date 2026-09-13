@@ -1,22 +1,12 @@
-use super::binding::validate_change_scope;
-use super::data::{
-    ChangeContinuationPlan, ChangeHandoffArtifact, ChangeHandoffArtifactDraft,
-    ChangeHandoffCompletion, ChangeHandoffCompletionBlock, ChangeHandoffDecisionDraft,
-    ChangeHandoffDecisionKind, ChangeHandoffError, ChangeHandoffIssue, ChangeHandoffState,
-    ChangeHandoffStatus, ChangeScope, ChangeScopeDraft, ChangeScopeHunkDraft,
-    FORBIDDEN_HANDOFF_CLAIM_LABELS, RecordedChangeHandoffDecision, artifact_declared_byte_bound,
-    scope_artifact_bound,
-};
-
 const DECISION_IDENTITY_DOMAIN: &str = "animus.change-scope-handoff.decision.v1";
 
 /// Opens one explicit ownership handoff for a validated scope.
 #[must_use]
-pub fn open_change_handoff(scope: ChangeScope) -> ChangeHandoffState {
-    ChangeHandoffState {
+pub fn open_change_handoff(scope: super::data::ChangeScope) -> super::data::ChangeHandoffState {
+    super::data::ChangeHandoffState {
         scope,
         decision: None,
-        status: ChangeHandoffStatus::PendingDecision,
+        status: super::data::ChangeHandoffStatus::PendingDecision,
     }
 }
 
@@ -25,59 +15,80 @@ pub fn open_change_handoff(scope: ChangeScope) -> ChangeHandoffState {
 ///
 /// # Errors
 ///
-/// Returns a typed issue when the decision references a different scope,
-/// duplicates a recorded decision, or carries a malformed approved subset.
+/// Returns a typed issue for a crossed scope, repeated decision, or malformed subset.
 pub fn record_change_handoff_decision(
-    state: &ChangeHandoffState,
-    draft: ChangeHandoffDecisionDraft<'_>,
-) -> Result<ChangeHandoffState, ChangeHandoffError> {
+    state: &super::data::ChangeHandoffState,
+    draft: super::data::ChangeHandoffDecisionDraft<'_>,
+) -> Result<super::data::ChangeHandoffState, super::data::ChangeHandoffError> {
     if state.decision.is_some() {
-        return Err(error(ChangeHandoffIssue::DecisionAlreadyRecorded));
+        return Err(super::digest::error(
+            super::data::ChangeHandoffIssue::DecisionAlreadyRecorded,
+        ));
     }
     if draft.scope_identity != state.scope.scope_identity {
-        return Err(error(ChangeHandoffIssue::ScopeIdentityMismatch));
+        return Err(super::digest::error(
+            super::data::ChangeHandoffIssue::ScopeIdentityMismatch,
+        ));
     }
     let approved = validate_approved_subset(draft, state.scope.hunks.len())?;
-    let decision = RecordedChangeHandoffDecision {
-        decision_identity: decision_identity(&state.scope.scope_identity, draft),
+    debug_assert_eq!(
+        state.status,
+        super::data::ChangeHandoffStatus::PendingDecision
+    );
+    let decision = super::data::RecordedChangeHandoffDecision {
+        decision_identity: decision_identity(&state.scope.scope_identity, draft)?,
         scope_identity: String::from(draft.scope_identity),
         kind: draft.kind,
         approved_hunks: approved,
     };
-    debug_assert!(is_blake3_identity(decision.decision_identity.as_str()));
-    Ok(ChangeHandoffState {
+    debug_assert!(super::digest::is_blake3_identity(
+        decision.decision_identity.as_str()
+    ));
+    Ok(super::data::ChangeHandoffState {
         scope: state.scope.clone(),
         decision: Some(decision),
-        status: ChangeHandoffStatus::DecisionRecorded,
+        status: super::data::ChangeHandoffStatus::DecisionRecorded,
     })
 }
 
 fn validate_approved_subset(
-    draft: ChangeHandoffDecisionDraft<'_>,
+    draft: super::data::ChangeHandoffDecisionDraft<'_>,
     hunk_count: usize,
-) -> Result<Vec<usize>, ChangeHandoffError> {
+) -> Result<Vec<u32>, super::data::ChangeHandoffError> {
+    let hunk_count = u32::try_from(hunk_count).map_err(|_overflow| {
+        super::digest::error(super::data::ChangeHandoffIssue::InvalidApprovedSubset)
+    })?;
+    debug_assert!(hunk_count > 0);
     match draft.kind {
-        ChangeHandoffDecisionKind::Rejected | ChangeHandoffDecisionKind::RefineRequested => {
+        super::data::ChangeHandoffDecisionKind::Rejected
+        | super::data::ChangeHandoffDecisionKind::RefineRequested => {
             if draft.approved_hunks.is_empty() {
                 Ok(Vec::new())
             } else {
-                Err(error(ChangeHandoffIssue::InvalidApprovedSubset))
+                Err(super::digest::error(
+                    super::data::ChangeHandoffIssue::InvalidApprovedSubset,
+                ))
             }
         }
-        ChangeHandoffDecisionKind::Approved => {
+        super::data::ChangeHandoffDecisionKind::Approved => {
             if draft.approved_hunks.is_empty() {
-                return Err(error(ChangeHandoffIssue::InvalidApprovedSubset));
+                return Err(super::digest::error(
+                    super::data::ChangeHandoffIssue::InvalidApprovedSubset,
+                ));
             }
-            let mut prior: Option<usize> = None;
+            let mut prior: Option<u32> = None;
             for index in draft.approved_hunks {
-                if *index >= hunk_count {
-                    return Err(error(ChangeHandoffIssue::InvalidApprovedSubset));
-                }
-                if prior.is_some_and(|seen| *index <= seen) {
-                    return Err(error(ChangeHandoffIssue::InvalidApprovedSubset));
+                if *index >= hunk_count || prior.is_some_and(|seen| *index <= seen) {
+                    return Err(super::digest::error(
+                        super::data::ChangeHandoffIssue::InvalidApprovedSubset,
+                    ));
                 }
                 prior = Some(*index);
             }
+            debug_assert!(super::digest::is_within_bound(
+                draft.approved_hunks.len(),
+                hunk_count
+            ));
             Ok(draft.approved_hunks.to_vec())
         }
     }
@@ -90,15 +101,15 @@ fn validate_approved_subset(
 ///
 /// Returns the explicit blocker class when no acceptance is recorded.
 pub fn evaluate_change_handoff_completion(
-    state: &ChangeHandoffState,
-) -> Result<ChangeHandoffCompletion, ChangeHandoffCompletionBlock> {
+    state: &super::data::ChangeHandoffState,
+) -> Result<super::data::ChangeHandoffCompletion, super::data::ChangeHandoffCompletionBlock> {
     let Some(decision) = state.decision.as_ref() else {
-        return Err(ChangeHandoffCompletionBlock::DecisionMissing);
+        return Err(super::data::ChangeHandoffCompletionBlock::DecisionMissing);
     };
-    if decision.kind != ChangeHandoffDecisionKind::Approved {
-        return Err(ChangeHandoffCompletionBlock::DecisionNotAcceptance);
+    if decision.kind != super::data::ChangeHandoffDecisionKind::Approved {
+        return Err(super::data::ChangeHandoffCompletionBlock::DecisionNotAcceptance);
     }
-    Ok(ChangeHandoffCompletion {
+    Ok(super::data::ChangeHandoffCompletion {
         scope_identity: state.scope.scope_identity.clone(),
         decision_identity: decision.decision_identity.clone(),
         approved_hunks: decision.approved_hunks.clone(),
@@ -112,21 +123,22 @@ pub fn evaluate_change_handoff_completion(
 ///
 /// Returns a typed issue when no decision is recorded yet.
 pub fn plan_change_continuation(
-    state: &ChangeHandoffState,
-) -> Result<ChangeContinuationPlan, ChangeHandoffError> {
+    state: &super::data::ChangeHandoffState,
+) -> Result<super::data::ChangeContinuationPlan, super::data::ChangeHandoffError> {
     let Some(decision) = state.decision.as_ref() else {
-        return Err(error(ChangeHandoffIssue::DecisionMissing));
+        return Err(super::digest::error(
+            super::data::ChangeHandoffIssue::DecisionMissing,
+        ));
     };
-    let rejected_indexes = rejected_hunk_indexes(state, decision);
-    let fresh_scope = if rejected_indexes.is_empty() {
+    debug_assert_eq!(decision.scope_identity, state.scope.scope_identity);
+    debug_assert!(decision.approved_hunks.len() <= state.scope.hunks.len());
+    let rejected = rejected_hunks(state, decision)?;
+    let fresh_scope = if rejected.is_empty() {
         None
     } else {
-        Some(fresh_scope_from_rejected(
-            state,
-            rejected_indexes.as_slice(),
-        )?)
+        Some(fresh_scope_from_rejected(state, rejected.as_slice())?)
     };
-    Ok(ChangeContinuationPlan {
+    Ok(super::data::ChangeContinuationPlan {
         scope_identity: state.scope.scope_identity.clone(),
         decision_identity: decision.decision_identity.clone(),
         approved_hunks: decision.approved_hunks.clone(),
@@ -134,31 +146,40 @@ pub fn plan_change_continuation(
     })
 }
 
-fn rejected_hunk_indexes(
-    state: &ChangeHandoffState,
-    decision: &RecordedChangeHandoffDecision,
-) -> Vec<usize> {
-    (0..state.scope.hunks.len())
-        .filter(|index| !decision.approved_hunks.contains(index))
-        .collect()
+fn rejected_hunks<'scope>(
+    state: &'scope super::data::ChangeHandoffState,
+    decision: &super::data::RecordedChangeHandoffDecision,
+) -> Result<Vec<super::data::ChangeScopeHunkDraft<'scope>>, super::data::ChangeHandoffError> {
+    let mut rejected = Vec::with_capacity(state.scope.hunks.len());
+    for (index, hunk) in state.scope.hunks.iter().enumerate() {
+        let index = u32::try_from(index).map_err(|_overflow| {
+            super::digest::error(super::data::ChangeHandoffIssue::InvalidApprovedSubset)
+        })?;
+        if !decision.approved_hunks.contains(&index) {
+            rejected.push(super::data::ChangeScopeHunkDraft {
+                file_path: hunk.file_path.as_str(),
+                hunk_identity: hunk.hunk_identity.as_str(),
+                old_start: hunk.old_start,
+                old_lines: hunk.old_lines,
+                new_start: hunk.new_start,
+                new_lines: hunk.new_lines,
+            });
+        }
+    }
+    debug_assert!(rejected.len() <= state.scope.hunks.len());
+    debug_assert_eq!(
+        rejected.len().checked_add(decision.approved_hunks.len()),
+        Some(state.scope.hunks.len())
+    );
+    Ok(rejected)
 }
 
 fn fresh_scope_from_rejected(
-    state: &ChangeHandoffState,
-    rejected: &[usize],
-) -> Result<ChangeScope, ChangeHandoffError> {
-    let hunks: Vec<ChangeScopeHunkDraft<'_>> = rejected
-        .iter()
-        .filter_map(|index| state.scope.hunks.get(*index))
-        .map(|hunk| ChangeScopeHunkDraft {
-            file_path: hunk.file_path.as_str(),
-            hunk_identity: hunk.hunk_identity.as_str(),
-            old_start: hunk.old_start,
-            old_lines: hunk.old_lines,
-            new_start: hunk.new_start,
-            new_lines: hunk.new_lines,
-        })
-        .collect();
+    state: &super::data::ChangeHandoffState,
+    hunks: &[super::data::ChangeScopeHunkDraft<'_>],
+) -> Result<super::data::ChangeScope, super::data::ChangeHandoffError> {
+    debug_assert!(!hunks.is_empty());
+    debug_assert!(hunks.len() <= state.scope.hunks.len());
     let declared: Vec<&str> = state
         .scope
         .files
@@ -167,10 +188,10 @@ fn fresh_scope_from_rejected(
         .filter(|file| hunks.iter().any(|hunk| hunk.file_path == *file))
         .collect();
     let obligations: Vec<&str> = state.scope.obligations.iter().map(String::as_str).collect();
-    validate_change_scope(ChangeScopeDraft {
+    super::binding::validate_change_scope(super::data::ChangeScopeDraft {
         driving_task: state.scope.driving_task.as_str(),
         files: declared.as_slice(),
-        hunks: hunks.as_slice(),
+        hunks,
         obligations: obligations.as_slice(),
     })
 }
@@ -180,29 +201,36 @@ fn fresh_scope_from_rejected(
 ///
 /// # Errors
 ///
-/// Returns a typed issue when a candidate declares raw transcript, tool-output,
-/// or prompt payload, or exceeds the named count or byte bounds.
+/// Returns a typed issue for raw payloads, malformed identities, or exceeded bounds.
 pub fn validate_change_handoff_artifacts(
-    drafts: &[ChangeHandoffArtifactDraft<'_>],
-) -> Result<Vec<ChangeHandoffArtifact>, ChangeHandoffError> {
-    if drafts.len() > scope_artifact_bound() {
-        return Err(error(ChangeHandoffIssue::ArtifactBoundExceeded));
+    drafts: &[super::data::ChangeHandoffArtifactDraft<'_>],
+) -> Result<Vec<super::data::ChangeHandoffArtifact>, super::data::ChangeHandoffError> {
+    if !super::digest::is_within_bound(drafts.len(), super::data::scope_artifact_bound()) {
+        return Err(super::digest::error(
+            super::data::ChangeHandoffIssue::ArtifactBoundExceeded,
+        ));
     }
     let mut artifacts = Vec::with_capacity(drafts.len());
     for draft in drafts {
         if !draft.kind.is_bounded() {
-            return Err(error(ChangeHandoffIssue::RawArtifactKind));
+            return Err(super::digest::error(
+                super::data::ChangeHandoffIssue::RawArtifactKind,
+            ));
         }
-        validate_identity(draft.artifact_identity)?;
-        if draft.declared_byte_count > artifact_declared_byte_bound() {
-            return Err(error(ChangeHandoffIssue::ArtifactBoundExceeded));
+        super::digest::validate_identity(draft.artifact_identity)?;
+        if draft.declared_byte_count > super::data::artifact_declared_byte_bound() {
+            return Err(super::digest::error(
+                super::data::ChangeHandoffIssue::ArtifactBoundExceeded,
+            ));
         }
-        artifacts.push(ChangeHandoffArtifact {
+        artifacts.push(super::data::ChangeHandoffArtifact {
             kind: draft.kind,
             artifact_identity: String::from(draft.artifact_identity),
             declared_byte_count: draft.declared_byte_count,
         });
     }
+    debug_assert_eq!(artifacts.len(), drafts.len());
+    debug_assert!(artifacts.iter().all(|artifact| artifact.kind.is_bounded()));
     Ok(artifacts)
 }
 
@@ -211,40 +239,24 @@ pub fn validate_change_handoff_artifacts(
 ///
 /// # Errors
 ///
-/// Returns a typed issue when any label claims change correctness, VCS
-/// completion, policy enforcement, tool correctness, production readiness, or
-/// release eligibility.
-pub fn validate_change_handoff_claims(claims: &[&str]) -> Result<(), ChangeHandoffError> {
+/// Returns a typed issue for correctness, VCS, policy, production, or release claims.
+pub fn validate_change_handoff_claims(
+    claims: &[&str],
+) -> Result<(), super::data::ChangeHandoffError> {
     for claim in claims {
-        if FORBIDDEN_HANDOFF_CLAIM_LABELS.contains(claim) {
-            return Err(error(ChangeHandoffIssue::NonClaimViolation));
+        if super::data::FORBIDDEN_HANDOFF_CLAIM_LABELS.contains(claim) {
+            return Err(super::digest::error(
+                super::data::ChangeHandoffIssue::NonClaimViolation,
+            ));
         }
     }
     Ok(())
 }
 
-pub(super) fn validate_identity(value: &str) -> Result<(), ChangeHandoffError> {
-    if is_blake3_identity(value) {
-        Ok(())
-    } else {
-        Err(error(ChangeHandoffIssue::InvalidIdentity))
-    }
-}
-
-pub(super) const fn error(issue: ChangeHandoffIssue) -> ChangeHandoffError {
-    ChangeHandoffError::new(issue)
-}
-
-pub(super) fn is_blake3_identity(value: &str) -> bool {
-    const BLAKE3_HEX_CHARS: usize = 64;
-    value.len() == BLAKE3_HEX_CHARS
-        && value
-            .as_bytes()
-            .iter()
-            .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
-}
-
-fn decision_identity(scope_identity: &str, draft: ChangeHandoffDecisionDraft<'_>) -> String {
+fn decision_identity(
+    scope_identity: &str,
+    draft: super::data::ChangeHandoffDecisionDraft<'_>,
+) -> Result<String, super::data::ChangeHandoffError> {
     let index_labels: Vec<String> = draft
         .approved_hunks
         .iter()
@@ -258,20 +270,5 @@ fn decision_identity(scope_identity: &str, draft: ChangeHandoffDecisionDraft<'_>
     for label in &index_labels {
         fields.push(label.as_bytes());
     }
-    hash_fields(DECISION_IDENTITY_DOMAIN, fields.as_slice())
-}
-
-pub(super) fn hash_fields(domain: &str, fields: &[&[u8]]) -> String {
-    let mut hasher = blake3::Hasher::new();
-    hash_field(&mut hasher, domain.as_bytes());
-    for field in fields {
-        hash_field(&mut hasher, field);
-    }
-    hasher.finalize().to_hex().to_string()
-}
-
-fn hash_field(hasher: &mut blake3::Hasher, field: &[u8]) {
-    let length = u64::try_from(field.len()).unwrap_or(u64::MAX);
-    hasher.update(&length.to_le_bytes());
-    hasher.update(field);
+    super::digest::hash_fields(DECISION_IDENTITY_DOMAIN, fields.as_slice())
 }

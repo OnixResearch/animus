@@ -215,9 +215,11 @@ mod tool_admission;
 pub mod tool_executor_kit {
     pub use crate::executionkit::*;
 }
+mod changescopehandoff;
 /// Typed change-scope handoff around developer review ownership.
-#[path = "changescopehandoff/mod.rs"]
-pub mod change_scope_handoff;
+pub mod change_scope_handoff {
+    pub use super::changescopehandoff::*;
+}
 #[path = "toolexecutionstages/mod.rs"]
 mod toolexecutionstages;
 /// Fixed monotonic stages around authoritative tool admission, execution, and commit owners.

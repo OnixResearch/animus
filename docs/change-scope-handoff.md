@@ -35,8 +35,23 @@ Callers must validate the scope again and obtain a fresh review decision.
 A v1 scope identity cannot answer a newly validated scope.
 There is no automatic legacy fallback.
 
-Public Rust signatures, `animus.change-scope-handoff.v1`, and the receipt schema remain unchanged.
-Receipt identities also change when their bound scope or decision identity changes.
+The public contract label `animus.change-scope-handoff.v1` and the receipt schema remain unchanged.
+Receipt identities change when their bound scope or decision identity changes.
+
+The later API qualification changes public counts and approved hunk indexes from `usize` to `u32`.
+This is a source-breaking Rust API change.
+It does not change admitted values, their order, the v2 scope encoding, or the decision and receipt encodings.
+
+- The five scope-bound accessors return `u32`.
+- `ChangeHandoffDecisionDraft::approved_hunks` takes `&[u32]`.
+- Recorded decisions, completion facts, and continuation plans return `&[u32]`.
+- The host `ChangeHandoffReviewDecision::approved_hunks` field uses `Vec<u32>`.
+- Declared artifact bytes remain `u64`. Receipt counts remain `u32`.
+
+Callers must use checked conversions for platform-sized allocations or indexes.
+The core rejects an out-of-scope, duplicate, or descending index without changing the pending state.
+The legacy accessor name `scope_label_char_bound` remains.
+Scope admission still measures label bytes, while receipt validation measures trimmed characters.
 Receipt validation checks supplied metadata consistency, not historical scope facts or external execution.
 The fixed non-claims remain unchanged.
 
@@ -49,10 +64,16 @@ The original imported counterexample remains in the Cairn evidence directory.
 Run these commands inside `nix develop`:
 
 ```sh
-cargo test --locked -p animus-runtime --all-features --test handoff
-cargo test --locked -p animus-runtime --all-features --lib change_scope_handoff
-cargo test --locked -p animus-std --features change-scope-handoff --lib change_scope_handoff
+cargo test --locked -p animus-runtime --all-features --test handoff --test portable --test boundary
+cargo test --locked -p animus-runtime --all-features --lib changescopehandoff
+cargo test --locked -p animus-std --features change-scope-handoff --lib changescopehandoff
 ```
+
+The `portable` target retains four digest values observed before the integer migration.
+It also covers the highest admitted index, `u32::MAX`, duplicate indexes, descending indexes, and the first excluded index.
+The `boundary` target covers exact and exceeded collection, label, and artifact bounds.
+The private owners are `binding`, `core`, `digest`, `data`, and `evidence` under `changescopehandoff`.
+The public runtime and host module paths remain unchanged.
 
 These controls establish decision binding over admitted in-memory facts.
 They do not prove file isolation, honest review, change correctness, policy enforcement, VCS completion, or release readiness.

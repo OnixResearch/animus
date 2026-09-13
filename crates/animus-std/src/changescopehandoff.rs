@@ -5,8 +5,6 @@
 //! observe files, mutate VCS state, invent decisions, enforce policy, or grant
 //! product authority.
 
-use animus_runtime::change_scope_handoff as handoff;
-
 /// Safe host issue for change-scope handoff review.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ChangeHandoffReviewIssue {
@@ -53,16 +51,16 @@ impl std::error::Error for ChangeHandoffReviewError {}
 /// One presented pending scope awaiting exactly one developer decision.
 pub struct ChangeHandoffScopePresentation<'input> {
     /// Pending handoff state that owns the presented scope.
-    pub state: &'input handoff::ChangeHandoffState,
+    pub state: &'input animus_runtime::change_scope_handoff::ChangeHandoffState,
 }
 
 /// One developer decision returned by the injected review service.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ChangeHandoffReviewDecision {
     /// Recorded decision kind.
-    pub kind: handoff::ChangeHandoffDecisionKind,
-    /// Approved hunk indexes in strict ascending order; empty unless approved.
-    pub approved_hunks: Vec<usize>,
+    pub kind: animus_runtime::change_scope_handoff::ChangeHandoffDecisionKind,
+    /// Approved portable hunk indexes in strict ascending order, empty unless approved.
+    pub approved_hunks: Vec<u32>,
 }
 
 /// Host-injected developer review service.
@@ -104,23 +102,28 @@ impl ChangeHandoffReviewService for NoChangeHandoffReview {
 /// core rejects the returned decision facts.
 pub fn record_presented_change_handoff_review<Review>(
     reviewer: &mut Review,
-    pending: &handoff::ChangeHandoffState,
-) -> Result<handoff::ChangeHandoffState, ChangeHandoffReviewError>
+    pending: &animus_runtime::change_scope_handoff::ChangeHandoffState,
+) -> Result<animus_runtime::change_scope_handoff::ChangeHandoffState, ChangeHandoffReviewError>
 where
     Review: ChangeHandoffReviewService,
 {
     let decision = reviewer
         .decide(ChangeHandoffScopePresentation { state: pending })
         .map_err(ChangeHandoffReviewError::new)?;
-    let recorded = handoff::record_change_handoff_decision(
+    let recorded = animus_runtime::change_scope_handoff::record_change_handoff_decision(
         pending,
-        handoff::ChangeHandoffDecisionDraft {
+        animus_runtime::change_scope_handoff::ChangeHandoffDecisionDraft {
             scope_identity: pending.scope().scope_identity(),
             kind: decision.kind,
             approved_hunks: decision.approved_hunks.as_slice(),
         },
     )
     .map_err(|_error| core_error())?;
+    debug_assert_eq!(recorded.scope(), pending.scope());
+    debug_assert_eq!(
+        recorded.status(),
+        animus_runtime::change_scope_handoff::ChangeHandoffStatus::DecisionRecorded
+    );
     Ok(recorded)
 }
 
@@ -128,9 +131,9 @@ where
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CompletedChangeHandoffReview {
     /// Completion evaluation citing the recorded acceptance.
-    pub completion: handoff::ChangeHandoffCompletion,
+    pub completion: animus_runtime::change_scope_handoff::ChangeHandoffCompletion,
     /// Metadata-only terminal handoff receipt.
-    pub receipt: handoff::ChangeHandoffReceipt,
+    pub receipt: animus_runtime::change_scope_handoff::ChangeHandoffReceipt,
 }
 
 // r[impl animus.change_scope_handoff.handoff]
@@ -146,21 +149,27 @@ pub struct CompletedChangeHandoffReview {
 /// Returns a safe blocker issue when no acceptance is recorded and a core
 /// issue when artifact or receipt facts are malformed.
 pub fn complete_change_handoff_review(
-    recorded: &handoff::ChangeHandoffState,
-    artifacts: &[handoff::ChangeHandoffArtifact],
+    recorded: &animus_runtime::change_scope_handoff::ChangeHandoffState,
+    artifacts: &[animus_runtime::change_scope_handoff::ChangeHandoffArtifact],
 ) -> Result<CompletedChangeHandoffReview, ChangeHandoffReviewError> {
-    let completion = handoff::evaluate_change_handoff_completion(recorded).map_err(|block| {
+    let completion = animus_runtime::change_scope_handoff::evaluate_change_handoff_completion(recorded).map_err(|block| {
         ChangeHandoffReviewError::new(match block {
-            handoff::ChangeHandoffCompletionBlock::DecisionMissing => {
+            animus_runtime::change_scope_handoff::ChangeHandoffCompletionBlock::DecisionMissing => {
                 ChangeHandoffReviewIssue::DecisionMissing
             }
-            handoff::ChangeHandoffCompletionBlock::DecisionNotAcceptance => {
+            animus_runtime::change_scope_handoff::ChangeHandoffCompletionBlock::DecisionNotAcceptance => {
                 ChangeHandoffReviewIssue::DecisionNotAcceptance
             }
         })
     })?;
-    let receipt = handoff::project_change_handoff_receipt(recorded, artifacts)
-        .map_err(|_error| core_error())?;
+    let receipt =
+        animus_runtime::change_scope_handoff::project_change_handoff_receipt(recorded, artifacts)
+            .map_err(|_error| core_error())?;
+    debug_assert_eq!(receipt.scope_identity(), completion.scope_identity());
+    debug_assert_eq!(
+        receipt.completion_decision_identity(),
+        Some(completion.decision_identity())
+    );
     Ok(CompletedChangeHandoffReview {
         completion,
         receipt,

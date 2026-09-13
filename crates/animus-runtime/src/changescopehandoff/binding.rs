@@ -1,10 +1,3 @@
-use super::core::{error, hash_fields, is_blake3_identity, validate_identity};
-use super::data::{
-    ChangeHandoffError, ChangeHandoffIssue, ChangeScope, ChangeScopeDraft, ChangeScopeHunk,
-    ChangeScopeHunkDraft, scope_file_bound, scope_hunk_bound, scope_label_char_bound,
-    scope_obligation_bound,
-};
-
 const SCOPE_IDENTITY_DOMAIN: &str = "animus.change-scope-handoff.scope.v2";
 
 // r[impl animus.change_scope_handoff.scope]
@@ -12,20 +5,34 @@ const SCOPE_IDENTITY_DOMAIN: &str = "animus.change-scope-handoff.scope.v2";
 ///
 /// # Errors
 ///
-/// Returns a typed issue when any bound file, hunk, driving-task, or
-/// validation-obligation fact is omitted, over bound, or inconsistent.
+/// Returns a typed issue for missing, inconsistent, or overbound scope facts.
 pub fn validate_change_scope(
-    draft: ChangeScopeDraft<'_>,
-) -> Result<ChangeScope, ChangeHandoffError> {
+    draft: super::data::ChangeScopeDraft<'_>,
+) -> Result<super::data::ChangeScope, super::data::ChangeHandoffError> {
     validate_driving_task(draft.driving_task)?;
-    if draft.files.is_empty() || draft.files.len() > scope_file_bound() {
-        return Err(error(ChangeHandoffIssue::MissingScopeFiles));
+    if draft.files.is_empty()
+        || !super::digest::is_within_bound(draft.files.len(), super::data::scope_file_bound())
+    {
+        return Err(super::digest::error(
+            super::data::ChangeHandoffIssue::MissingScopeFiles,
+        ));
     }
-    if draft.hunks.is_empty() || draft.hunks.len() > scope_hunk_bound() {
-        return Err(error(ChangeHandoffIssue::MissingScopeHunks));
+    if draft.hunks.is_empty()
+        || !super::digest::is_within_bound(draft.hunks.len(), super::data::scope_hunk_bound())
+    {
+        return Err(super::digest::error(
+            super::data::ChangeHandoffIssue::MissingScopeHunks,
+        ));
     }
-    if draft.obligations.is_empty() || draft.obligations.len() > scope_obligation_bound() {
-        return Err(error(ChangeHandoffIssue::MissingScopeObligations));
+    if draft.obligations.is_empty()
+        || !super::digest::is_within_bound(
+            draft.obligations.len(),
+            super::data::scope_obligation_bound(),
+        )
+    {
+        return Err(super::digest::error(
+            super::data::ChangeHandoffIssue::MissingScopeObligations,
+        ));
     }
     for file in draft.files {
         validate_fact_label(file)?;
@@ -36,17 +43,29 @@ pub fn validate_change_scope(
     for hunk in draft.hunks {
         validate_hunk(hunk)?;
         if !draft.files.contains(&hunk.file_path) {
-            return Err(error(ChangeHandoffIssue::UndeclaredScopeFile));
+            return Err(super::digest::error(
+                super::data::ChangeHandoffIssue::UndeclaredScopeFile,
+            ));
         }
     }
-    let scope = ChangeScope {
+    let mut scope = own_scope(draft);
+    scope.scope_identity = scope_identity(&scope)?;
+    debug_assert!(super::digest::is_blake3_identity(
+        scope.scope_identity.as_str()
+    ));
+    debug_assert_eq!(scope.hunks.len(), draft.hunks.len());
+    Ok(scope)
+}
+
+fn own_scope(draft: super::data::ChangeScopeDraft<'_>) -> super::data::ChangeScope {
+    let scope = super::data::ChangeScope {
         scope_identity: String::new(),
         driving_task: String::from(draft.driving_task),
         files: draft.files.iter().map(|file| String::from(*file)).collect(),
         hunks: draft
             .hunks
             .iter()
-            .map(|hunk| ChangeScopeHunk {
+            .map(|hunk| super::data::ChangeScopeHunk {
                 file_path: String::from(hunk.file_path),
                 hunk_identity: String::from(hunk.hunk_identity),
                 old_start: hunk.old_start,
@@ -61,39 +80,55 @@ pub fn validate_change_scope(
             .map(|obligation| String::from(*obligation))
             .collect(),
     };
-    let mut scoped = scope;
-    scoped.scope_identity = scope_identity(&scoped);
-    debug_assert!(is_blake3_identity(scoped.scope_identity.as_str()));
-    Ok(scoped)
+    debug_assert_eq!(scope.files.len(), draft.files.len());
+    debug_assert_eq!(scope.obligations.len(), draft.obligations.len());
+    scope
 }
 
-fn validate_hunk(hunk: &ChangeScopeHunkDraft<'_>) -> Result<(), ChangeHandoffError> {
+fn validate_hunk(
+    hunk: &super::data::ChangeScopeHunkDraft<'_>,
+) -> Result<(), super::data::ChangeHandoffError> {
     validate_fact_label(hunk.file_path)?;
-    validate_identity(hunk.hunk_identity)
+    super::digest::validate_identity(hunk.hunk_identity)
 }
 
-fn validate_label(label: &str) -> Result<(), ChangeHandoffError> {
-    if label.len() > scope_label_char_bound() {
-        return Err(error(ChangeHandoffIssue::LabelBoundExceeded));
+fn validate_label(label: &str) -> Result<(), super::data::ChangeHandoffError> {
+    if !super::digest::is_within_bound(label.len(), super::data::scope_label_char_bound()) {
+        return Err(super::digest::error(
+            super::data::ChangeHandoffIssue::LabelBoundExceeded,
+        ));
     }
     Ok(())
 }
 
-fn validate_driving_task(label: &str) -> Result<(), ChangeHandoffError> {
+fn validate_driving_task(label: &str) -> Result<(), super::data::ChangeHandoffError> {
     if label.is_empty() {
-        return Err(error(ChangeHandoffIssue::MissingDrivingTask));
+        return Err(super::digest::error(
+            super::data::ChangeHandoffIssue::MissingDrivingTask,
+        ));
     }
     validate_label(label)
 }
 
-fn validate_fact_label(label: &str) -> Result<(), ChangeHandoffError> {
+fn validate_fact_label(label: &str) -> Result<(), super::data::ChangeHandoffError> {
     if label.is_empty() {
-        return Err(error(ChangeHandoffIssue::EmptyScopeLabel));
+        return Err(super::digest::error(
+            super::data::ChangeHandoffIssue::EmptyScopeLabel,
+        ));
     }
     validate_label(label)
 }
 
-fn scope_identity(scope: &ChangeScope) -> String {
+fn scope_identity(
+    scope: &super::data::ChangeScope,
+) -> Result<String, super::data::ChangeHandoffError> {
+    debug_assert!(!scope.files.is_empty());
+    debug_assert!(
+        scope
+            .hunks
+            .iter()
+            .all(|hunk| scope.files.contains(&hunk.file_path))
+    );
     let mut owned: Vec<Vec<u8>> = vec![
         super::data::CHANGE_SCOPE_HANDOFF_CONTRACT_IDENTITY
             .as_bytes()
@@ -118,5 +153,5 @@ fn scope_identity(scope: &ChangeScope) -> String {
         owned.push(hunk.new_lines.to_le_bytes().to_vec());
     }
     let fields: Vec<&[u8]> = owned.iter().map(Vec::as_slice).collect();
-    hash_fields(SCOPE_IDENTITY_DOMAIN, fields.as_slice())
+    super::digest::hash_fields(SCOPE_IDENTITY_DOMAIN, fields.as_slice())
 }

@@ -6,7 +6,8 @@
 mod binding;
 mod core;
 mod data;
-mod receipt;
+mod digest;
+mod evidence;
 
 pub use binding::validate_change_scope;
 pub use core::{
@@ -25,7 +26,7 @@ pub use data::{
     RecordedChangeHandoffDecision, artifact_declared_byte_bound, scope_artifact_bound,
     scope_file_bound, scope_hunk_bound, scope_label_char_bound, scope_obligation_bound,
 };
-pub use receipt::{project_change_handoff_receipt, validate_change_handoff_receipt};
+pub use evidence::{project_change_handoff_receipt, validate_change_handoff_receipt};
 
 #[cfg(test)]
 mod tests;

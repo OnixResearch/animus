@@ -39,8 +39,25 @@ This correction changes scope identities.
 Old scope identities cannot authorize newly validated scopes, even when their visible facts match.
 Callers must validate the scope again and obtain a fresh decision.
 There is no automatic legacy fallback.
-The public Rust signatures, handoff contract label, receipt schema, and non-claims remain unchanged.
+The encoding correction retained the public Rust signatures, handoff contract label, receipt schema, and non-claims.
+The later portable API decision changes only the declared integer types and their checked internal conversions.
 The receipt validator still checks bounded metadata, not historical scope facts or external execution.
+
+### Decision: Public counts and approved indexes use portable integers
+
+**Choice:** public count bounds and approved hunk indexes use `u32`.
+Declared artifact bytes remain `u64`, and receipt counts remain `u32`.
+Conversions from collection lengths fail explicitly instead of using a sentinel value.
+Continuation derives rejected hunks through checked enumeration, without a silent missing-index filter.
+
+**Rationale:** review contracts must not change their integer width with the host pointer width.
+This is a source-breaking API migration, not a source-compatible alias.
+The admitted numeric range, order, refusal classes, and v2 encoded identities remain unchanged.
+Maintained public controls retain pre-migration scope, decision, pending-receipt, and completed-receipt digest values.
+
+The private data owners separate scope facts, judgments, and artifact records.
+The existing public runtime and host facades re-export the same named capabilities.
+The core gains no external authority, dependency, or port.
 
 ## Risks / Trade-offs
 
