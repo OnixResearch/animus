@@ -48,7 +48,10 @@ The parent traced these concrete owners on the immutable subject:
 - `crates/animus-runtime/src/toolexecutionstages/receipt.rs` then checks terminal fields, identities, labels, and handler count.
 
 For the live composition, `src/assembly/stages.rs` supplies an empty handler set.
-`src/adapters/responses/planning.rs` supplies the fixed Steel tool and schema labels.
+`src/assembly/policy.rs::steel_tool_request` constructs the request with fixed Steel tool and schema labels.
+`src/adapters/responses/planning.rs` advertises those same labels.
+Their values are `steel_repl` and `animus.steel-repl.v1` in `crates/animus-adapter-rlm-kernel/src/lib.rs`.
+Both values satisfy the inspected stage-receipt label predicate.
 The plan constructor bounds handlers and validates authority and owner identities.
 Final validation supplies the checked result and executor-receipt identities.
 The initial durable observation validates the head identity and derives the commit identity.
@@ -63,9 +66,10 @@ The existing exact-observation control also completes once and rejects repetitio
 
 ## Correlation and duplicate observations
 
-`CodingSessionHost::drive_one_with_gate` reduces the matching effect outcome before it calls the tool observer.
+`CodingSessionHost::drive_one_pending_with_gate` reduces the matching effect outcome before it calls the tool observer.
 `committed_tool_observation` derives the run, effect, and result fields from that commit request.
-The adapter checks stage/result/owner correlation and synchronization before it consumes the stage.
+The adapter checks result and commit-owner correlation, head syntax, and synchronization before it consumes the stage.
+The host owns run, effect, leaf, and cursor correlation.
 It is not a standalone verifier for an arbitrary external observation envelope.
 Its production contract depends on the owning host and the injected persistence contract.
 
