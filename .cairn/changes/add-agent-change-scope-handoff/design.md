@@ -22,6 +22,26 @@ Animus records agent activity through safe receipts but has no typed notion of a
 
 **Rationale:** bounded continuation keeps review authority real and prevents silent scope creep.
 
+### Decision: Scope identities preserve typed collection boundaries
+
+**Choice:** the scope digest uses `animus.change-scope-handoff.scope.v2`.
+The encoded fields retain the contract identity, driving task, and the declared order of files, obligations, and hunks.
+Each collection starts with its count as canonical decimal UTF-8 text.
+Each value retains the existing unsigned 64-bit little-endian byte-length prefix.
+Each hunk retains its six fields and unsigned 32-bit little-endian coordinates.
+
+**Rationale:** value lengths do not separate adjacent collections.
+The retained public-API counterexample moves one label from files to obligations without changing the old encoded bytes.
+Collection counts make that partition explicit without a new dependency or another authority boundary.
+Nested group digests also separate the collections but add hashing that this fixed schema does not need.
+
+This correction changes scope identities.
+Old scope identities cannot authorize newly validated scopes, even when their visible facts match.
+Callers must validate the scope again and obtain a fresh decision.
+There is no automatic legacy fallback.
+The public Rust signatures, handoff contract label, receipt schema, and non-claims remain unchanged.
+The receipt validator still checks bounded metadata, not historical scope facts or external execution.
+
 ## Risks / Trade-offs
 
 - Approval fatigue can convert review into rubber-stamping; hashed decision artifacts make the review visible and auditable.

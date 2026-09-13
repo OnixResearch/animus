@@ -19,6 +19,26 @@ r[animus.change_scope_handoff.scope] Animus MUST record every agent change as a 
 - WHEN scope validation runs
 - THEN the core MUST reject the scope.
 
+#### Scenario: A label crosses a typed field boundary
+
+- GIVEN two admitted scopes contain the same flattened labels but different file and obligation partitions
+- WHEN the core derives their scope identities
+- THEN the identities MUST differ
+- AND a decision for either scope MUST be rejected for the other scope without changing its pending state.
+
+#### Scenario: A scope fact changes
+
+- GIVEN an admitted scope changes its task, ordered collection contents, collection counts, or any hunk field
+- WHEN the core records a decision for the original scope against the changed scope
+- THEN the core MUST reject the decision at the scope-identity boundary.
+
+#### Scenario: A legacy scope identity answers a new scope
+
+- GIVEN a scope identity uses the uncounted `animus.change-scope-handoff.scope.v1` encoding
+- WHEN the decision attempts to answer a newly validated scope
+- THEN the core MUST reject the decision
+- AND fresh scope validation and review MUST precede completion.
+
 ### Requirement: Handoff is explicit and recorded
 
 r[animus.change_scope_handoff.handoff] Every change scope MUST be presented as an explicit ownership handoff, and nothing MUST be marked complete until the recorded review decision accepts it; missing decisions MUST block completion.
