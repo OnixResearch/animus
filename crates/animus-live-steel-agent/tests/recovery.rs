@@ -6,10 +6,6 @@ mod checkpoint;
 
 #[cfg(test)]
 mod cases {
-    use super::checkpoint;
-    use std::cell::Cell;
-    use std::rc::Rc;
-
     const CONFIG: &[u8] = include_bytes!("../../../config/generated/live-steel-agent-shell.json");
     const TOOL_STREAM: &[u8] =
         include_bytes!("../../animus-std-openai/tests/fixtures/openai-responses-tool-call.sse");
@@ -54,12 +50,12 @@ mod cases {
             &definitions,
             Boundary::KernelCommit,
         );
-        let calls = Rc::new(Cell::new(NO_PROVIDER_CALLS));
+        let calls = std::rc::Rc::new(std::cell::Cell::new(NO_PROVIDER_CALLS));
         let result = resume_and_close(
             &root,
             &base.with_session_resume_required(true),
             &definitions,
-            Rc::clone(&calls),
+            std::rc::Rc::clone(&calls),
         );
         assert_eq!(
             result,
@@ -81,12 +77,12 @@ mod cases {
             &definitions,
             Boundary::FinalCommit,
         );
-        let calls = Rc::new(Cell::new(NO_PROVIDER_CALLS));
+        let calls = std::rc::Rc::new(std::cell::Cell::new(NO_PROVIDER_CALLS));
         let result = resume_and_close(
             &root,
             &base.with_session_resume_required(true),
             &definitions,
-            Rc::clone(&calls),
+            std::rc::Rc::clone(&calls),
         );
         assert_eq!(result, Ok(animus_live_steel_agent::PersistentStatus::Idle));
         assert_eq!(calls.get(), NO_PROVIDER_CALLS);
@@ -104,7 +100,7 @@ mod cases {
                 .expect("kernel persistence");
         let kernel = animus_live_steel_agent::restore_or_create_kernel(config, &kernel_persistence)
             .expect("kernel restore");
-        let has_committed = Rc::new(Cell::new(false));
+        let has_committed = std::rc::Rc::new(std::cell::Cell::new(false));
         let provider = animus_live_steel_agent::FixtureStreamProvider::new(
             [TOOL_STREAM.to_vec(), FINAL_STREAM.to_vec()],
             config.max_provider_response_bytes(),
@@ -126,9 +122,9 @@ mod cases {
                 .expect("snapshot persistence"),
                 kernel,
                 host_executor: DenyHost,
-                kernel_persistence: checkpoint::Observed {
+                kernel_persistence: super::checkpoint::Observed {
                     inner: kernel_persistence,
-                    has_committed: Rc::clone(&has_committed),
+                    has_committed: std::rc::Rc::clone(&has_committed),
                 },
             },
         )
@@ -157,7 +153,7 @@ mod cases {
             KernelPersistence,
         >,
         boundary: Boundary,
-        has_committed: &Cell<bool>,
+        has_committed: &std::cell::Cell<bool>,
     ) where
         Provider: animus_live_steel_agent::ProviderStreamService,
         Persistence: animus_live_steel_agent::SessionPersistence,
@@ -198,7 +194,7 @@ mod cases {
         root: &cap_std::fs::Dir,
         config: &animus_live_steel_agent::ValidatedLiveSteelAgentConfig,
         definitions: &animus_live_steel_agent::LiveStoreDefinitions,
-        calls: Rc<Cell<u32>>,
+        calls: std::rc::Rc<std::cell::Cell<u32>>,
     ) -> Result<
         animus_live_steel_agent::PersistentStatus,
         animus_live_steel_agent::LiveSteelAgentError,
@@ -238,7 +234,7 @@ mod cases {
     }
 
     struct CountingProvider {
-        calls: Rc<Cell<u32>>,
+        calls: std::rc::Rc<std::cell::Cell<u32>>,
     }
 
     impl animus_live_steel_agent::ProviderStreamService for CountingProvider {

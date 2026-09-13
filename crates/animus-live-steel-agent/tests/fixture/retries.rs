@@ -1,7 +1,3 @@
-use std::cell::Cell;
-use std::collections::VecDeque;
-use std::rc::Rc;
-
 const PROMPT: &str = "Use Steel to calculate.";
 const COUNT_INCREMENT: u32 = 1;
 const FIRST_CALL_COUNT: u32 = 1;
@@ -9,14 +5,16 @@ const SECOND_CALL_COUNT: u32 = 2;
 const SECOND_SNAPSHOT_COMMIT: u32 = 2;
 const SECOND_TERMINAL_COMMIT: u32 = 2;
 const FINAL_TEXT: &str = "3";
+const BLOCKED_STATUS: animus_live_steel_agent::PersistentStatus =
+    animus_live_steel_agent::PersistentStatus::Blocked;
 
 #[test]
 fn continuation_snapshot_refusal_happens_before_provider_contact() {
-    let calls = Rc::new(Cell::new(0));
+    let calls = std::rc::Rc::new(std::cell::Cell::new(0));
     let mut session = session_with(
         controlled_provider(
             [super::TOOL_STREAM.to_vec(), super::FINAL_STREAM.to_vec()],
-            Rc::clone(&calls),
+            std::rc::Rc::clone(&calls),
             None,
         ),
         ControlledSnapshotPersistence::fail_snapshot(SECOND_SNAPSHOT_COMMIT),
@@ -31,18 +29,20 @@ fn continuation_snapshot_refusal_happens_before_provider_contact() {
         .expect("begin prompt");
 
     assert!(session.drive_pending().is_err());
+    assert_eq!(session.status(), BLOCKED_STATUS);
     assert_eq!(calls.get(), FIRST_CALL_COUNT);
     let _ignored = session.drive_one();
+    assert_eq!(session.status(), BLOCKED_STATUS);
     assert_eq!(calls.get(), FIRST_CALL_COUNT);
 }
 
 #[test]
 fn continuation_provider_failure_blocks_a_second_provider_call() {
-    let calls = Rc::new(Cell::new(0));
+    let calls = std::rc::Rc::new(std::cell::Cell::new(0));
     let mut session = session_with(
         controlled_provider(
             [super::TOOL_STREAM.to_vec()],
-            Rc::clone(&calls),
+            std::rc::Rc::clone(&calls),
             Some(SECOND_CALL_COUNT),
         ),
         ControlledSnapshotPersistence::normal(),
@@ -57,18 +57,20 @@ fn continuation_provider_failure_blocks_a_second_provider_call() {
         .expect("begin prompt");
 
     assert!(session.drive_pending().is_err());
+    assert_eq!(session.status(), BLOCKED_STATUS);
     assert_eq!(calls.get(), SECOND_CALL_COUNT);
     let _ignored = session.drive_one();
+    assert_eq!(session.status(), BLOCKED_STATUS);
     assert_eq!(calls.get(), SECOND_CALL_COUNT);
 }
 
 #[test]
 fn continuation_terminal_refusal_blocks_a_second_provider_call() {
-    let calls = Rc::new(Cell::new(0));
+    let calls = std::rc::Rc::new(std::cell::Cell::new(0));
     let mut session = session_with(
         controlled_provider(
             [super::TOOL_STREAM.to_vec(), super::FINAL_STREAM.to_vec()],
-            Rc::clone(&calls),
+            std::rc::Rc::clone(&calls),
             None,
         ),
         ControlledSnapshotPersistence::fail_terminal(SECOND_TERMINAL_COMMIT),
@@ -83,18 +85,20 @@ fn continuation_terminal_refusal_blocks_a_second_provider_call() {
         .expect("begin prompt");
 
     assert!(session.drive_pending().is_err());
+    assert_eq!(session.status(), BLOCKED_STATUS);
     assert_eq!(calls.get(), SECOND_CALL_COUNT);
     let _ignored = session.drive_one();
+    assert_eq!(session.status(), BLOCKED_STATUS);
     assert_eq!(calls.get(), SECOND_CALL_COUNT);
 }
 
 #[test]
 fn successful_continuation_reaches_the_final_response() {
-    let calls = Rc::new(Cell::new(0));
+    let calls = std::rc::Rc::new(std::cell::Cell::new(0));
     let output = session_with(
         controlled_provider(
             [super::TOOL_STREAM.to_vec(), super::FINAL_STREAM.to_vec()],
-            Rc::clone(&calls),
+            std::rc::Rc::clone(&calls),
             None,
         ),
         ControlledSnapshotPersistence::normal(),
@@ -107,8 +111,8 @@ fn successful_continuation_reaches_the_final_response() {
 }
 
 struct ControlledProvider {
-    streams: VecDeque<Vec<u8>>,
-    calls: Rc<Cell<u32>>,
+    streams: std::collections::VecDeque<Vec<u8>>,
+    calls: std::rc::Rc<std::cell::Cell<u32>>,
     fail_on_call: Option<u32>,
     max_response_bytes: u64,
 }
@@ -241,7 +245,7 @@ impl animus_std::model_request_snapshot_host::ModelRequestSnapshotStorePort
 
 fn controlled_provider(
     streams: impl IntoIterator<Item = Vec<u8>>,
-    calls: Rc<Cell<u32>>,
+    calls: std::rc::Rc<std::cell::Cell<u32>>,
     fail_on_call: Option<u32>,
 ) -> ControlledProvider {
     let config = animus_live_steel_agent::parse_live_steel_agent_config(super::CONFIG)
