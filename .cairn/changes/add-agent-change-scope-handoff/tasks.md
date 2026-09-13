@@ -13,9 +13,9 @@
 
 ## Phase 3: Scope identity correction
 
-- [ ] [serial] Preserve the imported baseline and run maintained public-API controls before the identity repair. r[animus.change_scope_handoff.fixtures]
-- [ ] [serial] Count-frame each scope collection under the v2 digest domain and document legacy-identity refusal. r[animus.change_scope_handoff.scope]
-- [ ] [serial] Verify exact replay, cross-field refusal, collection changes, all hunk fields, legacy refusal, and pending-state preservation through public APIs. r[animus.change_scope_handoff.scope] r[animus.change_scope_handoff.handoff] r[animus.change_scope_handoff.fixtures]
+- [x] [serial] Preserve the imported baseline and run maintained public-API controls before the identity repair. r[animus.change_scope_handoff.fixtures]
+- [x] [serial] Count-frame each scope collection under the v2 digest domain and document legacy-identity refusal. r[animus.change_scope_handoff.scope]
+- [x] [serial] Verify exact replay, cross-field refusal, collection changes, all hunk fields, legacy refusal, and pending-state preservation through public APIs. r[animus.change_scope_handoff.scope] r[animus.change_scope_handoff.handoff] r[animus.change_scope_handoff.fixtures]
 
 ## Phase 4: Evidence and isolation
 

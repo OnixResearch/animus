@@ -3,14 +3,16 @@
 //! The module is a deterministic functional core. It does not observe files,
 //! present UIs, mutate VCS state, enforce policy, or grant product authority.
 
+mod binding;
 mod core;
 mod data;
 mod receipt;
 
+pub use binding::validate_change_scope;
 pub use core::{
     evaluate_change_handoff_completion, open_change_handoff, plan_change_continuation,
     record_change_handoff_decision, validate_change_handoff_artifacts,
-    validate_change_handoff_claims, validate_change_scope,
+    validate_change_handoff_claims,
 };
 pub use data::{
     CHANGE_SCOPE_HANDOFF_CONTRACT_IDENTITY, CHANGE_SCOPE_HANDOFF_NON_CLAIMS,

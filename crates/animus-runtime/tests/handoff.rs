@@ -83,9 +83,9 @@ mod controls {
         changed: change_scope_handoff::ChangeScope,
     ) {
         assert_ne!(original, &changed);
-        refuses_identity(changed.clone(), original.scope_identity());
-        assert_ne!(original.scope_identity(), changed.scope_identity());
         refuses_identity(original.clone(), changed.scope_identity());
+        assert_ne!(original.scope_identity(), changed.scope_identity());
+        refuses_identity(changed, original.scope_identity());
     }
 
     #[test]
