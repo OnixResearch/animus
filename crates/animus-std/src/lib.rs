@@ -50,6 +50,10 @@ mod coding_session;
 pub mod coding_session_host {
     pub use super::coding_session::*;
 }
+#[cfg(feature = "change-scope-handoff")]
+#[path = "changescopehandoff.rs"]
+/// Review-ownership host shell around explicit change-scope handoffs.
+pub mod change_scope_handoff_host;
 mod config;
 mod context;
 /// Host-owned real-parallel execution and post-join commit for supervised cycles.

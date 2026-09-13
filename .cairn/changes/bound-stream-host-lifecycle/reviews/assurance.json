@@ -1,0 +1,15 @@
+{
+  "schema_version": "cairn.semantic-review.review-receipt.v1",
+  "review_kind": "plan",
+  "decision": "approved",
+  "reviewer": {"source": "agentic", "id": "pi-author-plan-review-not-independent"},
+  "reviewed_inputs": [
+    {"path": "proposal.md", "hash": "c8a6987d915e14fdd41d6d09400748887293af803d3ee15146d8af80701eba87"},
+    {"path": "design.md", "hash": "f1da466f341d0edd5e7fbc721d422e041b481a8e0f52f1bfdcb9889b5b7bacb2"},
+    {"path": "risk.md", "hash": "b7bf81d95100ab6da456f5ed58d169d9de412f3c07ca40a436f7297146eb4477"},
+    {"path": "tasks.md", "hash": "8070dae4e0b69fd78527afd02a2459c5b1f7e2a5da993875b8b204afd42a22de"},
+    {"path": "verification.md", "hash": "991f3afcf5bdcb6380a181ec95c9f8771764b43b1972ac563e114a3db7c1fdb0"},
+    {"path": "specs/stream-host-lifecycle/spec.md", "hash": "c01652b2268ae9383afa5d7d1d4e17597c2b8a24d471da95cc18db4b574db79d"}
+  ],
+  "findings": []
+}

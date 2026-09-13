@@ -120,6 +120,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "agent-guardrail",
     "authoritative-completion-smoke",
     "multi-role-smoke",
+    "change-scope-handoff",
     "models-dev-catalog",
     "openai-provider-host",
     "live-provider",
