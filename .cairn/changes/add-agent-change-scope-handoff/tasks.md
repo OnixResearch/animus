@@ -26,7 +26,7 @@
 
 - [x] [parallel] Add positive scope-shape, recorded-handoff, bounded-continuation, and artifact-identity fixtures. r[animus.change_scope_handoff.fixtures]
 - [x] [parallel] Add negative malformed-scope, missing-decision, unbounded-continuation, artifact-leak, and overclaim fixtures. r[animus.change_scope_handoff.fixtures] r[animus.change_scope_handoff.artifacts] r[animus.change_scope_handoff.nonclaims]
-- [ ] [serial] Run focused tests before and after changes, no-std builds, Clippy with warnings denied, octet, Cairn validation and gates, and relevant Nix checks. r[animus.change_scope_handoff.fixtures]
+- [x] [serial] Run focused tests before and after changes, no-std builds, Clippy with warnings denied, octet, Cairn validation and gates, and relevant Nix checks. r[animus.change_scope_handoff.fixtures]
 
 ## Historical encoding-only result (2026-09-13)
 
@@ -44,4 +44,11 @@ The user approved portable API qualification after the encoding-only closeout.
 The first candidate passes all ten original runtime cases, six binding controls, seven portable/boundary cases, and five host cases.
 The four retained digest values match the pre-migration implementation.
 The maintained safe-receipt selector now names `safe::receipt::`.
-Full qualification remains open until the current gates and preservation comparison finish.
+The declared product gates pass on `147bbe03f429ec1810e7b4bb11698f9832e9ecec`, including all 142 flake checks.
+Repository Octet and all three strict host selections report zero findings, warnings, and errors.
+The primary comparison passes after the status command uses the original untracked-file detail level.
+The maintained receipt wrapper runs five current-owner cases.
+Separate direct all-feature Octet runs still fail in untouched runtime and std families.
+The exact tool-call budget count is unverified after compaction.
+This task result covers the declared product gates, not wider lint qualification, archive, publication, or host lifecycle completion.
+See `evidence/portable-api-2026-09-13.md` for exact subjects, commands, failures, and claim limits.
