@@ -43,7 +43,14 @@ const MAX_SKILLS: usize = 64;
 const MAX_ITEMS: usize = 64;
 const MAX_NON_CLAIMS: usize = 32;
 const REQUIRED_OPERATIONS: &[&str] = &["context_read", "subagent"];
-const ALLOWED_OPERATIONS: &[&str] = &["context_read", "subagent", "tool"];
+const ALLOWED_OPERATIONS: &[&str] = &[
+    "context_read",
+    "file_edit",
+    "file_read",
+    "shell",
+    "subagent",
+    "tool",
+];
 const REQUIRED_NON_CLAIMS: &[&str] = &[
     "provider_correctness",
     "tool_correctness",
@@ -801,6 +808,9 @@ fn build_rlm_policy(
         .iter()
         .map(|operation| match operation.as_str() {
             "context_read" => Ok(animus_adapter_rlm_kernel::HostOperationClass::ContextRead),
+            "file_edit" => Ok(animus_adapter_rlm_kernel::HostOperationClass::FileEdit),
+            "file_read" => Ok(animus_adapter_rlm_kernel::HostOperationClass::FileRead),
+            "shell" => Ok(animus_adapter_rlm_kernel::HostOperationClass::Shell),
             "subagent" => Ok(animus_adapter_rlm_kernel::HostOperationClass::Subagent),
             "tool" => Ok(animus_adapter_rlm_kernel::HostOperationClass::Tool),
             _other => Err(LiveSteelAgentConfigError::InvalidCollection),

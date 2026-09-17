@@ -116,21 +116,21 @@ fn exact_host_tool_operation_is_optional_and_unknown_operations_fail_closed() {
     tool["admitted_operations"]
         .as_array_mut()
         .expect("operation array")
-        .push(Value::from("tool"));
-    let bytes = serde_json::to_vec(&tool).expect("tool operation fixture");
-    let config = parse_live_steel_agent_config(bytes.as_slice()).expect("tool operation config");
+        .push(Value::from("file_read"));
+    let bytes = serde_json::to_vec(&tool).expect("file read operation fixture");
+    let config = parse_live_steel_agent_config(bytes.as_slice()).expect("file read config");
     assert!(
         config
             .admitted_operations()
             .iter()
-            .any(|value| value == "tool")
+            .any(|value| value == "file_read")
     );
 
     let mut unknown: Value = serde_json::from_slice(CONFIG).expect("JSON");
     unknown["admitted_operations"]
         .as_array_mut()
         .expect("operation array")
-        .push(Value::from("shell"));
+        .push(Value::from("kernel_clear"));
     assert_eq!(
         parse_value(&unknown),
         Err(LiveSteelAgentConfigError::InvalidCollection)
