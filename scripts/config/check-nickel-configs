@@ -35,6 +35,7 @@ diff -u config/generated/codebase-graph-profile.json "${tmp_dir}/config/generate
 diff -u config/generated/mesh-provider-profile.json "${tmp_dir}/config/generated/mesh-provider-profile.json"
 diff -u config/generated/spacewasm-embedded-compat.json "${tmp_dir}/config/generated/spacewasm-embedded-compat.json"
 diff -u config/generated/harbor-evaluation-profile.json "${tmp_dir}/config/generated/harbor-evaluation-profile.json"
+diff -u config/generated/campaign-manager-eval-tasks.json "${tmp_dir}/config/generated/campaign-manager-eval-tasks.json"
 diff -u config/generated/native-evaluation-policy.json "${tmp_dir}/config/generated/native-evaluation-policy.json"
 diff -u config/generated/evaluation-host-policy.json "${tmp_dir}/config/generated/evaluation-host-policy.json"
 diff -u config/generated/evaluation-composition-conformance.json "${tmp_dir}/config/generated/evaluation-composition-conformance.json"

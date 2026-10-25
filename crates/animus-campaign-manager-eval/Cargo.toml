@@ -1,0 +1,31 @@
+[package]
+name = "animus-campaign-manager-eval"
+description = "Harbor-compatible evaluation lane for the Animus campaign manager: scenario tasks, a campaign trial environment, a separate history-replay verifier, rewards, and ATIF projections."
+edition.workspace = true
+license = "AGPL-3.0-or-later"
+readme.workspace = true
+rust-version = "1.96"
+version.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+default = []
+live = ["dep:animus-std-openai", "animus-std-openai/reqwest-client"]
+
+[dependencies]
+animus-adapters = { path = "../animus-adapters", version = "0.1.0", features = ["evaluation"] }
+animus-campaign-manager = { path = "../animus-campaign-manager", version = "0.1.0" }
+animus-eval-core = { path = "../animus-eval-core", version = "0.1.0" }
+animus-runtime = { path = "../animus-runtime", version = "0.1.0", default-features = false, features = ["harbor-eval"] }
+animus-std = { path = "../animus-std", version = "0.1.0", default-features = false, features = ["harbor-eval"] }
+animus-std-openai = { path = "../animus-std-openai", version = "0.1.0", optional = true }
+campaign-choregraph = { version = "0.1.0", git = "https://seed.radicle.garden/z2scC9MCm3pxk9mX4FEidRKabQ5LN.git", rev = "796fe3844c91c3060da5ffc573a6f801a214aba7", default-features = false }
+campaign-core = { version = "0.1.0", git = "https://seed.radicle.garden/z2scC9MCm3pxk9mX4FEidRKabQ5LN.git", rev = "796fe3844c91c3060da5ffc573a6f801a214aba7", default-features = false }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+
+[[bin]]
+name = "animus-campaign-manager-eval"
+path = "src/bin/animus-campaign-manager-eval.rs"

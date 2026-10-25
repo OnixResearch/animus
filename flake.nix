@@ -170,6 +170,7 @@
               diff -u ${./config/generated/mesh-provider-profile.json} "$tmp_dir/config/generated/mesh-provider-profile.json"
               diff -u ${./config/generated/spacewasm-embedded-compat.json} "$tmp_dir/config/generated/spacewasm-embedded-compat.json"
               diff -u ${./config/generated/harbor-evaluation-profile.json} "$tmp_dir/config/generated/harbor-evaluation-profile.json"
+              diff -u ${./config/generated/campaign-manager-eval-tasks.json} "$tmp_dir/config/generated/campaign-manager-eval-tasks.json"
               diff -u ${./config/generated/native-evaluation-policy.json} "$tmp_dir/config/generated/native-evaluation-policy.json"
               diff -u ${./config/generated/host-control-source.json} "$tmp_dir/config/generated/host-control-source.json"
               diff -u ${./config/generated/continual-harness-policy.json} "$tmp_dir/config/generated/continual-harness-policy.json"
@@ -770,6 +771,13 @@
           cargo-campaign-manager = cargoCheck "animus-cargo-campaign-manager" [ pkgs.clippy ] ''
             cargo test -p animus-campaign-manager --locked
             cargo clippy -p animus-campaign-manager --all-targets --locked -- -D warnings
+          '';
+
+          cargo-campaign-manager-eval = cargoCheck "animus-cargo-campaign-manager-eval" [ pkgs.clippy ] ''
+            cargo test -p animus-campaign-manager-eval --features live --locked
+            cargo clippy -p animus-campaign-manager-eval --all-targets --locked -- -D warnings
+            cargo clippy -p animus-campaign-manager-eval --all-targets --features live --locked -- -D warnings
+            cargo run -q -p animus-campaign-manager-eval --locked
           '';
 
           cargo-preserves-schema = cargoCheck "animus-cargo-preserves-schema" [ ] ''
@@ -1730,6 +1738,10 @@
 
           campaign-manager-octet = octetCheck "animus-campaign-manager-octet" ''
             -p animus-campaign-manager
+          '';
+
+          campaign-manager-eval-octet = octetCheck "animus-campaign-manager-eval-octet" ''
+            -p animus-campaign-manager-eval -- --all-targets --features live
           '';
 
           adapters-octet = octetCheck "animus-adapters-octet" ''

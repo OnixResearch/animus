@@ -41,6 +41,7 @@ in
     mesh_provider_profile | Request,
     spacewasm_embedded_compat | Request,
     harbor_evaluation_profile | Request,
+    campaign_manager_eval_tasks | Request,
     host_control_source | Request,
   } = {
     cargo_config = request "animus.repo.cargo" "config/repo.ncl" ["config/agent-check-registry.ncl"] "cargo_config" 'toml ".cargo/config.toml" false,
@@ -54,6 +55,7 @@ in
     mesh_provider_profile = request "animus.mesh-provider-profile" "config/mesh-provider-profile.ncl" [] "mesh_provider_profile" 'json "config/generated/mesh-provider-profile.json" false,
     spacewasm_embedded_compat = request "animus.spacewasm-embedded-compat" "config/spacewasm-embedded-compat.ncl" [] "spacewasm_embedded_compat" 'json "config/generated/spacewasm-embedded-compat.json" false,
     harbor_evaluation_profile = request "animus.harbor-evaluation-profile" "config/harbor-evaluation-profile.ncl" [] "harbor_evaluation_profile" 'json "config/generated/harbor-evaluation-profile.json" false,
+    campaign_manager_eval_tasks = request "animus.campaign-manager-eval-tasks" "config/campaign-manager-eval-tasks.ncl" [] "campaign_manager_eval_tasks" 'json "config/generated/campaign-manager-eval-tasks.json" false,
     host_control_source = request "animus.host-control-source" "config/host-control-source.ncl" [] "host_control_source" 'json "config/generated/host-control-source.json" false,
   },
 }

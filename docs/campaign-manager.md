@@ -100,3 +100,5 @@ nix build .#checks.x86_64-linux.campaign-manager-octet   # Octet deny-all over l
 ```
 
 The integration tests open real Campaign campaigns on Choregraph history and drive turns with a scripted model and an in-memory store. `tests/turns.rs` covers admitted turns, and `tests/refusals.rs` covers refusals and publication failure.
+
+To measure how well a manager steers campaigns, as opposed to whether its mechanics hold, use the [evaluation lane](campaign-manager-eval.md).

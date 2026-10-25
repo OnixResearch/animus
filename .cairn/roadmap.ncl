@@ -851,6 +851,9 @@ let change_entries = [
     "agent_harness_runtime.baseline.functional_core",
     "agent_harness_runtime.baseline.adapters",
   ] [],
+  change "add-campaign-manager-eval" evaluation_role "evaluation" [
+    "add-campaign-manager",
+  ] [],
 ]
 in
 

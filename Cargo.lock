@@ -296,6 +296,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "animus-campaign-manager-eval"
+version = "0.1.0"
+dependencies = [
+ "animus-adapters",
+ "animus-campaign-manager",
+ "animus-eval-core",
+ "animus-runtime",
+ "animus-std",
+ "animus-std-openai",
+ "campaign-choregraph",
+ "campaign-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "animus-core"
 version = "0.1.0"
 dependencies = [
