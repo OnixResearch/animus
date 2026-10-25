@@ -831,6 +831,22 @@ let change_entries = [
     "agent_harness_runtime.clankers_safe_receipts.closeout",
     "agent_harness_runtime.validation",
   ] ["add-coding-session-queue-cas", "adapt-goose-message-queue-interrupts", "add-agent-control-pubsub", "add-concrete-child-session-service", "add-durable-active-turn-recovery"],
+  change "add-agent-change-scope-handoff" core_role "event-hooks" [
+    "agent_harness_runtime.baseline.functional_core",
+    "agent_harness_runtime.clankers_safe_receipts.closeout",
+  ] ["add-agent-spec-contract-rail", "receipt-live-agent-actions"],
+  change "add-agent-spec-contract-rail" host_role "concrete-adapters" [
+    "agent_harness_runtime.baseline.adapters",
+    "agent_harness_runtime.cairn_policy.closeout",
+  ] ["add-agent-change-scope-handoff"],
+  change "add-command-action-unit-contract" core_role "runtime-loop" [
+    "agent_harness_runtime.baseline.functional_core",
+    "agent_harness_runtime.baseline.adapters",
+  ] ["add-durable-background-child-work", "add-idempotent-client-submission"],
+  change "ranked-codebase-retrieval" core_role "policy-guidance" [
+    "agent_harness_runtime.baseline.functional_core",
+    "agent_harness_runtime.baseline.adapters",
+  ] ["add-codebase-graph-host-adapter"],
 ]
 in
 
