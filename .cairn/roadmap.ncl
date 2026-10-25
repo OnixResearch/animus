@@ -847,6 +847,10 @@ let change_entries = [
     "agent_harness_runtime.baseline.functional_core",
     "agent_harness_runtime.baseline.adapters",
   ] ["add-codebase-graph-host-adapter"],
+  change "add-campaign-manager" optional_role "optional-references" [
+    "agent_harness_runtime.baseline.functional_core",
+    "agent_harness_runtime.baseline.adapters",
+  ] [],
 ]
 in
 

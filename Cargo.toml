@@ -16,6 +16,7 @@ members = [
   "crates/animus-adapter-zeron-harness",
   "crates/animus-acp-stdio-host",
   "crates/animus-adapters",
+  "crates/animus-campaign-manager",
   "crates/animus-core",
   "crates/animus-eval-core",
   "crates/animus-eval-conformance",

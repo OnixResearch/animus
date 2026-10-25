@@ -639,6 +639,20 @@
                 outputHashes."verified-logic-0.2.0" = "sha256-xhKyUabrb8Xx6c4vKrWfHmaQDwZITCMNefnxB8mxmwg=";
               };
             }
+            {
+              name = "campaign";
+              deps = importCargoLock {
+                lockFileContents = cargoLockContentsFor (pkgs.lib.hasInfix "/z2scC9MCm3pxk9mX4FEidRKabQ5LN.git");
+                outputHashes."campaign-core-0.1.0" = "sha256-ZmWFr5fpGh65EpXWZCJo9ScNIWpEIqbgVVfCmpoX6lk=";
+              };
+            }
+            {
+              name = "choregraph";
+              deps = importCargoLock {
+                lockFileContents = cargoLockContentsFor (pkgs.lib.hasInfix "/zL2ncTUeASVYwcoGkEXv9JKgGbAF.git");
+                outputHashes."choregraph-history-0.1.0" = "sha256-BO/AlwJBIuW+WXGRQgd2LymvGIYtK0fqd3YYMDtfGBw=";
+              };
+            }
           ];
           linkCargoDependencyGroup = group: ''
             mkdir -p "$out/${group.name}"
@@ -751,6 +765,11 @@
 
           cargo-preserves-adapter = cargoCheck "animus-cargo-preserves-adapter" [ ] ''
             cargo check -p animus-preserves-adapter --locked
+          '';
+
+          cargo-campaign-manager = cargoCheck "animus-cargo-campaign-manager" [ pkgs.clippy ] ''
+            cargo test -p animus-campaign-manager --locked
+            cargo clippy -p animus-campaign-manager --all-targets --locked -- -D warnings
           '';
 
           cargo-preserves-schema = cargoCheck "animus-cargo-preserves-schema" [ ] ''
@@ -1708,6 +1727,10 @@
                 sh scripts/cairn/check-current-head-release-evidence-index --root .
                 touch "$out"
               '';
+
+          campaign-manager-octet = octetCheck "animus-campaign-manager-octet" ''
+            -p animus-campaign-manager
+          '';
 
           adapters-octet = octetCheck "animus-adapters-octet" ''
             -p animus-adapters

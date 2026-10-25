@@ -285,6 +285,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "animus-campaign-manager"
+version = "0.1.0"
+dependencies = [
+ "animus-adapters",
+ "campaign-choregraph",
+ "campaign-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "animus-core"
 version = "0.1.0"
 dependencies = [
@@ -1081,6 +1092,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "campaign-choregraph"
+version = "0.1.0"
+source = "git+https://seed.radicle.garden/z2scC9MCm3pxk9mX4FEidRKabQ5LN.git?rev=796fe3844c91c3060da5ffc573a6f801a214aba7#796fe3844c91c3060da5ffc573a6f801a214aba7"
+dependencies = [
+ "campaign-core",
+ "choregraph-history",
+]
+
+[[package]]
+name = "campaign-core"
+version = "0.1.0"
+source = "git+https://seed.radicle.garden/z2scC9MCm3pxk9mX4FEidRKabQ5LN.git?rev=796fe3844c91c3060da5ffc573a6f801a214aba7#796fe3844c91c3060da5ffc573a6f801a214aba7"
+dependencies = [
+ "blake3",
+]
+
+[[package]]
 name = "cap-primitives"
 version = "3.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1156,6 +1184,14 @@ dependencies = [
  "cfg-if",
  "cpufeatures 0.3.0",
  "rand_core 0.10.1",
+]
+
+[[package]]
+name = "choregraph-history"
+version = "0.1.0"
+source = "git+https://git.onix.computer/zL2ncTUeASVYwcoGkEXv9JKgGbAF.git?rev=b3e08e19750f53bdbcae970cdf58a47a791ed20b#b3e08e19750f53bdbcae970cdf58a47a791ed20b"
+dependencies = [
+ "blake3",
 ]
 
 [[package]]
