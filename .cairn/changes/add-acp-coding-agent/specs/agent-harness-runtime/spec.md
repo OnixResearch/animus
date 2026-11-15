@@ -14,7 +14,7 @@ r[agent_harness_runtime.acp_coding_agent.boundary] Animus MUST provide the ACP c
 
 ### Requirement: Workspace tools are confined to one root
 
-r[agent_harness_runtime.acp_coding_agent.tools] The tool service MUST offer exactly `read_file`, `list_files`, `edit_file` and `run_check`. It MUST refuse a request whose path is absolute, empty, contains a `.`, `..` or empty component or a NUL byte, or exceeds the path bound, and any request whose sizes exceed their bounds. An `edit_file` request MUST be refused unless its `old` text occurs exactly once in the current file, except that an empty `old` creates a file that does not exist.
+r[agent_harness_runtime.acp_coding_agent.tools] The workspace root MUST be the `cwd` of `session/new`, refused when `--allowed-root` is given and the `cwd` is outside it. The tool service MUST offer exactly `read_file`, `list_files`, `edit_file` and `run_check`. It MUST refuse a request whose path is absolute, empty, contains a `.`, `..` or empty component or a NUL byte, or exceeds the path bound, and any request whose sizes exceed their bounds. An `edit_file` request MUST be refused unless its `old` text occurs exactly once in the current file, except that an empty `old` creates a file that does not exist.
 
 #### Scenario: A path outside the root is refused before any effect
 
@@ -46,13 +46,19 @@ r[agent_harness_runtime.acp_coding_agent.checks] `run_check` MUST run only a che
 
 ### Requirement: The provider is explicit
 
-r[agent_harness_runtime.acp_coding_agent.provider] The provider service MUST take its endpoint, model and credential file from explicit arguments and MUST NOT read credentials from the environment or stdin.
+r[agent_harness_runtime.acp_coding_agent.provider] The provider service MUST take its endpoint and model from explicit arguments, with session model selection limited to advertised models. It MUST read its credential once at startup from the one environment variable named by `--credential-env`, MUST remove that variable from its environment before serving, MUST NOT pass it to checks, and MUST NOT read credentials from stdin.
 
 #### Scenario: Missing credential for a remote endpoint
 
-- GIVEN an `https` endpoint and no credential file
+- GIVEN an `https` endpoint and an unset credential variable
 - WHEN the binary starts
 - THEN it exits with an error before serving ACP.
+
+#### Scenario: Checks never see the credential
+
+- GIVEN a declared check that prints its environment
+- WHEN the agent runs it
+- THEN its output does not contain the credential variable.
 
 ### Requirement: The session is served over ACP stdio
 
