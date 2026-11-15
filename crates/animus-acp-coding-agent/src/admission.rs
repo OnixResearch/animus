@@ -21,8 +21,60 @@ pub const MAX_CHECK_ID_BYTES: usize = 64;
 /// Longest tool-call argument document, in bytes.
 pub const MAX_ARGUMENT_BYTES: usize = 2 * MAX_EDITS_PER_CALL * MAX_EDIT_TEXT_BYTES + 4096;
 
-/// The tool names offered to the model, in a stable order.
+/// The tool operations, in a stable order.
 pub const TOOL_NAMES: [&str; 4] = ["read_file", "list_files", "edit_file", "run_check"];
+
+/// The one function offered to the model. `animus-std-openai` admits a single tool
+/// per cohort, so the four operations share one strict schema as an `anyOf` over a
+/// `request` object discriminated by `op`.
+pub const WORKSPACE_TOOL_NAME: &str = "workspace";
+
+/// Strict schema for [`WORKSPACE_TOOL_NAME`]: every object lists all its properties
+/// as required and forbids others, as `OpenAI` strict mode and `animus-std-openai`
+/// require.
+pub const WORKSPACE_TOOL_SCHEMA: &str = r#"{
+  "type": "object",
+  "properties": {
+    "request": {
+      "anyOf": [
+        {"type": "object", "properties": {"op": {"type": "string", "enum": ["read_file"]}, "path": {"type": "string"}}, "required": ["op", "path"], "additionalProperties": false},
+        {"type": "object", "properties": {"op": {"type": "string", "enum": ["list_files"]}, "path": {"type": "string"}}, "required": ["op", "path"], "additionalProperties": false},
+        {"type": "object", "properties": {"op": {"type": "string", "enum": ["edit_file"]}, "path": {"type": "string"}, "edits": {"type": "array", "items": {"type": "object", "properties": {"old": {"type": "string"}, "new": {"type": "string"}}, "required": ["old", "new"], "additionalProperties": false}}}, "required": ["op", "path", "edits"], "additionalProperties": false},
+        {"type": "object", "properties": {"op": {"type": "string", "enum": ["run_check"]}, "check_id": {"type": "string"}}, "required": ["op", "check_id"], "additionalProperties": false}
+      ]
+    }
+  },
+  "required": ["request"],
+  "additionalProperties": false
+}"#;
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct WorkspaceArguments {
+    request: serde_json::Map<String, serde_json::Value>,
+}
+
+/// Admit one call of the single [`WORKSPACE_TOOL_NAME`] function by routing its
+/// `request.op` to [`parse_tool_call`].
+///
+/// # Errors
+///
+/// Returns a [`ToolIssue`] for malformed arguments, an unknown `op`, or any refusal
+/// [`parse_tool_call`] makes.
+pub fn parse_workspace_call(json: &str) -> Result<ToolCall, ToolIssue> {
+    if json.len() > MAX_ARGUMENT_BYTES {
+        return Err(ToolIssue::ArgumentsTooLarge);
+    }
+    let WorkspaceArguments { mut request } = arguments(json)?;
+    let Some(serde_json::Value::String(op)) = request.remove("op") else {
+        return Err(ToolIssue::MalformedArguments);
+    };
+    if !TOOL_NAMES.contains(&op.as_str()) {
+        return Err(ToolIssue::UnknownTool);
+    }
+    let inner = serde_json::Value::Object(request).to_string();
+    parse_tool_call(&op, &inner)
+}
 
 /// A normalized path relative to the workspace root.
 #[derive(Clone, Debug, PartialEq, Eq)]

@@ -151,6 +151,7 @@ dependencies = [
 name = "animus-acp-coding-agent"
 version = "0.1.0"
 dependencies = [
+ "animus-std-openai",
  "blake3",
  "serde",
  "serde_json",

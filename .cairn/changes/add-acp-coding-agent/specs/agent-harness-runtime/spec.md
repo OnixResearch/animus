@@ -14,7 +14,7 @@ r[agent_harness_runtime.acp_coding_agent.boundary] Animus MUST provide the ACP c
 
 ### Requirement: Workspace tools are confined to one root
 
-r[agent_harness_runtime.acp_coding_agent.tools] The workspace root MUST be the `cwd` of `session/new`, refused when `--allowed-root` is given and the `cwd` is outside it. The tool service MUST offer exactly `read_file`, `list_files`, `edit_file` and `run_check`. It MUST refuse a request whose path is absolute, empty, contains a `.`, `..` or empty component or a NUL byte, or exceeds the path bound, and any request whose sizes exceed their bounds. An `edit_file` request MUST be refused unless its `old` text occurs exactly once in the current file, except that an empty `old` creates a file that does not exist.
+r[agent_harness_runtime.acp_coding_agent.tools] The workspace root MUST be the `cwd` of `session/new`, refused when `--allowed-root` is given and the `cwd` is outside it. The tool service MUST offer exactly the operations `read_file`, `list_files`, `edit_file` and `run_check`, as one `workspace` function discriminated by `op`. It MUST refuse a request whose path is absolute, empty, contains a `.`, `..` or empty component or a NUL byte, or exceeds the path bound, and any request whose sizes exceed their bounds. An `edit_file` request MUST be refused unless its `old` text occurs exactly once in the current file, except that an empty `old` creates a file that does not exist.
 
 #### Scenario: A path outside the root is refused before any effect
 

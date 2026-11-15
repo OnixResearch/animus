@@ -235,3 +235,49 @@ fn malformed_checks_files_are_refused() {
         Err(ChecksIssue::Malformed)
     );
 }
+
+#[test]
+fn the_workspace_tool_schema_is_admitted_by_the_openai_host() {
+    let binding = animus_std_openai::OpenAiToolSchemaBinding::from_json(
+        "animus.acp-coding-agent.workspace.v1",
+        crate::admission::WORKSPACE_TOOL_SCHEMA.as_bytes(),
+    );
+    assert!(binding.is_ok(), "{binding:?}");
+}
+
+#[test]
+fn workspace_calls_route_by_op() {
+    use crate::admission::parse_workspace_call;
+    assert!(matches!(
+        parse_workspace_call(r#"{"request":{"op":"read_file","path":"src/lib.rs"}}"#),
+        Ok(ToolCall::ReadFile { .. })
+    ));
+    assert!(matches!(
+        parse_workspace_call(
+            r#"{"request":{"op":"edit_file","path":"a","edits":[{"old":"x","new":"y"}]}}"#
+        ),
+        Ok(ToolCall::EditFile { .. })
+    ));
+    assert_eq!(
+        parse_workspace_call(r#"{"request":{"op":"run_check","check_id":"cargo-test"}}"#),
+        Ok(ToolCall::RunCheck {
+            check_id: "cargo-test".to_owned()
+        })
+    );
+    assert_eq!(
+        parse_workspace_call(r#"{"request":{"op":"shell","cmd":"ls"}}"#),
+        Err(ToolIssue::UnknownTool)
+    );
+    assert_eq!(
+        parse_workspace_call(r#"{"request":{"path":"a"}}"#),
+        Err(ToolIssue::MalformedArguments)
+    );
+    assert_eq!(
+        parse_workspace_call(r#"{"request":{"op":"read_file","path":"../x"}}"#),
+        Err(ToolIssue::Path(PathIssue::ForbiddenComponent))
+    );
+    assert_eq!(
+        parse_workspace_call(r#"{"request":{"op":"read_file","path":"a"},"extra":1}"#),
+        Err(ToolIssue::MalformedArguments)
+    );
+}

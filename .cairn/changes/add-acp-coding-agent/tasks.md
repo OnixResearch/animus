@@ -8,7 +8,8 @@ Phase 1 evidence (2026-11-15): `cargo test -p animus-acp-coding-agent` (8 passed
 
 ## Phase 2: Services
 
-- [ ] [serial] Confirm `animus-std-openai` canonical request planning accepts a four-tool cohort; record the result in design.md before provider work. r[agent_harness_runtime.acp_coding_agent.provider]
+- [x] [serial] Confirm `animus-std-openai` canonical request planning accepts a four-tool cohort; record the result in design.md before provider work. Result: it does not (one tool, named `steel_repl` only); the agent uses one `workspace` function, whose schema the host admits. r[agent_harness_runtime.acp_coding_agent.provider]
+- [ ] [serial] Let `OpenAiToolCapability` admit a caller-registered tool name and schema label, with positive and negative tests in `animus-std-openai`. r[agent_harness_runtime.acp_coding_agent.provider]
 - [ ] [serial] Implement the tool service shell: capability-root file access with symlink refusal, `animus-std-workspace-edit` publication for edits to existing files, exclusive-create for new files, and `animus-std-check-exec` for declared checks with an explicit environment. r[agent_harness_runtime.acp_coding_agent.tools] r[agent_harness_runtime.acp_coding_agent.checks]
 - [ ] [serial] Implement the provider service with explicit endpoint and model, the credential from the `--credential-env` variable read once and removed, and session model advertisement if `animus-acp-stdio-host` supports it (open question in design.md). r[agent_harness_runtime.acp_coding_agent.provider]
 

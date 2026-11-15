@@ -45,6 +45,12 @@ A provider service over `animus-std-openai`'s stream parser with the four-tool c
 
 `animus-acp-agent --state <dir> --checks <file> --endpoint <url> --model <id> [--allowed-model <id>]... [--credential-env <NAME>] [--allowed-root <dir>]`. The workspace root is the `cwd` of `session/new`; with `--allowed-root`, a `cwd` outside it is refused. stdout carries only ACP frames; diagnostics go to stderr. The state directory holds the durable session store.
 
+## Tool cohort result (Phase 2, task 1)
+
+`animus-std-openai` admits a cohort of exactly one tool (`OpenAiToolCapabilityMatrix::new` refuses `tools.len() != 1`), and `OpenAiToolCapability::new` refuses any tool other than `steel_repl` with its schema label. Its strict-schema validator itself has no name restriction: an object whose properties are all required, with `additionalProperties: false`, and nested `anyOf` is accepted.
+
+So the agent offers one function, `workspace`, whose `request` is an `anyOf` over the four operations discriminated by `op` (`WORKSPACE_TOOL_SCHEMA`). A test admits that schema through `OpenAiToolSchemaBinding::from_json`. This keeps the one-tool cohort and needs one change in `animus-std-openai`: `OpenAiToolCapability` must admit a caller-registered tool name and schema label instead of only `steel_repl`. That change touches a shared crate and needs its own review.
+
 ## Open questions
 
 - Whether `animus-acp-stdio-host` advertises session models; if not, model selection stays argument-only and assay passes the model through the registry entry.
