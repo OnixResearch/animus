@@ -1,0 +1,23 @@
+## Phase 1: Admission core
+
+- [x] [serial] Add the non-default crate `animus-acp-coding-agent` with a pure admission core: path normalization and confinement, read and list bounds, exact-once edit admission, and tool-call parsing for the four tools. r[agent_harness_runtime.acp_coding_agent.boundary] r[agent_harness_runtime.acp_coding_agent.tools]
+- [x] [serial] Add the declared checks file parser with schema, id, uniqueness, argv and budget-ceiling refusals, and its BLAKE3 identity. r[agent_harness_runtime.acp_coding_agent.checks]
+- [x] [parallel] Add positive and negative tests for every admission rule and checks-file refusal. r[agent_harness_runtime.acp_coding_agent.verification]
+
+## Phase 2: Services
+
+- [ ] [serial] Confirm `animus-std-openai` canonical request planning accepts a four-tool cohort; record the result in design.md before provider work. r[agent_harness_runtime.acp_coding_agent.provider]
+- [ ] [serial] Implement the tool service shell: capability-root file access with symlink refusal, `animus-std-workspace-edit` publication for edits, and `animus-std-check-exec` for declared checks. r[agent_harness_runtime.acp_coding_agent.tools] r[agent_harness_runtime.acp_coding_agent.checks]
+- [ ] [serial] Implement the provider service with explicit endpoint, model and credential file. r[agent_harness_runtime.acp_coding_agent.provider]
+
+## Phase 3: ACP binary
+
+- [ ] [serial] Compose `CodingSessionHost` with the durable store and the new services, and serve it through `animus-acp-stdio-host` in `animus-acp-agent`. r[agent_harness_runtime.acp_coding_agent.acp]
+- [ ] [serial] Run Harbor's ACP client against the binary offline with a fixture provider: edit a file, run a declared check, complete. r[agent_harness_runtime.acp_coding_agent.harbor]
+
+## Phase 4: Packaging and closeout
+
+- [ ] [serial] Add the Nix package `animus-acp-agent` and the checks `cargo-acp-coding-agent` and `acp-coding-agent-octet`. r[agent_harness_runtime.acp_coding_agent.verification]
+- [ ] [parallel] Document the binary, its arguments, the checks file and the non-claims in `docs/acp-coding-agent.md` and `README.md`. r[agent_harness_runtime.acp_coding_agent.boundary]
+- [ ] [serial] Register the change in `.cairn/roadmap.ncl` and pass the roadmap and Cairn validation rails. r[agent_harness_runtime.acp_coding_agent.verification]
+- [ ] [serial] After review, sync the requirements into `.cairn/specs/agent-harness-runtime/spec.md` and archive the change. r[agent_harness_runtime.acp_coding_agent.verification]

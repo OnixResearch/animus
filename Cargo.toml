@@ -14,6 +14,7 @@ members = [
   "crates/animus-adapter-usage-accounting",
   "crates/animus-adapter-weave",
   "crates/animus-adapter-zeron-harness",
+  "crates/animus-acp-coding-agent",
   "crates/animus-acp-stdio-host",
   "crates/animus-adapters",
   "crates/animus-campaign-manager",
