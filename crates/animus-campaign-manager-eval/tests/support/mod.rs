@@ -5,6 +5,8 @@
     reason = "each integration-test binary uses a subset of the shared support"
 )]
 
+pub mod frozen;
+
 /// Why a test step failed.
 #[derive(Debug)]
 pub enum Failure {

@@ -42,6 +42,8 @@ in
     spacewasm_embedded_compat | Request,
     harbor_evaluation_profile | Request,
     campaign_manager_eval_tasks | Request,
+    campaign_manager_local_scorer_fixture | Request,
+    campaign_manager_local_scorer_eval | Request,
     host_control_source | Request,
   } = {
     cargo_config = request "animus.repo.cargo" "config/repo.ncl" ["config/agent-check-registry.ncl"] "cargo_config" 'toml ".cargo/config.toml" false,
@@ -56,6 +58,8 @@ in
     spacewasm_embedded_compat = request "animus.spacewasm-embedded-compat" "config/spacewasm-embedded-compat.ncl" [] "spacewasm_embedded_compat" 'json "config/generated/spacewasm-embedded-compat.json" false,
     harbor_evaluation_profile = request "animus.harbor-evaluation-profile" "config/harbor-evaluation-profile.ncl" [] "harbor_evaluation_profile" 'json "config/generated/harbor-evaluation-profile.json" false,
     campaign_manager_eval_tasks = request "animus.campaign-manager-eval-tasks" "config/campaign-manager-eval-tasks.ncl" [] "campaign_manager_eval_tasks" 'json "config/generated/campaign-manager-eval-tasks.json" false,
+    campaign_manager_local_scorer_fixture = request "animus.campaign-manager-local-scorer-fixture" "config/campaign-manager-local-scorer-fixture.ncl" [] "campaign_manager_local_scorer_fixture" 'json "config/generated/campaign-manager-local-scorer-fixture.json" false,
+    campaign_manager_local_scorer_eval = request "animus.campaign-manager-local-scorer-eval" "config/campaign-manager-local-scorer-eval.ncl" [] "campaign_manager_local_scorer_eval" 'json "config/generated/campaign-manager-local-scorer-eval.json" false,
     host_control_source = request "animus.host-control-source" "config/host-control-source.ncl" [] "host_control_source" 'json "config/generated/host-control-source.json" false,
   },
 }

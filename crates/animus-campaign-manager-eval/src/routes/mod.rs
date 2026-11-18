@@ -3,7 +3,15 @@
 //! A scripted policy reads only the rendered brief, exactly what a model sees, and answers in the
 //! manager's reply schema.
 
+mod frozen;
 mod reading;
+
+pub use frozen::{
+    ACTION_SCHEMA, ARTIFACT_API, ARTIFACT_SCHEMA, AdmittedArtifact, ArtifactError, CostUnits,
+    DecisionRecord, Disposition, FALLBACK_POLICY, FEATURE_COUNT, FEATURE_NAMES, FEATURE_SCHEMA,
+    LocalScorerRoute, MAX_DECISIONS, MAX_PARAMETER_MAGNITUDE, POLICY_KIND, RandomRankRoute,
+    RankBounds, admit_artifact, artifact_identity,
+};
 
 /// Rank a policy gives a candidate it has not seen executed.
 const EXPLORE_RANK: i64 = 10;

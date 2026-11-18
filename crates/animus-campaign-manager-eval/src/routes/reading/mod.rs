@@ -13,6 +13,8 @@ const SIGNAL_MARKER: &str = "[signal ";
 const FAMILY_SEPARATOR: char = '/';
 /// Rank dimensions assumed when the brief names none.
 const DEFAULT_DIMENSIONS: u32 = 1;
+/// Text before the rank magnitude on the rank-domain line.
+const MAGNITUDE_MARKER: &str = "each from -";
 
 /// One listed candidate or offer.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -30,6 +32,8 @@ pub(super) struct Listed {
 pub(super) struct PromptView {
     /// Rank dimensions per score.
     pub(super) dimensions: u32,
+    /// Largest rank magnitude the brief presents, if it names one.
+    pub(super) magnitude: Option<u32>,
     /// Listed candidates in brief order.
     pub(super) candidates: Vec<Listed>,
     /// Offers in menu order.
@@ -48,6 +52,7 @@ enum Section {
 pub(super) fn read_prompt(prompt: &str) -> PromptView {
     let mut view = PromptView {
         dimensions: DEFAULT_DIMENSIONS,
+        magnitude: None,
         candidates: Vec::new(),
         offers: Vec::new(),
     };
@@ -55,6 +60,9 @@ pub(super) fn read_prompt(prompt: &str) -> PromptView {
     for line in prompt.lines() {
         if let Some(rest) = line.strip_prefix(RANKS_PREFIX) {
             view.dimensions = leading_number(rest).unwrap_or(DEFAULT_DIMENSIONS);
+            view.magnitude = rest
+                .split_once(MAGNITUDE_MARKER)
+                .and_then(|(_, tail)| leading_number(tail));
         }
         section = next_section(section, line);
         let Some(listed) = listed(line) else {

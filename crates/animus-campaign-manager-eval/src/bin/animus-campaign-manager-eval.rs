@@ -1,3 +1,5 @@
+#![cfg_attr(animus_octet, feature(register_tool))]
+#![cfg_attr(animus_octet, register_tool(tigerstyle))]
 //! Runs the campaign-manager evaluation job and prints a metadata-only report.
 //!
 //! Scripted mode, the default, runs every task against every scripted policy offline:
@@ -13,8 +15,19 @@
 //! animus-campaign-manager-eval --live openrouter --model <MODEL> --credential-stdin < key
 //! ```
 //!
-//! The report holds identities, counts, and mean rewards. It never includes prompts, replies,
-//! labels, or credentials.
+//! Local-scorer mode runs the predeclared comparison of the frozen local scorer route against the
+//! grant-matched `explore-only` baseline, seeded random ranking, and the `signal-greedy` reference,
+//! and prints the adoption decision:
+//!
+//! ```text
+//! animus-campaign-manager-eval --local-scorer
+//! ```
+//!
+//! The report holds identities, counts, mean rewards, cost units, and latency. It never includes
+//! prompts, replies, labels, or credentials.
+
+#[path = "animus-campaign-manager-eval/comparison.rs"]
+mod comparison;
 
 /// Job identity of every run.
 const JOB: &str = "job:campaign-manager-eval";
@@ -41,6 +54,9 @@ fn run(arguments: &[String]) -> Result<String, String> {
         .map_err(|error| format!("task set refused: {error:?}"))?;
     if arguments.is_empty() {
         return scripted(&set);
+    }
+    if arguments == ["--local-scorer"] {
+        return comparison::run(&set);
     }
     live(&set, arguments)
 }

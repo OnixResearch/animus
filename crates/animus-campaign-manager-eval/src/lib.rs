@@ -39,6 +39,7 @@
 
 mod artifacts;
 mod catalog;
+mod experiment;
 mod grading;
 mod history;
 mod matrix;
@@ -53,11 +54,22 @@ pub use catalog::{
     EvalTask, HarborPins, MAX_CANDIDATES, MAX_SIGNAL, MAX_TURNS, MandateLimits, TASK_SET_SCHEMA,
     TaskCandidate, TaskError, TaskSet, embedded_task_set, parse_task_set,
 };
+pub use experiment::{
+    AdoptionDecision, AdoptionInput, AdoptionRule, COMPARISON_SCHEMA, ComparisonProtocol,
+    ProtocolError, decide_adoption, embedded_comparison_protocol, embedded_local_scorer_fixture,
+    parse_comparison_protocol,
+};
 pub use grading::{CampaignVerifier, METRIC_EFFICIENCY, METRIC_FOUND, METRIC_REFUSALS, grade};
 pub use history::{CandidateEntry, HostFailure, TrialCampaign};
 pub use matrix::{ARTIFACT_NAMES, JobError, JobReport, RouteSummary, TrialFailure, run_job};
 #[cfg(feature = "live")]
 pub use provider::{Endpoint, LiveFailure, LiveRoute};
 pub use rollout::{CampaignEnvironment, HostAction, TrialRun, TurnOutcome, TurnRecord, run_turns};
-pub use routes::{Route, RouteAdapter, RouteFailure, RouteModel, ScriptedPolicy};
+pub use routes::{
+    ACTION_SCHEMA, ARTIFACT_API, ARTIFACT_SCHEMA, AdmittedArtifact, ArtifactError, CostUnits,
+    DecisionRecord, Disposition, FALLBACK_POLICY, FEATURE_COUNT, FEATURE_NAMES, FEATURE_SCHEMA,
+    LocalScorerRoute, MAX_DECISIONS, MAX_PARAMETER_MAGNITUDE, POLICY_KIND, RandomRankRoute,
+    RankBounds, Route, RouteAdapter, RouteFailure, RouteModel, ScriptedPolicy, admit_artifact,
+    artifact_identity,
+};
 pub use trajectory::project_turns;

@@ -171,6 +171,8 @@
               diff -u ${./config/generated/spacewasm-embedded-compat.json} "$tmp_dir/config/generated/spacewasm-embedded-compat.json"
               diff -u ${./config/generated/harbor-evaluation-profile.json} "$tmp_dir/config/generated/harbor-evaluation-profile.json"
               diff -u ${./config/generated/campaign-manager-eval-tasks.json} "$tmp_dir/config/generated/campaign-manager-eval-tasks.json"
+              diff -u ${./config/generated/campaign-manager-local-scorer-fixture.json} "$tmp_dir/config/generated/campaign-manager-local-scorer-fixture.json"
+              diff -u ${./config/generated/campaign-manager-local-scorer-eval.json} "$tmp_dir/config/generated/campaign-manager-local-scorer-eval.json"
               diff -u ${./config/generated/native-evaluation-policy.json} "$tmp_dir/config/generated/native-evaluation-policy.json"
               diff -u ${./config/generated/host-control-source.json} "$tmp_dir/config/generated/host-control-source.json"
               diff -u ${./config/generated/continual-harness-policy.json} "$tmp_dir/config/generated/continual-harness-policy.json"
@@ -778,6 +780,7 @@
             cargo clippy -p animus-campaign-manager-eval --all-targets --locked -- -D warnings
             cargo clippy -p animus-campaign-manager-eval --all-targets --features live --locked -- -D warnings
             cargo run -q -p animus-campaign-manager-eval --locked
+            cargo run -q -p animus-campaign-manager-eval --locked -- --local-scorer
           '';
 
           cargo-preserves-schema = cargoCheck "animus-cargo-preserves-schema" [ ] ''
