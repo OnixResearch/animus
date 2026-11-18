@@ -25669,3 +25669,250 @@ Evidence MUST bind the qualified source and distinguish holder observations from
 GIVEN passing positive and negative controls and connected authority checks
 WHEN evidence is recorded
 THEN it names the exact cohort and retains the observation non-claims.
+
+### Requirement: Campaign-manager evaluation is an optional Harbor-compatible lane
+
+r[agent_harness_runtime.campaign_manager_eval.boundary] Animus MUST provide the campaign-manager evaluation lane as the optional crate `animus-campaign-manager-eval`, outside the workspace's default members. The lane MUST implement Animus's Harbor environment and verifier ports and drive them only through `animus_runtime::harbor_eval` and `animus_std::harbor`, without Harbor's Python application, Hub, cloud, or container backends. It MUST NOT contact a model provider unless its `live` feature is built and a live route is invoked explicitly.
+
+#### Scenario: Default builds do not carry the lane
+
+- GIVEN the Animus workspace with its default members
+- WHEN a default build is resolved
+- THEN `animus-campaign-manager-eval` and its Campaign dependencies are not built.
+
+#### Scenario: Scripted evaluation runs offline
+
+- GIVEN a build without the `live` feature
+- WHEN the evaluation binary runs without arguments
+- THEN every trial runs against scripted routes with no network access
+- AND asking for live mode fails with a usage error.
+
+### Requirement: Evaluation tasks are typed Nickel revalidated in Rust
+
+r[agent_harness_runtime.campaign_manager_eval.tasks] The lane MUST load its tasks from the checked projection of `config/campaign-manager-eval-tasks.ncl`. It MUST refuse a projection that has:
+- an unknown field;
+- schema drift, or a Harbor cohort other than the pinned release, revision, task schema, and ATIF schema;
+- an unsafe identity or key;
+- a verifier identity equal to the environment identity;
+- a repeated task identity or candidate key;
+- a task whose objective or label is out of bounds or holds control characters, whose signal exceeds 9, whose turns exceed 24, whose offers exceed the manager's offer bound, or that has other than exactly one target.
+
+#### Scenario: The checked task set is admitted
+
+- GIVEN the generated projection exported from the Nickel source
+- WHEN the lane parses it
+- THEN every task has exactly one target, and the mandate terms are canonical.
+
+#### Scenario: Drift is refused
+
+- GIVEN a projection with an unknown field, another schema, another Harbor revision, a shared verifier, an unsafe identity, a duplicate, a second target or none, a signal of 10, an 81-character label, a multi-line objective, too many turns, or too many offers
+- WHEN the lane parses it
+- THEN it refuses with the matching `TaskError`.
+
+### Requirement: A trial alternates manager turns with host planner steps
+
+r[agent_harness_runtime.campaign_manager_eval.trial] For each trial the environment MUST open the task's campaign on fresh Choregraph history and admit the task's candidates. It then runs at most the task's turns, each as:
+1. one manager turn with the trial's route, offering every unadded offer and labelling every admitted candidate, with `[signal N]` appended once it has run;
+2. one host planner step.
+
+In a host planner step, a selection MUST be published, released by the publication fence, run against its hidden outcome, and settled by a published result. A wait MUST publish nothing, and the planner's stop MUST be published. The trial MUST end when the campaign stops.
+
+A manager reply MUST be classified as admitted, unchanged (`UnchangedState`), refused, or a model failure.
+
+#### Scenario: A manager reaches an offered target
+
+- GIVEN the parser task, whose target is an offer
+- WHEN a trial runs the signal-greedy route
+- THEN the manager adds offers, the target's run records the finding, and the planner's policy stop ends the campaign.
+
+#### Scenario: A manager that never adds offers misses it
+
+- GIVEN the same task
+- WHEN a trial runs the explore-only route
+- THEN no offer is added, no finding is recorded, and the budget stop ends the campaign.
+
+#### Scenario: Unknown routes and tasks fail closed
+
+- GIVEN a trial request that names an unknown route or an unknown task
+- WHEN the environment executes it
+- THEN it returns `Unavailable` or `Denied` and leaves no artifact.
+
+#### Scenario: An unreachable model completes with failed turns
+
+- GIVEN a route whose every call fails
+- WHEN a trial runs
+- THEN the trial completes with every turn recorded as a model failure.
+
+### Requirement: The separate verifier grades Campaign's replay
+
+r[agent_harness_runtime.campaign_manager_eval.verifier] The verifier MUST reload the trial's control projection from its recorded Choregraph graph, branch, payloads, and envelope. It MUST refuse:
+- a missing artifact as `Stale`;
+- a history that does not load as `Malformed`;
+- a replayed final state that differs from the environment's claim as `Stale`;
+- an unknown task as `Denied`.
+
+It MUST report:
+- `found` as 1 only when the replayed findings hold the task's finding and the target's candidate was selected;
+- `efficiency` as `(budget + 1 - selections) / budget` for a found target, and 0 otherwise;
+- `refusal-rate` as the share of refused or failed turns in the environment's ledger, which jobs mark advisory.
+
+#### Scenario: A tampered claim is refused
+
+- GIVEN a completed trial whose artifact claims another final state
+- WHEN the verifier runs
+- THEN it refuses the trial as `Stale`.
+
+#### Scenario: A foreign history is refused
+
+- GIVEN an artifact whose branch head belongs to another trial's history
+- WHEN the verifier runs
+- THEN it refuses the trial as `Malformed`.
+
+### Requirement: Trials project validated ATIF trajectories
+
+r[agent_harness_runtime.campaign_manager_eval.trajectory] Each trial MUST project an ATIF-v1.7 trajectory through `project_atif`. Each manager turn is an agent step with one correlated `campaign.advise` call. Each host step is a system step with one correlated `campaign.execute`, `campaign.wait`, or `campaign.stop` call, and the last step is terminal. The projection MUST carry no prompt, reply, or label text.
+
+#### Scenario: A trial's steps project
+
+- GIVEN a finished trial
+- WHEN its trajectory is projected
+- THEN it has one step per manager turn plus one per host step, each with one call.
+
+#### Scenario: An empty trial does not project
+
+- GIVEN no turns
+- WHEN a trajectory is projected
+- THEN projection refuses with `Bound`.
+
+### Requirement: Jobs run the task × route matrix through the Harbor slice
+
+r[agent_harness_runtime.campaign_manager_eval.job] A job MUST:
+1. plan every task against every route with `plan_trials`;
+2. run each trial through `execute_separate_verifier`;
+3. report every trial that does not complete;
+4. reduce each route's verifier rewards with `reduce_rewards`;
+5. build the metadata-only receipt with `receipt` from the completed trials' trajectory projections.
+
+#### Scenario: The job separates managers
+
+- GIVEN the scripted routes
+- WHEN the job runs every task
+- THEN every trial completes, signal-greedy finds every target with no refusals, explore-only finds fewer, and malformed finds none with every turn refused.
+
+### Requirement: The evaluation report is metadata only
+
+r[agent_harness_runtime.campaign_manager_eval.report] The evaluation binary's report MUST hold only the job and profile identities, the planned, completed, and failed counts, per-route completion counts and mean rewards with advisory markers, failure classes, the trajectory count, and the non-claims. It MUST never hold prompts, replies, labels, or credentials. Unsupported arguments MUST fail without a report.
+
+#### Scenario: The scripted report leaks nothing
+
+- GIVEN the scripted job
+- WHEN the binary reports it
+- THEN no objective, label, signal annotation, or reply text appears in the report.
+
+### Requirement: The live route is opt-in and reviewed
+
+r[agent_harness_runtime.campaign_manager_eval.live] Under the `live` feature, the lane MUST offer a route to the reviewed `OpenAI` or `OpenRouter` Responses endpoint with an explicit model and credential. Each turn is one text-only request planned through `plan_provider_dispatch`. The route MUST refuse an inadmissible credential or model before contacting the provider. Its route identity MUST be a safe identity derived from the endpoint and model.
+
+#### Scenario: Inadmissible live routes are refused offline
+
+- GIVEN an empty or multi-word credential, or an empty model
+- WHEN a live route is constructed
+- THEN it refuses with `Credential` or `Model` without contacting the provider.
+
+### Requirement: Campaign-manager evaluation verification
+
+r[agent_harness_runtime.campaign_manager_eval.verification] The change MUST verify the lane with positive and negative tests for its task set, trials, verifier, trajectories, jobs, report, and live-route construction. The focused checks `cargo-campaign-manager-eval` and `campaign-manager-eval-octet` MUST pass, and the generated task set MUST pass `check-nickel-configs`.
+
+#### Scenario: Focused rails pass
+
+- GIVEN the change's crate, config, and tests
+- WHEN the focused checks and the Nickel config rail run
+- THEN all succeed.
+
+#### Scenario: A regression is caught
+
+- GIVEN a lane that graded environment claims instead of the replay, leaked prompt text, or counted no-op replies as refusals
+- WHEN the focused tests run
+- THEN at least one test fails.
+
+### Requirement: A frozen local scorer is a guidance-only manager route
+
+r[agent_harness_runtime.campaign_manager_eval.local_scorer.route] The evaluation lane MUST provide a frozen local scorer route that reads only the rendered brief, scores every listed candidate with an admitted frozen policy, and replies in the existing manager reply schema with candidate scores only. The route MUST NOT add offers or retire, prune or stop candidates, and MUST NOT change the manager, Campaign or the verifier.
+
+#### Scenario: The scorer answers with guidance only
+
+- GIVEN an admitted fixture artifact and a brief listing candidates and offers
+- WHEN the route answers
+- THEN the reply scores each listed candidate in brief order
+- AND it adds no offers.
+
+### Requirement: The policy artifact is versioned and identity-bound
+
+r[agent_harness_runtime.campaign_manager_eval.local_scorer.artifact] The route MUST admit only an `animus.campaign-manager-local-scorer.v1` artifact whose BLAKE3 identity over its canonical encoding equals the selected identity. Admission MUST fail with a typed error before any scoring for unknown fields, another schema, policy, feature or action schema, out-of-bounds weights or rank bounds, an unsupported runtime API, or an identity mismatch. A file name MUST NOT serve as identity.
+
+#### Scenario: A mismatched artifact is refused before scoring
+
+- GIVEN artifact bytes whose identity differs from the selected identity, or with one changed weight
+- WHEN the route is built
+- THEN admission fails with a typed error and no score is computed.
+
+### Requirement: Features, ranks and ties are declared
+
+r[agent_harness_runtime.campaign_manager_eval.local_scorer.schema] The scorer MUST project only observations visible in the brief at decision time into the declared per-mille features, in brief order. It MUST compute scores in checked fixed-point integer arithmetic, MUST treat a score outside the declared rank bounds as out of range rather than clamp it, and MUST give equal scores equal ranks without random tie-breaking.
+
+#### Scenario: Hidden facts cannot reach the policy
+
+- GIVEN two tasks whose briefs render identically but whose hidden targets differ
+- WHEN the scorer answers both
+- THEN the features and replies are identical.
+
+### Requirement: Failures fall back deterministically and visibly
+
+r[agent_harness_runtime.campaign_manager_eval.local_scorer.fallback] The route MUST record a `scored`, `malformed-brief`, `out-of-range`, `operation-budget`, `incompatible-artifact` or `unavailable` disposition for every call. Every disposition except `scored` MUST answer with the `explore-only` reply for the same brief and record that fallback and its cost.
+
+#### Scenario: A malformed brief falls back
+
+- GIVEN a brief listing a signal above the task schema's bound
+- WHEN the scorer answers
+- THEN the reply equals `explore-only`'s reply
+- AND the record shows `malformed-brief` with the fallback charged.
+
+### Requirement: Decisions are recorded, not regenerated
+
+r[agent_harness_runtime.campaign_manager_eval.local_scorer.record] The route MUST retain, per call, the artifact identity, per-candidate features and scores, the disposition, the fallback and deterministic cost units, up to a fixed bound past which it refuses calls. Reports and replay MUST use these records and MUST NOT re-run inference.
+
+#### Scenario: Records bind what was decided
+
+- GIVEN a completed job
+- WHEN its decision records are read
+- THEN each scored call carries the admitted identity, its features and its scores.
+
+### Requirement: Random ranking is a budget-matched baseline
+
+r[agent_harness_runtime.campaign_manager_eval.local_scorer.baseline] The lane MUST provide a random-ranking route that emits one uniform rank per listed candidate within the declared rank bounds from a declared seed and the call index, adds no offers, and runs on the same tasks, turns and selection budgets as the other arms.
+
+#### Scenario: The same seed repeats
+
+- GIVEN two runs of the random route with the same seed
+- WHEN both answer the same brief sequence
+- THEN their replies are identical.
+
+### Requirement: The comparison is predeclared and reported in full
+
+r[agent_harness_runtime.campaign_manager_eval.local_scorer.evaluation] The lane MUST load arms, seeds, tasks, outcomes and the adoption rule from a checked Nickel protocol before running, and its report MUST give per-arm completion, rewards, fallback counts, cost units and latency, mark broader-grant arms as non-comparable, and state the go/no-go decision with null or regression results unchanged.
+
+#### Scenario: A losing scorer is reported as no-go
+
+- GIVEN a scorer whose mean `found` is below the adoption rule
+- WHEN the comparison runs
+- THEN the report states no-go with the measured values.
+
+### Requirement: The scorer boundary is verified
+
+r[agent_harness_runtime.campaign_manager_eval.local_scorer.verification] The change MUST include positive and negative tests for admission, projection, ranking, dispositions, records and the baseline, and MUST pass formatting, Clippy, the crate tests, the evaluator checks, Octet and Cairn validation.
+
+#### Scenario: Negative controls stay red
+
+- GIVEN tampered artifacts and malformed briefs
+- WHEN the tests run
+- THEN each is refused or falls back with its declared disposition.
