@@ -22,4 +22,5 @@
 
 - [x] [parallel] Document the lane, the task model, the grading, the routes, the live invocation, and the non-claims in `docs/campaign-manager-eval.md` and `README.md`. r[agent_harness_runtime.campaign_manager_eval.boundary]
 - [x] [serial] Register the change in `.cairn/roadmap.ncl` and pass the roadmap and Cairn validation rails. r[agent_harness_runtime.campaign_manager_eval.verification]
-- [ ] [serial] After review, sync the requirements into `.cairn/specs/agent-harness-runtime/spec.md` and archive the change. r[agent_harness_runtime.campaign_manager_eval.verification]
+- [x] [serial] After review, sync the requirements into `.cairn/specs/agent-harness-runtime/spec.md` and archive the change. r[agent_harness_runtime.campaign_manager_eval.verification]
+  - Reviewed on 2026-11-18; the owner confirmed the fixes and the archive. See [review](evidence/review-2026-11-18.md).

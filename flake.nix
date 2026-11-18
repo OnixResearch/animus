@@ -777,6 +777,7 @@
 
           cargo-campaign-manager-eval = cargoCheck "animus-cargo-campaign-manager-eval" [ pkgs.clippy ] ''
             cargo test -p animus-campaign-manager-eval --features live --locked
+            cargo test -p animus-campaign-manager-eval --locked --test report
             cargo clippy -p animus-campaign-manager-eval --all-targets --locked -- -D warnings
             cargo clippy -p animus-campaign-manager-eval --all-targets --features live --locked -- -D warnings
             cargo run -q -p animus-campaign-manager-eval --locked

@@ -22,3 +22,30 @@ fn the_scripted_report_holds_metadata_only() -> Result<(), String> {
     assert!(refused.stdout.is_empty());
     Ok(())
 }
+
+#[cfg(not(feature = "live"))]
+#[test]
+// r[verify agent_harness_runtime.campaign_manager_eval.boundary]
+fn live_mode_needs_a_build_with_the_live_feature() -> Result<(), String> {
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_animus-campaign-manager-eval"))
+        .args([
+            "--live",
+            "openrouter",
+            "--model",
+            "model",
+            "--credential-stdin",
+        ])
+        .output()
+        .map_err(|error| error.to_string())?;
+    assert!(!output.status.success());
+    assert!(
+        output.stdout.is_empty(),
+        "a refused invocation prints no report"
+    );
+    let error = String::from_utf8(output.stderr).map_err(|error| error.to_string())?;
+    assert!(
+        error.contains("live mode needs a build with `--features live`"),
+        "{error}"
+    );
+    Ok(())
+}

@@ -75,4 +75,4 @@ Animus adapts Harbor's evaluation mechanisms into Rust:
 
 - The tasks are small and synthetic, so scores rank managers only on them.
 - A route may exploit the label format rather than the objective. The tasks keep the signal meaningful, but they do not prove semantic reasoning.
-- The git-based flake checks see only tracked files. While other uncommitted work leaves `animus-runtime` referencing an untracked module, `cargo-campaign-manager-eval` and `campaign-manager-eval-octet` build only from a snapshot of the working tree.
+- The git-based flake checks see only tracked files, so `cargo-campaign-manager-eval` and `campaign-manager-eval-octet` check the committed or staged sources, not untracked work in the tree.
