@@ -133,6 +133,9 @@ mod runtime_authority_seal;
 #[cfg(feature = "sandlock-host")]
 #[path = "sandlockhost/mod.rs"]
 pub mod sandlock_host;
+/// Non-default serving-readiness and request-admission host path over the Mesh shell.
+#[cfg(feature = "serving-admission")]
+pub mod serving;
 #[cfg(feature = "spacewasm-diagnostic")]
 pub mod spacewasm;
 #[cfg(feature = "syndicate-host")]

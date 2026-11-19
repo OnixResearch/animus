@@ -1,6 +1,7 @@
 //! Non-default Mesh LLM host adapter over an injected bounded transport.
 
 use animus_adapters::mesh::{DispatchAdmission, DispatchDecision, ResponseModelDecision};
+use animus_adapters::serving::ResponseFacts;
 use serde::Deserialize;
 
 /// Reviewed API path for the initial profile.
@@ -32,6 +33,9 @@ pub struct TransportOutcome {
     pub body: Vec<u8>,
     /// Reported exact semantic model.
     pub response_model: Option<String>,
+    /// Bounded usage and policy-generation facts the transport extracted;
+    /// [`ResponseFacts::UNREPORTED`] when the provider reported none.
+    pub facts: ResponseFacts,
 }
 
 /// Canonical transport status before retry ownership.
@@ -99,6 +103,8 @@ pub struct ProviderObservation {
     pub model_fidelity: ResponseModelDecision,
     /// Bounded provider bytes.
     pub body: Vec<u8>,
+    /// Bounded usage and policy-generation facts reported by the transport.
+    pub facts: ResponseFacts,
 }
 
 /// Executes only after all existing policy and authority decisions admit the request.
@@ -144,6 +150,7 @@ pub fn execute<T: MeshTransport>(
         status: outcome.status,
         model_fidelity: fidelity,
         body: outcome.body,
+        facts: outcome.facts,
     })
 }
 
@@ -274,6 +281,7 @@ mod tests {
                 status: self.status,
                 body: b"fixture".to_vec(),
                 response_model: Some(self.model.into()),
+                facts: ResponseFacts::UNREPORTED,
             })
         }
     }

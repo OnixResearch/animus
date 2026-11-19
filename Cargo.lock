@@ -484,6 +484,7 @@ dependencies = [
  "animus-core",
  "animus-eval-core",
  "animus-preserves",
+ "animus-router",
  "animus-runtime",
  "animus-std-observability",
  "animus-steel",

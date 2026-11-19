@@ -105,6 +105,7 @@ const ALLOWED_FEATURES: &[&str] = &[
     "headless",
     "loop",
     "mesh-provider",
+    "serving-admission",
     "harbor-eval",
     "harbor-atif",
     "basalt-authority-adapter",

@@ -19,6 +19,7 @@
 - The optional `session-event-replay` runtime feature adds nominal cursor identities, durable and live-only event classes, bounded replay planning, and one order for ACP, headless, and TUI projections. The admitted session ledger remains authoritative; see [docs/session-event-replay.md](docs/session-event-replay.md).
 - The optional `trajectory-transcript-adapter` feature adds an exact `@letta-ai/trajectory` transcript-only cohort behind an injected bounded service, pure trajectory-v1 validation, and existing ledger and batch draft projection. It does not discover stores or persist normalized content; see [docs/trajectory-transcript-adapter.md](docs/trajectory-transcript-adapter.md).
 - The optional `execution-backend-planner` feature selects the weakest policy-admitted backend and requires a current host recheck before effects. It never silently falls back to a broader backend; see [docs/execution-backend-selection.md](docs/execution-backend-selection.md).
+- `animus_adapters::serving` screens named model routes against host-supplied serving readiness and capacity before any preference, gates dispatch on a serving-owner grant and a current recheck, and projects metadata-only per-request usage receipts keyed to the caller's route identity. The non-default `serving-admission` feature adds one injected host path over the Mesh shell. Capacity observations are never reservations; see [docs/serving-admission.md](docs/serving-admission.md).
 - `crates/animus-std` is the standard-library host compatibility shell. It owns environment/config parsing, feature-gated generated model-profile and semantic-role loading, process-facing orchestration, a pure authority catalog, and facade re-exports for authority-scoped host blocks.
 - The non-default `model-catalog` feature validates versioned shipped and user catalogs, deterministic replace-by-ID merge, environment-variable credential references, fail-loud parsing, and manual-only custom connections. See [docs/model-catalog-hygiene.md](docs/model-catalog-hygiene.md).
 - The non-default `models-dev-catalog` feature projects caller-fetched Models.dev snapshots into the shell-owned registry. Exact caller bindings retain API, endpoint, credential, and model authority. See [docs/pi-provider-registry-shell.md](docs/pi-provider-registry-shell.md).
@@ -236,6 +237,7 @@ scripts/cairn/check-schedule-reliability --root .
 scripts/cairn/check-session-event-replay --root .
 scripts/cairn/check-trajectory-transcript-adapter --root .
 scripts/cairn/check-execution-backend-selection --root .
+scripts/cairn/check-serving-admission --root .
 scripts/cairn/check-model-runtime-profiles --root .
 scripts/cairn/check-agent-role-profiles --root .
 scripts/cairn/check-multi-role-host-smoke --root .

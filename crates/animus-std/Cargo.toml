@@ -43,6 +43,7 @@ harness-convergence = ["dep:animus-runtime"]
 native-evaluation-profile = ["dep:animus-eval-core", "dep:serde", "dep:serde_json"]
 mesh-provider = ["dep:serde", "dep:serde_json"]
 model-catalog = ["dep:serde", "dep:serde_json"]
+serving-admission = ["mesh-provider", "dep:animus-router"]
 models-dev-catalog = ["dep:serde", "dep:serde_json"]
 model-runtime-profiles = ["dep:animus-runtime", "dep:serde", "dep:serde_json"]
 pending-input-vault = ["coding-session-host", "active-turn-recovery"]
@@ -118,6 +119,7 @@ animus-adapters = { path = "../animus-adapters", version = "0.1.0" }
 animus-core = { path = "../animus-core", version = "0.1.0" }
 animus-eval-core = { path = "../animus-eval-core", version = "0.1.0", optional = true }
 animus-preserves = { path = "../animus-preserves", version = "0.1.0", optional = true }
+animus-router = { path = "../animus-router", version = "0.1.0", optional = true }
 animus-runtime = { path = "../animus-runtime", version = "0.1.0", default-features = false, optional = true }
 animus-steel = { path = "../animus-steel", version = "0.1.0", optional = true }
 animus-std-observability = { path = "../animus-std-observability", version = "0.1.0", optional = true }

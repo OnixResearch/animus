@@ -158,6 +158,17 @@ pub mod mesh_provider {
     };
 }
 
+/// Non-default serving-readiness, request-admission, and usage-receipt host path.
+#[cfg(feature = "serving-admission")]
+pub mod serving_admission {
+    pub use animus_adapters::serving::*;
+    pub use animus_std::serving::{
+        CodecError, CurrentRecord, CurrentReply, FixtureOwner, Invocation, InvocationError,
+        InvocationReport, MAX_SNAPSHOT_BYTES, OwnerCall, OwnerPort, Selection, UnavailableOwner,
+        invoke, parse_profile, parse_snapshot, receipt_json,
+    };
+}
+
 /// Re-export of the non-default ACP stdio host adapter.
 #[cfg(feature = "acp-stdio-host")]
 pub use animus_acp_stdio_host as acp_stdio_host;

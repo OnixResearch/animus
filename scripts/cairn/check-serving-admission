@@ -1,0 +1,84 @@
+#!/usr/bin/env sh
+# r[verify agent_harness_runtime.serving_admission.snapshot]
+# r[verify agent_harness_runtime.serving_admission.eligibility]
+# r[verify agent_harness_runtime.serving_admission.gate]
+# r[verify agent_harness_runtime.serving_admission.receipt]
+# r[verify agent_harness_runtime.serving_admission.rollout]
+# r[verify agent_harness_runtime.serving_admission.host_path]
+set -eu
+
+readonly FAILURE=1
+readonly RECEIPT_SCHEMA='animus.focused-rail-receipt.v1'
+readonly RAIL_NAME='serving-admission'
+readonly PROFILE_SOURCE='config/serving-capacity-profile.ncl'
+readonly GENERATED_PROFILE='config/generated/serving-capacity-profile.json'
+readonly PROFILE_FIXTURES='config/serving-capacity-profile/fixtures'
+readonly SNAPSHOT_FIXTURE='fixtures/serving-admission/snapshot-cpu-worker-remote.json'
+readonly CORE_SOURCE='crates/animus-adapters/src/serving'
+readonly CORE_ROOT='crates/animus-adapters/src/serving.rs'
+readonly STD_SOURCE='crates/animus-std/src/serving'
+readonly STD_ROOT='crates/animus-std/src/serving.rs'
+readonly CONTRACT_DOC='docs/serving-admission.md'
+
+root='.'
+if [ "${1:-}" = '--root' ]; then
+  root=${2:-.}
+fi
+cd "${root}"
+
+for command_name in cargo nickel; do
+  if ! command -v "${command_name}" >/dev/null 2>&1; then
+    printf 'error: %s is required for serving-admission checks\n' "${command_name}" >&2
+    exit "${FAILURE}"
+  fi
+done
+
+if grep -R -E 'std::|SystemTime|Instant::now|reqwest|hyper::|TcpStream|Command::new|env::var' \
+  "${CORE_ROOT}" "${CORE_SOURCE}" --include='*.rs' >/dev/null 2>&1
+then
+  printf '%s\n' 'error: serving pure core gained ambient clock, network, process, or environment authority' >&2
+  exit "${FAILURE}"
+fi
+if grep -R -E 'reqwest|iroh|std::env|std::process|Command::new|SystemTime|Instant::now|std::fs' \
+  "${STD_ROOT}" "${STD_SOURCE}" --include='*.rs' >/dev/null 2>&1
+then
+  printf '%s\n' 'error: serving host path gained ambient discovery, clock, filesystem, or network authority' >&2
+  exit "${FAILURE}"
+fi
+if ! grep -F 'not live evidence' "${CONTRACT_DOC}" >/dev/null; then
+  printf '%s\n' 'error: serving-admission fixture/live non-claim is undocumented' >&2
+  exit "${FAILURE}"
+fi
+
+exported=$(mktemp)
+fixture_error=$(mktemp)
+trap 'rm -f "${exported}" "${fixture_error}"' EXIT HUP INT TERM
+nickel export --format json --field serving_capacity_profile "${PROFILE_SOURCE}" > "${exported}"
+diff -u "${GENERATED_PROFILE}" "${exported}"
+for fixture in "${PROFILE_FIXTURES}"/valid-*.ncl; do
+  nickel export --format json --field fixture "${fixture}" >/dev/null
+done
+for fixture in "${PROFILE_FIXTURES}"/negative-*.ncl; do
+  expected_issue=$(nickel export --format raw --field expected_issue "${fixture}")
+  if nickel export --format json --field fixture "${fixture}" >/dev/null 2>"${fixture_error}"; then
+    printf 'error: negative serving profile fixture unexpectedly passed: %s\n' "${fixture}" >&2
+    exit "${FAILURE}"
+  fi
+  if ! grep -F "${expected_issue}" "${fixture_error}" >/dev/null; then
+    printf 'error: serving profile fixture missed issue %s: %s\n' "${expected_issue}" "${fixture}" >&2
+    exit "${FAILURE}"
+  fi
+done
+test -s "${SNAPSHOT_FIXTURE}"
+
+cargo test -p animus-adapters --locked serving
+cargo test -p animus-std --no-default-features --features serving-admission --locked serving
+cargo test -p animus-std --no-default-features --features mesh-provider --locked mesh
+cargo clippy -p animus-adapters --all-targets --locked -- -D warnings
+cargo clippy -p animus-std --no-default-features --features serving-admission --all-targets --locked -- -D warnings
+cargo check -p animus-std --no-default-features --locked
+cargo check -p animus --features serving-admission --locked
+
+printf 'schema: %s\nrail: %s\nstatus: pass\nevidence: fixture\nnon_claims: live-endpoint-qualification,gpu-scheduling,production-availability,provider-honesty,capacity-reservation\n' \
+  "${RECEIPT_SCHEMA}" "${RAIL_NAME}"
+printf '%s\n' 'focused rail serving-admission: pass'

@@ -39,6 +39,7 @@ The catalog names Lego-style Animus components, application-owned capability sea
 | `adapters.harbor-evaluation` | `host-injection-surface` | `animus-adapters` | `always` | `injected-only` | `adapter-contracts` | `cargo test -p animus-adapters harbor --locked<br>scripts/cairn/check-harbor-evaluation --root .` | `animus_adapters::harbor` |
 | `adapters.spacewasm-diagnostic` | `host-injection-surface` | `animus-adapters` | `always` | `injected-only` | `adapter-contracts` | `cargo test -p animus-adapters spacewasm --locked<br>scripts/cairn/check-spacewasm-compat --root .` | `animus_adapters::spacewasm` |
 | `adapters.mesh-provider` | `host-injection-surface` | `animus-adapters` | `always` | `injected-only` | `model` | `cargo test -p animus-adapters mesh --locked<br>scripts/cairn/check-mesh-provider --root .` | `animus_adapters::mesh` |
+| `adapters.serving-admission` | `host-injection-surface` | `animus-adapters` | `always` | `injected-only` | `model` | `cargo test -p animus-adapters serving --locked<br>scripts/cairn/check-serving-admission --root .` | `animus_adapters::serving::{screen_routes, gate_dispatch, project_receipt}` |
 | `adapters.codebase-graph` | `host-injection-surface` | `animus-adapters` | `always` | `injected-only` | `context` | `cargo test -p animus-adapters codegraph --locked<br>scripts/cairn/check-codebase-graph --root .` | `animus_adapters::codegraph::{CodeGraphQueryService, CodeGraphIndex, CodeGraphReceipt}` |
 | `adapters.document-ingest` | `reusable-contract` | `animus-adapters` | `always` | `none` | `document-ingest` | `cargo test -p animus-adapters document --locked<br>scripts/cairn/check-adapter-conformance-index --root .` | `animus_adapters::{DocumentIngestReport, validate_document_ingest_report}` |
 | `adapters.model-evidence` | `reusable-contract` | `animus-adapters` | `always` | `none` | `model-evidence` | `cargo test -p animus-adapters modelevidence --locked<br>scripts/cairn/check-adapter-conformance-index --root .` | `animus_adapters::{ModelEvidenceReport, validate_model_evidence_report}` |
@@ -159,6 +160,7 @@ The catalog names Lego-style Animus components, application-owned capability sea
 | `std.harbor-evaluation` | `shell-adapter` | `animus-std` | `harbor-eval` | `shell-owned` | `std-shell` | `cargo test -p animus-std --no-default-features --features harbor-eval harbor --locked<br>scripts/cairn/check-harbor-evaluation --root .` | `animus_std::harbor::{execute_separate_verifier, validate_profile_json}` |
 | `std.spacewasm-diagnostic` | `shell-adapter` | `animus-std` | `spacewasm-diagnostic` | `shell-owned` | `std-shell` | `cargo test -p animus-std --no-default-features --features spacewasm-diagnostic spacewasm --locked<br>scripts/cairn/check-spacewasm-compat --root .` | `animus_std::spacewasm::{DiagnosticService, execute}` |
 | `std.mesh-provider` | `shell-adapter` | `animus-std` | `mesh-provider` | `shell-owned` | `model` | `cargo test -p animus-std --no-default-features --features mesh-provider mesh --locked<br>scripts/cairn/check-mesh-provider --root .` | `animus_std::mesh::{MeshTransport, execute}` |
+| `std.serving-admission` | `shell-adapter` | `animus-std` | `serving-admission` | `shell-owned` | `model` | `cargo test -p animus-std --no-default-features --features serving-admission serving --locked<br>scripts/cairn/check-serving-admission --root .` | `animus_std::serving::{OwnerPort, invoke}` |
 | `std.codebase-graph-host` | `shell-adapter` | `animus-std` | `codebase-graph-host` | `shell-owned` | `context` | `cargo test -p animus-std --features codebase-graph-host codegraph --locked<br>scripts/cairn/check-codebase-graph --root .` | `animus_std::{CodeGraphHost, parse_code_graph_profile_json}` |
 | `std.codebase-tool-host` | `shell-adapter` | `animus-std` | `codebase-tool-host` | `shell-owned` | `tool` | `cargo test -p animus-std --features codebase-tool-host codebase_tool --locked<br>scripts/cairn/check-codebase-tool-host --root .` | `animus_std::codebase_tool::{CodebaseQueryToolExecutor, execute_codebase_query_tool}` |
 | `std.context-shell` | `shell-adapter` | `animus-std` | `std` | `shell-owned` | `context` | `cargo test -p animus-std context --locked<br>scripts/cairn/check-request-lifecycle --root .` | `animus_std::{LocalFileContextResolver, LocalDirectoryContextResolver}` |
@@ -221,6 +223,7 @@ The catalog names Lego-style Animus components, application-owned capability sea
 | `adapters.harbor-evaluation` | `adapters.dto-boundary`, `adapters.safe-receipts`, `adapters.native-evaluation-services` | - |
 | `adapters.spacewasm-diagnostic` | `adapters.dto-boundary`, `adapters.safe-receipts` | - |
 | `adapters.mesh-provider` | `adapters.dto-boundary`, `adapters.safe-receipts` | - |
+| `adapters.serving-admission` | `adapters.dto-boundary`, `adapters.safe-receipts`, `adapters.mesh-provider`, `router.recipe-selection` | - |
 | `adapters.codebase-graph` | `adapters.context-references`, `adapters.safe-receipts` | - |
 | `adapters.document-ingest` | `adapters.context-references` | - |
 | `adapters.model-evidence` | `adapters.dto-boundary` | - |
@@ -341,6 +344,7 @@ The catalog names Lego-style Animus components, application-owned capability sea
 | `std.harbor-evaluation` | `runtime.harbor-evaluation-core`, `adapters.harbor-evaluation`, `std.host-authority-catalog` | - |
 | `std.spacewasm-diagnostic` | `adapters.spacewasm-diagnostic`, `std.host-authority-catalog` | - |
 | `std.mesh-provider` | `adapters.mesh-provider`, `std.host-authority-catalog` | - |
+| `std.serving-admission` | `adapters.serving-admission`, `std.mesh-provider`, `std.host-authority-catalog` | - |
 | `std.codebase-graph-host` | `adapters.codebase-graph`, `adapters.context-references`, `std.host-authority-catalog` | - |
 | `std.codebase-tool-host` | `std.codebase-graph-host`, `runtime.tool-executor-kit`, `std.host-authority-catalog` | - |
 | `std.context-shell` | `runtime.loop-kernel`, `adapters.context-references`, `std.host-authority-catalog` | - |

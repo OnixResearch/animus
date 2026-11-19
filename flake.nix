@@ -168,6 +168,7 @@
               diff -u ${./config/generated/agent-guardrail-profile.json} "$tmp_dir/config/generated/agent-guardrail-profile.json"
               diff -u ${./config/generated/codebase-graph-profile.json} "$tmp_dir/config/generated/codebase-graph-profile.json"
               diff -u ${./config/generated/mesh-provider-profile.json} "$tmp_dir/config/generated/mesh-provider-profile.json"
+              diff -u ${./config/generated/serving-capacity-profile.json} "$tmp_dir/config/generated/serving-capacity-profile.json"
               diff -u ${./config/generated/spacewasm-embedded-compat.json} "$tmp_dir/config/generated/spacewasm-embedded-compat.json"
               diff -u ${./config/generated/harbor-evaluation-profile.json} "$tmp_dir/config/generated/harbor-evaluation-profile.json"
               diff -u ${./config/generated/campaign-manager-eval-tasks.json} "$tmp_dir/config/generated/campaign-manager-eval-tasks.json"
@@ -365,6 +366,7 @@
                 || baseName == "check-agent-control"
                 || baseName == "check-codebase-graph"
                 || baseName == "check-mesh-provider"
+                || baseName == "check-serving-admission"
                 || baseName == "check-spacewasm-compat"
                 || baseName == "check-harbor-evaluation"
                 || baseName == "check-host-control-extraction"
@@ -1599,6 +1601,10 @@
             ${self.packages.${pkgs.stdenv.hostPlatform.system}.check-nickel-configs}/bin/check-nickel-configs
             export ANIMUS_MESH_SKIP_NICKEL=1
             sh scripts/cairn/check-mesh-provider --root .
+          '';
+
+          serving-admission = cargoCheck "animus-serving-admission" [ pkgs.clippy pkgs.nickel ] ''
+            sh scripts/cairn/check-serving-admission --root .
           '';
 
           branchfs-host = cargoCheck "animus-branchfs-host" [ pkgs.clippy ] ''

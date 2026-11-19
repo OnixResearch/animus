@@ -854,6 +854,13 @@ let change_entries = [
   change "add-campaign-manager-eval" evaluation_role "evaluation" [
     "add-campaign-manager",
   ] [],
+  # Animus #17 (https://github.com/OnixResearch/animus/issues/17): serving readiness,
+  # owner request admission, and per-request usage receipts over the Mesh path.
+  # Fixture qualification only; live endpoint qualification (task 3.3) remains open.
+  change "consume-serving-readiness-admission" host_role "concrete-adapters" [
+    "add-mesh-llm-provider-adapter",
+    "define-model-router-execution-service",
+  ] ["negotiate-model-capability-matrix", "adapt-tau-provider-retry-execution"],
 ]
 in
 
