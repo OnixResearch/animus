@@ -33,7 +33,7 @@ rm -rf /tmp/s1-head && mkdir /tmp/s1-head && git archive HEAD | tar -x -C /tmp/s
 
 ## Full flake result
 
-The full `nix flake check -L --keep-going` result for this combined tree is recorded in the integration commit message, not in this file, because the run starts after the last tracked-file edit.
+`nix flake check -L --keep-going --builders '' --max-jobs 2 --cores 8 path:$PWD` on this tree, committed unchanged as `1c370d5029a2667051c46bdfa1919e78e65e2f4b`: exit 0; 145 x86_64-linux checks, 151 derivations built, 0 failures, 8023 s. aarch64-linux outputs are not evaluated by default. The flake's own clippy check on the pinned toolchain passes; the six findings above come only from the newer host nightly.
 
 ## Non-claims
 
