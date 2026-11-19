@@ -29,10 +29,11 @@ impl Role {
 }
 
 /// Renders the report of `finished`, the job of `arms` under `protocol`.
-pub(super) fn render(
+pub(super) fn render<S: super::Recorded>(
     protocol: &animus_campaign_manager_eval::ComparisonProtocol,
     finished: &animus_campaign_manager_eval::JobReport,
-    arms: &super::Arms,
+    arms: &super::Arms<S>,
+    header: &super::Header,
 ) -> Result<String, String> {
     let input = adoption_input(finished, arms)?;
     let decision = match animus_campaign_manager_eval::decide_adoption(&protocol.adoption, &input) {
@@ -40,12 +41,15 @@ pub(super) fn render(
         animus_campaign_manager_eval::AdoptionDecision::NoGo => "no-go",
     };
     let mut lines = vec![
-        String::from("LOCAL_SCORER_COMPARISON status=completed"),
+        format!("{} status=completed", header.title),
         format!(
             "job={} protocol={}",
             finished.receipt.job_identity, protocol.schema
         ),
-        format!("artifact={} provenance=fixture", protocol.artifact_identity),
+        format!(
+            "artifact={} provenance={}",
+            protocol.artifact_identity, header.provenance
+        ),
         format!(
             "planned={} completed={} failed={}",
             finished.receipt.planned,
@@ -81,9 +85,9 @@ pub(super) fn render(
 }
 
 /// One line per arm in job order, with the scorer's dispositions after its own line.
-fn arm_lines(
+fn arm_lines<S: super::Recorded>(
     finished: &animus_campaign_manager_eval::JobReport,
-    arms: &super::Arms,
+    arms: &super::Arms<S>,
 ) -> Vec<String> {
     let mut lines = vec![arm_line(finished, Role::Baseline, &arms.baseline)];
     lines.extend(
@@ -92,7 +96,7 @@ fn arm_lines(
             .map(|reference| arm_line(finished, Role::Reference, reference)),
     );
     lines.push(arm_line(finished, Role::Scorer, &arms.scorer));
-    lines.push(scorer_line(arms.scorer.inner.decisions()));
+    lines.push(scorer_line(arms.scorer.inner.records()));
     lines.extend(
         arms.randoms
             .iter()
@@ -135,7 +139,7 @@ fn arm_line<A>(
     )
 }
 
-/// The scorer's dispositions and summed deterministic cost units.
+/// The scorer's dispositions, summed deterministic cost units, and retained leaf receipts.
 fn scorer_line(decisions: &[animus_campaign_manager_eval::DecisionRecord]) -> String {
     let with = |disposition: animus_campaign_manager_eval::Disposition| {
         decisions
@@ -157,15 +161,21 @@ fn scorer_line(decisions: &[animus_campaign_manager_eval::DecisionRecord]) -> St
         }),
         "exactly the unscored decisions name a fallback"
     );
-    format!(
-        "scorer decisions={} scored={} malformed_brief={} out_of_range={} operation_budget={} incompatible_artifact={} unavailable={} brief_bytes={} feature_operations={} inference_operations={} fallback_candidates={}",
-        decisions.len(),
+    let dispositions = format!(
+        "scored={} malformed_brief={} out_of_range={} operation_budget={} incompatible_artifact={} unavailable={} stale={} abstained={}",
         with(animus_campaign_manager_eval::Disposition::Scored),
         with(animus_campaign_manager_eval::Disposition::MalformedBrief),
         with(animus_campaign_manager_eval::Disposition::OutOfRange),
         with(animus_campaign_manager_eval::Disposition::OperationBudget),
         with(animus_campaign_manager_eval::Disposition::IncompatibleArtifact),
         with(animus_campaign_manager_eval::Disposition::Unavailable),
+        with(animus_campaign_manager_eval::Disposition::Stale),
+        with(animus_campaign_manager_eval::Disposition::Abstained),
+    );
+    let receipts: usize = decisions.iter().map(|record| record.receipts.len()).sum();
+    format!(
+        "scorer decisions={} {dispositions} brief_bytes={} feature_operations={} inference_operations={} fallback_candidates={} leaf_receipts={receipts}",
+        decisions.len(),
         total(|cost| cost.brief_bytes),
         total(|cost| cost.feature_operations),
         total(|cost| cost.inference_operations),
@@ -174,9 +184,9 @@ fn scorer_line(decisions: &[animus_campaign_manager_eval::DecisionRecord]) -> St
 }
 
 /// The measured means and fallback share that the adoption rule compares.
-fn adoption_input(
+fn adoption_input<S: super::Recorded>(
     finished: &animus_campaign_manager_eval::JobReport,
-    arms: &super::Arms,
+    arms: &super::Arms<S>,
 ) -> Result<animus_campaign_manager_eval::AdoptionInput, String> {
     let randoms = arms
         .randoms
@@ -187,7 +197,7 @@ fn adoption_input(
         scorer: found_mean(finished, &arms.scorer.identity)?,
         baseline: found_mean(finished, &arms.baseline.identity)?,
         random: mean(&randoms)?,
-        scorer_fallback_per_mille: fallback_per_mille(arms.scorer.inner.decisions())?,
+        scorer_fallback_per_mille: fallback_per_mille(arms.scorer.inner.records())?,
     })
 }
 

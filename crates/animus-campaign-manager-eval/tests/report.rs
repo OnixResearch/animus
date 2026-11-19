@@ -23,6 +23,27 @@ fn the_scripted_report_holds_metadata_only() -> Result<(), String> {
     Ok(())
 }
 
+#[test]
+// r[verify agent_harness_runtime.frozen_policy.evaluation]
+fn the_frozen_policy_report_states_its_decision_and_holds_metadata_only() -> Result<(), String> {
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_animus-campaign-manager-eval"))
+        .arg("--frozen-policy")
+        .output()
+        .map_err(|error| error.to_string())?;
+    let printed = String::from_utf8(output.stdout).map_err(|error| error.to_string())?;
+    assert!(output.status.success(), "{printed}");
+    assert!(printed.starts_with("FROZEN_POLICY_COMPARISON status=completed\n"));
+    assert!(printed.contains("protocol=animus.campaign-manager-frozen-policy-eval.v1\n"));
+    assert!(printed.contains("provenance=fixture\n"));
+    assert!(printed.contains("planned=33 completed=33 failed=0\n"));
+    assert!(printed.contains("arm role=scorer route=model:frozen-policy:"));
+    assert!(printed.contains("\ndecision="));
+    for leaked in ["Objective", "includes/", "signal 9", "Reply with"] {
+        assert!(!printed.contains(leaked), "the report leaks {leaked}");
+    }
+    Ok(())
+}
+
 #[cfg(not(feature = "live"))]
 #[test]
 // r[verify agent_harness_runtime.campaign_manager_eval.boundary]

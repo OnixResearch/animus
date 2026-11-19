@@ -1,13 +1,16 @@
-//! The frozen local scorer route and its random-ranking baseline.
+//! The frozen local scorer routes and their random-ranking baseline.
 //!
-//! The scorer reads only the rendered brief, projects the declared features of every listed
+//! Each scorer reads only the rendered brief, projects the declared features of every listed
 //! candidate, scores them with an admitted frozen policy, and replies with candidate scores only:
 //! it adds no offers and retires, prunes, or stops nothing. Every call records its decision; a call
-//! the scorer cannot answer falls back to the declared `explore-only` reply and says so.
+//! the scorer cannot answer falls back to the declared `explore-only` reply and says so. The
+//! linear scorer owns its own `animus.campaign-manager-local-scorer.v1` artifact; the
+//! frozen-policy route classifies candidates through the shared `animus-frozen-policy` leaf.
 
 mod admission;
 mod baseline;
 mod features;
+mod leaf;
 
 pub use admission::{
     ACTION_SCHEMA, ARTIFACT_API, ARTIFACT_SCHEMA, AdmittedArtifact, ArtifactError, FEATURE_SCHEMA,
@@ -15,6 +18,7 @@ pub use admission::{
 };
 pub use baseline::RandomRankRoute;
 pub use features::{FEATURE_COUNT, FEATURE_NAMES};
+pub use leaf::{CANDIDATE_OPERATIONS, CLASS_ACTION_SCHEMA, CLASS_ACTIONS, ClassifierRoute};
 
 /// Decisions one route retains; later calls are refused.
 pub const MAX_DECISIONS: usize = 4_096;
@@ -38,6 +42,10 @@ pub enum Disposition {
     IncompatibleArtifact,
     /// No artifact was supplied.
     Unavailable,
+    /// The route's binding pins another artifact or schema than the admitted one.
+    Stale,
+    /// The policy's best score for a candidate lies below its declared abstention threshold.
+    Abstained,
 }
 
 /// Deterministic cost units of one call.
@@ -70,6 +78,9 @@ pub struct DecisionRecord {
     pub fallback: Option<super::ScriptedPolicy>,
     /// The call's cost units.
     pub cost: CostUnits,
+    /// The `animus.frozen-policy-receipt.v1` identities of the call's leaf decisions, in brief
+    /// order; empty for the linear scorer.
+    pub receipts: Vec<String>,
 }
 
 /// A manager route answered by an admitted frozen local policy.
@@ -165,6 +176,7 @@ impl LocalScorerRoute {
             disposition: decided.disposition,
             fallback,
             cost,
+            receipts: Vec::new(),
         });
         Ok(reply)
     }

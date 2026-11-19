@@ -99,6 +99,27 @@ On the checked task set the comparison reports:
 
 All 17 scorer decisions were scored without fallback. The adoption rule requires the scorer's mean `found` to exceed the baseline's by 0.100, to reach the random mean, and to have no fallback, so the decision is **no-go**: the fixture matches the baseline's findings with higher efficiency but finds nothing more. Latency is reported per arm as a non-deterministic observation.
 
+## Frozen-policy tree route
+
+The frozen-policy route decides each listed candidate's class through the shared `animus-frozen-policy` leaf; see [frozen-policy.md](frozen-policy.md). It projects the same six brief features and declares the classes `follow-signal`, `explore` and `exploit` (`animus.campaign-manager-candidate-class.v1`). It maps them to ranks: an executed candidate's observed signal, 10, and 20. Like the linear scorer it adds no offers. Any refused candidate answers the whole brief with `explore-only`'s reply and records the disposition: `malformed-brief`, `out-of-range`, `operation-budget`, `incompatible-artifact`, `unavailable`, `stale` or `abstained`. Each record keeps every candidate's `animus.frozen-policy-receipt.v1` identity.
+
+The checked fixture `config/campaign-manager-frozen-policy-fixture.ncl` is a seven-node hand-authored decision tree. It was not trained, and it was written before the comparison ran. The predeclared protocol `config/campaign-manager-frozen-policy-eval.ncl` (`animus.campaign-manager-frozen-policy-eval.v1`) keeps the linear scorer's baseline, reference, seeds and adoption rule. Its random arms draw from the route's own rank range, 0 to 20:
+
+```sh
+cargo run -p animus-campaign-manager-eval -- --frozen-policy
+```
+
+On the checked task set the comparison reports:
+
+| Arm | found | efficiency | refusal rate |
+|---|---|---|---|
+| `explore-only` (baseline) | 0.333 | 0.083 | 0.000 |
+| frozen-policy tree (fixture) | 0.333 | 0.167 | 0.000 |
+| random ranking, seeds 1 to 8 | mean 0.167 (0.000 to 0.333 by seed) | 0.000 to 0.333 by seed | 0.000 |
+| `signal-greedy` (broader grant) | 1.000 | 0.556 | 0.000 |
+
+The tree route scored all 17 briefs, 75 candidate decisions with 110 tree splits, without fallback. It ties the baseline on `found` and misses the predeclared 0.100 gain, so the decision is **no-go**. Its per-call latency in a debug build was about ten times the scripted arms', because every candidate decision encodes and hashes a receipt; latency remains a non-deterministic observation.
+
 ## Non-claims
 
 - Scores hold only for these synthetic tasks. They do not measure advice quality on real workloads, and they claim no benchmark superiority.
@@ -106,12 +127,15 @@ All 17 scorer decisions were scored without fallback. The adoption rule requires
 - A route can exploit the label format without understanding the objective.
 - Live scores are not deterministic, and a live run contacts the provider only when invoked.
 - The lane establishes no Harbor Hub, cloud, or container parity, and no production or release readiness.
-- The local scorer's fixture encodes a hand-written heuristic. Its comparison qualifies the route and artifact boundary; it does not measure a trained model, learning, or consumer improvement.
+- The local scorer's and the tree route's fixtures encode hand-written heuristics. Their comparisons qualify the route and artifact boundaries; they do not measure a trained model, learning, or consumer improvement.
+- Cost units compare equal selection budgets. Equal total compute, memory and model-load amortization are not measured.
 
 ## Verification
 
 ```sh
-nix build .#checks.x86_64-linux.cargo-campaign-manager-eval   # tests with live, Clippy with and without live, scripted job, local-scorer comparison
+nix build .#checks.x86_64-linux.cargo-campaign-manager-eval   # tests with live, Clippy with and without live, scripted job, both scorer comparisons
 nix build .#checks.x86_64-linux.campaign-manager-eval-octet   # Octet deny-all with live
-nix build .#checks.x86_64-linux.nickel-config                 # generated task set, scorer fixture and protocol parity
+nix build .#checks.x86_64-linux.cargo-frozen-policy           # leaf tests, Clippy, and the wasm32 no-std check
+nix build .#checks.x86_64-linux.frozen-policy-octet           # Octet deny-all for the leaf
+nix build .#checks.x86_64-linux.nickel-config                 # generated task set, fixtures and protocols parity
 ```

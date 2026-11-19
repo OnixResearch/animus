@@ -7,7 +7,8 @@ mod frozen;
 mod reading;
 
 pub use frozen::{
-    ACTION_SCHEMA, ARTIFACT_API, ARTIFACT_SCHEMA, AdmittedArtifact, ArtifactError, CostUnits,
+    ACTION_SCHEMA, ARTIFACT_API, ARTIFACT_SCHEMA, AdmittedArtifact, ArtifactError,
+    CANDIDATE_OPERATIONS, CLASS_ACTION_SCHEMA, CLASS_ACTIONS, ClassifierRoute, CostUnits,
     DecisionRecord, Disposition, FALLBACK_POLICY, FEATURE_COUNT, FEATURE_NAMES, FEATURE_SCHEMA,
     LocalScorerRoute, MAX_DECISIONS, MAX_PARAMETER_MAGNITUDE, POLICY_KIND, RandomRankRoute,
     RankBounds, admit_artifact, artifact_identity,

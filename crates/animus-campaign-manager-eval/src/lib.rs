@@ -56,8 +56,9 @@ pub use catalog::{
 };
 pub use experiment::{
     AdoptionDecision, AdoptionInput, AdoptionRule, COMPARISON_SCHEMA, ComparisonProtocol,
-    ProtocolError, decide_adoption, embedded_comparison_protocol, embedded_local_scorer_fixture,
-    parse_comparison_protocol,
+    FROZEN_POLICY_COMPARISON_SCHEMA, ProtocolError, ScorerArm, decide_adoption,
+    embedded_comparison_protocol, embedded_frozen_policy_fixture, embedded_frozen_policy_protocol,
+    embedded_local_scorer_fixture, parse_comparison_protocol,
 };
 pub use grading::{CampaignVerifier, METRIC_EFFICIENCY, METRIC_FOUND, METRIC_REFUSALS, grade};
 pub use history::{CandidateEntry, HostFailure, TrialCampaign};
@@ -66,7 +67,8 @@ pub use matrix::{ARTIFACT_NAMES, JobError, JobReport, RouteSummary, TrialFailure
 pub use provider::{Endpoint, LiveFailure, LiveRoute};
 pub use rollout::{CampaignEnvironment, HostAction, TrialRun, TurnOutcome, TurnRecord, run_turns};
 pub use routes::{
-    ACTION_SCHEMA, ARTIFACT_API, ARTIFACT_SCHEMA, AdmittedArtifact, ArtifactError, CostUnits,
+    ACTION_SCHEMA, ARTIFACT_API, ARTIFACT_SCHEMA, AdmittedArtifact, ArtifactError,
+    CANDIDATE_OPERATIONS, CLASS_ACTION_SCHEMA, CLASS_ACTIONS, ClassifierRoute, CostUnits,
     DecisionRecord, Disposition, FALLBACK_POLICY, FEATURE_COUNT, FEATURE_NAMES, FEATURE_SCHEMA,
     LocalScorerRoute, MAX_DECISIONS, MAX_PARAMETER_MAGNITUDE, POLICY_KIND, RandomRankRoute,
     RankBounds, Route, RouteAdapter, RouteFailure, RouteModel, ScriptedPolicy, admit_artifact,

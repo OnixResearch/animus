@@ -1,11 +1,16 @@
-//! The predeclared comparison protocol of the local scorer route and its adoption rule.
+//! The predeclared comparison protocols of the frozen scorer routes and their adoption rule.
 //!
-//! The protocol is the checked projection of `config/campaign-manager-local-scorer-eval.ncl`; the
-//! fixture artifact is the checked projection of `config/campaign-manager-local-scorer-fixture.ncl`.
-//! Both are embedded, so selecting them needs no filesystem access.
+//! Each protocol is the checked projection of a Nickel source: the linear local scorer's
+//! `config/campaign-manager-local-scorer-eval.ncl` over the fixture
+//! `config/campaign-manager-local-scorer-fixture.ncl`, and the frozen-policy tree route's
+//! `config/campaign-manager-frozen-policy-eval.ncl` over the fixture
+//! `config/campaign-manager-frozen-policy-fixture.ncl`. All are embedded, so selecting them
+//! needs no filesystem access. The protocol schema selects the scorer arm.
 
-/// Schema of the comparison protocol.
+/// Schema of the linear local scorer's comparison protocol.
 pub const COMPARISON_SCHEMA: &str = "animus.campaign-manager-local-scorer-eval.v1";
+/// Schema of the frozen-policy route's comparison protocol.
+pub const FROZEN_POLICY_COMPARISON_SCHEMA: &str = "animus.campaign-manager-frozen-policy-eval.v1";
 /// Most random-ranking seeds one protocol may declare.
 const MAX_RANDOM_SEEDS: usize = 16;
 /// Fixed-point scale of the adoption thresholds.
@@ -17,6 +22,12 @@ const EMBEDDED_FIXTURE: &str =
 /// The checked protocol, exported from `config/campaign-manager-local-scorer-eval.ncl`.
 const EMBEDDED_PROTOCOL: &str =
     include_str!("../../../../config/generated/campaign-manager-local-scorer-eval.json");
+/// The checked tree fixture, exported from `config/campaign-manager-frozen-policy-fixture.ncl`.
+const EMBEDDED_FROZEN_POLICY_FIXTURE: &str =
+    include_str!("../../../../config/generated/campaign-manager-frozen-policy-fixture.json");
+/// The checked protocol, exported from `config/campaign-manager-frozen-policy-eval.ncl`.
+const EMBEDDED_FROZEN_POLICY_PROTOCOL: &str =
+    include_str!("../../../../config/generated/campaign-manager-frozen-policy-eval.json");
 
 /// The adoption rule, fixed before any arm runs.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Deserialize)]
@@ -50,6 +61,27 @@ pub struct ComparisonProtocol {
     pub adoption: AdoptionRule,
     /// What the comparison does not establish.
     pub non_claims: Vec<String>,
+}
+
+/// The scorer arm a protocol compares, selected by its schema.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ScorerArm {
+    /// The linear local scorer over an `animus.campaign-manager-local-scorer.v1` artifact.
+    LocalScorer,
+    /// The frozen-policy route over an `animus.frozen-policy.v1` artifact.
+    FrozenPolicy,
+}
+
+impl ComparisonProtocol {
+    /// The scorer arm this protocol compares; `None` only for an unparsed foreign schema.
+    #[must_use]
+    pub fn scorer_arm(&self) -> Option<ScorerArm> {
+        match self.schema.as_str() {
+            COMPARISON_SCHEMA => Some(ScorerArm::LocalScorer),
+            FROZEN_POLICY_COMPARISON_SCHEMA => Some(ScorerArm::FrozenPolicy),
+            _ => None,
+        }
+    }
 }
 
 /// Why a protocol was refused.
@@ -97,13 +129,19 @@ pub struct AdoptionInput {
     pub scorer_fallback_per_mille: u32,
 }
 
-/// The embedded fixture artifact's bytes.
+/// The embedded linear-scorer fixture artifact's bytes.
 #[must_use]
 pub fn embedded_local_scorer_fixture() -> &'static [u8] {
     EMBEDDED_FIXTURE.as_bytes()
 }
 
-/// The embedded comparison protocol, revalidated.
+/// The embedded frozen-policy tree fixture artifact's bytes.
+#[must_use]
+pub fn embedded_frozen_policy_fixture() -> &'static [u8] {
+    EMBEDDED_FROZEN_POLICY_FIXTURE.as_bytes()
+}
+
+/// The embedded linear-scorer comparison protocol, revalidated.
 ///
 /// # Errors
 ///
@@ -112,16 +150,26 @@ pub fn embedded_comparison_protocol() -> Result<ComparisonProtocol, ProtocolErro
     parse_comparison_protocol(EMBEDDED_PROTOCOL)
 }
 
+/// The embedded frozen-policy comparison protocol, revalidated.
+///
+/// # Errors
+///
+/// Returns the [`ProtocolError`] of a protocol that does not hold.
+pub fn embedded_frozen_policy_protocol() -> Result<ComparisonProtocol, ProtocolError> {
+    parse_comparison_protocol(EMBEDDED_FROZEN_POLICY_PROTOCOL)
+}
+
 /// Parses and checks one comparison protocol.
 ///
 /// # Errors
 ///
 /// Returns the first [`ProtocolError`] that refuses the protocol.
 // r[impl agent_harness_runtime.campaign_manager_eval.local_scorer.evaluation]
+// r[impl agent_harness_runtime.frozen_policy.evaluation]
 pub fn parse_comparison_protocol(text: &str) -> Result<ComparisonProtocol, ProtocolError> {
     let protocol: ComparisonProtocol =
         serde_json::from_str(text).map_err(|_| ProtocolError::Malformed)?;
-    if protocol.schema != COMPARISON_SCHEMA {
+    if protocol.scorer_arm().is_none() {
         return Err(ProtocolError::Schema);
     }
     animus_eval_core::validate_blake3_identity(&protocol.artifact_identity)

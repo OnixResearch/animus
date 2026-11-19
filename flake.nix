@@ -173,6 +173,10 @@
               diff -u ${./config/generated/campaign-manager-eval-tasks.json} "$tmp_dir/config/generated/campaign-manager-eval-tasks.json"
               diff -u ${./config/generated/campaign-manager-local-scorer-fixture.json} "$tmp_dir/config/generated/campaign-manager-local-scorer-fixture.json"
               diff -u ${./config/generated/campaign-manager-local-scorer-eval.json} "$tmp_dir/config/generated/campaign-manager-local-scorer-eval.json"
+              diff -u ${./config/generated/campaign-manager-frozen-policy-fixture.json} "$tmp_dir/config/generated/campaign-manager-frozen-policy-fixture.json"
+              diff -u ${./config/generated/campaign-manager-frozen-policy-eval.json} "$tmp_dir/config/generated/campaign-manager-frozen-policy-eval.json"
+              diff -u ${./config/generated/frozen-policy-example-tree.json} "$tmp_dir/config/generated/frozen-policy-example-tree.json"
+              diff -u ${./config/generated/frozen-policy-example-mlp.json} "$tmp_dir/config/generated/frozen-policy-example-mlp.json"
               diff -u ${./config/generated/native-evaluation-policy.json} "$tmp_dir/config/generated/native-evaluation-policy.json"
               diff -u ${./config/generated/host-control-source.json} "$tmp_dir/config/generated/host-control-source.json"
               diff -u ${./config/generated/continual-harness-policy.json} "$tmp_dir/config/generated/continual-harness-policy.json"
@@ -782,6 +786,13 @@
             cargo clippy -p animus-campaign-manager-eval --all-targets --features live --locked -- -D warnings
             cargo run -q -p animus-campaign-manager-eval --locked
             cargo run -q -p animus-campaign-manager-eval --locked -- --local-scorer
+            cargo run -q -p animus-campaign-manager-eval --locked -- --frozen-policy
+          '';
+
+          cargo-frozen-policy = cargoCheck "animus-cargo-frozen-policy" [ pkgs.clippy ] ''
+            cargo test -p animus-frozen-policy --locked
+            cargo clippy -p animus-frozen-policy --all-targets --locked -- -D warnings
+            cargo check -p animus-frozen-policy --target wasm32-unknown-unknown --locked
           '';
 
           cargo-preserves-schema = cargoCheck "animus-cargo-preserves-schema" [ ] ''
@@ -1746,6 +1757,10 @@
 
           campaign-manager-eval-octet = octetCheck "animus-campaign-manager-eval-octet" ''
             -p animus-campaign-manager-eval -- --all-targets --features live
+          '';
+
+          frozen-policy-octet = octetCheck "animus-frozen-policy-octet" ''
+            -p animus-frozen-policy -- --all-targets
           '';
 
           adapters-octet = octetCheck "animus-adapters-octet" ''

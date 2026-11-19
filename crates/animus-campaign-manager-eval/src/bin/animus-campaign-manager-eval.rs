@@ -23,6 +23,14 @@
 //! animus-campaign-manager-eval --local-scorer
 //! ```
 //!
+//! Frozen-policy mode runs the predeclared comparison of the decision-tree route over the shared
+//! `animus-frozen-policy` leaf against the same baseline, seeded random ranking within the route's
+//! own rank range, and the same reference, and prints the adoption decision:
+//!
+//! ```text
+//! animus-campaign-manager-eval --frozen-policy
+//! ```
+//!
 //! The report holds identities, counts, mean rewards, cost units, and latency. It never includes
 //! prompts, replies, labels, or credentials.
 
@@ -57,6 +65,9 @@ fn run(arguments: &[String]) -> Result<String, String> {
     }
     if arguments == ["--local-scorer"] {
         return comparison::run(&set);
+    }
+    if arguments == ["--frozen-policy"] {
+        return comparison::run_frozen_policy(&set);
     }
     live(&set, arguments)
 }

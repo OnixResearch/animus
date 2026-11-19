@@ -311,6 +311,7 @@ dependencies = [
  "animus-adapters",
  "animus-campaign-manager",
  "animus-eval-core",
+ "animus-frozen-policy",
  "animus-runtime",
  "animus-std",
  "animus-std-openai",
@@ -346,6 +347,15 @@ name = "animus-eval-core"
 version = "0.1.0"
 dependencies = [
  "blake3",
+]
+
+[[package]]
+name = "animus-frozen-policy"
+version = "0.1.0"
+dependencies = [
+ "blake3",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
