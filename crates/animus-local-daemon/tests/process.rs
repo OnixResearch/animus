@@ -10,11 +10,17 @@ use std::time::Duration;
 const HASH: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const STOP_DEADLINE_MS: u64 = 2000;
 
+/// The worker's environment is explicitly empty, so its shell resolves no
+/// external command (NixOS `sh` falls back to `PATH=/no-such-path`). A
+/// subshell running a builtin-only loop keeps a real process tree alive until
+/// the group teardown under test, without reading any ambient environment.
+const LIVE_TREE: &str = "( while :; do :; done ) & wait";
+
 #[test]
 fn worker_launch_uses_explicit_environment_and_complete_group_teardown() {
     let request = WorkerLaunchRequest {
         executable: PathBuf::from("/bin/sh"),
-        arguments: vec![String::from("-c"), String::from("sleep 30 & wait")],
+        arguments: vec![String::from("-c"), String::from(LIVE_TREE)],
         environment: BTreeMap::new(),
         current_directory: PathBuf::from("/"),
         root_id: String::from("root-a"),
