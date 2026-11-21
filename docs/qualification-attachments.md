@@ -71,7 +71,7 @@ The four evidence classes are independent facts, never a ladder:
 
 For `contract_conformance` and `task_family_evaluation`, the protocol, verifier, and corpus identities must equal the subject's observed `task_protocol`, `verifier`, and `corpus` components.
 
-Every string is either a token or a `blake3:` identity. A token follows the task-family rule above and is refused if a credential marker (`sk-`, `xoxb-`, `xoxp-`, `akia`, `bearer`, `password`, `passwd`, `private-key`, `api-key`) starts the token or follows a `.`, `:` or `-`. Raw prompts, hidden tests, credentials, provider bodies, and host paths cannot be represented, and attempts to include them are `malformed`. Unknown fields are `malformed` too. That includes authority fields such as `activate_revision`, throughput fields, and self-scored success fields.
+Every string is either a token or a `blake3:` identity. A token follows the task-family rule above and is refused if a credential marker (`sk-`, `xoxb-`, `xoxp-`, `akia`, `bearer`, `password`, `passwd`, `private-key`, `api-key`) starts the token or follows a `.`, `:`, `-` or `_`. An `_` in the token matches the marker's `-`, so `db_password:…`, `sk_live_…` and `private_key:…` are refused while `task-family` and `risk-assessment` stay valid. Raw prompts, hidden tests, credentials, provider bodies, and host paths cannot be represented, and attempts to include them are `malformed`. Unknown fields are `malformed` too. That includes authority fields such as `activate_revision`, throughput fields, and self-scored success fields.
 
 ### Example
 
@@ -117,7 +117,7 @@ Every string is either a token or a `blake3:` identity. A token follows the task
 
 ## Measures
 
-Failed, cancelled, and incomplete trials stay in `planned`. A shrunk denominator is `malformed`: `measures.task_coverage.declared × repetitions` must equal `planned`. An unmeasured cost or time is `null`, never `0`. If any cost is `null`, `unknown_remainder` must be `true`.
+Failed, cancelled, and incomplete trials stay in `planned`. A shrunk denominator is `malformed`: `measures.task_coverage.declared × repetitions` must equal `planned`. Coverage must match the completed (accepted plus rejected) trials: `covered ≤ completed ≤ covered × repetitions`, so one completion cannot claim full coverage. `time_to_acceptance_ms` must be `null` when nothing was accepted. An unmeasured cost or time is `null`, never `0`. If any cost is `null`, `unknown_remainder` must be `true`.
 
 - `cost_per_accepted` returns `Defined { known_total, accepted }` only when every cost is known and something was accepted. Otherwise it returns `NoAcceptedCompletion` or `UnknownCost`.
 - `compare_equal_budget(baseline, candidate)` compares independently accepted completions only. It refuses unless the task family, the denominator, and the `budget`, `corpus`, `environment`, `evaluation_config`, `isolation`, `network`, `permissions`, `selection_policy`, `task_protocol`, `topology`, and `verifier` identities are identical and available. Token throughput and self-written scores are not fields, so they cannot select a route.
@@ -154,7 +154,9 @@ pub fn review_qualification(applicability: &Applicability) -> EvalFeedbackReview
 | 5 | `unusable` | A required component is unavailable in the evidence, a current component is unavailable now, or `now_ms < observed_at_ms` |
 | 6 | `stale` | `now_ms >= valid_until_ms`, or a supplied current component identity changed |
 
-`qualify` collapses exact duplicates. Distinct valid attachments that claim one `source_identity` for the same subject keys, task family, and class are `conflicting`. Otherwise `qualify` returns `Qualified { qualification_ref, evidence_class, protocol_identity, verifier_identity, observed_at_ms }` for the most recent valid attachment. With no valid attachment it returns `NotQualified(furthest reason)`, and with no input it returns `Unavailable`. `replay_attachments` decodes stored bytes only. It reports accepted identities, duplicates, rejections, and conflicting sources. It runs nothing and fills in nothing.
+Stages 2–4 are the claim checks and stages 5–6 the currency checks. `qualify` collapses exact duplicates. Distinct attachments that pass the claim checks and claim one `source_identity` are `conflicting`, even when one of them is unusable, stale, or changed under the current components: a conflict never resolves because time passed or the policy grew stricter. Otherwise `qualify` returns `Qualified { qualification_ref, evidence_class, protocol_identity, verifier_identity, observed_at_ms, provenance_label }` for the most recent attachment that also passes the currency checks. With none it returns `NotQualified(furthest reason)`, and with no input it returns `Unavailable`. `replay_attachments` decodes stored bytes only. It reports accepted identities, duplicates, rejections, and conflicting sources. It runs nothing and fills in nothing.
+
+`Qualified` means admissible evidence exists for the exact subject, task family, and class. It is not a favorable verdict: the outcomes, including 0 accepted, must be read from the attachment. `provenance_label` is the attachment's `fixture` or `live` label (`EvidenceLabel::as_str()` gives the wire spelling), and `validate_attachment` exposes the same label as `attachment.document.provenance.label`. Fixture provenance is not live evidence. `ExpectedSubject` carries no provenance requirement; a consumer that needs live evidence checks the label itself.
 
 ## Applicability and authority
 
@@ -173,7 +175,7 @@ Reuse keeps the original claims and is never `Current`. The port still answers `
 ## Lattice adoption
 
 1. Resync the vendored Animus snapshot to the commit that lands this change. In `scripts/sync_animus.rs`, update `EXPECTED_REVISION` and `SOURCE_ARCHIVE_BLAKE3`. The crate list and the dependency declaration (`animus-runtime`, `default-features = false, features = ["steel"]`) stay unchanged, and no new crate or Cargo dependency is needed.
-2. Implement the qualification port over `animus_runtime::qualification::qualify` or `validate_attachment`. Pass the definition identity as published and the profile revision as bare hex, with `required_class` taken from the promotion policy. Map `Qualified` to `{ support: "qualified", qualification_ref }` and `NotQualified(reason)` to `reason.as_str()`. Keep `Unavailable` as the no-producer answer owned by `animus#18`.
+2. Implement the qualification port over `animus_runtime::qualification::qualify` or `validate_attachment`. Pass the definition identity as published and the profile revision as bare hex, with `required_class` taken from the promotion policy. Map `Qualified` to `{ support: "qualified", qualification_ref }` and `NotQualified(reason)` to `reason.as_str()`. Keep `Unavailable` as the no-producer answer owned by `animus#18`. Do not read `qualified` as favorable, and keep `provenance_label` visible so fixture evidence is never presented as live.
 3. Promotion stays a separate explicit Lattice operation. A qualified answer is evidence for review only, and current revocation still applies.
 
 ## Verification
@@ -187,3 +189,11 @@ cargo check -p animus-runtime --no-default-features --features steel
 ## Non-claims
 
 The checked fixtures come from a deterministic scripted lane over three synthetic tasks. Their Lattice subject keys are fixture keys supplied by the test binding. They claim no live model, deployment, benchmark, or production qualification. The NVIDIA skill-evidence follow-up in #18 (skill-set manifests, scanner coverage, activation, paired arms) is not implemented.
+
+The contract also leaves these open:
+
+- `Qualified` is not a verdict on outcomes, and fixture provenance is not live evidence (see [Consumer API](#consumer-api)).
+- Hosted-model version drift is invisible to `validate_attachment`. `classify_applicability` compares model version facts, but `ExpectedSubject` has no way to carry them.
+- The credential denylist can reject some legitimate capability names. A Lattice task family such as `auth.password-reset` makes every attachment for it `malformed`.
+- Scope lists and references hold at most 32 entries, so a job with more than 32 tasks cannot be attached even though the planner allows up to 256 trials.
+- Attachments are unsigned. Integrity comes from the content identity; nothing establishes who produced the bytes. Any 64-hex value fits a `blake3:` field, and `host:port` tokens pass the token rules.

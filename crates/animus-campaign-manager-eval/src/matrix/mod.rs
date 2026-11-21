@@ -32,6 +32,8 @@ pub struct RouteSummary {
 /// A finished job.
 #[derive(Clone, Debug, PartialEq)]
 pub struct JobReport {
+    /// Identity of the task set the job ran; the qualification producer refuses any other set.
+    pub task_set_identity: String,
     /// The metadata-only evaluation receipt.
     pub receipt: animus_runtime::harbor_eval::EvaluationReceipt,
     /// Per-route reward summaries, in route order.
@@ -111,6 +113,7 @@ pub fn run_job(
     debug_assert_eq!(graded.len().saturating_add(failures.len()), plans.len());
     debug_assert_eq!(trajectories.len(), graded.len());
     Ok(JobReport {
+        task_set_identity: crate::evidence::subject::task_set_identity(set),
         receipt,
         routes: summaries,
         failures,

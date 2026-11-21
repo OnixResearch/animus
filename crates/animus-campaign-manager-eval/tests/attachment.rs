@@ -3,36 +3,44 @@
 
 mod support;
 
-const NEGATIVE_FIXTURES: [(&str, &str); 5] = [
+/// Each checked negative fixture, its bytes, and the one field that rejects it.
+const NEGATIVE_FIXTURES: [(&str, &str, &str); 5] = [
     (
         "noncanonical-whitespace",
         include_str!(
             "../../../fixtures/qualification-attachment/negative/noncanonical-whitespace.json"
         ),
+        "attachment.syntax",
     ),
     (
         "prefixed-profile-revision",
         include_str!(
             "../../../fixtures/qualification-attachment/negative/prefixed-profile-revision.json"
         ),
+        "subject.lattice_profile_revision",
     ),
     (
         "redaction-host-path",
         include_str!(
             "../../../fixtures/qualification-attachment/negative/redaction-host-path.json"
         ),
+        "scope.limitations",
     ),
     (
         "authority-field",
         include_str!("../../../fixtures/qualification-attachment/negative/authority-field.json"),
+        "attachment.shape",
     ),
     (
-        "failures-dropped-from-denominator",
+        "rejected-dropped-from-denominator",
         include_str!(
-            "../../../fixtures/qualification-attachment/negative/failures-dropped-from-denominator.json"
+            "../../../fixtures/qualification-attachment/negative/rejected-dropped-from-denominator.json"
         ),
+        "measures.task_coverage",
     ),
 ];
+/// The root schema member of every attachment, in canonical position after `references`.
+const ROOT_SCHEMA: &str = "\"schema\":\"animus.qualification-attachment.v1\"";
 
 /// The signal-greedy route's fixture keys and checked bytes.
 fn greedy() -> Result<(support::SubjectKeys, &'static [u8]), support::Failure> {
@@ -63,6 +71,11 @@ fn checked_fixtures_qualify_only_their_exact_subject() -> Result<(), support::Fa
         animus_runtime::qualification::attachment_identity(greedy)
     );
     assert_eq!(qualified.observed_at_ms, support::OBSERVED_AT_MS);
+    assert_eq!(
+        qualified.provenance_label,
+        animus_runtime::qualification::EvidenceLabel::Fixture
+    );
+    assert_eq!(qualified.provenance_label.as_str(), "fixture");
     let cross_profile = animus_runtime::qualification::ExpectedSubject {
         lattice_profile_revision: &explore_keys.revision,
         ..expected
@@ -155,7 +168,7 @@ fn conflicting_claims_over_one_run_are_not_qualified() -> Result<(), support::Fa
     let (keys, greedy) = greedy()?;
     let decoded = animus_runtime::qualification::decode_attachment(greedy)
         .map_err(|_| support::Failure::Unexpected("fixture decodes"))?;
-    let mut altered = decoded.document;
+    let mut altered = decoded.document.clone();
     if let Some(outcomes) = altered.outcomes.as_mut() {
         outcomes.accepted = 2;
         outcomes.rejected = 1;
@@ -172,18 +185,52 @@ fn conflicting_claims_over_one_run_are_not_qualified() -> Result<(), support::Fa
             animus_runtime::qualification::RejectionReason::Conflicting
         )
     );
+
+    // A second claim over the same run whose prompt is observed: requiring the prompt makes the
+    // fixture unusable, and the set still conflicts.
+    let mut prompted = decoded.document;
+    let prompt = prompted
+        .subject
+        .components
+        .iter_mut()
+        .find(|component| component.kind == animus_runtime::qualification::ComponentKind::Prompt)
+        .ok_or(support::Failure::Unexpected("prompt component"))?;
+    prompt.basis = animus_runtime::qualification::ComponentBasis::Observed;
+    prompt.identity = Some(animus_runtime::qualification::component_identity(
+        animus_runtime::qualification::ComponentKind::Prompt,
+        b"prompt",
+    ));
+    let prompted = animus_runtime::qualification::encode_attachment(&prompted)
+        .map_err(|_| support::Failure::Unexpected("prompted encodes"))?;
+    let requires_prompt = animus_runtime::qualification::ExpectedSubject {
+        required_components: &[animus_runtime::qualification::ComponentKind::Prompt],
+        ..support::expected_subject(&keys)
+    };
+    assert_eq!(
+        support::rejection_reason(greedy, &requires_prompt),
+        animus_runtime::qualification::RejectionReason::Unusable
+    );
+    assert_eq!(
+        animus_runtime::qualification::qualify(&[greedy, &prompted.canonical], &requires_prompt),
+        animus_runtime::qualification::QualificationAnswer::NotQualified(
+            animus_runtime::qualification::RejectionReason::Conflicting
+        )
+    );
     Ok(())
 }
 
 #[test]
 // r[verify agent_harness_runtime.qualification_attachment.redaction]
 fn checked_negative_fixtures_are_malformed() {
-    for (name, text) in NEGATIVE_FIXTURES {
+    for (name, text, field) in NEGATIVE_FIXTURES {
         let rejection =
-            animus_runtime::qualification::decode_attachment(text.trim_end().as_bytes());
+            animus_runtime::qualification::decode_attachment(text.trim_end().as_bytes()).err();
         assert_eq!(
-            rejection.map_err(|rejection| rejection.reason).err(),
-            Some(animus_runtime::qualification::RejectionReason::Malformed),
+            rejection.map(|rejection| (rejection.reason, rejection.field)),
+            Some((
+                animus_runtime::qualification::RejectionReason::Malformed,
+                field
+            )),
             "{name}"
         );
     }
@@ -191,4 +238,35 @@ fn checked_negative_fixtures_are_malformed() {
     for forbidden in ['/', ' ', '\\'] {
         assert!(!greedy.contains(forbidden), "{forbidden:?}");
     }
+}
+
+#[test]
+// r[verify agent_harness_runtime.qualification_attachment.attachment]
+fn reordered_and_oversized_fixture_bytes_are_malformed() -> Result<(), support::Failure> {
+    let greedy = support::GREEDY_FIXTURE.trim_end();
+    let rest = greedy
+        .replacen(&format!(",{ROOT_SCHEMA}"), "", 1)
+        .strip_prefix('{')
+        .map(String::from)
+        .ok_or(support::Failure::Unexpected("an object"))?;
+    let reordered = format!("{{{ROOT_SCHEMA},{rest}");
+    assert_ne!(reordered, greedy);
+    assert_eq!(reordered.len(), greedy.len());
+    let field = |bytes: &[u8]| {
+        animus_runtime::qualification::decode_attachment(bytes)
+            .err()
+            .map(|rejection| (rejection.reason, rejection.field))
+    };
+    let malformed = animus_runtime::qualification::RejectionReason::Malformed;
+    assert_eq!(
+        field(reordered.as_bytes()),
+        Some((malformed, "attachment.canonical"))
+    );
+    let mut padded_bytes = greedy.as_bytes().to_vec();
+    padded_bytes.resize(
+        animus_runtime::qualification::MAX_ATTACHMENT_BYTES.saturating_add(1),
+        b' ',
+    );
+    assert_eq!(field(&padded_bytes), Some((malformed, "attachment.bytes")));
+    Ok(())
 }

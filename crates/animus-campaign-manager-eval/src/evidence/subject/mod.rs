@@ -19,6 +19,38 @@ const OFFER_ROLE: &str = "offer";
 const TARGET_MARK: &str = "target";
 /// Marker of any other candidate in the corpus identity.
 const OTHER_MARK: &str = "other";
+/// Domain of the task-set identity.
+const TASK_SET_DOMAIN: &str = "animus.campaign-manager-eval.task-set.v1";
+
+/// Identity of every task-set input that the job's trials or an attachment read: the agent,
+/// environment, Harbor pins, protocol, verifier, mandate, budgets, corpus and non-claims. Each
+/// section is framed separately, so no two task sets share one identity by moving a boundary.
+pub(crate) fn task_set_identity(set: &crate::TaskSet) -> String {
+    let sections = [
+        vec![set.agent.clone(), set.environment.clone()],
+        harness(set),
+        protocol(set),
+        verifier(set),
+        mandate(set),
+        budget(set),
+        corpus(set),
+        set.non_claims.clone(),
+    ];
+    let identities: Vec<String> = sections
+        .iter()
+        .map(|section| {
+            let bytes: Vec<&[u8]> = section.iter().map(String::as_bytes).collect();
+            animus_runtime::qualification::framed_identity(&bytes)
+        })
+        .collect();
+    let parts: Vec<&[u8]> = core::iter::once(TASK_SET_DOMAIN)
+        .chain(identities.iter().map(String::as_str))
+        .map(str::as_bytes)
+        .collect();
+    debug_assert_eq!(identities.len(), sections.len());
+    debug_assert_eq!(parts.len(), sections.len().saturating_add(1));
+    animus_runtime::qualification::framed_identity(&parts)
+}
 
 /// The subject of `binding.route` over `set`.
 pub(super) fn project(

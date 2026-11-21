@@ -25,20 +25,30 @@ r[agent_harness_runtime.qualification_attachment.attachment] An `animus.qualific
 - THEN it is rejected as `malformed`
 
 ### Requirement: Redacted bounded exports
-r[agent_harness_runtime.qualification_attachment.redaction] Every attachment string MUST be a bounded lowercase token or a `blake3:` identity, so raw prompts, hidden tests, credentials, provider bodies, and host paths cannot be represented. Credential-looking tokens MUST be rejected.
+r[agent_harness_runtime.qualification_attachment.redaction] Every attachment string MUST be a bounded lowercase token or a `blake3:` identity, so raw prompts, hidden tests, credentials, provider bodies, and host paths cannot be represented. Credential-looking tokens MUST be rejected, treating `_` as a word boundary equal to `-`.
 
 #### Scenario: Host path in a limitation
 - GIVEN an attachment whose limitation is an absolute host path
 - WHEN it is decoded
 - THEN it is rejected as `malformed`
 
+#### Scenario: Underscored credential
+- GIVEN a token such as `db_password:hunter2`, `sk_live_…`, or `private_key:…`
+- WHEN it is encoded or decoded
+- THEN it is rejected as `malformed`, while `task-family` and `risk-assessment` stay valid
+
 ### Requirement: Complete measures with honest denominators
-r[agent_harness_runtime.qualification_attachment.measures] Task-family measures MUST keep failed, cancelled, and incomplete trials in the denominator, MUST record unmeasured costs and times as unknown rather than zero, and MUST leave cost per accepted completion undefined when nothing was accepted or any cost is unknown. Equal-budget comparisons MUST require identical task family, denominator, and control components and MUST compare independently accepted completions only.
+r[agent_harness_runtime.qualification_attachment.measures] Task-family measures MUST keep failed, cancelled, and incomplete trials in the denominator, MUST tie task coverage to completed trials (`covered ≤ completed ≤ covered × repetitions`), MUST NOT report a time to acceptance when nothing was accepted, MUST record unmeasured costs and times as unknown rather than zero, and MUST leave cost per accepted completion undefined when nothing was accepted or any cost is unknown. Equal-budget comparisons MUST require identical task family, denominator, and control components and MUST compare independently accepted completions only.
 
 #### Scenario: Faster route with fewer accepted completions
 - GIVEN a candidate with fewer accepted completions under identical controls
 - WHEN it is compared with the baseline
 - THEN the comparison reports no accepted gain
+
+#### Scenario: Inflated coverage
+- GIVEN measures claiming more covered tasks than completed trials, or a time to acceptance with nothing accepted
+- WHEN the attachment is encoded or decoded
+- THEN it is rejected as `malformed`
 
 ### Requirement: Applicability over the complete subject
 r[agent_harness_runtime.qualification_attachment.applicability] Applicability MUST extend evaluation-feedback freshness to every subject component: a changed component, profile revision, or expired freshness makes evidence historical, and an unavailable required component makes it unusable. Reuse across revisions or components MUST require an explicit compatibility decision scoped to the exact attachment, revision pair, task family, and class that waives every changed component and no evaluator component, and such reuse MUST NOT strengthen claims or become current.
@@ -49,7 +59,7 @@ r[agent_harness_runtime.qualification_attachment.applicability] Applicability MU
 - THEN the evidence is historical
 
 ### Requirement: Pure consumer validator
-r[agent_harness_runtime.qualification_attachment.validator] `validate_attachment(bytes, expected)` MUST return the attachment only when its subject keys equal the expected keys exactly, its task family is the expected family, its class is the required class, no required or current component is unavailable, it is fresh, and no supplied current component changed. Otherwise it MUST return one closed reason: `malformed`, `subject_mismatch`, `scope_mismatch`, `insufficient_class`, `unusable`, `stale`, or `conflicting`.
+r[agent_harness_runtime.qualification_attachment.validator] `validate_attachment(bytes, expected)` MUST return the attachment only when its subject keys equal the expected keys exactly, its task family is the expected family, its class is the required class, no required or current component is unavailable, it is fresh, and no supplied current component changed. Otherwise it MUST return one closed reason: `malformed`, `subject_mismatch`, `scope_mismatch`, `insufficient_class`, `unusable`, `stale`, or `conflicting`. A `Qualified` answer MUST carry the attachment's provenance label (`fixture` or `live`); it means admissible evidence exists for the exact subject, scope, and class, and MUST NOT be read as a favorable verdict.
 
 #### Scenario: Cross-profile attachment
 - GIVEN an attachment for another profile revision
@@ -57,12 +67,17 @@ r[agent_harness_runtime.qualification_attachment.validator] `validate_attachment
 - THEN it is rejected as `subject_mismatch`
 
 ### Requirement: Replay without rerun
-r[agent_harness_runtime.qualification_attachment.replay] Replay and set qualification MUST only decode stored bytes: exact duplicates collapse to one identity, distinct attachments that claim one source for the same subject are `conflicting`, and no model, verifier, or evaluation runs and no missing fact is filled in.
+r[agent_harness_runtime.qualification_attachment.replay] Replay and set qualification MUST only decode stored bytes: exact duplicates collapse to one identity, distinct attachments that pass the claim checks (subject keys, task family, class) and claim one source are `conflicting` even when one of them fails the currency checks (unusable, stale, or changed), and no model, verifier, or evaluation runs and no missing fact is filled in.
 
 #### Scenario: Conflicting claims over one run
 - GIVEN two attachments for the same subject and source with different outcome counts
 - WHEN they are qualified together
 - THEN the answer is `conflicting`
+
+#### Scenario: Conflict with a stale member
+- GIVEN two conflicting attachments where one is stale, unusable, or changed under the current components
+- WHEN they are qualified together
+- THEN the answer is still `conflicting`
 
 ### Requirement: Recommendations carry no authority
 r[agent_harness_runtime.qualification_attachment.authority] A favorable attachment MUST NOT activate a revision, change runtime selection policy, widen capabilities, bypass current revocation, or replace per-candidate acceptance; current evidence may only request separate review or admission.
@@ -73,9 +88,14 @@ r[agent_harness_runtime.qualification_attachment.authority] A favorable attachme
 - THEN it may request review but activates nothing
 
 ### Requirement: One existing producer lane
-r[agent_harness_runtime.qualification_attachment.producer] The campaign-manager evaluation lane MUST produce `task_family_evaluation` attachments from a finished job report, its task set, and a host binding of subject keys and freshness, counting accepted completions from the separate verifier's reduced rewards, without running another trial or evaluation engine.
+r[agent_harness_runtime.qualification_attachment.producer] The campaign-manager evaluation lane MUST produce `task_family_evaluation` attachments from a finished job report, its task set, and a host binding of subject keys and freshness, counting accepted completions from the separate verifier's reduced rewards, without running another trial or evaluation engine. It MUST refuse a task set whose identity differs from the one the report records, and MUST refuse unless the report planned exactly the replanned trials and holds each of the route's trials exactly once as a failure or a trajectory.
 
 #### Scenario: Scripted job
 - GIVEN the scripted job over the checked task set
 - WHEN attachments are produced for the scripted routes
 - THEN they equal the checked fixtures byte for byte
+
+#### Scenario: Other task set
+- GIVEN a finished job and an edited, renamed, or shorter task set
+- WHEN an attachment is produced from them
+- THEN the producer returns an error and no attachment

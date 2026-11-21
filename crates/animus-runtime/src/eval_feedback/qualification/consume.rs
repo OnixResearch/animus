@@ -47,54 +47,54 @@ pub fn validate_attachment(
     bytes: &[u8],
     expected: &ExpectedSubject<'_>,
 ) -> Result<Attachment, Rejection> {
-    check_expected(expected)?;
-    let attachment = decode_attachment(bytes)?;
-    check_applicable(&attachment.document, expected)?;
+    let attachment = claimed_attachment(bytes, expected)?;
+    check_current(&attachment.document, expected)?;
     Ok(attachment)
 }
 
 /// Answers the qualification port over every supplied attachment.
 ///
-/// Exact duplicates collapse to one identity. Distinct valid attachments that
-/// claim the same source are `conflicting`. Otherwise the most recent valid
-/// attachment qualifies; with none, the furthest-stage rejection is returned.
-/// An empty set is `Unavailable`.
+/// Exact duplicates collapse to one identity. Distinct attachments that pass
+/// the claim checks (subject keys, task family, class) and claim the same
+/// source are `conflicting`, even when one of them is unusable or stale.
+/// Otherwise the most recent attachment that also passes the currency checks
+/// qualifies; with none, the furthest-stage rejection is returned. An empty
+/// set is `Unavailable`.
 #[must_use]
 pub fn qualify(attachments: &[&[u8]], expected: &ExpectedSubject<'_>) -> QualificationAnswer {
-    let mut valid: Vec<Attachment> = Vec::new();
+    let mut claimed: Vec<Attachment> = Vec::new();
     let mut furthest: Option<RejectionReason> = None;
     for bytes in attachments {
-        match validate_attachment(bytes, expected) {
+        match claimed_attachment(bytes, expected) {
             Ok(attachment) => {
-                if valid
+                if claimed
                     .iter()
                     .all(|seen| seen.identity != attachment.identity)
                 {
-                    valid.push(attachment);
+                    claimed.push(attachment);
                 }
             }
             Err(rejection) => furthest = furthest.max(Some(rejection.reason)),
         }
     }
-    if valid.is_empty() {
-        return furthest.map_or(
-            QualificationAnswer::Unavailable,
-            QualificationAnswer::NotQualified,
-        );
-    }
-    if !conflicting_sources(&valid).is_empty() {
+    if !conflicting_sources(&claimed).is_empty() {
         return QualificationAnswer::NotQualified(RejectionReason::Conflicting);
     }
-    valid
-        .iter()
-        .max_by(|left, right| {
-            let left_key = (left.document.provenance.observed_at_ms, &left.identity);
-            let right_key = (right.document.provenance.observed_at_ms, &right.identity);
-            left_key.cmp(&right_key)
-        })
-        .map_or(QualificationAnswer::Unavailable, |chosen| {
-            QualificationAnswer::Qualified(qualification(chosen))
-        })
+    let mut chosen: Option<&Attachment> = None;
+    for attachment in &claimed {
+        match check_current(&attachment.document, expected) {
+            Ok(()) if chosen.is_none_or(|best| recency(attachment) > recency(best)) => {
+                chosen = Some(attachment);
+            }
+            Ok(()) => {}
+            Err(rejection) => furthest = furthest.max(Some(rejection.reason)),
+        }
+    }
+    match (chosen, furthest) {
+        (Some(chosen), _) => QualificationAnswer::Qualified(qualification(chosen)),
+        (None, Some(reason)) => QualificationAnswer::NotQualified(reason),
+        (None, None) => QualificationAnswer::Unavailable,
+    }
 }
 
 /// Replays stored attachment bytes: decodes and checks them only. No model,
@@ -307,7 +307,28 @@ fn qualification(attachment: &Attachment) -> Qualification {
         protocol_identity: evidence.protocol_identity.clone(),
         verifier_identity: evidence.verifier_identity.clone(),
         observed_at_ms: attachment.document.provenance.observed_at_ms,
+        provenance_label: attachment.document.provenance.label,
     }
+}
+
+/// Ordering key of current attachments: the greatest is the most recent,
+/// with ties broken by identity.
+fn recency(attachment: &Attachment) -> (u64, &str) {
+    (
+        attachment.document.provenance.observed_at_ms,
+        &attachment.identity,
+    )
+}
+
+/// Decodes `bytes` and applies the claim checks only.
+fn claimed_attachment(
+    bytes: &[u8],
+    expected: &ExpectedSubject<'_>,
+) -> Result<Attachment, Rejection> {
+    check_expected(expected)?;
+    let attachment = decode_attachment(bytes)?;
+    check_claim(&attachment.document, expected)?;
+    Ok(attachment)
 }
 
 fn check_expected(expected: &ExpectedSubject<'_>) -> Result<(), Rejection> {
@@ -325,7 +346,9 @@ fn check_expected(expected: &ExpectedSubject<'_>) -> Result<(), Rejection> {
     }
 }
 
-fn check_applicable(
+/// Claim checks: the attachment claims the exact subject keys, task family,
+/// and class.
+fn check_claim(
     document: &AttachmentDocument,
     expected: &ExpectedSubject<'_>,
 ) -> Result<(), Rejection> {
@@ -342,6 +365,17 @@ fn check_applicable(
     if document.evidence.class != expected.required_class {
         return reject(RejectionReason::InsufficientClass, "evidence.class");
     }
+    Ok(())
+}
+
+/// Currency checks: no required or current component is unavailable, the
+/// evidence is fresh at `now_ms`, and no supplied current component changed.
+fn check_current(
+    document: &AttachmentDocument,
+    expected: &ExpectedSubject<'_>,
+) -> Result<(), Rejection> {
+    let subject = &document.subject;
+    let reject = |reason, field| Err(Rejection::new(reason, field));
     let required_missing = expected
         .required_components
         .iter()
@@ -414,7 +448,7 @@ fn decision_covers(
 }
 
 /// Sources claimed differently for the same subject keys, task family and class.
-fn conflicting_sources(valid: &[Attachment]) -> Vec<String> {
+fn conflicting_sources(attachments: &[Attachment]) -> Vec<String> {
     let same_claim = |left: &Attachment, right: &Attachment| {
         let (left, right) = (&left.document, &right.document);
         left.evidence.source_identity == right.evidence.source_identity
@@ -424,9 +458,9 @@ fn conflicting_sources(valid: &[Attachment]) -> Vec<String> {
             && left.subject.task_family == right.subject.task_family
     };
     let mut sources: Vec<String> = Vec::new();
-    for (index, attachment) in valid.iter().enumerate() {
+    for (index, attachment) in attachments.iter().enumerate() {
         let source = &attachment.document.evidence.source_identity;
-        let repeated = valid
+        let repeated = attachments
             .iter()
             .skip(index.saturating_add(1))
             .any(|other| same_claim(attachment, other));

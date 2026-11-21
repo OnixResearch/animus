@@ -2,14 +2,17 @@
 //!
 //! The producer reads three inputs: a [`crate::JobReport`] that [`crate::run_job`] already
 //! returned, the task set the job ran, and a host binding that names the evaluated route's
-//! Lattice subject keys and freshness. It replans the same task-major trial matrix to attribute
-//! trials to the route. It counts independently accepted completions from the separate
-//! verifier's reduced `found` metric, and it keeps failed, cancelled and incomplete trials in the
-//! denominator. It runs no trial, model or verifier and adds no evaluation engine.
+//! Lattice subject keys and freshness. It refuses a task set whose identity differs from the one
+//! the report records. It replans the same task-major trial matrix to attribute trials to the
+//! route, and refuses unless the report planned exactly those trials and holds each of the route's
+//! trials exactly once, as a failure or as a trajectory. It counts independently accepted
+//! completions from the separate verifier's reduced `found` metric, and it keeps failed, cancelled
+//! and incomplete trials in the denominator. It runs no trial, model or verifier and adds no
+//! evaluation engine.
 // r[impl agent_harness_runtime.qualification_attachment.producer]
 
 mod counts;
-mod subject;
+pub(crate) mod subject;
 
 /// Producer token every attachment of this lane carries.
 pub const QUALIFICATION_PRODUCER: &str = "animus-campaign-manager-eval";
@@ -70,6 +73,10 @@ pub enum QualificationError {
     InexactAcceptedCount,
     /// A count exceeded its representation.
     Bound,
+    /// The task set is not the one the job ran.
+    TaskSetMismatch,
+    /// The replanned trials are not the trials the report planned, completed or refused.
+    TrialMismatch,
     /// The trial matrix could not be replanned.
     Plan(crate::JobError),
     /// The projected document failed attachment validation.
@@ -80,8 +87,9 @@ pub enum QualificationError {
 ///
 /// # Errors
 ///
-/// Returns [`QualificationError`] when the route is absent, counts are inexact or unbounded, the
-/// matrix cannot be replanned, or the document fails attachment validation.
+/// Returns [`QualificationError`] when the route is absent, the task set or the replanned trials
+/// differ from the report, counts are inexact or unbounded, the matrix cannot be replanned, or the
+/// document fails attachment validation.
 pub fn task_family_attachment(
     set: &crate::TaskSet,
     report: &crate::JobReport,
@@ -92,6 +100,9 @@ pub fn task_family_attachment(
         .iter()
         .find(|summary| summary.route == binding.route)
         .ok_or(QualificationError::UnknownRoute)?;
+    if report.task_set_identity != subject::task_set_identity(set) {
+        return Err(QualificationError::TaskSetMismatch);
+    }
     let identities: Vec<String> = report
         .routes
         .iter()
@@ -102,6 +113,7 @@ pub fn task_family_attachment(
         .iter()
         .filter(|plan| plan.model == binding.route)
         .collect();
+    check_trials(report, summary, plans.len(), &trials)?;
     let outcomes = counts::outcomes(report, summary, binding.route, trials.len())?;
     let subject = subject::project(set, binding);
     debug_assert_eq!(
@@ -120,6 +132,58 @@ pub fn task_family_attachment(
     };
     animus_runtime::qualification::encode_attachment(&document)
         .map_err(QualificationError::Attachment)
+}
+
+/// Requires that the report planned `planned` trials, that each of the route's `trials` appears
+/// exactly once among the failures or the `atif:` trajectories, that every failure of the route is
+/// one of them, and that the route's completed count equals its trajectories.
+fn check_trials(
+    report: &crate::JobReport,
+    summary: &crate::RouteSummary,
+    planned: usize,
+    trials: &[&animus_runtime::harbor_eval::TrialPlan],
+) -> Result<(), QualificationError> {
+    let failed = |trial: &str| {
+        report
+            .failures
+            .iter()
+            .filter(|failure| failure.trial == trial)
+            .count()
+    };
+    let completed = |trial: &str| {
+        report
+            .receipt
+            .trajectories
+            .iter()
+            .filter(|trajectory| trajectory.strip_prefix(TRAJECTORY_PREFIX) == Some(trial))
+            .count()
+    };
+    let is_planned_equal = usize::try_from(report.receipt.planned).ok() == Some(planned);
+    let is_each_trial_once = trials
+        .iter()
+        .all(|plan| failed(&plan.identity).saturating_add(completed(&plan.identity)) == 1);
+    let is_every_failure_planned = report
+        .failures
+        .iter()
+        .filter(|failure| failure.route == summary.route)
+        .all(|failure| {
+            trials
+                .iter()
+                .any(|plan| plan.identity == failure.trial && plan.task == failure.task)
+        });
+    let route_completed = trials
+        .iter()
+        .filter(|plan| completed(&plan.identity) == 1)
+        .count();
+    let is_completed_equal = usize::try_from(summary.completed).ok() == Some(route_completed);
+    debug_assert!(route_completed <= trials.len());
+    debug_assert!(!is_planned_equal || trials.len() <= planned);
+    let is_attributed = is_each_trial_once && is_every_failure_planned;
+    if is_planned_equal && is_attributed && is_completed_equal {
+        Ok(())
+    } else {
+        Err(QualificationError::TrialMismatch)
+    }
 }
 
 /// Protocol, verifier and corpus identities bound to the subject, and the job's source identity.

@@ -227,12 +227,8 @@ fn measures_value(measures: &Measures) -> Value {
 }
 
 fn provenance_value(provenance: &Provenance) -> Value {
-    let label = match provenance.label {
-        EvidenceLabel::Fixture => "fixture",
-        EvidenceLabel::Live => "live",
-    };
     json::object(alloc::vec![
-        ("label", json::text(label)),
+        ("label", json::text(provenance.label.as_str())),
         ("producer", json::text(&provenance.producer)),
         (
             "producer_revision",
