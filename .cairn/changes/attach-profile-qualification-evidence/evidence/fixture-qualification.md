@@ -1,6 +1,6 @@
 # Fixture qualification: attach-profile-qualification-evidence
 
-- Subject: uncommitted review fixes on top of Animus `8d6f67d3` (Animus `4071c65e` plus the first #18 change) for [Animus #18](https://github.com/OnixResearch/animus/issues/18).
+- Subject: uncommitted workspace-Octet fixes on top of Animus `3356878d` (the first #18 change and its review fixes) for [Animus #18](https://github.com/OnixResearch/animus/issues/18).
 - Evidence label: `fixture`, with `live_qualification: false`. No model, provider, endpoint, or live evaluation ran. The attachments come from the deterministic scripted campaign-manager job.
 - Toolchain: the flake-pinned dev shell (`nix develop`, rustc 1.96.1, cargo 1.96.2), with `CARGO_BUILD_JOBS=6`. The shell was built locally (`--option builders ''`) because the remote builder queue was saturated; its inputs are unchanged.
 
@@ -15,14 +15,24 @@ The review of the first change found one P2 and five P3 issues. All are fixed (t
 - **Fixtures.** `redaction-host-path` now puts the path in the first `limitations` entry, so only the token rule rejects it. The rejected-completion fixture is renamed `rejected-dropped-from-denominator`. Every negative fixture test asserts its exact `Rejection.field`. Reordered root keys are refused at `attachment.canonical` and oversized bytes at `attachment.bytes`, in both the unit and fixture tests.
 - **Provenance.** `Qualified` carries `provenance_label` (`EvidenceLabel::as_str()` gives `fixture` or `live`). The docs say `Qualified` is admissible evidence, not a favorable verdict, and list the remaining contract non-claims.
 
+## Workspace Octet fixes
+
+The full `nix flake check` on `3356878d` failed only `checks.x86_64-linux.octet`, which covers `animus-runtime`; the campaign-manager rail does not. All eight deny findings are fixed in code, with no allow attribute, baseline edit or suppression (task 4.8):
+
+- `codec.rs` (`as_text`, `take_number`, `take_optional_number`, `list`) and `json.rs` (`Fields::new`): every `Value` match names each variant instead of `_`.
+- `consume.rs` (`framed_identity`): the `u64::try_from(len).unwrap_or(u64::MAX)` sentinel is gone. `length_frame` writes the length as a little-endian `u64` zero-extended from `usize`, and `const _: () = assert!(usize::BITS <= u64::BITS)` proves at compile time that no length can exceed the frame. The bytes are unchanged on every target.
+- `json.rs`: parsing and encoding are iterative. The parser keeps open containers on an explicit stack and refuses a value nested deeper than `MAX_DEPTH` (6, so at most 7 levels) before reading it, with the same 64-item and duplicate-key bounds. The encoder schedules members on a pending stack. `the_iterative_parser_keeps_its_depth_item_and_key_bounds` covers the depth, item and member bounds and refused spellings. A throwaway differential run against the previous recursive parser and encoder agreed on 4,400,087 inputs (695,894 accepted by both): random token strings, nesting and item-count edges, and mutations of every positive and negative fixture.
+- `tests.rs`: the compound redaction assertion is split in two.
+
 ## Results
 
 | Check | Result |
 |---|---|
 | `cargo check -p animus-runtime --no-default-features --features steel` | exit 0 |
-| `cargo test -p animus-runtime --lib qualification` | exit 0: 11 passed, 0 failed |
-| `cargo test -p animus-runtime --lib eval_feedback` | exit 0: 16 passed, 0 failed (11 qualification + 5 existing) |
-| `cargo test -p animus-runtime` | exit 0: 599 passed, 0 failed, 0 ignored (597 unit + 2 `sessioncorefacade`) |
+| `nix build .#checks.x86_64-linux.octet -L --builders ''` (workspace Octet, the check `nix flake check` runs) | exit 0, `clean`: 0 findings, 0 warnings, 0 errors |
+| `cargo test -p animus-runtime --lib qualification` | exit 0: 12 passed, 0 failed |
+| `cargo test -p animus-runtime --lib eval_feedback` | exit 0: 17 passed, 0 failed (12 qualification + 5 existing) |
+| `cargo test -p animus-runtime` | exit 0: 600 passed, 0 failed, 0 ignored (598 unit + 2 `sessioncorefacade`) |
 | `cargo test -p animus-campaign-manager-eval` | exit 0: 38 passed, 0 failed, 0 ignored across 14 test targets, including `qualification` (3) and `attachment` (5) |
 | `cargo check --workspace --all-targets` | exit 0 |
 | `cargo clippy --workspace --all-targets -- -D warnings` | exit 0 |

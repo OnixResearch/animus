@@ -287,16 +287,31 @@ pub fn component_identity(kind: ComponentKind, bytes: &[u8]) -> String {
     ])
 }
 
+/// Bytes of one length frame: the part length as a little-endian `u64`.
+const LENGTH_FRAME_BYTES: usize = core::mem::size_of::<u64>();
+
+// Every `usize` fits the `u64` length frame, so each length is framed exactly
+// and no conversion can fail.
+const _: () = assert!(usize::BITS <= u64::BITS);
+
 /// `blake3:` identity over length-framed parts.
 #[must_use]
 pub fn framed_identity(parts: &[&[u8]]) -> String {
     let mut hasher = blake3::Hasher::new();
     for part in parts {
-        let length = u64::try_from(part.len()).unwrap_or(u64::MAX);
-        hasher.update(&length.to_le_bytes());
+        hasher.update(&length_frame(part.len()));
         hasher.update(part);
     }
     alloc::format!("{BLAKE3_PREFIX}{}", hasher.finalize().to_hex())
+}
+
+/// `length` as a little-endian `u64`, zero-extended from `usize`.
+fn length_frame(length: usize) -> [u8; LENGTH_FRAME_BYTES] {
+    let mut frame = [0_u8; LENGTH_FRAME_BYTES];
+    for (slot, byte) in frame.iter_mut().zip(length.to_le_bytes()) {
+        *slot = byte;
+    }
+    frame
 }
 
 fn qualification(attachment: &Attachment) -> Qualification {

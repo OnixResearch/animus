@@ -374,7 +374,57 @@ fn unsafe_material_cannot_be_represented() {
         decode_reason(escaped.as_bytes()),
         RejectionReason::Malformed
     );
-    assert!(!text.contains('/') && !text.contains(' '));
+    assert!(!text.contains('/'));
+    assert!(!text.contains(' '));
+}
+
+#[test]
+// r[verify agent_harness_runtime.qualification_attachment.attachment]
+fn the_iterative_parser_keeps_its_depth_item_and_key_bounds() {
+    let nested = |levels: usize| {
+        let mut text = "[".repeat(levels);
+        text.push('1');
+        text.push_str(&"]".repeat(levels));
+        text
+    };
+    // Six containers put the scalar at depth 6, the deepest allowed.
+    let deepest = nested(6);
+    let parsed = super::json::parse(deepest.as_bytes()).expect("depth 6");
+    assert_eq!(super::json::encode(&parsed), deepest.as_bytes());
+    assert!(super::json::parse(nested(7).as_bytes()).is_none());
+    // An empty container counts as a value at its own depth.
+    assert!(super::json::parse(b"[[[[[[[]]]]]]]").is_some());
+    assert!(super::json::parse(b"[[[[[[[[]]]]]]]]").is_none());
+    assert!(super::json::parse(b"[[[[[[[]]]]]]").is_none());
+
+    let items = |count: usize| alloc::format!("[{}]", alloc::vec!["0"; count].join(","));
+    assert!(super::json::parse(items(64).as_bytes()).is_some());
+    assert!(super::json::parse(items(65).as_bytes()).is_none());
+    let members = |count: usize| {
+        let entries: Vec<String> = (0..count)
+            .map(|index| alloc::format!("\"k{index:02}\":0"))
+            .collect();
+        alloc::format!("{{{}}}", entries.join(","))
+    };
+    assert!(super::json::parse(members(64).as_bytes()).is_some());
+    assert!(super::json::parse(members(65).as_bytes()).is_none());
+
+    let object = br#"{"a":[1,{"b":null}],"c":{"d":true,"e":"x"}}"#;
+    let parsed = super::json::parse(object).expect("object");
+    assert_eq!(super::json::encode(&parsed), object);
+    for refused in [
+        br#"{"a":1,"a":2}"#.as_slice(),
+        b"[1,]",
+        b"[1 ]",
+        b"{}x",
+        b"[1",
+        b"{\"a\"1}",
+        b"",
+    ] {
+        assert!(super::json::parse(refused).is_none(), "{refused:?}");
+    }
+    assert!(super::json::parse(b"[]").is_some());
+    assert!(super::json::parse(b"{}").is_some());
 }
 
 #[test]
