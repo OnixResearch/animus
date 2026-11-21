@@ -1,7 +1,7 @@
 //! One evaluation job: the task × route trial matrix, run through Animus's Harbor slice.
 
 /// Trials planned to run at once; the in-memory lane runs them in order.
-const CONCURRENCY: u32 = 1;
+pub(crate) const CONCURRENCY: u32 = 1;
 /// Artifact identities every trial request declares.
 pub const ARTIFACT_NAMES: [&str; 2] = ["artifact:control-history", "artifact:turn-ledger"];
 
@@ -117,8 +117,9 @@ pub fn run_job(
     })
 }
 
-/// The task-major, route-minor trial matrix.
-fn plan(
+/// The task-major, route-minor trial matrix; the qualification producer
+/// replans it to attribute trials to routes without rerunning them.
+pub(crate) fn plan(
     set: &crate::TaskSet,
     identities: &[String],
 ) -> Result<Vec<animus_runtime::harbor_eval::TrialPlan>, JobError> {

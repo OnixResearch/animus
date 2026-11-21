@@ -120,6 +120,16 @@ On the checked task set the comparison reports:
 
 The tree route scored all 17 briefs, 75 candidate decisions with 110 tree splits, without fallback. It ties the baseline on `found` and misses the predeclared 0.100 gain, so the decision is **no-go**. Its per-call latency in a debug build was about ten times the scripted arms', because every candidate decision encodes and hashes a receipt; latency remains a non-deterministic observation.
 
+## Qualification attachments
+
+`task_family_attachment(set, report, binding)` projects one `task_family_evaluation` [qualification attachment](qualification-attachments.md) for one route of a finished job. It replans the same task-major matrix to attribute trials to the route. Accepted completions come from the separate verifier's reduced `found` metric, and refused trials count as failed, cancelled or incomplete in the denominator. Costs are recorded as unknown. The host binding supplies the Lattice subject keys, model facts and freshness. The producer runs no trial and adds no engine.
+
+`fixtures/qualification-attachment/positive/` holds the checked attachments for `signal-greedy` (3 of 3 accepted) and `explore-only` (1 of 3 accepted) from the scripted job. `negative/` holds malformed variants. One fixture profile revision per route covers every run of that route. The job identity enters only the source identity.
+
+```sh
+cargo test -p animus-campaign-manager-eval --test qualification --test attachment
+```
+
 ## Non-claims
 
 - Scores hold only for these synthetic tasks. They do not measure advice quality on real workloads, and they claim no benchmark superiority.

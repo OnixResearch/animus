@@ -162,3 +162,69 @@ impl
         Err(animus_campaign_manager_eval::RouteFailure::Unavailable)
     }
 }
+
+/// Task family the qualification fixtures evaluate.
+pub const TASK_FAMILY: &str = "campaign.exploration";
+/// Observation time the qualification fixtures carry, milliseconds since the epoch.
+pub const OBSERVED_AT_MS: u64 = 1_790_000_000_000;
+/// First time the qualification fixtures are stale, milliseconds since the epoch.
+pub const VALID_UNTIL_MS: u64 = 1_792_592_000_000;
+/// Consumer time the qualification tests validate at, milliseconds since the epoch.
+pub const NOW_MS: u64 = 1_790_000_060_000;
+/// The checked signal-greedy attachment.
+pub const GREEDY_FIXTURE: &str =
+    include_str!("../../../../fixtures/qualification-attachment/positive/signal-greedy.json");
+/// The checked explore-only attachment.
+pub const EXPLORE_FIXTURE: &str =
+    include_str!("../../../../fixtures/qualification-attachment/positive/explore-only.json");
+
+/// Fixture Lattice subject keys a host binding would supply for one route.
+pub struct SubjectKeys {
+    /// Definition identity, `blake3:<hex>`.
+    pub definition: String,
+    /// Profile revision, bare hex.
+    pub revision: String,
+}
+
+/// The fixture keys of `route` in `set`. One profile revision covers every evaluation run of
+/// the same route; the job identity does not enter it.
+pub fn qualification_keys(set: &animus_campaign_manager_eval::TaskSet, route: &str) -> SubjectKeys {
+    let definition = animus_runtime::qualification::framed_identity(&[
+        b"fixture-lattice-definition".as_slice(),
+        set.agent.as_bytes(),
+    ]);
+    let revision = animus_runtime::qualification::framed_identity(&[
+        b"fixture-lattice-profile-revision".as_slice(),
+        set.agent.as_bytes(),
+        route.as_bytes(),
+    ]);
+    SubjectKeys {
+        definition,
+        revision: String::from(revision.trim_start_matches("blake3:")),
+    }
+}
+
+/// The fixture task family and evaluation class at [`NOW_MS`] for exact subject keys.
+pub fn expected_subject(keys: &SubjectKeys) -> animus_runtime::qualification::ExpectedSubject<'_> {
+    animus_runtime::qualification::ExpectedSubject {
+        lattice_definition_identity: &keys.definition,
+        lattice_profile_revision: &keys.revision,
+        task_family: TASK_FAMILY,
+        required_class: animus_runtime::qualification::EvidenceClass::TaskFamilyEvaluation,
+        now_ms: NOW_MS,
+        required_components: &[],
+        current_components: &[],
+    }
+}
+
+/// The rejection reason of `bytes` for `expected`; `Conflicting` stands in for an admission,
+/// which no caller of this helper expects.
+pub fn rejection_reason(
+    bytes: &[u8],
+    expected: &animus_runtime::qualification::ExpectedSubject<'_>,
+) -> animus_runtime::qualification::RejectionReason {
+    animus_runtime::qualification::validate_attachment(bytes, expected).map_or_else(
+        |rejection| rejection.reason,
+        |_| animus_runtime::qualification::RejectionReason::Conflicting,
+    )
+}

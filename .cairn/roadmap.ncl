@@ -861,6 +861,12 @@ let change_entries = [
     "add-mesh-llm-provider-adapter",
     "define-model-router-execution-service",
   ] ["negotiate-model-capability-matrix", "adapt-tau-provider-retry-execution"],
+  # Animus #18 (https://github.com/OnixResearch/animus/issues/18): task-family qualification
+  # attachments over existing evaluation evidence, produced by the campaign-manager lane.
+  # Fixture qualification only; the NVIDIA skill-evidence follow-up remains open.
+  change "attach-profile-qualification-evidence" evaluation_role "evaluation" [
+    "add-campaign-manager-eval",
+  ] ["consume-serving-readiness-admission"],
 ]
 in
 

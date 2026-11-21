@@ -39,6 +39,7 @@
 
 mod artifacts;
 mod catalog;
+mod evidence;
 mod experiment;
 mod grading;
 mod history;
@@ -53,6 +54,9 @@ pub use artifacts::{ArtifactStore, TrialArtifact};
 pub use catalog::{
     EvalTask, HarborPins, MAX_CANDIDATES, MAX_SIGNAL, MAX_TURNS, MandateLimits, TASK_SET_SCHEMA,
     TaskCandidate, TaskError, TaskSet, embedded_task_set, parse_task_set,
+};
+pub use evidence::{
+    QUALIFICATION_PRODUCER, QualificationBinding, QualificationError, task_family_attachment,
 };
 pub use experiment::{
     AdoptionDecision, AdoptionInput, AdoptionRule, COMPARISON_SCHEMA, ComparisonProtocol,

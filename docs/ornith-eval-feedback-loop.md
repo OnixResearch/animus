@@ -18,6 +18,8 @@ Feedback candidates may recommend promote, demote, revise, or investigate, but t
 
 Freshness compares model route, scaffold hash, verifier hash, trust-boundary hash, tool-surface hash, runtime version label, and sampling profile against current policy. Mismatches mark evidence stale or reduced-weight according to policy, and stale evidence cannot justify promotion by itself.
 
+[Qualification attachments](qualification-attachments.md) extend this freshness check to the complete evaluated subject. Any changed component, profile revision, or expired freshness makes evidence historical. Reuse across revisions needs an explicit scoped compatibility decision and never yields a qualified answer.
+
 ## Focused verification
 
 Run the focused tests with:
