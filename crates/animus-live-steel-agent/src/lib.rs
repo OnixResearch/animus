@@ -15,6 +15,7 @@
 mod activation;
 mod application;
 mod config;
+mod lineage;
 mod receipt;
 mod runtime;
 mod session;
@@ -28,9 +29,14 @@ pub use application::{LiveApplicationError, LiveApplicationInput, run_live_appli
 pub use config::{
     LiveSteelAgentConfigError, ValidatedLiveSteelAgentConfig, parse_live_steel_agent_config,
 };
+pub use lineage::{
+    ImplementationChildEdge, ImplementationChildLineage, ImplementationChildProfileResult,
+    ImplementationLineageBinding, ImplementationLineageError, ImplementationParentProfileResult,
+    run_implementation_child_profile, run_implementation_parent_profile,
+};
 pub use receipt::{LIVE_SHELL_NON_CLAIMS, LiveSteelAgentRunReceipt};
 pub use runtime::child::{
-    ExplicitChildAuthority, ExplicitChildFactory, FixedChildTimer, LiveConcreteChildService,
+    ExplicitChildAuthority, ExplicitChildFactory, FixedChildTimer, InjectedChildFactory, LiveConcreteChildService,
     MetadataChildEvents, MetadataChildStore, admit_child_request, build_child_service,
 };
 pub use runtime::host::{

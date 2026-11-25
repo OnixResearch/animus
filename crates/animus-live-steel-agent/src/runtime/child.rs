@@ -34,6 +34,45 @@ const CHILD_ENTRY_PREFIX: &str = "entry.live-steel-agent-child.user.";
 const MAX_CHILD_QUEUE_ITEMS: u32 = 1;
 const CHILD_SUMMARY: &str = "bounded child summary";
 
+/// Explicit production-capable child factory: the caller supplies a provider and
+/// workspace-scoped tool host for each admitted child; no ambient services exist.
+pub struct InjectedChildFactory<Create, Provider, Tool> {
+    service_identity: String,
+    create_services: Create,
+    service_types: std::marker::PhantomData<fn() -> (Provider, Tool)>,
+}
+
+impl<Create, Provider, Tool> InjectedChildFactory<Create, Provider, Tool> {
+    /// Selects the exact factory identity and service construction callback.
+    pub fn new(service_identity: impl Into<String>, create_services: Create) -> Self {
+        Self { service_identity: service_identity.into(), create_services, service_types: std::marker::PhantomData }
+    }
+}
+
+impl<Create, Provider, Tool> ChildSessionFactory for InjectedChildFactory<Create, Provider, Tool>
+where
+    Create: FnMut(&ConcreteChildSessionAdmission) -> Result<(Provider, Tool), ChildSessionHostFailure>,
+    Provider: animus_std::coding_session_host::CodingSessionProviderService + 'static,
+    Tool: animus_std::coding_session_host::CodingSessionToolService + 'static,
+{
+    fn services(&self) -> ChildSessionServiceSet {
+        ChildSessionServiceSet::all_available()
+    }
+
+    fn service_identity(&self) -> &str {
+        &self.service_identity
+    }
+
+    fn create(&mut self, admission: &ConcreteChildSessionAdmission) -> Result<Box<dyn ChildCodingSessionController>, ChildSessionHostFailure> {
+        let (provider, tool) = (self.create_services)(admission)?;
+        build_injected_child_controller(admission, provider, tool, false)
+    }
+
+    fn restore(&mut self, _admission: &ConcreteChildSessionAdmission, _record: &ChildSessionLifecycleRecord) -> Result<Box<dyn ChildCodingSessionController>, ChildSessionHostFailure> {
+        Err(child_session_failure("in-memory implementation child cannot restore"))
+    }
+}
+
 /// Explicit child-session factory with no provider or credential discovery.
 #[derive(Clone)]
 pub struct ExplicitChildFactory {
@@ -106,6 +145,24 @@ fn build_normal_child_controller(
     response: String,
     restore: bool,
 ) -> Result<Box<dyn ChildCodingSessionController>, ChildSessionHostFailure> {
+    build_injected_child_controller(
+        admission,
+        animus_std::coding_session_host::FakeCodingSessionProvider { response, dispatch_count: 0 },
+        animus_std::coding_session_host::DenyUnusedCodingSessionTool,
+        restore,
+    )
+}
+
+fn build_injected_child_controller<Provider, Tool>(
+    admission: &ConcreteChildSessionAdmission,
+    provider: Provider,
+    tool: Tool,
+    restore: bool,
+) -> Result<Box<dyn ChildCodingSessionController>, ChildSessionHostFailure>
+where
+    Provider: animus_std::coding_session_host::CodingSessionProviderService + 'static,
+    Tool: animus_std::coding_session_host::CodingSessionToolService + 'static,
+{
     use animus_runtime::coding_session_host::{
         CodingSessionConfig, CodingSessionQueueProfile, CodingSessionServiceSet,
         new_coding_session_state,
@@ -153,11 +210,8 @@ fn build_normal_child_controller(
     let host = coding_host::CodingSessionHost::new(
         state,
         coding_host::CodingSessionHostServices {
-            provider: coding_host::FakeCodingSessionProvider {
-                response,
-                dispatch_count: 0,
-            },
-            tool: coding_host::DenyUnusedCodingSessionTool,
+            provider,
+            tool,
             persistence: coding_host::MemoryCodingSessionPersistence::default(),
             policy: coding_host::AllowCodingSessionPolicy,
             authority: coding_host::AdmittedCodingSessionAuthority::default(),

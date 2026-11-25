@@ -4,6 +4,10 @@ use animus_live_steel_agent::{
     FixtureStreamProvider, LiveSteelAgentComposition, LiveSteelAgentCompositionInput,
     parse_live_steel_agent_config,
 };
+use animus_live_steel_agent::{
+    ImplementationLineageBinding, ImplementationLineageError, InjectedChildFactory,
+    run_implementation_parent_profile,
+};
 use animus_runtime::rlm_kernel::RlmKernelHostExecutor;
 
 const CONFIG: &[u8] = include_bytes!("../../../config/generated/live-steel-agent-shell.json");
@@ -159,6 +163,95 @@ fn production_entrypoint_runs_prompt_tool_result_continuation_and_final_commit()
         "sk-test",
     ] {
         assert!(!rendered.contains(secret));
+    }
+}
+
+#[test]
+fn parent_steel_tool_dispatches_real_child_and_captures_native_lineage() {
+    let config = parse_live_steel_agent_config(CONFIG).expect("fixture configuration");
+    let limits = config.child_session_limits();
+    let code = format!(
+        "(rlm \"focused-child\" \"Selected bounded child context.\" 1 1 {} {} {})",
+        limits.tokens, limits.wall_time_ms, limits.result_chars,
+    );
+    let arguments = serde_json::json!({ "code": code }).to_string();
+    let stream = String::from_utf8(TOOL_STREAM.to_vec()).expect("fixture UTF-8");
+    let mut rewritten = String::new();
+    for line in stream.lines() {
+        if let Some(data) = line.strip_prefix("data: ") {
+            let mut event: serde_json::Value = serde_json::from_str(data).expect("fixture event");
+            match event["type"].as_str() {
+                Some("response.function_call_arguments.delta") => event["delta"] = arguments.clone().into(),
+                Some("response.function_call_arguments.done") => event["arguments"] = arguments.clone().into(),
+                Some("response.output_item.done") if event["item"]["type"] == "function_call" => {
+                    event["item"]["arguments"] = arguments.clone().into();
+                }
+                _other => {}
+            }
+            rewritten.push_str("data: ");
+            rewritten.push_str(&event.to_string());
+        } else {
+            rewritten.push_str(line);
+        }
+        rewritten.push('\n');
+    }
+    let provider = FixtureStreamProvider::new(
+        [rewritten.into_bytes(), FINAL_STREAM.to_vec()],
+        usize::try_from(config.max_provider_response_bytes()).expect("stream bound"),
+    );
+    let factory = InjectedChildFactory::new(config.authority_component_identity(), |_admission: &animus_runtime::child_session_service::ConcreteChildSessionAdmission| {
+        Ok((
+            animus_std::coding_session_host::FakeCodingSessionProvider {
+                response: String::from("Bounded child result."), dispatch_count: 0,
+            },
+            animus_std::coding_session_host::DenyUnusedCodingSessionTool,
+        ))
+    });
+    let binding = match std::env::var_os("ANIMUS_LINEAGE_FIXTURE_BINDING") {
+        Some(path) => {
+            let bytes = std::fs::read(path).expect("explicit temporary fixture binding");
+            let value: serde_json::Value = serde_json::from_slice(&bytes).expect("fixture binding JSON");
+            let identity = |name: &str| value[name].as_str().expect("fixture identity").to_owned();
+            ImplementationLineageBinding {
+                work_identity: identity("work_identity"),
+                attempt_identity: identity("attempt_identity"),
+                fence: value["fence"].as_u64().expect("fixture fence"),
+                request_identity: identity("request_identity"),
+                worker_incarnation: identity("worker_incarnation"),
+                profile_revision: identity("profile_revision"),
+            }
+        }
+        None => ImplementationLineageBinding {
+            work_identity: "a".repeat(64), attempt_identity: "b".repeat(64), fence: 3,
+            request_identity: "c".repeat(64), worker_incarnation: "d".repeat(64),
+            profile_revision: "e".repeat(64),
+        },
+    };
+    let result = run_implementation_parent_profile(&config, binding, factory, |child_route| {
+        let context = animus_live_steel_agent::ExplicitContextMap::default();
+        let mut context_route = animus_live_steel_agent::context_route(&context);
+        let executor = animus_live_steel_agent::build_executor(&config, &mut context_route, child_route)
+            .map_err(|_error| ImplementationLineageError::Execution)?;
+        let kernel = animus_steel::SteelRlmKernel::new(config.rlm_policy().clone())
+            .map_err(|_error| ImplementationLineageError::Execution)?;
+        LiveSteelAgentComposition::new(LiveSteelAgentCompositionInput {
+            config: config.clone(), provider,
+            session_persistence: MemoryPersistence::default(),
+            snapshot_persistence: MemorySnapshotPersistence::default(),
+            kernel, host_executor: executor, kernel_persistence: (),
+        })
+        .map_err(|_error| ImplementationLineageError::Execution)?
+        .run_prompt("Delegate bounded implementation investigation.")
+        .map_err(|_error| ImplementationLineageError::Execution)
+    }).expect("parent Steel session and genuine child lifecycle");
+    assert_eq!(result.output.final_text(), "3");
+    assert_eq!(result.lineage.edges.len(), 1);
+    assert_eq!(result.lineage.edges[0].state, "completed");
+    assert_eq!(result.lineage.edges[0].parent_id, result.lineage.root_id);
+    let bytes = serde_json::to_vec(&result.lineage).expect("metadata-only wire receipt");
+    assert!(!bytes.windows(code.len()).any(|window| window == code.as_bytes()));
+    if let Some(path) = std::env::var_os("ANIMUS_LINEAGE_FIXTURE_OUTPUT") {
+        std::fs::write(path, bytes).expect("explicit temporary capture path");
     }
 }
 
